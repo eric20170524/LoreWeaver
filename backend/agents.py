@@ -47,7 +47,7 @@ CRITICAL SCHEMA REQUIREMENTS (Return EXACTLY this JSON structure, no markdown ou
   ]
 }}"""
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"
@@ -60,7 +60,7 @@ CRITICAL SCHEMA REQUIREMENTS (Return EXACTLY this JSON structure, no markdown ou
             return get_procedural_preset(theme)
 
     @staticmethod
-    async def adjust_gdd(current_gdd: dict, feedback: str) -> dict:
+    async def adjust_gdd(current_gdd: dict, feedback: str, agent_role: str = "world_builder") -> dict:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             print("No GEMINI_API_KEY for adjust prompt, applying mock tweak.")
@@ -73,18 +73,38 @@ CRITICAL SCHEMA REQUIREMENTS (Return EXACTLY this JSON structure, no markdown ou
             from google.genai import types
 
             client = genai.Client(api_key=api_key)
-            prompt = f"""You are LoreWeaver Game Orchestrator. 
-Here is the current Game Design Document (JSON):
+            
+            # Formulate the targeted sub-agent specialized role instructions
+            role_instructions = ""
+            if agent_role == "world_builder":
+                role_instructions = """You are the World Builder Agent (世界编制官). Your specialty is the core IP DNA, color themes, currency name, and the 6 ascending cultivation realms.
+Verify and adapt fields like 'title', 'themeColor', and the 'economy' node based on user suggestions. Retain everything in the node narrative stages as intact as possible."""
+            elif agent_role == "narrative":
+                role_instructions = """You are the Narrative Architect Agent (剧本大纲师). Your specialty is the 12 cultivation milestones storyline tree, chronological introductions, taunts, mechanics mappings, difficulties, duration limits, and goal values.
+Update the 'nodes' element objects based on the narrative or difficulty values requested, ensuring you preserve the overall economic parameters in the root document."""
+            elif agent_role == "sandbox":
+                role_instructions = """You are the Sandbox Architect Agent (沙盒架构师). Your specialty is resolution rules (720x1280 scaling checks), 'store.js' and 'data.js' static assets indices integration, and recipe formulas.
+Analyze and tweak sandbox variables if the feedback concerns screen bounds, layout setups, or persistent memory keys."""
+            elif agent_role == "code_foundry":
+                role_instructions = """You are the Code Foundry Agent (代码铸造厂). Your specialty is Phaser 3 card logic, Web Audio synthesizers, wind/thunder pitch values, particle flow overlays, and word-wrapping tolerances for Chinese typography.
+Incorporate physical code configurations, thresholds, sound levels, and timing metrics into the JSON."""
+            elif agent_role == "auditor":
+                role_instructions = """You are the Quality Auditor Agent (多模审计官). Your specialty is diagnosing overlapping coordinates, HUD collision rules, sanitizing trademark or copyright names, and injecting E2E robust safety rules.
+Refine text wraps or validation flags inside the JSON schema to ensure maximum quality."""
+            else:
+                role_instructions = "You are the general LoreWeaver Orchestrator Agent. Intelligently edit the design specs."
+
+            prompt = f"""{role_instructions}
+Here is the current Game Design Document (JSON specification):
 {json.dumps(current_gdd, ensure_ascii=False)}
 
-The user provided the following feedback/request for changes:
+The user provided the following design adjustment directive:
 "{feedback}"
 
-Apply the requested changes to the JSON structure while maintaining the EXACT schema requirements.
-Return ONLY valid JSON."""
+Apply the modifications perfectly to the specification layout. Maintain the EXACT schema requirements and return ONLY the fully refined valid JSON payload. Keep everything else intact. Do not output anything other than JSON."""
 
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json"

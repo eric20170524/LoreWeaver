@@ -522,13 +522,18 @@ export default function App() {
             )}
           </div>
 
-          {currentJob && currentJob.status !== 'idle' && currentJob.status !== 'completed' && (
+          {activeWorkspace && (
             <AgentChatPanel
-              jobId={currentJob.id}
-              status={currentJob.status}
-              stageName={currentJob.stage === 'world_building' ? 'World Builder' : 'QA Audit'}
+              jobId={currentJob?.id}
+              status={currentJob?.status}
+              stageName={currentJob?.stage === 'world_building' ? 'World Builder' : 'QA Audit'}
+              workspaceId={activeWorkspace.id}
               onRefreshJob={handleRefreshJob}
-              onApprove={handleRefreshJob}
+              onUpdateSpec={(newSpec) => {
+                setGameSpec(newSpec);
+                restartGameInstance(newSpec);
+              }}
+              addLog={addLog}
             />
           )}
 

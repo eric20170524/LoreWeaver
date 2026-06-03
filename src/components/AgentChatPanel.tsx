@@ -1,120 +1,361 @@
-import React, { useState } from 'react';
-import { Send, Bot, Check, AlertTriangle } from 'lucide-react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from 'react';
+import { Send, Bot, Check, HelpCircle, ChevronDown, MessageSquare, RefreshCw, Layers } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface AgentChatPanelProps {
-  jobId: string;
-  status: string;
-  stageName: string;
+  jobId?: string;
+  status?: string;
+  stageName?: string;
+  workspaceId: string;
   onRefreshJob: () => void;
-  onApprove: () => void;
+  onUpdateSpec: (newSpec: any) => void;
+  addLog: (msg: string) => void;
 }
 
-export function AgentChatPanel({ jobId, status, stageName, onRefreshJob, onApprove }: AgentChatPanelProps) {
+interface ChatMessage {
+  sender: 'user' | 'agent';
+  text: string;
+  timestamp: string;
+}
+
+export function AgentChatPanel({
+  jobId,
+  status,
+  stageName,
+  workspaceId,
+  onRefreshJob,
+  onUpdateSpec,
+  addLog
+}: AgentChatPanelProps) {
+  const [selectedAgent, setSelectedAgent] = useState('world_builder');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  
+  // High-fidelity local conversation storage, indexed by agent_role
+  const [conversations, setConversations] = useState<Record<string, ChatMessage[]>>({
+    world_builder: [
+      { sender: 'agent', text: '我是【世界编制官】，已为您逆向解构了同人IP的DNA与经济配置。如果您想微调游戏主标题、境界梯度、代币以及三类资源名称，请随时向我神识传输您的微调想法！', timestamp: '系统' }
+    ],
+    narrative: [
+      { sender: 'agent', text: '我是【剧本大纲师】，掌控12重修真天劫关卡序列与数值。你可以对具体关卡的解锁关名、引入大纲、机制映射（tap/dodge/memory）或造化收益进行神识调整。', timestamp: '系统' }
+    ],
+    sandbox: [
+      { sender: 'agent', text: '我是【沙盒架构师】，负责保障720x1280完美锁屏分辨率布局，以及本地存储状态寄存器（store.js）。我可以为您在背后注入额外的变量绑定与配方清单！', timestamp: '系统' }
+    ],
+    code_foundry: [
+      { sender: 'agent', text: '我是【代码铸造厂】，将大纲编译配对成 Phaser 3 物理内核，并合成 Web Audio 三相 ASMR 谐振。你可以要求我调大声波、增加屏幕震动或字模包裹包裹长度限制。', timestamp: '系统' }
+    ],
+    auditor: [
+      { sender: 'agent', text: '我是【多模审计官】，专门通过多模态视觉 QA 来扫描 HUD 文字碰撞并清洗版权敏感词汇。欢迎您将异常页面对齐、敏感文本净化要求发送给我。', timestamp: '系统' }
+    ]
+  });
+
+  const activeAgentInfo = [
+    {
+      id: "world_builder",
+      name: "世界编制官 (World Builder)",
+      title: "Step 1.1 DNA & 经济编制",
+      avatar: "🧬",
+      desc: "逆向提取同人 IP 精髓，定义游戏主色、核心代币及 6 大修真阶段境界称谓。",
+      color: "border-emerald-500/30 text-emerald-400"
+    },
+    {
+      id: "narrative",
+      name: "剧本大纲师 (Narrative)",
+      title: "Step 1.2 故事脉络与天劫卡牌",
+      avatar: "📜",
+      desc: "规划 12 核心神战节点大纲、BOSS 对白、机制玩法关联、以及数值通关奖赏。",
+      color: "border-cyan-500/30 text-cyan-400"
+    },
+    {
+      id: "sandbox",
+      name: "沙盒架构师 (Sandbox)",
+      title: "Step 2.1-2.2 宿主框架与状态机",
+      avatar: "🛠️",
+      desc: "强制 720x1280 锁屏对齐，并注入存储寄存器 store.js，实现修真财产本地持久化。",
+      color: "border-amber-500/30 text-amber-400"
+    },
+    {
+      id: "code_foundry",
+      name: "代码铸造厂 (Foundry)",
+      title: "Step 3.1-3.2 物理编译与声学ASMR",
+      avatar: "⚙️",
+      desc: "热接 Phaser 3 运行池与 Web Audio 脉冲。负责 ASMR 调幅滤波、粒子消散及弹性碰撞。",
+      color: "border-indigo-500/30 text-indigo-400"
+    },
+    {
+      id: "auditor",
+      name: "多模审计官 (Auditor)",
+      title: "Step 3.3 视觉排版校验与合规",
+      avatar: "👁️",
+      desc: "基于多模态对齐检测 HUD 双重遮挡。提供净化版权敏感、自适应换行的高精审计。",
+      color: "border-rose-500/30 text-rose-400"
+    }
+  ].find(item => item.id === selectedAgent) || {
+    id: "world_builder",
+    name: "世界编制官 (World Builder)",
+    title: "Step 1.1 DNA & 经济编制",
+    avatar: "🧬",
+    desc: "负责逆天同人 IP DNA 逆向提取、主配色方案定义及境界阶梯编制。",
+    color: "border-emerald-500/30 text-emerald-400"
+  };
 
   const isPendingApproval = status === 'pending_approval';
 
   const handleSend = async () => {
     if (!message.trim() || isSending) return;
+    
+    const userMsgText = message.trim();
+    setMessage('');
     setIsSending(true);
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    // Append user message immediately
+    setConversations(prev => ({
+      ...prev,
+      [selectedAgent]: [
+        ...prev[selectedAgent],
+        { sender: 'user', text: userMsgText, timestamp: timeStr }
+      ]
+    }));
+
+    addLog(`💬 [神识音波] 发送微调指令至【${activeAgentInfo.name}】:「${userMsgText}」`);
+
     try {
-      await fetch(`/api/jobs/${jobId}/chat`, {
-        method: 'POST',
-        headers: { 'Content-type': 'application/json' },
-        body: JSON.stringify({ message })
-      });
-      setMessage('');
-      onRefreshJob();
-    } catch (e) {
+      // Determine request path
+      // If there is an active job in pending_approval, route through job chat
+      let res;
+      if (jobId && (status === 'pending_approval' || status === 'running')) {
+        res = await fetch(`/api/jobs/${jobId}/chat`, {
+          method: 'POST',
+          headers: { 'Content-type': 'application/json' },
+          body: JSON.stringify({
+            message: userMsgText,
+            agent_role: selectedAgent
+          })
+        });
+      } else {
+        // Direct workspace refinement route
+        res = await fetch(`/api/workspaces/${workspaceId}/refine`, {
+          method: 'POST',
+          headers: { 'Content-type': 'application/json' },
+          body: JSON.stringify({
+            message: userMsgText,
+            agent_role: selectedAgent
+          })
+        });
+      }
+
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        addLog(`✨ [${activeAgentInfo.name}]：融合神识成功，规格蓝图已被微调热合！`);
+        
+        // If workspace route, instantly propagate updated game spec
+        if (data.data) {
+          onUpdateSpec(data.data);
+        }
+
+        setConversations(prev => ({
+          ...prev,
+          [selectedAgent]: [
+            ...prev[selectedAgent],
+            {
+              sender: 'agent',
+              text: `已根据您的修改意愿「${userMsgText}」进行了神识微调优化。您可以通过查看最新 GDD 企划或启动编制来体验变更。`,
+              timestamp: timeStr
+            }
+          ]
+        }));
+        
+        onRefreshJob();
+      } else {
+        throw new Error(data.error || "请求失败");
+      }
+    } catch (e: any) {
       console.error(e);
+      addLog(`❌ [神识波动异常] 协同调整中断: ${e.message || e}`);
+      setConversations(prev => ({
+        ...prev,
+        [selectedAgent]: [
+          ...prev[selectedAgent],
+          {
+            sender: 'agent',
+            text: `⚠️ 抱歉主人，我在融合时神识出现微弱波动（无法连接 AI 服务），请稍后再试。`,
+            timestamp: timeStr
+          }
+        ]
+      }));
     } finally {
       setIsSending(false);
     }
   };
 
   const handleApprove = async () => {
+    if (!jobId || isApproving) return;
     setIsApproving(true);
+    addLog("⚡ [Master_Commit] 开始下达五部合一、编译生产落库指令...");
     try {
-      await fetch(`/api/jobs/${jobId}/approve`, {
+      const res = await fetch(`/api/jobs/${jobId}/approve`, {
         method: 'POST',
         headers: { 'Content-type': 'application/json' },
         body: JSON.stringify({})
       });
-      onRefreshJob();
-    } catch (e) {
+      if (res.ok) {
+        addLog("🧙‍♂️ 主控管线: GDD 已作为基准神格固化，编译车间已启动 ASMR 增频以及 Phaser 代码合成...");
+        onRefreshJob();
+      } else {
+        throw new Error("合并落库异常");
+      }
+    } catch (e: any) {
       console.error(e);
+      addLog(`❌ [生产线故障] 固化落库失败: ${e.message || e}`);
     } finally {
       setIsApproving(false);
     }
   };
 
-  if (!isPendingApproval && status !== 'running') return null;
-
   return (
     <motion.div 
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="bg-slate-900 border border-emerald-500/30 rounded-xl p-4 flex flex-col gap-4 relative overflow-hidden shadow-2xl shadow-emerald-900/10"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-slate-900/80 border border-slate-900 rounded-xl p-4 flex flex-col gap-4 relative overflow-hidden shadow-2xl"
     >
-      {/* Decorative gradient */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-cyan-500" />
+      {/* Dynamic Aura Accent */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500" />
       
-      <div className="flex items-start gap-3">
-        <div className="p-2 bg-emerald-950 rounded-lg text-emerald-400 shrink-0">
-          <Bot className="w-5 h-5" />
+      {/* Header with Sub-agent selection dropdown */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
+              神识共鸣 HITL Chamber
+            </h3>
+          </div>
+          <span className="text-4xs px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 uppercase font-mono animate-pulse">
+            会商窗口
+          </span>
         </div>
-        <div>
-          <h3 className="text-sm font-semibold text-slate-200">
-            {stageName} 代理
-          </h3>
-          <p className="text-xs text-slate-400 mt-1">
-            {isPendingApproval 
-              ? "我已经完成了当前阶段的设计方案。请在预览区（PRD/Manifest标签页）检查结果。你可以提出修改意见，也可以点击批准落库。" 
-              : "正在分析处理你的反馈，请稍候..."}
-          </p>
+        
+        {/* Custom Agent Dropdown Select Card */}
+        <div className="relative">
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 flex items-center justify-between text-left hover:border-slate-700 transition duration-200 cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl shrink-0">{activeAgentInfo.avatar}</span>
+              <div>
+                <h4 className="text-2xs font-semibold text-slate-200">{activeAgentInfo.name}</h4>
+                <p className="text-4xs text-slate-500 mt-0.5">{activeAgentInfo.title}</p>
+              </div>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+          </button>
+          
+          <AnimatePresence>
+            {showDropdown && (
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 5 }}
+                className="absolute z-50 left-0 right-0 mt-1 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto"
+              >
+                {[
+                  { id: "world_builder", name: "世界编制官", title: "DNA & 经济配置", avatar: "🧬" },
+                  { id: "narrative", name: "剧本大纲师", title: "剧情脉络与天劫", avatar: "📜" },
+                  { id: "sandbox", name: "沙盒架构师", title: "宿主框架与 store", avatar: "🛠️" },
+                  { id: "code_foundry", name: "代码铸造厂", title: "Phaser物理与声相", avatar: "⚙️" },
+                  { id: "auditor", name: "多模审计官", title: "视觉QA与排版", avatar: "👁️" }
+                ].map((agent) => (
+                  <button
+                    key={agent.id}
+                    onClick={() => {
+                      setSelectedAgent(agent.id);
+                      setShowDropdown(false);
+                    }}
+                    className={`w-full p-2.5 flex items-center gap-3 text-left hover:bg-slate-900/60 transition text-xs border-b border-slate-900/50 last:border-0 cursor-pointer ${selectedAgent === agent.id ? 'bg-slate-900/40 text-emerald-400' : 'text-slate-300'}`}
+                  >
+                    <span className="text-lg">{agent.avatar}</span>
+                    <div className="flex-1">
+                      <div className="font-semibold text-2xs">{agent.name}</div>
+                      <div className="text-4xs text-slate-500">{agent.title}</div>
+                    </div>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
+      {/* Selected Agent Description Card */}
+      <div className={`p-2.5 rounded-lg bg-slate-950 border ${activeAgentInfo.color} transition-all duration-300`}>
+        <p className="text-4xs text-slate-400 leading-relaxed font-sans">{activeAgentInfo.desc}</p>
+      </div>
+
+      {/* Internal Agent dialogue display log */}
+      <div className="bg-slate-950/60 rounded-lg border border-slate-900/60 p-3 h-[180px] overflow-y-auto flex flex-col gap-3 scrollbar-thin">
+        {conversations[selectedAgent].map((chat, ci) => (
+          <div key={ci} className={`flex flex-col gap-1 ${chat.sender === 'user' ? 'items-end' : 'items-start'}`}>
+            <div className="flex items-center gap-1.5 text-4xs text-slate-500">
+              <span>{chat.sender === 'user' ? '你' : activeAgentInfo.name}</span>
+              <span>•</span>
+              <span>{chat.timestamp}</span>
+            </div>
+            <div className={`px-2.5 py-1.5 rounded-lg max-w-[90%] text-3xs ${chat.sender === 'user' ? 'bg-emerald-950/40 border border-emerald-500/20 text-slate-200 rounded-tr-none' : 'bg-slate-900/80 border border-slate-800 text-slate-300 rounded-tl-none'}`}>
+              {chat.text}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Message Prompt Input Field */}
       <div className="flex flex-col gap-2">
         <div className="relative">
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            disabled={!isPendingApproval || isSending}
-            placeholder="告诉 Agent 你的修改意见..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 min-h-[80px] resize-none disabled:opacity-50"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            disabled={isSending}
+            placeholder={`告诉 ${activeAgentInfo.name} 你的修改意见 (Enter 发送)...`}
+            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-2xs text-slate-200 focus:outline-none focus:border-emerald-500 min-h-[70px] max-h-[120px] resize-none disabled:opacity-50 font-sans"
           />
           <button 
             onClick={handleSend}
-            disabled={!isPendingApproval || !message.trim() || isSending}
-            className="absolute bottom-2 right-2 p-1.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded disabled:opacity-30 transition cursor-pointer"
+            disabled={!message.trim() || isSending}
+            className="absolute bottom-2.5 right-2 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 rounded font-semibold text-3xs disabled:opacity-30 transition cursor-pointer flex items-center gap-1"
           >
-            <Send className="w-3 h-3" />
+            {isSending ? (
+              <RefreshCw className="w-3 h-3 animate-spin" />
+            ) : (
+              <Send className="w-3 h-3" />
+            )}
+            神识传输
           </button>
         </div>
 
-        {isPendingApproval && (
+        {/* Master Pipeline Approve and Commit gate */}
+        {isPendingApproval && jobId && (
           <button 
             onClick={handleApprove}
             disabled={isApproving}
-            className="w-full mt-2 bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-400 font-semibold py-2 rounded text-xs transition flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full mt-1 bg-gradient-to-r from-emerald-950 to-teal-950 hover:from-emerald-900 hover:to-teal-900 border border-emerald-500/50 text-emerald-400 font-semibold py-2 rounded text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/50"
           >
             <Check className="w-4 h-4" />
-            {isApproving ? " 落库合并中..." : "确认无误，合成落库 (Approve & Merge)"}
+            {isApproving ? " 编译固化中..." : "确认无误，合成落库 (Approve & Merge)"}
           </button>
         )}
       </div>
-
-      {status === 'running' && (
-        <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-10">
-          <div className="bg-slate-900 border border-slate-700 px-4 py-2 rounded shadow-xl flex items-center gap-2 text-xs text-emerald-400 animate-pulse">
-            <Bot className="w-4 h-4" /> 处理中...
-          </div>
-        </div>
-      )}
     </motion.div>
   );
 }

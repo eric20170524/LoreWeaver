@@ -42,6 +42,7 @@ class JobResponse(BaseModel):
 
 class FeedbackRequest(BaseModel):
     message: str
+    agent_role: Optional[str] = "world_builder"
 
 class ApproveRequest(BaseModel):
     modifications: Optional[Any] = None

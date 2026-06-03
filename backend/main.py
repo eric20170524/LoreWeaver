@@ -177,15 +177,23 @@ async def run_async_compilation(job_id: str, final_gdd: dict, db_session_maker):
     finally:
         db.close()
 
-async def run_async_feedback(job_id: str, db_session_maker, message: str):
+async def run_async_feedback(job_id: str, db_session_maker, message: str, agent_role: Optional[str] = "world_builder"):
     db = db_session_maker()
     try:
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             return
 
+        role_cn = {
+            "world_builder": "世界编制官 (WorldBuilder)",
+            "narrative": "剧本大纲师 (Narrative)",
+            "sandbox": "沙盒架构师 (SandboxArchitect)",
+            "code_foundry": "代码铸造厂 (CodeFoundry)",
+            "auditor": "多模审计官 (Auditor)"
+        }.get(agent_role, "世界编制官 (WorldBuilder)")
+
         job.status = "running"
-        job.progress = "🔄 WorldBuilder: 正在分析您的修改意见:「%s」..." % message
+        job.progress = f"🔄 {role_cn}: 正在根据神识意见微调方案:「{message}」..."
         db.commit()
         await asyncio.sleep(1.5)
 
@@ -193,9 +201,9 @@ async def run_async_feedback(job_id: str, db_session_maker, message: str):
         if job.result_json:
             current_gdd = json.loads(job.result_json)
 
-        new_gdd = await WorldBuilderAgent.adjust_gdd(current_gdd, message)
+        new_gdd = await WorldBuilderAgent.adjust_gdd(current_gdd, message, agent_role)
 
-        job.progress = "✅ WorldBuilder: 意见修改应用成功，等待人机再次确认。"
+        job.progress = f"✅ {role_cn}: 修改已经完美融入游戏企划书，等待人机最后编译落库确认。"
         job.result_json = json.dumps(new_gdd, ensure_ascii=False)
         job.status = "pending_approval"
         db.commit()
@@ -206,7 +214,7 @@ async def run_async_feedback(job_id: str, db_session_maker, message: str):
             job = db.query(Job).filter(Job.id == job_id).first()
             if job:
                 job.status = "pending_approval"
-                job.progress = f"⚠️ 反馈合并异常: {str(e)}"
+                job.progress = f"⚠️ 神识反馈合并异常: {str(e)}"
                 db.commit()
         except:
             pass
@@ -448,11 +456,48 @@ def api_chat_job(job_id: str, payload: FeedbackRequest, background_tasks: Backgr
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Launch feedback refinement thread
+    # Launch feedback refinement thread and pass agent_role
     from .database import SessionLocal
-    background_tasks.add_task(run_async_feedback, job_id, SessionLocal, payload.message)
+    background_tasks.add_task(run_async_feedback, job_id, SessionLocal, payload.message, payload.agent_role)
 
     return {"success": True}
+
+@app.post("/api/workspaces/{workspace_id}/refine")
+async def api_refine_workspace(workspace_id: str, payload: FeedbackRequest, db: Session = Depends(get_db)):
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    ws_path = get_ws_path(workspace_id)
+    manifest_path = os.path.join(ws_path, "manifest.json")
+    
+    current_gdd = {}
+    if os.path.exists(manifest_path):
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            try:
+                current_gdd = json.load(f)
+            except:
+                pass
+                
+    active_job = db.query(Job).filter(Job.workspace_id == workspace_id).order_by(Job.created_at.desc()).first()
+    if not current_gdd and active_job and active_job.result_json:
+        try:
+            current_gdd = json.loads(active_job.result_json)
+        except:
+            pass
+
+    # Direct agent invocation
+    new_gdd = await WorldBuilderAgent.adjust_gdd(current_gdd, payload.message, payload.agent_role)
+    
+    # Save optimized manifest
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(new_gdd, f, ensure_ascii=False, indent=2)
+        
+    if active_job:
+        active_job.result_json = json.dumps(new_gdd, ensure_ascii=False)
+        db.commit()
+
+    return {"success": True, "data": new_gdd}
 
 @app.post("/api/audit")
 def api_post_audit(payload: dict):
