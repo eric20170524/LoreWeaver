@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0",
+  "id": "boss_phases",
+  "title": "Boss Phases",
+  "category": "boss_modifier",
+  "status": "candidate",
+  "modifierFor": ["survivor_horde", "shooter_duel", "dodge_counter_boss"],
+  "knobs": {
+    "phaseThresholds": { "type": "array", "default": [0.66, 0.33], "patchLevel": "L1" },
+    "patterns": { "type": "array", "default": [], "patchLevel": "L2" },
+    "phaseAnnouncement": { "type": "boolean", "default": true, "patchLevel": "L1" }
+  },
+  "requiredCoreSystems": ["GameplayModifier", "BossController", "TelegraphRenderer", "VFX"],
+  "sourceProvenance": ["minigame/xianni/nodes/node12.js", "minigame/Path_to_Immortality/node15.html"],
+  "knownRisks": ["phase transitions need cleanup to avoid stacked timers/projectiles"]
+}

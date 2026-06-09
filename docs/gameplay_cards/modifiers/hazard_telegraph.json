@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "id": "hazard_telegraph",
+  "title": "Hazard Telegraph",
+  "category": "hazard_modifier",
+  "status": "candidate",
+  "modifierFor": ["survivor_horde", "platform_escape", "hazard_collect_waves", "dodge_counter_boss"],
+  "knobs": {
+    "warningMs": { "type": "integer", "default": 900, "min": 100, "max": 10000, "patchLevel": "L1" },
+    "activeMs": { "type": "integer", "default": 250, "min": 50, "max": 10000, "patchLevel": "L1" },
+    "damage": { "type": "number", "default": 20, "min": 0, "max": 9999, "patchLevel": "L1" },
+    "shape": { "type": "enum", "values": ["line", "circle", "rect", "polygon"], "default": "circle", "patchLevel": "L2" }
+  },
+  "requiredCoreSystems": ["GameplayModifier", "TelegraphRenderer", "Collision", "Timer"],
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node17.html",
+    "minigame/xianni/nodes/node3.js",
+    "minigame/xianni/nodes/node6.js"
+  ],
+  "knownRisks": [
+    "the visual warning must match the actual hit area",
+    "timers must be cleaned up on retreat and scene transition"
+  ]
+}

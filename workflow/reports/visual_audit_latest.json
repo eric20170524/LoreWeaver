@@ -1,0 +1,59 @@
+{
+  "gate": "visual_audit",
+  "status": "passed",
+  "createdAt": "2026-06-09T08:41:45Z",
+  "method": "codex_antigravity_local_visual_audit",
+  "data": {
+    "checks": [
+      {
+        "id": "real_screenshot_input",
+        "name": "Real Canvas Screenshot",
+        "status": "PASS",
+        "remarks": "Source=survivor_horde_e2e_canvas; PNG bytes=34572."
+      },
+      {
+        "id": "canvas_nonblank_pixels",
+        "name": "Canvas Nonblank Pixel Signal",
+        "status": "PASS",
+        "remarks": "nonBackgroundRatio=0.00591, luminanceStdDev=7.638."
+      },
+      {
+        "id": "phaser_fit_scale",
+        "name": "Phaser FIT Scaling",
+        "status": "PASS",
+        "remarks": "Captured 720x1280; expected a mobile-first 9:16-ish viewport."
+      },
+      {
+        "id": "text_wrap_risk",
+        "name": "CJK Text Wrap Risk",
+        "status": "PASS",
+        "remarks": "No unusually long node title/intro detected."
+      },
+      {
+        "id": "touch_safe_area",
+        "name": "Touch Safe-Area Frame",
+        "status": "PASS",
+        "remarks": "Canvas CSS frame=720x1280."
+      }
+    ],
+    "vlm_feedback": "Codex/Antigravity local visual audit path consumed a real Phaser screenshot. Deterministic pixel gate is clean; Codex CLI status: available_disabled.",
+    "prompt_reflow_diff": "Require every visual audit request to include a real canvas PNG, canvas CSS frame metrics, and deterministic nonblank/scale/text-wrap checks before any optional vision-agent critique.",
+    "image_analysis": {
+      "valid": true,
+      "supportedForPixels": true,
+      "width": 720,
+      "height": 1280,
+      "byteLength": 34572,
+      "sampleCount": 61440,
+      "alphaPixelRatio": 1.0,
+      "nonBackgroundRatio": 0.00591,
+      "luminanceStdDev": 7.638,
+      "hasMeaningfulPixels": true
+    },
+    "codex_visual_agent": {
+      "status": "available_disabled",
+      "enabled": false,
+      "cli": "/Applications/Codex.app/Contents/Resources/codex"
+    }
+  }
+}

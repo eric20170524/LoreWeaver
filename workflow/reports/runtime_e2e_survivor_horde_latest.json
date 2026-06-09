@@ -1,0 +1,94 @@
+{
+  "gate": "runtime_e2e",
+  "target": "minigame_master/core/demo/survivor_horde",
+  "status": "passed",
+  "createdAt": "2026-06-09T08:44:36Z",
+  "method": "Playwright against Vite-served survivor_horde demo",
+  "server": {
+    "url": "http://127.0.0.1:50624/",
+    "command": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/node_modules/.bin/vite --config /Users/lm/pyProj/hungry-for-knowledge/minigame_master/core/demo/survivor_horde/vite.config.mjs --host 127.0.0.1 --port 50624 --strictPort"
+  },
+  "assertions": {
+    "startButtonUnique": true,
+    "canvasCreated": true,
+    "canvasNonblankBeforeRun": true,
+    "runningStateObserved": true,
+    "timerUpdated": true,
+    "combatLoopObserved": true,
+    "canvasNonblankDuringRun": true,
+    "retreatResultReason": true,
+    "returnedToMenu": true,
+    "consoleErrors": 0
+  },
+  "observedState": {
+    "initialCanvas": {
+      "present": true,
+      "width": 720,
+      "height": 1280,
+      "dataUrlLength": 54966,
+      "nonBlank": true
+    },
+    "duringRunStart": {
+      "mode": "run",
+      "status": "running",
+      "hasLastResult": false,
+      "nodeId": "survivor_horde_demo",
+      "hp": 120,
+      "timer": 30,
+      "kills": 0,
+      "score": 0
+    },
+    "duringRunAfterCombat": {
+      "mode": "run",
+      "status": "running",
+      "hasLastResult": false,
+      "nodeId": "survivor_horde_demo",
+      "hp": 120,
+      "timer": 24,
+      "kills": 2,
+      "score": 0
+    },
+    "combatProbe": {
+      "adapterStatus": "running",
+      "enemies": 5,
+      "bullets": 2,
+      "collectibles": 2
+    },
+    "runningCanvas": {
+      "present": true,
+      "width": 720,
+      "height": 1280,
+      "dataUrlLength": 47410,
+      "nonBlank": true
+    },
+    "afterRetreat": {
+      "mode": "result",
+      "status": "ended",
+      "hasLastResult": false,
+      "nodeId": "survivor_horde_demo",
+      "hp": 120,
+      "timer": 24,
+      "kills": 2,
+      "score": 0,
+      "resultReason": "retreated",
+      "resultSuccess": false,
+      "rewards": {}
+    },
+    "afterBack": {
+      "mode": "menu",
+      "status": "idle",
+      "hasLastResult": true,
+      "nodeId": "survivor_horde_demo",
+      "hp": 120,
+      "timer": 24,
+      "kills": 2,
+      "score": 0,
+      "resultReason": "retreated",
+      "resultSuccess": false,
+      "rewards": {}
+    }
+  },
+  "errors": [],
+  "stdout": "\n  VITE v6.4.3  ready in 105 ms\n\n  ➜  Local:   http://127.0.0.1:50624/\n",
+  "stderr": ""
+}
