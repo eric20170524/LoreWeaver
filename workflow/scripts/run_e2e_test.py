@@ -5,10 +5,272 @@ import time
 import sys
 import json
 import os
+import socket
 from datetime import datetime
+from pathlib import Path
 from playwright.sync_api import sync_playwright
 
+SCRIPT_PATH = Path(__file__).resolve()
+LORE_ROOT = SCRIPT_PATH.parents[2]
+REPO_ROOT = LORE_ROOT.parent
+REPORTS_DIR = LORE_ROOT / "workflow" / "reports"
+SURVIVOR_DEMO_CONFIG = REPO_ROOT / "minigame_master" / "core" / "demo" / "survivor_horde" / "vite.config.mjs"
+
+def utc_now_iso():
+    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+def find_open_port():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+def wait_for_url(url, timeout=12):
+    deadline = time.time() + timeout
+    last_error = None
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=1) as res:
+                if res.status == 200:
+                    return
+        except Exception as exc:
+            last_error = exc
+        time.sleep(0.25)
+    raise RuntimeError(f"Timed out waiting for {url}: {last_error}")
+
+def stop_process(proc):
+    if proc.poll() is None:
+        proc.terminate()
+    try:
+        return proc.communicate(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        return proc.communicate(timeout=5)
+
+def read_demo_state(page):
+    return page.evaluate("""
+    () => {
+        const stateNode = document.querySelector('[data-testid="test-state"]');
+        if (!stateNode || !stateNode.textContent) return {};
+        try {
+            return JSON.parse(stateNode.textContent);
+        } catch (_error) {
+            return {};
+        }
+    }
+    """)
+
+def read_canvas_probe(page):
+    return page.evaluate("""
+    () => {
+        const canvas = document.querySelector('canvas');
+        if (!canvas) return { present: false };
+        try {
+            const dataUrl = canvas.toDataURL('image/png');
+            return {
+                present: true,
+                width: canvas.width,
+                height: canvas.height,
+                dataUrlLength: dataUrl.length,
+                nonBlank: dataUrl.length > 1500
+            };
+        } catch (error) {
+            return {
+                present: true,
+                width: canvas.width,
+                height: canvas.height,
+                dataUrlLength: 0,
+                nonBlank: false,
+                error: String(error)
+            };
+        }
+    }
+    """)
+
+def read_combat_probe(page):
+    return page.evaluate("""
+    () => {
+        const adapter = window.__LW_SURVIVOR_DEMO__;
+        return {
+            adapterStatus: adapter?.status || null,
+            enemies: adapter?.groups?.enemies?.getLength?.() || 0,
+            bullets: adapter?.groups?.bullets?.getLength?.() || 0,
+            collectibles: adapter?.groups?.collectibles?.getLength?.() || 0
+        };
+    }
+    """)
+
+def write_survivor_report(report):
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    with open(REPORTS_DIR / "runtime_e2e_survivor_horde_latest.json", "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+
+def run_survivor_horde_demo_test():
+    vite_bin = LORE_ROOT / "node_modules" / ".bin" / "vite"
+    if not vite_bin.exists():
+        raise RuntimeError(f"Missing Vite binary: {vite_bin}")
+    if not SURVIVOR_DEMO_CONFIG.exists():
+        raise RuntimeError(f"Missing survivor horde Vite config: {SURVIVOR_DEMO_CONFIG}")
+
+    port = find_open_port()
+    url = f"http://127.0.0.1:{port}/"
+    proc = subprocess.Popen(
+        [
+            str(vite_bin),
+            "--config",
+            str(SURVIVOR_DEMO_CONFIG),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+            "--strictPort"
+        ],
+        cwd=str(REPO_ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    errors = []
+    observed = {}
+    assertions = {}
+    stdout = ""
+    stderr = ""
+
+    try:
+        wait_for_url(url)
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 720, "height": 1280}, device_scale_factor=1)
+
+            page.on("pageerror", lambda err: errors.append(f"Page Error: {err}"))
+            page.on("console", lambda msg: errors.append(f"Console Error: {msg.text}") if msg.type == "error" else None)
+
+            try:
+                page.goto(url)
+                page.wait_for_selector('[data-testid="start-run"]', timeout=10000)
+                assertions["startButtonUnique"] = page.locator('[data-testid="start-run"]').count() == 1
+                if not assertions["startButtonUnique"]:
+                    raise RuntimeError("Expected exactly one survivor_horde start button.")
+
+                initial_canvas = read_canvas_probe(page)
+                observed["initialCanvas"] = initial_canvas
+                assertions["canvasCreated"] = bool(initial_canvas.get("present"))
+                assertions["canvasNonblankBeforeRun"] = bool(initial_canvas.get("nonBlank"))
+
+                page.locator('[data-testid="start-run"]').click()
+                page.wait_for_function("""
+                () => {
+                    const node = document.querySelector('[data-testid="test-state"]');
+                    if (!node?.textContent) return false;
+                    try {
+                        const state = JSON.parse(node.textContent);
+                        return state.mode === 'run' && state.status === 'running';
+                    } catch (_error) {
+                        return false;
+                    }
+                }
+                """, timeout=10000)
+
+                observed["duringRunStart"] = read_demo_state(page)
+                page.mouse.move(360, 640)
+                page.mouse.down()
+                page.mouse.move(420, 540)
+                page.mouse.up()
+                page.wait_for_timeout(6200)
+                observed["duringRunAfterCombat"] = read_demo_state(page)
+                observed["combatProbe"] = read_combat_probe(page)
+                running_canvas = read_canvas_probe(page)
+                observed["runningCanvas"] = running_canvas
+
+                start_timer = observed["duringRunStart"].get("timer")
+                later_timer = observed["duringRunAfterCombat"].get("timer")
+                assertions["runningStateObserved"] = observed["duringRunStart"].get("status") == "running"
+                assertions["timerUpdated"] = isinstance(start_timer, (int, float)) and isinstance(later_timer, (int, float)) and later_timer < start_timer
+                assertions["combatLoopObserved"] = (
+                    observed["duringRunAfterCombat"].get("kills", 0) > 0
+                    or observed["combatProbe"].get("enemies", 0) > 0
+                    or observed["combatProbe"].get("bullets", 0) > 0
+                    or observed["combatProbe"].get("collectibles", 0) > 0
+                )
+                assertions["canvasNonblankDuringRun"] = bool(running_canvas.get("nonBlank"))
+
+                page.locator('[data-testid="retreat-run"]').click()
+                page.wait_for_function("""
+                () => {
+                    const node = document.querySelector('[data-testid="test-state"]');
+                    if (!node?.textContent) return false;
+                    try {
+                        const state = JSON.parse(node.textContent);
+                        return state.mode === 'result' && state.resultReason === 'retreated';
+                    } catch (_error) {
+                        return false;
+                    }
+                }
+                """, timeout=10000)
+                observed["afterRetreat"] = read_demo_state(page)
+                assertions["retreatResultReason"] = observed["afterRetreat"].get("resultReason") == "retreated"
+
+                page.locator('[data-testid="back-menu"]').click()
+                page.wait_for_function("""
+                () => {
+                    const node = document.querySelector('[data-testid="test-state"]');
+                    if (!node?.textContent) return false;
+                    try {
+                        const state = JSON.parse(node.textContent);
+                        return state.mode === 'menu' && state.hasLastResult === true;
+                    } catch (_error) {
+                        return false;
+                    }
+                }
+                """, timeout=10000)
+                observed["afterBack"] = read_demo_state(page)
+                assertions["returnedToMenu"] = observed["afterBack"].get("mode") == "menu"
+
+            finally:
+                browser.close()
+
+    except Exception as exc:
+        errors.append(f"Interaction failure: {exc}")
+    finally:
+        stdout, stderr = stop_process(proc)
+
+    assertions["consoleErrors"] = len([err for err in errors if err.startswith("Console Error:")])
+    passed = not errors and all(value is True for key, value in assertions.items() if key != "consoleErrors")
+
+    report = {
+        "gate": "runtime_e2e",
+        "target": "minigame_master/core/demo/survivor_horde",
+        "status": "passed" if passed else "failed",
+        "createdAt": utc_now_iso(),
+        "method": "Playwright against Vite-served survivor_horde demo",
+        "server": {
+            "url": url,
+            "command": f"{vite_bin} --config {SURVIVOR_DEMO_CONFIG} --host 127.0.0.1 --port {port} --strictPort"
+        },
+        "assertions": assertions,
+        "observedState": observed,
+        "errors": errors,
+        "stdout": stdout,
+        "stderr": stderr
+    }
+    write_survivor_report(report)
+
+    print(json.dumps({
+        "gate": report["gate"],
+        "target": report["target"],
+        "status": report["status"],
+        "assertions": report["assertions"],
+        "errors": report["errors"]
+    }, ensure_ascii=False, indent=2))
+
+    if not passed:
+        sys.exit(1)
+    sys.exit(0)
+
 def run_test(game_name, node_id=None, grant_state_str=None):
+    if game_name == 'survivor_horde':
+        run_survivor_horde_demo_test()
+
     print(f'Starting HTTP server for {game_name}...')
     proc = subprocess.Popen(['python3', '-m', 'http.server', '8080'])
     time.sleep(2) # Give server time to start
@@ -537,7 +799,7 @@ def run_test(game_name, node_id=None, grant_state_str=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run Playwright tests for minigames.')
-    parser.add_argument('--game', required=True, help='Name of the game directory (e.g., xianni, perfectworld_dahuang)')
+    parser.add_argument('--game', required=True, help='Name of the game directory or core demo (e.g., xianni, perfectworld_dahuang, survivor_horde)')
     parser.add_argument('--node', type=int, help='Specific Node ID to run a smoke test on')
     parser.add_argument('--grant-state', help='JSON string to inject into localStorage before testing')
     args = parser.parse_args()

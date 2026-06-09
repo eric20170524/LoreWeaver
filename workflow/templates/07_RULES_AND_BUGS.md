@@ -57,6 +57,8 @@
 - **【2026-05-28 沉淀】** 挂机引擎 `IdleEngine` 必须严格限制 fallback (`setInterval`) 运行边界。非测试环境下如果缺少 `scene` 绑定，必须通过带 Error Call Stack 的 `console.warn` 强警示开发者，防止隐藏的生命周期泄露。
 - **【2026-05-28 沉淀】** 核心库真实位置是 `minigame_master/core/lib`。从 `minigame/[slug]/js`、`scenes`、`nodes` 内引用时，必须使用能回到仓库根目录的正确相对路径或 Vite alias；`../../core/lib/...` 容易解析到不存在的 `minigame/core/lib`，必须用 `npm run build` 作为硬校验。
 - **【2026-05-28 沉淀】** 构建成功和 console clean 不能证明布局合格。UI、弹窗、玩法说明或响应式改动必须用 Playwright 保存并查看桌面宽屏与移动端真机/设备模拟截图；文字溢出、遮挡、按钮越界或安全区问题必须先修复。
+- **【2026-06-08 沉淀】** Canvas 游戏的 E2E 不能只依赖截图或猜坐标。必须暴露稳定的 DOM test-state 镜像或 TestHooks，使测试能断言 scene、timer、HP、result 与 console error。
+- **【2026-06-08 沉淀】** CDN Phaser 可用于原型，但自动化 gate 必须支持本地可服务的 Phaser bundle 或临时测试根目录，避免网络波动导致运行时误判失败。
 
 ## 💡 4. 最佳实践与技术规范 (Best Practices)
 

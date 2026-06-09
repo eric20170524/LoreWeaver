@@ -52,3 +52,11 @@ this.events.once('shutdown', () => {
     if (this.idleEngine) this.idleEngine.stop();
 });
 ```
+
+## 准则 6：Adapter/Modifier 清理合同
+沉淀到 `minigame_master/core/lib/gameplay` 的可复用玩法不得直接写外层 Store。Adapter 只能通过 `NodeResult` 结束，modifier 只能通过 context 操作 adapter 暴露的 helper，并且必须实现 `uninstall(context)`。
+
+- Adapter 的撤退、失败、超时、成功必须走同一个 `finish()` 流程。
+- `finish()` 必须有 transition guard，避免同一帧碰撞重复结算。
+- `finish()` 必须清理 timer、physics group、player、modifier 临时渲染对象和测试状态。
+- E2E 必须能观测 `status=running/ended`、timer、关键计数与最近 result。

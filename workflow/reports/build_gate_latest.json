@@ -1,0 +1,51 @@
+{
+  "gate": "build",
+  "status": "passed",
+  "createdAt": "2026-06-09T08:44:36.909Z",
+  "results": [
+    {
+      "name": "loreweaver_typescript",
+      "command": "npm run lint",
+      "cwd": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver",
+      "status": "passed",
+      "exitCode": 0,
+      "startedAt": "2026-06-09T08:44:14.672Z",
+      "finishedAt": "2026-06-09T08:44:19.036Z",
+      "stdout": "\n> react-example@0.0.0 lint\n> tsc --noEmit\n\n",
+      "stderr": ""
+    },
+    {
+      "name": "loreweaver_build",
+      "command": "npm run build",
+      "cwd": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver",
+      "status": "passed",
+      "exitCode": 0,
+      "startedAt": "2026-06-09T08:44:19.036Z",
+      "finishedAt": "2026-06-09T08:44:23.465Z",
+      "stdout": "\n> react-example@0.0.0 build\n> vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs\n\nvite v6.4.3 building for production...\ntransforming...\n✓ 2080 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                     0.41 kB │ gzip:   0.28 kB\ndist/assets/index-d__pEaSr.css     49.37 kB │ gzip:   8.50 kB\ndist/assets/index-CEWJb6jg.js   2,085.92 kB │ gzip: 509.74 kB\n✓ built in 3.73s\n",
+      "stderr": "\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\n  dist/server.cjs      4.2kb\n  dist/server.cjs.map  5.6kb\n\n⚡ Done in 1ms\n"
+    },
+    {
+      "name": "survivor_horde_demo_build",
+      "command": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/node_modules/.bin/vite build --config minigame_master/core/demo/survivor_horde/vite.config.mjs --outDir /private/tmp/lw_survivor_demo_dist",
+      "cwd": "/Users/lm/pyProj/hungry-for-knowledge",
+      "status": "passed",
+      "exitCode": 0,
+      "startedAt": "2026-06-09T08:44:23.465Z",
+      "finishedAt": "2026-06-09T08:44:25.733Z",
+      "stdout": "vite v6.4.3 building for production...\ntransforming...\n✓ 15 modules transformed.\nrendering chunks...\ncomputing gzip size...\n../../../../../../../../private/tmp/lw_survivor_demo_dist/index.html                    1.61 kB │ gzip:   0.66 kB\n../../../../../../../../private/tmp/lw_survivor_demo_dist/assets/index-D9Of3yGL.js  1,679.39 kB │ gzip: 382.15 kB\n✓ built in 2.09s\n",
+      "stderr": "\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n"
+    },
+    {
+      "name": "survivor_horde_runtime_e2e",
+      "command": "python3 LoreWeaver/workflow/scripts/run_e2e_test.py --game survivor_horde",
+      "cwd": "/Users/lm/pyProj/hungry-for-knowledge",
+      "status": "passed",
+      "exitCode": 0,
+      "startedAt": "2026-06-09T08:44:25.733Z",
+      "finishedAt": "2026-06-09T08:44:36.908Z",
+      "stdout": "{\n  \"gate\": \"runtime_e2e\",\n  \"target\": \"minigame_master/core/demo/survivor_horde\",\n  \"status\": \"passed\",\n  \"assertions\": {\n    \"startButtonUnique\": true,\n    \"canvasCreated\": true,\n    \"canvasNonblankBeforeRun\": true,\n    \"runningStateObserved\": true,\n    \"timerUpdated\": true,\n    \"combatLoopObserved\": true,\n    \"canvasNonblankDuringRun\": true,\n    \"retreatResultReason\": true,\n    \"returnedToMenu\": true,\n    \"consoleErrors\": 0\n  },\n  \"errors\": []\n}\n",
+      "stderr": ""
+    }
+  ]
+}

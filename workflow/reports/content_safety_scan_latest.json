@@ -1,0 +1,12 @@
+{
+  "gate": "content_safety_scan",
+  "status": "passed",
+  "createdAt": "2026-06-09T08:43:55.975Z",
+  "exportSurfaces": [
+    "minigame_master/core/lib",
+    "minigame_master/core/demo",
+    "LoreWeaver/src",
+    "LoreWeaver/docs/gameplay_cards"
+  ],
+  "findings": []
+}

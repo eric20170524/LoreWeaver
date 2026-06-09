@@ -1042,6 +1042,9 @@ export function initializePhaserGame(
       default: "arcade",
       arcade: { debug: false }
     },
+    render: {
+      preserveDrawingBuffer: true
+    },
     scene: [BootScene, MainScene, LevelActiveScene],
     transparent: true
   };

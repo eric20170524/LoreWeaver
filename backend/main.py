@@ -3,6 +3,14 @@ import uuid
 import json
 import time
 import asyncio
+import base64
+import binascii
+import math
+import shutil
+import struct
+import subprocess
+import tempfile
+import zlib
 from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,7 +38,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DATA_DIR = os.path.join(os.getcwd(), "data")
+LORE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+REPORTS_DIR = os.path.join(LORE_ROOT, "workflow", "reports")
+DATA_DIR = os.path.join(LORE_ROOT, "data")
 WORKSPACES_DIR = os.path.join(DATA_DIR, "workspaces")
 os.makedirs(WORKSPACES_DIR, exist_ok=True)
 
@@ -499,17 +509,325 @@ async def api_refine_workspace(workspace_id: str, payload: FeedbackRequest, db: 
 
     return {"success": True, "data": new_gdd}
 
+def decode_png_data_url(data_url: str) -> bytes:
+    if not data_url:
+        raise ValueError("Missing screenshot_base64.")
+    encoded = data_url.split(",", 1)[1] if "," in data_url else data_url
+    try:
+        return base64.b64decode(encoded, validate=True)
+    except binascii.Error as exc:
+        raise ValueError(f"Invalid base64 screenshot: {exc}") from exc
+
+def paeth_predictor(a: int, b: int, c: int) -> int:
+    p = a + b - c
+    pa = abs(p - a)
+    pb = abs(p - b)
+    pc = abs(p - c)
+    if pa <= pb and pa <= pc:
+        return a
+    if pb <= pc:
+        return b
+    return c
+
+def unfilter_png_scanline(filter_type: int, scanline: bytearray, previous: bytearray, bpp: int) -> bytearray:
+    for i in range(len(scanline)):
+        left = scanline[i - bpp] if i >= bpp else 0
+        up = previous[i] if previous else 0
+        up_left = previous[i - bpp] if previous and i >= bpp else 0
+
+        if filter_type == 1:
+            scanline[i] = (scanline[i] + left) & 0xFF
+        elif filter_type == 2:
+            scanline[i] = (scanline[i] + up) & 0xFF
+        elif filter_type == 3:
+            scanline[i] = (scanline[i] + ((left + up) // 2)) & 0xFF
+        elif filter_type == 4:
+            scanline[i] = (scanline[i] + paeth_predictor(left, up, up_left)) & 0xFF
+        elif filter_type != 0:
+            raise ValueError(f"Unsupported PNG filter type: {filter_type}")
+    return scanline
+
+def analyze_png_screenshot(data_url: str) -> dict:
+    png_bytes = decode_png_data_url(data_url)
+    if not png_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("Screenshot is not a PNG data URL.")
+
+    pos = 8
+    width = height = bit_depth = color_type = interlace = None
+    idat_chunks = []
+
+    while pos + 8 <= len(png_bytes):
+        chunk_len = struct.unpack(">I", png_bytes[pos:pos + 4])[0]
+        chunk_type = png_bytes[pos + 4:pos + 8]
+        chunk_data = png_bytes[pos + 8:pos + 8 + chunk_len]
+        pos += 12 + chunk_len
+
+        if chunk_type == b"IHDR":
+            width, height, bit_depth, color_type, _compression, _filter, interlace = struct.unpack(">IIBBBBB", chunk_data)
+        elif chunk_type == b"IDAT":
+            idat_chunks.append(chunk_data)
+        elif chunk_type == b"IEND":
+            break
+
+    if not width or not height:
+        raise ValueError("PNG is missing IHDR dimensions.")
+    if bit_depth != 8 or color_type not in (0, 2, 6) or interlace != 0:
+        return {
+            "valid": True,
+            "width": width,
+            "height": height,
+            "supportedForPixels": False,
+            "reason": f"Unsupported PNG format: bitDepth={bit_depth}, colorType={color_type}, interlace={interlace}",
+            "byteLength": len(png_bytes)
+        }
+
+    bpp = {0: 1, 2: 3, 6: 4}[color_type]
+    stride = width * bpp
+    raw = zlib.decompress(b"".join(idat_chunks))
+    previous = bytearray(stride)
+    sample_every = max(1, (width * height) // 60000)
+    sample_count = 0
+    non_background = 0
+    alpha_pixels = 0
+    luminance_sum = 0.0
+    luminance_sq_sum = 0.0
+    background = None
+    raw_pos = 0
+
+    for y in range(height):
+        filter_type = raw[raw_pos]
+        raw_pos += 1
+        scanline = bytearray(raw[raw_pos:raw_pos + stride])
+        raw_pos += stride
+        scanline = unfilter_png_scanline(filter_type, scanline, previous, bpp)
+
+        for x in range(0, width, sample_every):
+            i = x * bpp
+            if color_type == 6:
+                r, g, b, a = scanline[i], scanline[i + 1], scanline[i + 2], scanline[i + 3]
+            elif color_type == 2:
+                r, g, b, a = scanline[i], scanline[i + 1], scanline[i + 2], 255
+            else:
+                r = g = b = scanline[i]
+                a = 255
+
+            if background is None:
+                background = (r, g, b)
+
+            luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            luminance_sum += luminance
+            luminance_sq_sum += luminance * luminance
+            sample_count += 1
+            if a > 8:
+                alpha_pixels += 1
+            if a > 8 and sum(abs(channel - base) for channel, base in zip((r, g, b), background)) > 24:
+                non_background += 1
+
+        previous = scanline
+
+    mean = luminance_sum / max(sample_count, 1)
+    variance = max((luminance_sq_sum / max(sample_count, 1)) - mean * mean, 0)
+    luminance_stddev = math.sqrt(variance)
+    non_background_ratio = non_background / max(sample_count, 1)
+
+    return {
+        "valid": True,
+        "supportedForPixels": True,
+        "width": width,
+        "height": height,
+        "byteLength": len(png_bytes),
+        "sampleCount": sample_count,
+        "alphaPixelRatio": alpha_pixels / max(sample_count, 1),
+        "nonBackgroundRatio": round(non_background_ratio, 5),
+        "luminanceStdDev": round(luminance_stddev, 3),
+        "hasMeaningfulPixels": non_background_ratio > 0.005 and luminance_stddev > 2.5
+    }
+
+def make_audit_check(check_id: str, name: str, status: str, remarks: str) -> dict:
+    return {
+        "id": check_id,
+        "name": name,
+        "status": status,
+        "remarks": remarks
+    }
+
+def find_codex_cli() -> Optional[str]:
+    candidates = [
+        os.environ.get("CODEX_CLI"),
+        shutil.which("codex"),
+        "/Applications/Codex.app/Contents/Resources/codex"
+    ]
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    return None
+
+def run_optional_codex_visual_critic(screenshot_bytes: bytes, payload_summary: dict) -> dict:
+    cli = find_codex_cli()
+    if not cli:
+        return {"status": "unavailable", "enabled": False, "cli": None}
+
+    enabled = os.environ.get("LOREWEAVER_ENABLE_CODEX_AUDIT") == "1"
+    if not enabled:
+        return {"status": "available_disabled", "enabled": False, "cli": cli}
+
+    prompt = (
+        "You are a concise visual QA critic for a Phaser game workbench. "
+        "Inspect the attached screenshot for blank rendering, HUD overlap, text overflow, "
+        "unsafe touch margins, and contrast issues. Return compact JSON only with keys "
+        "status, feedback, and prompt_reflow_diff. Context: "
+        + json.dumps(payload_summary, ensure_ascii=False)
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as image_file:
+        image_file.write(screenshot_bytes)
+        image_path = image_file.name
+
+    try:
+        proc = subprocess.run(
+            [
+                cli,
+                "exec",
+                "--ask-for-approval",
+                "never",
+                "--sandbox",
+                "read-only",
+                "--image",
+                image_path,
+                prompt
+            ],
+            capture_output=True,
+            text=True,
+            timeout=45
+        )
+        output = (proc.stdout or "").strip()
+        parsed = None
+        if "{" in output and "}" in output:
+            candidate = output[output.find("{"):output.rfind("}") + 1]
+            try:
+                parsed = json.loads(candidate)
+            except json.JSONDecodeError:
+                parsed = None
+        return {
+            "status": "completed" if proc.returncode == 0 else "failed",
+            "enabled": True,
+            "cli": cli,
+            "exitCode": proc.returncode,
+            "stdout": output[-2000:],
+            "stderr": (proc.stderr or "").strip()[-2000:],
+            "result": parsed
+        }
+    except Exception as exc:
+        return {"status": "failed", "enabled": True, "cli": cli, "error": str(exc)}
+    finally:
+        try:
+            os.remove(image_path)
+        except OSError:
+            pass
+
 @app.post("/api/audit")
 def api_post_audit(payload: dict):
-    # Simulated high-quality visual/VLM QAs
-    mock_audit = {
-        "checks": [
-            { "id": "scale_check", "name": "Phaser FIT Scaling", "status": "PASS", "remarks": "Layout correctly locks to 720x1280 and auto-centers in current frame." },
-            { "id": "text2_wordwrap", "name": "Korean / Chinese Text Overflows", "status": "PASS", "remarks": "Phaser Text layers verified. Advanced wrap is enforced." },
-            { "id": "touch_safety", "name": "Interactive Hitbox Margins", "status": "PASS", "remarks": "Click boundaries are comfortable (>=60px)." },
-            { "id": "hud_overlap", "name": "Z-Index Hierarchy and Backdrops", "status": "WARNING", "remarks": "Double breakthroughs might overlay. Mitigated with clear backdrops." }
-        ],
-        "vlm_feedback": "Successfully scanned the viewport screenshot via python server. Pixel structure looks pristine. Ready to deploy.",
-        "prompt_reflow_diff": "Reflowing rules to python storage. Constraint: ensure background assets use non-blocking progressive stream."
+    screenshot_base64 = payload.get("screenshot_base64", "")
+    audit_context = payload.get("audit_context", {}) or {}
+    nodes = payload.get("currentNodes", []) or []
+
+    screenshot_bytes = b""
+    try:
+        screenshot_bytes = decode_png_data_url(screenshot_base64)
+        image_analysis = analyze_png_screenshot(screenshot_base64)
+    except Exception as exc:
+        image_analysis = {
+            "valid": False,
+            "error": str(exc),
+            "byteLength": len(screenshot_base64 or "")
+        }
+
+    source = audit_context.get("source") or "unknown"
+    canvas_context = audit_context.get("canvas", {}) or {}
+    long_text_nodes = [
+        node.get("id")
+        for node in nodes
+        if len(str(node.get("title", ""))) > 30 or len(str(node.get("intro", ""))) > 120
+    ]
+    width = image_analysis.get("width") or canvas_context.get("width") or 0
+    height = image_analysis.get("height") or canvas_context.get("height") or 0
+    aspect = (width / height) if width and height else 0
+
+    checks = [
+        make_audit_check(
+            "real_screenshot_input",
+            "Real Canvas Screenshot",
+            "PASS" if image_analysis.get("valid") and source != "mock" and len(screenshot_base64) > 1500 else "FAIL",
+            f"Source={source}; PNG bytes={image_analysis.get('byteLength', 0)}."
+        ),
+        make_audit_check(
+            "canvas_nonblank_pixels",
+            "Canvas Nonblank Pixel Signal",
+            "PASS" if image_analysis.get("hasMeaningfulPixels") else "FAIL",
+            f"nonBackgroundRatio={image_analysis.get('nonBackgroundRatio', 0)}, luminanceStdDev={image_analysis.get('luminanceStdDev', 0)}."
+        ),
+        make_audit_check(
+            "phaser_fit_scale",
+            "Phaser FIT Scaling",
+            "PASS" if width >= 320 and height >= 480 and abs(aspect - (9 / 16)) <= 0.14 else "WARNING",
+            f"Captured {width}x{height}; expected a mobile-first 9:16-ish viewport."
+        ),
+        make_audit_check(
+            "text_wrap_risk",
+            "CJK Text Wrap Risk",
+            "PASS" if not long_text_nodes else "WARNING",
+            "No unusually long node title/intro detected." if not long_text_nodes else f"Long text risk in nodes: {long_text_nodes[:6]}."
+        ),
+        make_audit_check(
+            "touch_safe_area",
+            "Touch Safe-Area Frame",
+            "PASS" if (canvas_context.get("cssWidth", 0) >= 320 and canvas_context.get("cssHeight", 0) >= 520) else "WARNING",
+            f"Canvas CSS frame={canvas_context.get('cssWidth', 0)}x{canvas_context.get('cssHeight', 0)}."
+        )
+    ]
+
+    codex_status = run_optional_codex_visual_critic(
+        screenshot_bytes,
+        {
+            "theme": payload.get("theme"),
+            "source": source,
+            "canvas": canvas_context,
+            "nodeCount": len(nodes),
+            "imageAnalysis": image_analysis
+        }
+    )
+    codex_result = codex_status.get("result") or {}
+
+    if codex_status.get("status") == "completed" and codex_result.get("feedback"):
+        vlm_feedback = codex_result["feedback"]
+    else:
+        vlm_feedback = (
+            "Codex/Antigravity local visual audit path consumed a real Phaser screenshot. "
+            f"Deterministic pixel gate is {'clean' if image_analysis.get('hasMeaningfulPixels') else 'blocked'}; "
+            f"Codex CLI status: {codex_status.get('status')}."
+        )
+
+    prompt_reflow_diff = codex_result.get("prompt_reflow_diff") or (
+        "Require every visual audit request to include a real canvas PNG, canvas CSS frame metrics, "
+        "and deterministic nonblank/scale/text-wrap checks before any optional vision-agent critique."
+    )
+
+    audit = {
+        "checks": checks,
+        "vlm_feedback": vlm_feedback,
+        "prompt_reflow_diff": prompt_reflow_diff,
+        "image_analysis": image_analysis,
+        "codex_visual_agent": codex_status
     }
-    return {"success": True, "method": "python_visual_vlm_audit", "data": mock_audit}
+
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+    with open(os.path.join(REPORTS_DIR, "visual_audit_latest.json"), "w", encoding="utf-8") as f:
+        json.dump({
+            "gate": "visual_audit",
+            "status": "failed" if any(item["status"] == "FAIL" for item in checks) else "passed",
+            "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "method": "codex_antigravity_local_visual_audit",
+            "data": audit
+        }, f, ensure_ascii=False, indent=2)
+
+    return {"success": True, "method": "codex_antigravity_local_visual_audit", "data": audit}
