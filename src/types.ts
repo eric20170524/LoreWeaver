@@ -93,4 +93,5 @@ export interface AuditReport {
   checks: AuditCheck[];
   vlm_feedback: string;
   prompt_reflow_diff: string;
+  proposed_patches?: ManifestPatch[];
 }

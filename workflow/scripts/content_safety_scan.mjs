@@ -12,7 +12,20 @@ const exportSurfaces = [
   "minigame_master/core/lib",
   "minigame_master/core/demo",
   "LoreWeaver/src",
-  "LoreWeaver/docs/gameplay_cards"
+  "LoreWeaver/dist",
+  "LoreWeaver/index.html",
+  "LoreWeaver/docs",
+  "LoreWeaver/data/workspaces",
+  "LoreWeaver/data/presets",
+  "LoreWeaver/workflow/reports"
+];
+
+const warningSurfaces = [
+  "minigame_master/core/lib",
+  "minigame_master/core/demo",
+  "LoreWeaver/src",
+  "LoreWeaver/dist",
+  "LoreWeaver/index.html"
 ];
 
 const sensitiveTerms = [
@@ -29,6 +42,11 @@ const sensitiveTerms = [
 function collectFiles(dirRel) {
   const dir = path.join(repoRoot, dirRel);
   if (!fs.existsSync(dir)) return [];
+  // If it's a single file, return it directly if it matches the text extension
+  if (fs.statSync(dir).isFile()) {
+    if (/\.(js|ts|tsx|json|md|html|css)$/.test(dirRel)) return [dirRel];
+    return [];
+  }
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const rel = path.join(dirRel, entry.name);
     if (entry.isDirectory()) return collectFiles(rel);
@@ -44,10 +62,11 @@ for (const surface of exportSurfaces) {
     const source = fs.readFileSync(path.join(repoRoot, file), "utf8");
     for (const term of sensitiveTerms) {
       if (source.includes(term)) {
+        const isWarning = warningSurfaces.some((ws) => file.startsWith(ws));
         findings.push({
           file,
           term,
-          severity: file.includes("gameplay_cards") ? "note" : "warning"
+          severity: isWarning ? "warning" : "note"
         });
       }
     }

@@ -1,6 +1,16 @@
 import Phaser from "phaser";
 import { GameSpec, PlayerState, NodeSpec } from "../types";
 import { synth } from "../utils/AudioSynth";
+import {
+  SurvivorHordeAdapter,
+  HazardTelegraphModifier,
+  DefendCoreModifier
+} from "../../../minigame_master/core/lib/gameplay/index.js";
+import {
+  createNodePayload,
+  TestHooks
+} from "../../../minigame_master/core/lib/contracts/index.js";
+
 
 export function initializePhaserGame(
   parentEl: HTMLElement,
@@ -458,6 +468,9 @@ export function initializePhaserGame(
     private scoreHUD!: Phaser.GameObjects.Text;
     private livesCount: number = 3;
     private livesHUD!: Phaser.GameObjects.Text;
+    
+    private adapter: any = null;
+    private testHooks: any = null;
 
     // Tap Reaction lists
     private spawnTimer!: Phaser.Time.TimerEvent;
@@ -485,6 +498,97 @@ export function initializePhaserGame(
       this.timeLeft = data.node.durationLimit || 30;
       this.scoreCount = 0;
       this.livesCount = 3;
+      this.adapter = null;
+      this.testHooks = null;
+
+      if (this.node.gameplay && this.node.gameplay.cardId === "survivor_horde") {
+        this.testHooks = new TestHooks("__LOREWEAVER_TEST_HOOKS__");
+        
+        const modifiersList: any[] = [];
+        if (this.node.gameplay.modifiers) {
+          this.node.gameplay.modifiers.forEach((modSpec: any) => {
+            if (modSpec.id === "hazard_telegraph") {
+              const defaultModConfig = {
+                intervalMs: 3600,
+                warningDelayMs: 900,
+                radius: 54,
+                damage: 18,
+                target: "random"
+              };
+              modifiersList.push(new HazardTelegraphModifier({
+                ...defaultModConfig,
+                ...modSpec.knobs
+              }));
+            } else if (modSpec.id === "defend_core") {
+              const defaultModConfig = {
+                hp: 80,
+                radius: 34,
+                color: 0x38bdf8,
+                enemyDamage: 8,
+                aggro: false
+              };
+              modifiersList.push(new DefendCoreModifier({
+                ...defaultModConfig,
+                ...modSpec.knobs
+              }));
+            }
+          });
+        }
+
+        this.adapter = new SurvivorHordeAdapter({
+          testHooks: this.testHooks,
+          modifiers: modifiersList,
+          onEnd: (result: any) => {
+            this.handleAdapterEnd(result);
+          }
+        });
+
+        const baseKnobs = {
+          duration: this.node.durationLimit || 30,
+          goalValue: this.node.goalValue,
+          difficulty: this.node.difficulty,
+          resourceMultiplier: this.node.resourceMultiplier,
+          enemies: {
+            spawnIntervalMs: Math.max(400, 1000 - (this.node.difficulty - 1) * 100),
+            pool: [
+              {
+                id: "grunt",
+                hp: Math.max(1, Math.floor(this.node.difficulty * 0.8)),
+                speed: 80 + (this.node.difficulty - 1) * 8,
+                damage: 5 + this.node.difficulty * 2,
+                radius: 10,
+                color: 0x888888,
+                reward: { score: 1 }
+              }
+            ]
+          }
+        };
+
+        const mergedKnobs = this.node.gameplay.knobs
+          ? { ...baseKnobs, ...this.node.gameplay.knobs }
+          : baseKnobs;
+
+        const pState = this.game.registry.get("playerState") || {};
+        const payload = createNodePayload({
+          id: this.node.id,
+          nodeId: `node_${this.node.id}`,
+          nodeConfig: {
+            duration: this.node.durationLimit,
+            rewards: {
+              score: this.node.goalValue
+            },
+            gameplay: {
+              cardId: this.node.gameplay.cardId,
+              knobs: mergedKnobs
+            }
+          },
+          playerStats: {
+            hp: pState.hp || 100
+          }
+        });
+
+        this.adapter.init(payload);
+      }
     }
 
     create() {
@@ -516,20 +620,44 @@ export function initializePhaserGame(
       rBtn.on("pointerdown", () => {
         synth.playClick();
         onLog(`◀ 已主动撤出境界考验 [节点 ${this.node.id}]。正在返回修真卷轴主态。`);
-        this.safeRetreat();
+        if (this.adapter) {
+          this.adapter.retreat();
+        } else {
+          this.safeRetreat();
+        }
       });
 
-      // Spawn overall active level timers
-      this.timerBar = this.add.graphics();
-      this.gameTimer = this.time.addEvent({
-        delay: 50,
-        callback: this.tickLevelTimer,
-        callbackScope: this,
-        loop: true
-      });
+      if (this.adapter) {
+        this.adapter.create(this);
+        (window as any).__LW_SURVIVOR_DEMO__ = this.adapter;
+      } else {
+        // Spawn overall active level timers
+        this.timerBar = this.add.graphics();
+        this.gameTimer = this.time.addEvent({
+          delay: 50,
+          callback: this.tickLevelTimer,
+          callbackScope: this,
+          loop: true
+        });
 
-      // Distribute and trigger minigame core routines
-      this.launchMechanicMinigame(width, height, col);
+        // Distribute and trigger minigame core routines
+        this.launchMechanicMinigame(width, height, col);
+      }
+    }
+
+    update(time: number, delta: number) {
+      if (this.adapter) {
+        this.adapter.update(time, delta);
+        const testState = this.adapter.getTestState();
+        if (testState) {
+          this.scoreHUD.setText(`目标进度：${testState.score} / ${this.node.goalValue}`);
+          this.livesHUD.setText(`生命精力：${Math.ceil(testState.hp)}`);
+          
+          if (this.adapter.status === "running" && testState.score >= this.node.goalValue) {
+            this.adapter.finish(true, "objective_met");
+          }
+        }
+      }
     }
 
     private drawLevelHeader(width: number, height: number, themeHex: number) {
@@ -947,6 +1075,66 @@ export function initializePhaserGame(
       }
     }
 
+    private handleAdapterEnd(result: any) {
+      const { width, height } = this.scale;
+      if (result.success) {
+        synth.playNodeSuccess();
+        onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！悟得通关造化: [${this.node.rewards}]。`);
+
+        const pState = { ...this.game.registry.get("playerState") } as PlayerState;
+        
+        if (!pState.completedNodeIds.includes(this.node.id)) {
+          pState.completedNodeIds.push(this.node.id);
+        }
+
+        const nextId = this.node.id + 1;
+        if (nextId <= 12 && !pState.unlockedNodeIds.includes(nextId)) {
+          pState.unlockedNodeIds.push(nextId);
+        }
+
+        pState.activeMultiplier += this.node.resourceMultiplier / 12.0;
+        
+        const rwdKey = spec.economy.resources[0] || "灵石";
+        pState.secondaryResources[rwdKey] = (pState.secondaryResources[rwdKey] || 0) + 1;
+
+        this.game.registry.set("playerState", pState);
+        this.game.registry.get("onSaveState")(pState);
+
+        this.cameras.main.flash(300, 16, 185, 129);
+        
+        this.add.text(width / 2, height / 2, "🍀 挑战成功", {
+          fontFamily: "Inter, sans-serif",
+          fontSize: "38px",
+          fontStyle: "bold",
+          color: spec.themeColor
+        }).setOrigin(0.5);
+
+        this.time.delayedCall(1400, () => {
+          this.safeRetreat();
+        });
+      } else {
+        if (result.reason === "retreated") {
+          this.safeRetreat();
+        } else {
+          synth.playDamage();
+          onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${result.reason || "未知"}]。请重新尝试。`);
+          
+          this.cameras.main.shake(250, 0.015);
+          
+          this.add.text(width / 2, height / 2, "💀 渡劫失败", {
+            fontFamily: "Inter, sans-serif",
+            fontSize: "38px",
+            fontStyle: "bold",
+            color: "#ef4444"
+          }).setOrigin(0.5);
+
+          this.time.delayedCall(1600, () => {
+            this.safeRetreat();
+          });
+        }
+      }
+    }
+
     /* GENERAL EXIT STRATEGIES AND SCENE RESTORATION CONTROLLER */
     private handleLevelWin() {
       synth.playNodeSuccess();
@@ -1025,6 +1213,16 @@ export function initializePhaserGame(
       this.activeCollects = [];
       this.activeHazards = [];
       this.runeKeyrings = [];
+
+      // Clean up adapter
+      if (this.adapter) {
+        this.adapter.destroy();
+        this.adapter = null;
+      }
+      if (this.testHooks) {
+        this.testHooks = null;
+      }
+      delete (window as any).__LW_SURVIVOR_DEMO__;
     }
   }
 
@@ -1054,6 +1252,9 @@ export function initializePhaserGame(
   // Set communication hooks to Phaser global variables
   game.registry.set("playerState", playerState);
   game.registry.set("onSaveState", onSaveState);
+  game.registry.set("gameSpec", spec);
+
+  (window as any).__LOREWEAVER_GAME__ = game;
 
   return game;
 }

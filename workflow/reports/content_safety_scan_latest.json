@@ -1,12 +1,93 @@
 {
   "gate": "content_safety_scan",
   "status": "passed",
-  "createdAt": "2026-06-09T08:43:55.975Z",
+  "createdAt": "2026-06-10T02:06:53.964Z",
   "exportSurfaces": [
     "minigame_master/core/lib",
     "minigame_master/core/demo",
     "LoreWeaver/src",
-    "LoreWeaver/docs/gameplay_cards"
+    "LoreWeaver/dist",
+    "LoreWeaver/index.html",
+    "LoreWeaver/docs",
+    "LoreWeaver/data/workspaces",
+    "LoreWeaver/data/presets",
+    "LoreWeaver/workflow/reports"
   ],
-  "findings": []
+  "findings": [
+    {
+      "file": "LoreWeaver/docs/LoreWeaver_v1.0_MVP.md",
+      "term": "凡人修仙",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/docs/LoreWeaver_v2.0_Juicing.md",
+      "term": "凡人修仙",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/docs/LoreWeaver_v3.0_Autonomous.md",
+      "term": "完美世界",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/docs/LoreWeaver_v3.0_Autonomous.md",
+      "term": "仙逆",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/88dca351-066a-44bb-b5c0-584ebf25eb83/manifest.json",
+      "term": "凡人修仙",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/data/presets/guimi_preset.json",
+      "term": "诡秘之主",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/data/presets/xianxia_preset.json",
+      "term": "凡人修仙",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/workflow/reports/build_gate_latest.json",
+      "term": "完美世界",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/workflow/reports/build_gate_latest.json",
+      "term": "仙逆",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/workflow/reports/build_gate_latest.json",
+      "term": "凡人修仙",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/workflow/reports/build_gate_latest.json",
+      "term": "诡秘之主",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/workflow/reports/content_safety_scan_latest.json",
+      "term": "完美世界",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/workflow/reports/content_safety_scan_latest.json",
+      "term": "仙逆",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/workflow/reports/content_safety_scan_latest.json",
+      "term": "凡人修仙",
+      "severity": "note"
+    },
+    {
+      "file": "LoreWeaver/workflow/reports/content_safety_scan_latest.json",
+      "term": "诡秘之主",
+      "severity": "note"
+    }
+  ]
 }

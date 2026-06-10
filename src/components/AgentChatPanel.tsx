@@ -254,7 +254,7 @@ export function AgentChatPanel({
     <motion.div 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-slate-900/80 border border-slate-900 relative overflow-hidden ${
+      className={`bg-white/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-900 relative overflow-hidden transition-colors duration-250 ${
         compact
           ? "rounded-lg p-3 shadow-lg"
           : "rounded-xl p-4 shadow-2xl"
@@ -263,13 +263,12 @@ export function AgentChatPanel({
       {/* Dynamic Aura Accent */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500" />
 
-      <div className={compact ? "grid gap-3 xl:grid-cols-[280px_minmax(0,1fr)]" : "flex flex-col gap-4"}>
-        <div className="flex flex-col gap-3 min-w-0">
+      <div className="flex flex-col gap-4">
           {/* Header with Sub-agent selection dropdown */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
+            <MessageSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
               {copy.title}
             </h3>
           </div>
@@ -278,66 +277,40 @@ export function AgentChatPanel({
           </span>
         </div>
         
-        {/* Custom Agent Dropdown Select Card */}
-        <div className="relative">
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 flex items-center justify-between text-left hover:border-slate-700 transition duration-200 cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-xl shrink-0">{activeAgentInfo.avatar}</span>
-              <div>
-                <h4 className="text-2xs font-semibold text-slate-200">{activeAgentInfo.name}</h4>
-                <p className="text-4xs text-slate-500 mt-0.5">{activeAgentInfo.title}</p>
-              </div>
-            </div>
-            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-          </button>
-          
-          <AnimatePresence>
-            {showDropdown && (
-              <motion.div
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 5 }}
-                className="absolute z-50 left-0 right-0 mt-1 bg-slate-950 border border-slate-800 rounded-lg shadow-2xl overflow-hidden max-h-[300px] overflow-y-auto"
+        {/* Custom Agent Quick-Select Bar */}
+        <div className="grid grid-cols-5 gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-800/80">
+          {[
+            { id: "world_builder", shortName: locale === "zh" ? "世界" : "World", avatar: "🧬" },
+            { id: "narrative", shortName: locale === "zh" ? "大纲" : "Story", avatar: "📜" },
+            { id: "sandbox", shortName: locale === "zh" ? "沙盒" : "Shell", avatar: "🛠️" },
+            { id: "code_foundry", shortName: locale === "zh" ? "代码" : "Code", avatar: "⚙️" },
+            { id: "auditor", shortName: locale === "zh" ? "审计" : "Audit", avatar: "👁️" }
+          ].map((agent) => {
+            const isSelected = selectedAgent === agent.id;
+            return (
+              <button
+                key={agent.id}
+                onClick={() => setSelectedAgent(agent.id)}
+                className={`py-1.5 flex flex-col items-center justify-center rounded transition-all duration-250 cursor-pointer text-center select-none ${
+                  isSelected
+                    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold"
+                    : "border border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-200/70 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900/40"
+                }`}
               >
-                {[
-                  { id: "world_builder", name: locale === "zh" ? "世界编制官" : "World Builder", title: locale === "zh" ? "DNA & 经济配置" : "DNA & Economy", avatar: "🧬" },
-                  { id: "narrative", name: locale === "zh" ? "剧本大纲师" : "Narrative Planner", title: locale === "zh" ? "剧情脉络与天劫" : "Storyline & Trials", avatar: "📜" },
-                  { id: "sandbox", name: locale === "zh" ? "沙盒架构师" : "Sandbox Architect", title: locale === "zh" ? "宿主框架与 store" : "Host Shell & Store", avatar: "🛠️" },
-                  { id: "code_foundry", name: locale === "zh" ? "代码铸造厂" : "Code Foundry", title: locale === "zh" ? "Phaser物理与声相" : "Runtime & Audio", avatar: "⚙️" },
-                  { id: "auditor", name: locale === "zh" ? "多模审计官" : "Visual Auditor", title: locale === "zh" ? "视觉QA与排版" : "Visual QA & Layout", avatar: "👁️" }
-                ].map((agent) => (
-                  <button
-                    key={agent.id}
-                    onClick={() => {
-                      setSelectedAgent(agent.id);
-                      setShowDropdown(false);
-                    }}
-                    className={`w-full p-2.5 flex items-center gap-3 text-left hover:bg-slate-900/60 transition text-xs border-b border-slate-900/50 last:border-0 cursor-pointer ${selectedAgent === agent.id ? 'bg-slate-900/40 text-emerald-400' : 'text-slate-300'}`}
-                  >
-                    <span className="text-lg">{agent.avatar}</span>
-                    <div className="flex-1">
-                      <div className="font-semibold text-2xs">{agent.name}</div>
-                      <div className="text-4xs text-slate-500">{agent.title}</div>
-                    </div>
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <span className="text-sm shrink-0 mb-0.5">{agent.avatar}</span>
+                <span className="text-[10px] tracking-tight whitespace-nowrap">{agent.shortName}</span>
+              </button>
+            );
+          })}
         </div>
 
           {/* Selected Agent Description Card */}
-          <div className={`p-2.5 rounded-lg bg-slate-950 border ${activeAgentInfo.color} transition-all duration-300`}>
-            <p className="text-4xs text-slate-400 leading-relaxed font-sans">{activeAgentInfo.desc}</p>
+          <div className={`p-2.5 rounded-lg bg-white dark:bg-slate-950 border ${activeAgentInfo.color} transition-all duration-300`}>
+            <p className="text-4xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans">{activeAgentInfo.desc}</p>
           </div>
-      </div>
 
-        <div className="flex flex-col gap-3 min-w-0">
       {/* Internal Agent dialogue display log */}
-      <div className={`bg-slate-950/60 rounded-lg border border-slate-900/60 p-3 overflow-y-auto flex flex-col gap-3 scrollbar-thin ${compact ? "h-[120px]" : "h-[180px]"}`}>
+      <div className="bg-white/70 dark:bg-slate-950/60 rounded-lg border border-slate-200 dark:border-slate-900/60 p-3 overflow-y-auto flex flex-col gap-3 scrollbar-thin h-[180px]">
         {conversations[selectedAgent].map((chat, ci) => (
           <div key={ci} className={`flex flex-col gap-1 ${chat.sender === 'user' ? 'items-end' : 'items-start'}`}>
             <div className="flex items-center gap-1.5 text-4xs text-slate-500">
@@ -345,7 +318,7 @@ export function AgentChatPanel({
               <span>•</span>
               <span>{chat.timestamp}</span>
             </div>
-            <div className={`px-2.5 py-1.5 rounded-lg max-w-[90%] text-3xs ${chat.sender === 'user' ? 'bg-emerald-950/40 border border-emerald-500/20 text-slate-200 rounded-tr-none' : 'bg-slate-900/80 border border-slate-800 text-slate-300 rounded-tl-none'}`}>
+            <div className={`px-2.5 py-1.5 rounded-lg max-w-[90%] text-3xs ${chat.sender === 'user' ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/20 text-slate-800 dark:text-slate-200 rounded-tr-none' : 'bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-none'}`}>
               {chat.text}
             </div>
           </div>
@@ -366,7 +339,8 @@ export function AgentChatPanel({
             }}
             disabled={isSending}
             placeholder={`${copy.placeholderPrefix} ${activeAgentInfo.name} ${copy.placeholderSuffix}`}
-            className={`w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-2xs text-slate-200 focus:outline-none focus:border-emerald-500 max-h-[120px] resize-none disabled:opacity-50 font-sans ${compact ? "min-h-[54px]" : "min-h-[70px]"}`}
+            rows={compact ? 4 : 5}
+            className={`w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 pt-3 pb-12 pr-24 text-2xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 max-h-[220px] resize-y disabled:opacity-50 font-sans leading-relaxed ${compact ? "min-h-[92px]" : "min-h-[116px]"}`}
           />
           <button 
             onClick={handleSend}
@@ -387,14 +361,13 @@ export function AgentChatPanel({
           <button 
             onClick={handleApprove}
             disabled={isApproving}
-            className="w-full mt-1 bg-gradient-to-r from-emerald-950 to-teal-950 hover:from-emerald-900 hover:to-teal-900 border border-emerald-500/50 text-emerald-400 font-semibold py-2 rounded text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/50"
+            className="w-full mt-1 bg-gradient-to-r from-emerald-100 to-teal-100 hover:from-emerald-200 hover:to-teal-200 dark:from-emerald-950 dark:to-teal-950 dark:hover:from-emerald-900 dark:hover:to-teal-900 border border-emerald-500/50 text-emerald-700 dark:text-emerald-400 font-semibold py-2 rounded text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-200/60 dark:shadow-emerald-950/50"
           >
             <Check className="w-4 h-4" />
             {isApproving ? copy.sending : copy.approve}
           </button>
         )}
       </div>
-        </div>
       </div>
     </motion.div>
   );

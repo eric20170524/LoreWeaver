@@ -6,6 +6,7 @@ import sys
 import json
 import os
 import socket
+import signal
 from datetime import datetime
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -267,8 +268,200 @@ def run_survivor_horde_demo_test():
         sys.exit(1)
     sys.exit(0)
 
+def write_loreweaver_report(report):
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    with open(REPORTS_DIR / "runtime_e2e_loreweaver_latest.json", "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+
+def run_loreweaver_app_test():
+    print("Starting LoreWeaver App dev server (npm run dev)...")
+    proc = subprocess.Popen(
+        ["npm", "run", "dev"],
+        cwd=str(LORE_ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        preexec_fn=os.setsid
+    )
+
+    url = "http://127.0.0.1:3000/"
+    errors = []
+    observed = {}
+    assertions = {}
+    stdout = ""
+    stderr = ""
+
+    try:
+        wait_for_url(url, timeout=15)
+        print("LoreWeaver App server is ready. Launching Playwright...")
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1280, "height": 800})
+
+            page.on("pageerror", lambda err: errors.append(f"Page Error: {err}"))
+            page.on("console", lambda msg: errors.append(f"Console Error: {msg.text}") if msg.type == "error" else None)
+
+            try:
+                page.goto(url)
+                print("Waiting for page load...")
+                page.wait_for_timeout(3000)
+
+                # 1. Click "玩法卡工作台" / "Gameplay Cards" tab
+                print("Switching to Gameplay Cards tab...")
+                page.locator('button:has-text("玩法卡工作台"), button:has-text("Gameplay Cards")').click()
+                page.wait_for_timeout(1000)
+
+                # 2. Select survivor_horde for Node 1
+                print("Selecting survivor_horde base card for Node 1...")
+                page.locator('label:has-text("基础玩法卡"), label:has-text("Base card")').locator('select').first.select_option('survivor_horde')
+                page.wait_for_timeout(500)
+
+                # 3. Check hazard_telegraph modifier checkbox
+                print("Toggling hazard_telegraph modifier...")
+                checkbox = page.locator('label:has-text("危险区预警"), label:has-text("Hazard telegraph")').first.locator('input')
+                if not checkbox.is_checked():
+                    checkbox.click()
+                page.wait_for_timeout(500)
+
+                # 4. Click "确认应用" / "Apply" button
+                print("Applying pending patch...")
+                page.locator('button:has-text("确认应用"), button:has-text("Apply")').click()
+                page.wait_for_timeout(2000)
+
+                # 5. Switch back to WebGL H5 Emulator tab
+                print("Switching back to WebGL H5 Emulator tab...")
+                page.locator('button:has-text("WebGL H5 模拟器"), button:has-text("WebGL H5 Emulator")').click()
+                page.wait_for_timeout(3000)
+
+                # 6. Verify phaser game exists
+                print("Waiting for Phaser game instance to be created...")
+                page.wait_for_function("""
+                () => window.__LOREWEAVER_GAME__ !== undefined && window.__LOREWEAVER_GAME__ !== null
+                """, timeout=15000)
+
+                has_game = page.evaluate("Boolean(window.__LOREWEAVER_GAME__)")
+                assertions["gameInstanceCreated"] = has_game
+
+                # Wait for MainScene to become active
+                print("Waiting for MainScene to become active...")
+                page.wait_for_function("""
+                () => {
+                    const game = window.__LOREWEAVER_GAME__;
+                    return game && game.scene.isActive('MainScene');
+                }
+                """, timeout=15000)
+
+                # 7. Start Node 1's trial programmatically
+                print("Launching Node 1 trial programmatically...")
+                page.evaluate("""
+                () => {
+                    const game = window.__LOREWEAVER_GAME__;
+                    const spec = game.registry.get("gameSpec");
+                    const firstNode = spec.nodes[0];
+                    game.scene.start('LevelActiveScene', { node: firstNode });
+                }
+                """)
+                
+                # 8. Wait for the adapter to start running
+                print("Waiting for SurvivorHordeAdapter to run...")
+                page.wait_for_function("""
+                () => {
+                    const adapter = window.__LW_SURVIVOR_DEMO__;
+                    return adapter && adapter.status === 'running';
+                }
+                """, timeout=10000)
+
+                observed["duringRunStart"] = page.evaluate("window.__LOREWEAVER_TEST_HOOKS__")
+                print(f"Adapter started: {observed['duringRunStart']}")
+
+                # 9. Wait for 6 seconds
+                print("Simulating gameplay for 6 seconds...")
+                page.wait_for_timeout(6000)
+
+                observed["duringRunAfter6s"] = page.evaluate("window.__LOREWEAVER_TEST_HOOKS__")
+                print(f"Adapter state after 6s: {observed['duringRunAfter6s']}")
+
+                start_timer = observed["duringRunStart"].get("timer")
+                later_timer = observed["duringRunAfter6s"].get("timer")
+
+                assertions["runningStateObserved"] = observed["duringRunStart"].get("status") == "running"
+                assertions["timerUpdated"] = (
+                    isinstance(start_timer, (int, float)) 
+                    and isinstance(later_timer, (int, float)) 
+                    and later_timer < start_timer
+                )
+
+                # 10. Trigger retreat
+                print("Triggering retreat programmatically...")
+                page.evaluate("""
+                () => {
+                    const game = window.__LOREWEAVER_GAME__;
+                    const activeScene = game.scene.keys['LevelActiveScene'];
+                    if (activeScene && activeScene.adapter) {
+                        activeScene.adapter.finish(false, 'retreated');
+                    }
+                }
+                """)
+
+                # 11. Wait for return to MainScene
+                print("Waiting for return to MainScene...")
+                page.wait_for_function("""
+                () => {
+                    const game = window.__LOREWEAVER_GAME__;
+                    return game && game.scene.isActive('MainScene');
+                }
+                """, timeout=10000)
+
+                is_active = page.evaluate("window.__LOREWEAVER_GAME__.scene.isActive('MainScene')")
+                assertions["returnedToMainScene"] = is_active
+                print("Successfully returned to MainScene!")
+
+            finally:
+                browser.close()
+
+    except Exception as exc:
+        errors.append(f"Interaction failure: {exc}")
+        print(f"E2E test error: {exc}")
+    finally:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        except Exception as kill_err:
+            print(f"Error terminating process group: {kill_err}")
+        stdout, stderr = proc.communicate()
+
+    assertions["consoleErrors"] = len([err for err in errors if err.startswith("Console Error:")])
+    passed = not errors and all(value is True for key, value in assertions.items() if key != "consoleErrors")
+
+    report = {
+        "gate": "runtime_e2e",
+        "target": "LoreWeaver/app",
+        "status": "passed" if passed else "failed",
+        "createdAt": utc_now_iso(),
+        "method": "Playwright against Express proxy serving LoreWeaver dev backend/frontend",
+        "assertions": assertions,
+        "observedState": observed,
+        "errors": errors,
+        "stdout": stdout,
+        "stderr": stderr
+    }
+    write_loreweaver_report(report)
+
+    print(json.dumps({
+        "gate": report["gate"],
+        "target": report["target"],
+        "status": report["status"],
+        "assertions": report["assertions"],
+        "errors": report["errors"]
+    }, ensure_ascii=False, indent=2))
+
+    if not passed:
+        sys.exit(1)
+    sys.exit(0)
+
 def run_test(game_name, node_id=None, grant_state_str=None):
-    if game_name == 'survivor_horde':
+    if game_name == 'loreweaver':
+        run_loreweaver_app_test()
+    elif game_name == 'survivor_horde':
         run_survivor_horde_demo_test()
 
     print(f'Starting HTTP server for {game_name}...')

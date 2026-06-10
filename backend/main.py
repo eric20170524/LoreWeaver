@@ -673,9 +673,31 @@ def run_optional_codex_visual_critic(screenshot_bytes: bytes, payload_summary: d
 
     prompt = (
         "You are a concise visual QA critic for a Phaser game workbench. "
-        "Inspect the attached screenshot for blank rendering, HUD overlap, text overflow, "
-        "unsafe touch margins, and contrast issues. Return compact JSON only with keys "
-        "status, feedback, and prompt_reflow_diff. Context: "
+        "Inspect the attached screenshot for HUD occlusion (components blocking controls), "
+        "button overlap (interactive buttons touching/overlapping), text overflow (labels wrapping incorrectly "
+        "or cut off), and readability / touch safe area concerns (legibility, click target spacing). "
+        "Return compact JSON only with the following structure:\n"
+        "{\n"
+        "  \"status\": \"passed\" | \"failed\",\n"
+        "  \"checks\": {\n"
+        "    \"vlm_hud_occlusion\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
+        "    \"vlm_button_overlap\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
+        "    \"vlm_text_overflow\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
+        "    \"vlm_touch_readability\": \"PASS\" | \"FAIL\" | \"WARNING\"\n"
+        "  },\n"
+        "  \"feedback\": \"Detailed visual critique review remarks.\",\n"
+        "  \"prompt_reflow_diff\": \"Textual suggestions for themeColor, goalValue, or knobs settings.\",\n"
+        "  \"proposed_patches\": [\n"
+        "    {\n"
+        "      \"target\": \"themeColor\" | \"nodes.<nodeId>.goalValue\" | \"nodes.<nodeId>.gameplay.knobs.<knob>\",\n"
+        "      \"operation\": \"replace\",\n"
+        "      \"after\": \"<new_suggested_value>\",\n"
+        "      \"reason\": \"Brief explanation of this suggestion.\",\n"
+        "      \"patchLevel\": \"L1\" | \"L2\" | \"L3\" | \"L4\"\n"
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        "Context: "
         + json.dumps(payload_summary, ensure_ascii=False)
     )
 
@@ -688,8 +710,6 @@ def run_optional_codex_visual_critic(screenshot_bytes: bytes, payload_summary: d
             [
                 cli,
                 "exec",
-                "--ask-for-approval",
-                "never",
                 "--sandbox",
                 "read-only",
                 "--image",
@@ -753,6 +773,19 @@ def api_post_audit(payload: dict):
     height = image_analysis.get("height") or canvas_context.get("height") or 0
     aspect = (width / height) if width and height else 0
 
+    codex_status = run_optional_codex_visual_critic(
+        screenshot_bytes,
+        {
+            "theme": payload.get("theme"),
+            "source": source,
+            "canvas": canvas_context,
+            "nodeCount": len(nodes),
+            "imageAnalysis": image_analysis
+        }
+    )
+    codex_result = codex_status.get("result") or {}
+
+    # 1. Deterministic Checks
     checks = [
         make_audit_check(
             "real_screenshot_input",
@@ -786,18 +819,57 @@ def api_post_audit(payload: dict):
         )
     ]
 
-    codex_status = run_optional_codex_visual_critic(
-        screenshot_bytes,
-        {
-            "theme": payload.get("theme"),
-            "source": source,
-            "canvas": canvas_context,
-            "nodeCount": len(nodes),
-            "imageAnalysis": image_analysis
-        }
-    )
-    codex_result = codex_status.get("result") or {}
+    # 2. VLM Checks (depending on codex status/enabled/results)
+    codex_enabled = codex_status.get("enabled")
+    if not codex_enabled:
+        vlm_status = "WARNING"
+        vlm_remarks = "VLM audit is disabled. Set LOREWEAVER_ENABLE_CODEX_AUDIT=1 to enable." if codex_status.get("status") == "available_disabled" else "Codex CLI is not available."
+        vlm_checks = [
+            make_audit_check("vlm_hud_occlusion", "VLM HUD Occlusion", vlm_status, vlm_remarks),
+            make_audit_check("vlm_button_overlap", "VLM Button Overlap", vlm_status, vlm_remarks),
+            make_audit_check("vlm_text_overflow", "VLM Text Overflow", vlm_status, vlm_remarks),
+            make_audit_check("vlm_touch_readability", "VLM Touch & Readability", vlm_status, vlm_remarks)
+        ]
+    elif codex_status.get("status") == "failed":
+        err_msg = codex_status.get("error") or codex_status.get("stderr") or "Codex CLI execution failed."
+        vlm_checks = [
+            make_audit_check("vlm_hud_occlusion", "VLM HUD Occlusion", "FAIL", f"VLM run failed: {err_msg}"),
+            make_audit_check("vlm_button_overlap", "VLM Button Overlap", "FAIL", f"VLM run failed: {err_msg}"),
+            make_audit_check("vlm_text_overflow", "VLM Text Overflow", "FAIL", f"VLM run failed: {err_msg}"),
+            make_audit_check("vlm_touch_readability", "VLM Touch & Readability", "FAIL", f"VLM run failed: {err_msg}")
+        ]
+    else:
+        codex_checks = codex_result.get("checks") or {}
+        vlm_checks = [
+            make_audit_check(
+                "vlm_hud_occlusion",
+                "VLM HUD Occlusion",
+                codex_checks.get("vlm_hud_occlusion") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
+                "VLM HUD occlusion check completed."
+            ),
+            make_audit_check(
+                "vlm_button_overlap",
+                "VLM Button Overlap",
+                codex_checks.get("vlm_button_overlap") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
+                "VLM Button overlap check completed."
+            ),
+            make_audit_check(
+                "vlm_text_overflow",
+                "VLM Text Overflow",
+                codex_checks.get("vlm_text_overflow") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
+                "VLM Text overflow check completed."
+            ),
+            make_audit_check(
+                "vlm_touch_readability",
+                "VLM Touch & Readability",
+                codex_checks.get("vlm_touch_readability") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
+                "VLM Touch & Readability check completed."
+            )
+        ]
 
+    checks.extend(vlm_checks)
+
+    # 3. Overall VLM feedback / diff text
     if codex_status.get("status") == "completed" and codex_result.get("feedback"):
         vlm_feedback = codex_result["feedback"]
     else:
@@ -812,19 +884,29 @@ def api_post_audit(payload: dict):
         "and deterministic nonblank/scale/text-wrap checks before any optional vision-agent critique."
     )
 
+    # Determine overall gate status:
+    # VLM failure cannot mask deterministic FAIL; VLM not enabled cannot be marked as complete PASS.
+    if any(item["status"] == "FAIL" for item in checks):
+        overall_status = "failed"
+    elif not codex_enabled:
+        overall_status = "partial_pass"
+    else:
+        overall_status = "passed"
+
     audit = {
         "checks": checks,
         "vlm_feedback": vlm_feedback,
         "prompt_reflow_diff": prompt_reflow_diff,
         "image_analysis": image_analysis,
-        "codex_visual_agent": codex_status
+        "codex_visual_agent": codex_status,
+        "proposed_patches": codex_result.get("proposed_patches") or []
     }
 
     os.makedirs(REPORTS_DIR, exist_ok=True)
     with open(os.path.join(REPORTS_DIR, "visual_audit_latest.json"), "w", encoding="utf-8") as f:
         json.dump({
             "gate": "visual_audit",
-            "status": "failed" if any(item["status"] == "FAIL" for item in checks) else "passed",
+            "status": overall_status,
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "method": "codex_antigravity_local_visual_audit",
             "data": audit

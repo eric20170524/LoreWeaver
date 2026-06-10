@@ -103,29 +103,61 @@ export function createGameplayPatch(
 
 export function applyManifestPatch(spec: GameSpec, patch: ManifestPatch): GameSpec {
   const normalized = ensureGameplayManifest(spec);
-  const nodeId = Number(patch.target.split(".")[1]);
   const appliedPatch: ManifestPatch = {
     ...patch,
     status: "applied"
   };
 
-  const nextSpec: GameSpec = {
-    ...normalized,
-    nodes: normalized.nodes.map((node) => (
-      node.id === nodeId
-        ? { ...node, gameplay: patch.after }
-        : node
-    )),
-    workbench: {
-      patches: [...(normalized.workbench?.patches || []), appliedPatch],
-      revisions: normalized.workbench?.revisions || [],
-      artifactStatus: {
-        ...(normalized.workbench?.artifactStatus || {}),
-        [`node:${nodeId}`]: "stale",
-        "gate:build": "stale",
-        "gate:e2e": "stale"
+  let nextSpec: GameSpec = { ...normalized };
+  const target = patch.target;
+
+  if (target === "themeColor") {
+    nextSpec.themeColor = patch.after;
+  } else if (target.startsWith("nodes.")) {
+    const parts = target.split(".");
+    const nodeId = Number(parts[1]);
+    const field = parts[2];
+    
+    nextSpec.nodes = nextSpec.nodes.map((node) => {
+      if (node.id === nodeId) {
+        if (!field) {
+          return { ...node, gameplay: patch.after };
+        }
+        if (field === "gameplay") {
+          if (parts[3] === "knobs") {
+            const currentGameplay = node.gameplay || defaultGameplayForMechanics(node.mechanics || "survivor_horde");
+            return {
+              ...node,
+              gameplay: {
+                ...currentGameplay,
+                knobs: patch.after
+              }
+            };
+          }
+          return { ...node, gameplay: patch.after };
+        }
+        return { ...node, [field]: patch.after };
       }
-    }
+      return node;
+    });
+  }
+
+  const nodeIdMatch = target.match(/nodes\.(\d+)/);
+  const nodeId = nodeIdMatch ? Number(nodeIdMatch[1]) : null;
+
+  const newArtifactStatus = {
+    ...(normalized.workbench?.artifactStatus || {}),
+    "gate:build": "stale" as const,
+    "gate:e2e": "stale" as const
+  };
+  if (nodeId !== null) {
+    newArtifactStatus[`node:${nodeId}`] = "stale" as const;
+  }
+
+  nextSpec.workbench = {
+    patches: [...(normalized.workbench?.patches || []), appliedPatch],
+    revisions: normalized.workbench?.revisions || [],
+    artifactStatus: newArtifactStatus
   };
 
   const revision: RevisionRecord = {
@@ -155,3 +187,23 @@ export function toggleModifier(modifiers: GameplayModifierSpec[], modifierId: st
   }
   return [...modifiers, { id: modifierId, knobs: {} }];
 }
+
+export function getSpecValueByPath(spec: GameSpec, path: string): any {
+  if (path === "themeColor") return spec.themeColor;
+  if (path.startsWith("nodes.")) {
+    const parts = path.split(".");
+    const nodeId = Number(parts[1]);
+    const field = parts[2];
+    const node = spec.nodes.find(n => n.id === nodeId);
+    if (!node) return undefined;
+    if (field === "gameplay") {
+      if (parts[3] === "knobs") {
+        return node.gameplay?.knobs;
+      }
+      return node.gameplay;
+    }
+    return (node as any)[field];
+  }
+  return undefined;
+}
+

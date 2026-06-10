@@ -65,6 +65,24 @@ const steps = [
       "--game",
       "survivor_horde"
     ]
+  },
+  {
+    name: "loreweaver_runtime_e2e",
+    cwd: repoRoot,
+    cmd: "python3",
+    args: [
+      "LoreWeaver/workflow/scripts/run_e2e_test.py",
+      "--game",
+      "loreweaver"
+    ]
+  },
+  {
+    name: "content_safety_scan",
+    cwd: loreRoot,
+    cmd: "node",
+    args: [
+      "workflow/scripts/content_safety_scan.mjs"
+    ]
   }
 ];
 

@@ -59,6 +59,23 @@ checks.push({
   message: "Finish path has status guard and transition guard"
 });
 
+const runnerSource = read("LoreWeaver/src/game/GameRunner.ts");
+checks.push({
+  id: "gamerunner:cleans_up_adapter_on_shutdown",
+  status: runnerSource.includes("this.adapter.destroy()") && runnerSource.includes("this.adapter = null") ? "passed" : "failed",
+  message: "GameRunner LevelActiveScene cleans up the gameplay adapter and nullifies it on shutdown"
+});
+checks.push({
+  id: "gamerunner:no_global_timers",
+  status: runnerSource.includes("setInterval") || runnerSource.includes("setTimeout") ? "failed" : "passed",
+  message: "GameRunner has no global setInterval/setTimeout calls to prevent memory leaks"
+});
+checks.push({
+  id: "gamerunner:retreat_calls_adapter_retreat",
+  status: runnerSource.includes("this.adapter.retreat()") ? "passed" : "failed",
+  message: "GameRunner LevelActiveScene retreat button triggers adapter.retreat() when adapter is active"
+});
+
 for (const file of targetFiles.filter((item) => item.includes("/modifiers/"))) {
   const source = read(file);
   checks.push({

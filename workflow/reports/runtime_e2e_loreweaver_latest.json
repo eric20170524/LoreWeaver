@@ -1,0 +1,43 @@
+{
+  "gate": "runtime_e2e",
+  "target": "LoreWeaver/app",
+  "status": "passed",
+  "createdAt": "2026-06-10T02:06:53Z",
+  "method": "Playwright against Express proxy serving LoreWeaver dev backend/frontend",
+  "assertions": {
+    "gameInstanceCreated": true,
+    "runningStateObserved": true,
+    "timerUpdated": true,
+    "returnedToMainScene": true,
+    "consoleErrors": 0
+  },
+  "observedState": {
+    "duringRunStart": {
+      "sceneKey": null,
+      "nodeId": "node_1",
+      "adapterId": "survivor_horde",
+      "status": "running",
+      "hp": 100,
+      "progress": 0,
+      "timer": 30,
+      "score": 0,
+      "lastResult": null,
+      "errors": []
+    },
+    "duringRunAfter6s": {
+      "sceneKey": null,
+      "nodeId": "node_1",
+      "adapterId": "survivor_horde",
+      "status": "running",
+      "hp": 100,
+      "progress": 0,
+      "timer": 25,
+      "score": 0,
+      "lastResult": null,
+      "errors": []
+    }
+  },
+  "errors": [],
+  "stdout": "\n> react-example@0.0.0 dev\n> tsx server.ts\n\n◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]\nAttempting to spawn Python FastAPI backend on port 8000...\n",
+  "stderr": "WebSocket server error: Port 24678 is already in use\nnode:events:497\n      throw er; // Unhandled 'error' event\n      ^\n\nError: listen EADDRINUSE: address already in use 0.0.0.0:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\nEmitted 'error' event on Server instance at:\n    at emitErrorNT (node:net:1976:8)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {\n  code: 'EADDRINUSE',\n  errno: -48,\n  syscall: 'listen',\n  address: '0.0.0.0',\n  port: 3000\n}\n\nNode.js v22.21.1\n"
+}

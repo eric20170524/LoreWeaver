@@ -256,6 +256,19 @@
   - 修改 core 或 adapter 时，触发更大范围回归。
   - 当前实现为局部失效标记：`node:<id>`、`adapter:<adapter>`、`gate:build`、`gate:e2e` 标记 stale；真实执行由 Phase 6 gate 负责。
 
+- [ ] 5.7 **玩法卡组合关系表达优化**
+  - 将玩法卡工作台从“基础玩法 + modifier 复选框”升级为“玩法组合编辑器”。
+  - 明确三层概念：基础玩法 Base Card、挂载机制 Modifier、运行时 Adapter。
+  - 在 UI 中展示组合结构：`基础玩法 -> 已挂载机制 -> 组合结果预览`。
+  - 为 modifier 补充关系元数据：`modifierFor`、`effectSummary`、`changes`、`requires`、`conflicts`、`implementationStatus`。
+  - 根据当前基础玩法过滤或标记可用 modifier，避免用户误以为所有 modifier 都能任意组合。
+  - 在 modifier 卡片上说明它改变了什么：目标、失败条件、敌人行为、地图危险、Boss 行为或资源压力。
+  - 在组合结果区域显示语义 diff，例如新增失败条件、新增核心系统依赖、影响的 gate。
+  - 区分 `implemented` 与 `design_only` modifier，当前仅设计项继续允许审阅但不能暗示已可运行。
+  - Pending Patch 区域除 JSON before/after 外，补充“本次组合变更摘要”。
+  - 保持 L2 边界：玩法卡与 modifier 组合只改 node gameplay assignment；涉及 adapter/core 行为时进入 L3/L4 人工审阅。
+  - 第一阶段只覆盖 `survivor_horde` 与现有 modifier：`hazard_telegraph`、`defend_core`、`escort_npc`、`boss_phases`、`poison_fog`、`laser_warning`。
+
 ---
 
 ## Phase 6：质量门禁与知识回流
@@ -308,14 +321,98 @@
 
 ---
 
+## 2026-06-10 复盘结论
+
+这次复核结论：LoreWeaver 不是“只有 GDD 的空壳”，但也还没有完成“工作台内真实动态玩法运行时”。当前最关键的差异是：
+
+- `minigame_master/core` 已经有 `GameplayAdapter`、`GameplayModifier`、`SurvivorHordeAdapter`、`HazardTelegraphModifier`、`DefendCoreModifier` 和独立 demo gate。
+- `LoreWeaver/src/types.ts` 与 `src/utils/gameplayManifest.ts` 已经支持 `node.gameplay.cardId / modifiers / knobs / patchLevel`，UI 也能排队 gameplay patch。
+- `LoreWeaver/src/game/GameRunner.ts` 的 `LevelActiveScene` 仍然通过 `node.mechanics` 分支写死 `tap_reaction`、`collect_dodge`、`memory_sequence` 三种小游戏；它尚未读取 `node.gameplay`，也未加载 core adapter registry。
+- `backend/main.py` 的 `/api/audit` 已接入真实 Canvas PNG、像素门禁与可选 Codex 视觉审计，但 `workflow/reports/visual_audit_latest.json` 显示 `codex_visual_agent.status=available_disabled`，还不能算真正启用 VLM 视觉审计。
+- `backend/theme_presets.py` 仍保留具体题材/IP 风格预设；这适合 demo，但不适合长期作为去题材化工作台 core 默认路径。
+
+因此下一轮不应回到“创建 adapter 骨架”，而应做 **Workbench Runtime Bridge**：把已经 demo-proven 的 core adapter 接进 LoreWeaver 真实模拟器，并把 gate 覆盖范围从 core demo 扩展到工作台路径。
+
+---
+
+## Phase 8：Workbench Runtime Bridge
+
+目标：让 LoreWeaver 手机模拟器真正消费 Gameplay Card，而不是只在 UI 与 manifest 层保存玩法选择。
+
+- [x] 8.1 **建立 LoreWeaver 运行时 adapter registry**
+  - 输入：`node.gameplay.cardId`、`node.gameplay.modifiers`、`node.gameplay.knobs`。
+  - 输出：可实例化的 runtime adapter 与 modifier 列表。
+  - 第一批只接 `survivor_horde`，其他 card 保持 legacy fallback。
+  - 需要兼容 `GameRunner.ts` 的 Phaser/TypeScript 构建方式，避免直接破坏现有三种 legacy mechanics。
+
+- [x] 8.2 **在 `LevelActiveScene` 中接入 `node.gameplay` 优先分发**
+  - 当 `node.gameplay.cardId === "survivor_horde"` 时，走 core `SurvivorHordeAdapter`。
+  - 当没有 gameplay 或 card 尚未有 runtime adapter 时，保留当前 `node.mechanics` legacy 分支。
+  - 将 `goalValue`、`durationLimit`、`difficulty`、`resourceMultiplier` 合并为 adapter knobs。
+  - 将 adapter `NodeResult` 映射回当前 `PlayerState` 解锁、奖励和保存流程。
+
+- [x] 8.3 **实现 modifier 实例化与 knobs 合并**
+  - 支持 `hazard_telegraph` 与 `defend_core` 两个已落地 modifier。
+  - 未落地的 `poison_fog`、`laser_warning`、`escort_npc`、`boss_phases` 在 UI 可选择时必须标记为 design-only 或禁用运行。
+  - 所有 modifier 必须经过 `install/update/uninstall` 生命周期，不能在 Scene 中散落裸定时器。
+
+- [x] 8.4 **补齐工作台 TestHooks**
+  - 在 LoreWeaver 模拟器暴露当前 scene、node id、adapter id、status、timer、kills/result reason、console error。
+  - 保持 core demo 的 DOM test-state 镜像经验，但落到工作台路径。
+  - E2E 不依赖视觉文案定位，优先依赖稳定 `data-testid` 或 `window.__LOREWEAVER_TEST_HOOKS__`。
+
+- [x] 8.5 **扩展 Gate 覆盖到 LoreWeaver 工作台运行时**
+  - Build Gate：继续跑 `npm run lint`、`npm run build`、core demo build。
+  - Runtime E2E Gate：新增 LoreWeaver app path，选择一个 node，切换 `survivor_horde + hazard_telegraph/defend_core`，进入关卡，运行 5-10 秒，撤退，断言 NodeResult 与无 console error。
+  - Scene Hygiene Gate：扫描 `GameRunner.ts` adapter path 的 timer、input、transition lock、shutdown cleanup。
+
+---
+
+## Phase 9：VLM 视觉审计真正启用
+
+目标：在 deterministic gates 之后启用视觉大模型审计，避免把 VLM 当作唯一质量判断来源。
+
+- [x] 9.1 **整理 VLM 开关与运行说明**
+  - 在 `.env.example` 与 docs 中记录 `LOREWEAVER_ENABLE_CODEX_AUDIT=1`。
+  - 明确未开启时报告应显示 `available_disabled`，开启后必须有真实视觉 agent 结果或明确失败原因。
+
+- [x] 9.2 **让视觉审计报告区分 deterministic 与 VLM 两层结果**
+  - deterministic：真实截图、非黑屏、比例、长文本风险、安全热区。
+  - VLM：HUD 遮挡、按钮重叠、文本溢出、可读性与移动端触控风险。
+  - VLM 失败不能掩盖 deterministic FAIL；VLM 未启用不能被标为完整 PASS。
+
+- [x] 9.3 **沉淀 prompt reflow 为可审阅 patch**
+  - VLM 输出只进入建议队列，不直接修改代码。
+  - 坐标/布局建议映射为 L1/L2 patch；涉及 adapter/core 仍走 L3/L4 人工确认。
+
+---
+
+## Phase 10：去题材化与配置货币化
+
+目标：让工作台 core 默认路径不携带具体 IP 语料，把题材、文案、数值都变成 manifest/knobs。
+
+- [x] 10.1 **清理 `backend/theme_presets.py` 的默认 IP 风格依赖**
+  - 保留通用 fallback。
+  - 具体题材示例移动到 demo seed 或用户自带语料路径。
+  - 导出路径默认走去题材化文案。
+
+- [x] 10.2 **建立 theme seed 与 gameplay knobs 的边界**
+  - theme seed 只负责风格、资源名、叙事方向。
+  - gameplay knobs 负责目标数、时长、刷怪、伤害、奖励、modifier 参数。
+  - Agent patch 默认先改 knobs，不直接改 runtime 代码。
+
+- [x] 10.3 **补充内容安全扫描到 Workbench Runtime Bridge**
+  - 扫描 manifest、generated docs、UI placeholder、export package。
+  - 确保 core/demo 代码不携带特定 IP 文案。
+
+---
+
 ## 当前下一步
 
-优先执行：
+等待人工确认后，优先执行：
 
-1. [x] 建立 `gameplay_inventory.md`。
-2. [x] 复核并细化 `minigame/Path_to_Immortality` 的主干、battle 与 Node1-Node17。
-3. [x] 盘点 `minigame/xianni` 的 Node1-Node12。
-4. [x] 输出第一版 `survivor_horde` 与 `node_iframe_microgame` 玩法卡草案。
-5. [x] 盘点 `minigame/perfectworld_dahuang` 并补齐跨项目共同合同。
-
-下一步进入 Phase 4：先创建 `survivor_horde` core adapter 骨架，再抽 `hazard_telegraph` 与 `defend_core` 两个最小 modifier，随后补最小 demo 与 Build/E2E gate。
+1. [ ] 先做 Phase 8.1-8.2：adapter registry + `LevelActiveScene` 分发桥接。
+2. [ ] 再做 Phase 8.3：只启用已落地的 `hazard_telegraph` 与 `defend_core` modifier。
+3. [ ] 随后做 Phase 8.4-8.5：工作台 TestHooks 与 E2E/Scene Hygiene gate 覆盖。
+4. [ ] Phase 9 只在 Phase 8 gate 稳定后开启，避免 VLM 结果掩盖基础运行时问题。
+5. [ ] Phase 10 与版权/IP 最终清理可并行规划，但不抢 Phase 8 的主线优先级。

@@ -96,9 +96,9 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
     <div className="relative">
       <button 
         onClick={() => { setIsOpen(!isOpen); loadWorkspaces(); }}
-        className="flex items-center gap-2 bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-slate-300 px-3 py-1.5 rounded transition font-mono text-xs cursor-pointer"
+        className="flex items-center gap-2 bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-emerald-500/50 text-slate-800 dark:text-slate-300 px-3 py-1.5 rounded transition font-mono text-xs cursor-pointer"
       >
-        <FolderGit2 className="w-4 h-4 text-emerald-400" />
+        <FolderGit2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
         <span className="truncate max-w-[120px]">
           {activeWorkspace ? activeWorkspace.name : copy.emptySelection}
         </span>
@@ -110,14 +110,14 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute top-full right-0 mt-2 w-[340px] bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col max-h-[500px]"
+            className="absolute top-full right-0 mt-2 w-[340px] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col max-h-[500px]"
           >
-            <div className="p-3 border-b border-slate-900 flex justify-between items-center bg-slate-900/50">
-              <span className="font-semibold text-xs tracking-wider uppercase text-slate-300 flex items-center gap-2">
+            <div className="p-3 border-b border-slate-200 dark:border-slate-900 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+              <span className="font-semibold text-xs tracking-wider uppercase text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <Server className="w-3.5 h-3.5" />
                 {copy.lobby}
               </span>
-              <button onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-slate-300 cursor-pointer p-1">
+              <button onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 cursor-pointer p-1">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -131,9 +131,9 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
                     <div 
                       key={ws.id}
                       onClick={() => { onSelectWorkspace(ws); setIsOpen(false); }}
-                      className={`p-3 rounded-lg border transition cursor-pointer flex flex-col gap-1 ${activeWorkspaceId === ws.id ? 'bg-emerald-950/20 border-emerald-500/50' : 'bg-slate-900/30 border-slate-800 hover:border-slate-700'}`}
+                      className={`p-3 rounded-lg border transition cursor-pointer flex flex-col gap-1 ${activeWorkspaceId === ws.id ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-500/50' : 'bg-white dark:bg-slate-900/30 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'}`}
                     >
-                      <h4 className="text-sm font-semibold text-slate-200">{ws.name}</h4>
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{ws.name}</h4>
                       <p className="text-3xs text-slate-500 truncate">{copy.theme}: {ws.theme}</p>
                       <p className="text-3xs text-slate-600 mt-1">
                         {copy.modifiedAt} {new Date(ws.lastModifiedAt).toLocaleString(locale === "zh" ? "zh-CN" : "en-US")}
@@ -144,17 +144,17 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
               )}
             </div>
 
-            <div className="p-3 border-t border-slate-900 bg-slate-900/30 flex flex-col gap-2">
+            <div className="p-3 border-t border-slate-200 dark:border-slate-900 bg-slate-50 dark:bg-slate-900/30 flex flex-col gap-2">
               <span className="text-3xs text-slate-500 uppercase tracking-wider font-semibold mb-1">{copy.createTitle}</span>
               <input 
                 value={newName} onChange={e => setNewName(e.target.value)}
                 placeholder={copy.namePlaceholder}
-                className="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500"
               />
               <input 
                 value={newTheme} onChange={e => setNewTheme(e.target.value)}
                 placeholder={copy.themePlaceholder}
-                className="bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500"
               />
               <button 
                 onClick={handleCreate} disabled={isCreating || !newName || !newTheme}

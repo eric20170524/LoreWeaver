@@ -101,7 +101,9 @@ Here is the current Game Design Document (JSON specification):
 The user provided the following design adjustment directive:
 "{feedback}"
 
-Apply the modifications perfectly to the specification layout. Maintain the EXACT schema requirements and return ONLY the fully refined valid JSON payload. Keep everything else intact. Do not output anything other than JSON."""
+Apply the modifications perfectly to the specification layout. Maintain the EXACT schema requirements and return ONLY the fully refined valid JSON payload. Keep everything else intact. Do not output anything other than JSON.
+
+CRITICAL INSTRUCTION: Always separate theme narrative styling from gameplay numerical parameters. When adjusting gameplay, pacing, balance, or difficulty, prioritize updating nodes' gameplay knobs (e.g. knobs, goalValue, durationLimit, resourceMultiplier) inside the JSON rather than modifying or recommending modifications to external runtime codebase/adapter files."""
 
             response = client.models.generate_content(
                 model='gemini-3.5-flash',
