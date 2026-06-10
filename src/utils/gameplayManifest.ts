@@ -12,21 +12,134 @@ export interface GameplayCardOption {
   titleEn?: string;
   category: "base" | "container" | "modifier";
   adapter: string;
+  
+  // Relational metadata
+  modifierFor?: string[];
+  effectSummary?: string;
+  effectSummaryEn?: string;
+  changes?: string;
+  changesEn?: string;
+  requires?: string[];
+  conflicts?: string[];
+  implementationStatus?: "implemented" | "design_only";
+  
+  // Base card specific metadata
+  victory?: string;
+  victoryEn?: string;
+  failure?: string;
+  failureEn?: string;
 }
 
 export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
   { id: "node_iframe_microgame", title: "HTML 单页玩法容器", titleEn: "HTML single-page container", category: "container", adapter: "iframe" },
-  { id: "survivor_horde", title: "割草生存", titleEn: "Survivor horde", category: "base", adapter: "phaser" },
+  {
+    id: "survivor_horde",
+    title: "割草生存",
+    titleEn: "Survivor horde",
+    category: "base",
+    adapter: "phaser",
+    victory: "存活至倒计时结束",
+    victoryEn: "Survive until timer ends",
+    failure: "玩家角色死亡 (HP <= 0)",
+    failureEn: "Player dies (HP <= 0)",
+    requires: ["Movement", "Spawner", "Timer", "Combat"]
+  },
   { id: "turn_based_skill_battle", title: "回合制技能战斗", titleEn: "Turn-based skill battle", category: "base", adapter: "iframe" },
   { id: "rhythm_timing", title: "节奏判定", titleEn: "Rhythm timing", category: "base", adapter: "iframe" },
   { id: "drag_collect_grid", title: "拖拽采集网格", titleEn: "Drag collect grid", category: "base", adapter: "iframe" },
   { id: "sequence_synthesis", title: "顺序合成", titleEn: "Sequence synthesis", category: "base", adapter: "iframe" },
-  { id: "hazard_telegraph", title: "危险区预警", titleEn: "Hazard telegraph", category: "modifier", adapter: "phaser" },
-  { id: "defend_core", title: "防守核心", titleEn: "Defend core", category: "modifier", adapter: "phaser" },
-  { id: "escort_npc", title: "护送 NPC", titleEn: "Escort NPC", category: "modifier", adapter: "phaser" },
-  { id: "boss_phases", title: "Boss 多阶段", titleEn: "Boss phases", category: "modifier", adapter: "phaser" },
-  { id: "poison_fog", title: "毒雾缩圈", titleEn: "Poison fog", category: "modifier", adapter: "phaser" },
-  { id: "laser_warning", title: "激光预警", titleEn: "Laser warning", category: "modifier", adapter: "phaser" }
+  
+  // Modifiers
+  {
+    id: "hazard_telegraph",
+    title: "危险区预警",
+    titleEn: "Hazard telegraph",
+    category: "modifier",
+    adapter: "phaser",
+    modifierFor: ["survivor_horde"],
+    effectSummary: "在地图上生成红色预警区域，延迟后对玩家造成伤害",
+    effectSummaryEn: "Generates red warning zones that deal damage to player after a delay",
+    changes: "地图危险, 伤害机制",
+    changesEn: "Map Hazard, Damage Mechanism",
+    requires: ["TelegraphRenderer", "Collision", "Timer"],
+    conflicts: [],
+    implementationStatus: "implemented"
+  },
+  {
+    id: "defend_core",
+    title: "防守核心",
+    titleEn: "Defend core",
+    category: "modifier",
+    adapter: "phaser",
+    modifierFor: ["survivor_horde"],
+    effectSummary: "在地图中心添加防守目标，目标血量归零则关卡失败",
+    effectSummaryEn: "Adds a core objective at the center; mission fails if its HP reaches zero",
+    changes: "失败条件, 防守目标",
+    changesEn: "Failure Condition, Defense Objective",
+    requires: ["ObjectiveHp", "EnemyTargeting"],
+    conflicts: ["escort_npc"],
+    implementationStatus: "implemented"
+  },
+  {
+    id: "escort_npc",
+    title: "护送 NPC",
+    titleEn: "Escort NPC",
+    category: "modifier",
+    adapter: "phaser",
+    modifierFor: ["survivor_horde"],
+    effectSummary: "保护移动的友好 NPC 到达终点，NPC 死亡则关卡失败",
+    effectSummaryEn: "Protect a moving friendly NPC to the destination; fails if NPC dies",
+    changes: "失败条件, 胜利条件, 友军 HP",
+    changesEn: "Failure/Victory Condition, Ally HP",
+    requires: ["NPCAI", "ObjectiveHp"],
+    conflicts: ["defend_core"],
+    implementationStatus: "design_only"
+  },
+  {
+    id: "boss_phases",
+    title: "Boss 多阶段",
+    titleEn: "Boss phases",
+    category: "modifier",
+    adapter: "phaser",
+    modifierFor: ["survivor_horde"],
+    effectSummary: "首领怪拥有多个血量阶段与不同的弹幕招式",
+    effectSummaryEn: "Boss monster has multiple HP stages and different bullet patterns",
+    changes: "Boss 行为, 胜利条件",
+    changesEn: "Boss Behavior, Victory Condition",
+    requires: ["BossState", "PhaseBulletPatterns"],
+    conflicts: [],
+    implementationStatus: "design_only"
+  },
+  {
+    id: "poison_fog",
+    title: "毒雾缩圈",
+    titleEn: "Poison fog",
+    category: "modifier",
+    adapter: "phaser",
+    modifierFor: ["survivor_horde"],
+    effectSummary: "随时间缩小安全区域，处于迷雾中持续扣除生命值",
+    effectSummaryEn: "Shrinks safe zone over time; standing in fog drains player HP",
+    changes: "地图危险, 持续扣血",
+    changesEn: "Map Hazard, HP Drain",
+    requires: ["FogRenderer", "SafeZoneCollision"],
+    conflicts: [],
+    implementationStatus: "design_only"
+  },
+  {
+    id: "laser_warning",
+    title: "激光预警",
+    titleEn: "Laser warning",
+    category: "modifier",
+    adapter: "phaser",
+    modifierFor: ["survivor_horde"],
+    effectSummary: "横跨屏幕的激光束预警，短暂延迟后发射造成致命伤害",
+    effectSummaryEn: "Screen-wide laser beam warnings that fire after a short delay",
+    changes: "地图危险, 伤害机制",
+    changesEn: "Map Hazard, Damage Mechanism",
+    requires: ["LaserRenderer", "LineCollision"],
+    conflicts: [],
+    implementationStatus: "design_only"
+  }
 ];
 
 const LEGACY_MECHANICS_TO_CARD: Record<string, string> = {
@@ -160,11 +273,12 @@ export function applyManifestPatch(spec: GameSpec, patch: ManifestPatch): GameSp
     artifactStatus: newArtifactStatus
   };
 
+  const { workbench: _, ...snapshotSpec } = nextSpec;
   const revision: RevisionRecord = {
     id: `rev_${Date.now()}`,
     createdAt: new Date().toISOString(),
     patches: [appliedPatch.id],
-    manifestSnapshot: nextSpec,
+    manifestSnapshot: snapshotSpec,
     gateResults: {
       build: "pending",
       e2e: "pending"

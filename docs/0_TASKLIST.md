@@ -256,7 +256,7 @@
   - 修改 core 或 adapter 时，触发更大范围回归。
   - 当前实现为局部失效标记：`node:<id>`、`adapter:<adapter>`、`gate:build`、`gate:e2e` 标记 stale；真实执行由 Phase 6 gate 负责。
 
-- [ ] 5.7 **玩法卡组合关系表达优化**
+- [x] 5.7 **玩法卡组合关系表达优化**
   - 将玩法卡工作台从“基础玩法 + modifier 复选框”升级为“玩法组合编辑器”。
   - 明确三层概念：基础玩法 Base Card、挂载机制 Modifier、运行时 Adapter。
   - 在 UI 中展示组合结构：`基础玩法 -> 已挂载机制 -> 组合结果预览`。
@@ -407,12 +407,49 @@
 
 ---
 
+## Phase 11：全玩法可运行化长期规划
+
+目标：将 Phase 1 盘点出的玩法候选逐步从“文档候选”推进到“可选择、可配置、可运行、可测试”的 Gameplay Card 资产。
+
+- [ ] 11.1 **建立玩法成熟度分层**
+  - 为每个玩法候选标记成熟度：`inventoried`、`card_json`、`ui_registered`、`runtime_ready`、`gate_verified`。
+  - UI 中区分“可运行基础玩法”“候选基础玩法”“仅设计/待实现”，避免用户误以为所有候选已经可运行。
+  - 成熟度进入 Gameplay Card 元数据，并在玩法卡工作台可见。
+
+- [ ] 11.2 **补齐候选玩法卡 JSON**
+  - 将 Phase 1 已盘点但尚未机器可读化的玩法补成 Gameplay Card JSON。
+  - 第一批补齐：`maze_exploration`、`energy_balance`、`reaction_pick`、`rune_connect_sequence`、`branching_dialogue_check`。
+  - 第二批补齐：平台逃亡、弹幕射击、闪避反击 Boss、观察捕捉、压力点击生存、机关拼图、区域占领/Qix 类玩法。
+  - 每张卡必须包含：来源证据、输入方式、胜利/失败条件、knobs、依赖系统、适合/不适合题材、已知风险。
+
+- [ ] 11.3 **扩展基础玩法 UI 展示**
+  - 基础玩法下拉不只显示已注册的 5 张基础卡，而要展示完整候选池。
+  - 对未运行化玩法显示状态徽标：`候选`、`已卡片化`、`待 adapter`、`可运行`。
+  - 未可运行玩法可进入设计审阅与 patch 队列，但不能暗示已能进入模拟器运行。
+
+- [ ] 11.4 **逐步实现 runtime adapter / iframe demo**
+  - 优先复用 `node_iframe_microgame` 容器，把 Path 类单页 HTML 玩法纳入统一 `NodePayload` / `NodeResult`。
+  - 对 Phaser 适合玩法沉淀独立 adapter；对轻量微玩法优先用 iframe demo 降低迁移成本。
+  - 每完成一个玩法，必须补 runtime smoke test、TestHooks、SceneLifecycle/cleanup 规则。
+
+- [ ] 11.5 **建立玩法运行化优先级**
+  - 优先级依据：案例来源完整度、实现复杂度、复用面、与现有 core 合同兼容度、测试可观测性。
+  - 推荐顺序：`rhythm_timing`、`drag_collect_grid`、`sequence_synthesis`、`turn_based_skill_battle`、`energy_balance`、`maze_exploration`、`reaction_pick`、`rune_connect_sequence`、`dodge_counter_boss`、`platform_escape`。
+  - 每轮只推进 1-2 个玩法，避免一次性扩大运行时风险。
+
+- [ ] 11.6 **将 gate 覆盖扩展到多玩法矩阵**
+  - Build Gate 覆盖所有已 runtime-ready 的 Gameplay Card。
+  - Runtime E2E Gate 为每张可运行玩法至少提供一个 5-10 秒 smoke flow。
+  - Scene Hygiene Gate 检查每个 adapter/demo 的 timer、input、physics、iframe/message listener 清理。
+  - 视觉审计在 deterministic gates 通过后抽样覆盖多玩法，重点检查 HUD 遮挡、文本溢出和移动端触控区域。
+
+---
+
 ## 当前下一步
 
-等待人工确认后，优先执行：
+所有 Phase 8-10 以及 Phase 5.7 玩法卡组合关系表达优化与 manifest 递归膨胀 bug 已全部开发完成并修复。
 
-1. [ ] 先做 Phase 8.1-8.2：adapter registry + `LevelActiveScene` 分发桥接。
-2. [ ] 再做 Phase 8.3：只启用已落地的 `hazard_telegraph` 与 `defend_core` modifier。
-3. [ ] 随后做 Phase 8.4-8.5：工作台 TestHooks 与 E2E/Scene Hygiene gate 覆盖。
-4. [ ] Phase 9 只在 Phase 8 gate 稳定后开启，避免 VLM 结果掩盖基础运行时问题。
-5. [ ] Phase 10 与版权/IP 最终清理可并行规划，但不抢 Phase 8 的主线优先级。
+下一步主要执行：
+1. [x] 修复 `manifest.json` 膨胀递归 bug。
+2. [x] 优化玩法卡组合关系表达（包括 UI、预览、语义 diff 与元数据）。
+3. [ ] 重跑工作台与 demo 编译及 E2E 校验，确保所有 gates 通过并变绿。

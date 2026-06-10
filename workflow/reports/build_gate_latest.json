@@ -1,7 +1,7 @@
 {
   "gate": "build",
-  "status": "passed",
-  "createdAt": "2026-06-10T02:06:54.001Z",
+  "status": "failed",
+  "createdAt": "2026-06-10T02:15:04.669Z",
   "results": [
     {
       "name": "loreweaver_typescript",
@@ -9,8 +9,8 @@
       "cwd": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver",
       "status": "passed",
       "exitCode": 0,
-      "startedAt": "2026-06-10T02:06:00.882Z",
-      "finishedAt": "2026-06-10T02:06:05.812Z",
+      "startedAt": "2026-06-10T02:14:22.853Z",
+      "finishedAt": "2026-06-10T02:14:26.934Z",
       "stdout": "\n> react-example@0.0.0 lint\n> tsc --noEmit\n\n",
       "stderr": ""
     },
@@ -20,10 +20,10 @@
       "cwd": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver",
       "status": "passed",
       "exitCode": 0,
-      "startedAt": "2026-06-10T02:06:05.812Z",
-      "finishedAt": "2026-06-10T02:06:12.268Z",
-      "stdout": "\n> react-example@0.0.0 build\n> vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs\n\nvite v6.4.3 building for production...\ntransforming...\n✓ 2095 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                     0.42 kB │ gzip:   0.31 kB\ndist/assets/index-Eth21pHa.css     62.00 kB │ gzip:   9.78 kB\ndist/assets/index-B53uAxH1.js   2,119.44 kB │ gzip: 518.78 kB\n✓ built in 5.76s\n",
-      "stderr": "\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\n  dist/server.cjs      4.2kb\n  dist/server.cjs.map  5.6kb\n\n⚡ Done in 3ms\n"
+      "startedAt": "2026-06-10T02:14:26.934Z",
+      "finishedAt": "2026-06-10T02:14:31.132Z",
+      "stdout": "\n> react-example@0.0.0 build\n> vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs\n\nvite v6.4.3 building for production...\ntransforming...\n✓ 2095 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                     0.42 kB │ gzip:   0.31 kB\ndist/assets/index-Eth21pHa.css     62.00 kB │ gzip:   9.78 kB\ndist/assets/index-B53uAxH1.js   2,119.44 kB │ gzip: 518.78 kB\n✓ built in 3.65s\n",
+      "stderr": "\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n\n  dist/server.cjs      4.2kb\n  dist/server.cjs.map  5.6kb\n\n⚡ Done in 2ms\n"
     },
     {
       "name": "survivor_horde_demo_build",
@@ -31,9 +31,9 @@
       "cwd": "/Users/lm/pyProj/hungry-for-knowledge",
       "status": "passed",
       "exitCode": 0,
-      "startedAt": "2026-06-10T02:06:12.268Z",
-      "finishedAt": "2026-06-10T02:06:16.340Z",
-      "stdout": "vite v6.4.3 building for production...\ntransforming...\n✓ 15 modules transformed.\nrendering chunks...\ncomputing gzip size...\n../../../../../../../../private/tmp/lw_survivor_demo_dist/index.html                    1.61 kB │ gzip:   0.66 kB\n../../../../../../../../private/tmp/lw_survivor_demo_dist/assets/index-D9Of3yGL.js  1,679.39 kB │ gzip: 382.15 kB\n✓ built in 3.86s\n",
+      "startedAt": "2026-06-10T02:14:31.132Z",
+      "finishedAt": "2026-06-10T02:14:33.226Z",
+      "stdout": "vite v6.4.3 building for production...\ntransforming...\n✓ 15 modules transformed.\nrendering chunks...\ncomputing gzip size...\n../../../../../../../../private/tmp/lw_survivor_demo_dist/index.html                    1.61 kB │ gzip:   0.66 kB\n../../../../../../../../private/tmp/lw_survivor_demo_dist/assets/index-D9Of3yGL.js  1,679.39 kB │ gzip: 382.15 kB\n✓ built in 1.93s\n",
       "stderr": "\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n"
     },
     {
@@ -42,8 +42,8 @@
       "cwd": "/Users/lm/pyProj/hungry-for-knowledge",
       "status": "passed",
       "exitCode": 0,
-      "startedAt": "2026-06-10T02:06:16.340Z",
-      "finishedAt": "2026-06-10T02:06:29.284Z",
+      "startedAt": "2026-06-10T02:14:33.226Z",
+      "finishedAt": "2026-06-10T02:14:42.902Z",
       "stdout": "{\n  \"gate\": \"runtime_e2e\",\n  \"target\": \"minigame_master/core/demo/survivor_horde\",\n  \"status\": \"passed\",\n  \"assertions\": {\n    \"startButtonUnique\": true,\n    \"canvasCreated\": true,\n    \"canvasNonblankBeforeRun\": true,\n    \"runningStateObserved\": true,\n    \"timerUpdated\": true,\n    \"combatLoopObserved\": true,\n    \"canvasNonblankDuringRun\": true,\n    \"retreatResultReason\": true,\n    \"returnedToMenu\": true,\n    \"consoleErrors\": 0\n  },\n  \"errors\": []\n}\n",
       "stderr": ""
     },
@@ -51,11 +51,11 @@
       "name": "loreweaver_runtime_e2e",
       "command": "python3 LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver",
       "cwd": "/Users/lm/pyProj/hungry-for-knowledge",
-      "status": "passed",
-      "exitCode": 0,
-      "startedAt": "2026-06-10T02:06:29.284Z",
-      "finishedAt": "2026-06-10T02:06:53.631Z",
-      "stdout": "Starting LoreWeaver App dev server (npm run dev)...\nLoreWeaver App server is ready. Launching Playwright...\nWaiting for page load...\nSwitching to Gameplay Cards tab...\nSelecting survivor_horde base card for Node 1...\nToggling hazard_telegraph modifier...\nApplying pending patch...\nSwitching back to WebGL H5 Emulator tab...\nWaiting for Phaser game instance to be created...\nWaiting for MainScene to become active...\nLaunching Node 1 trial programmatically...\nWaiting for SurvivorHordeAdapter to run...\nAdapter started: {'sceneKey': None, 'nodeId': 'node_1', 'adapterId': 'survivor_horde', 'status': 'running', 'hp': 100, 'progress': 0, 'timer': 30, 'score': 0, 'lastResult': None, 'errors': []}\nSimulating gameplay for 6 seconds...\nAdapter state after 6s: {'sceneKey': None, 'nodeId': 'node_1', 'adapterId': 'survivor_horde', 'status': 'running', 'hp': 100, 'progress': 0, 'timer': 25, 'score': 0, 'lastResult': None, 'errors': []}\nTriggering retreat programmatically...\nWaiting for return to MainScene...\nSuccessfully returned to MainScene!\nError terminating process group: [Errno 3] No such process\n{\n  \"gate\": \"runtime_e2e\",\n  \"target\": \"LoreWeaver/app\",\n  \"status\": \"passed\",\n  \"assertions\": {\n    \"gameInstanceCreated\": true,\n    \"runningStateObserved\": true,\n    \"timerUpdated\": true,\n    \"returnedToMainScene\": true,\n    \"consoleErrors\": 0\n  },\n  \"errors\": []\n}\n",
+      "status": "failed",
+      "exitCode": 1,
+      "startedAt": "2026-06-10T02:14:42.902Z",
+      "finishedAt": "2026-06-10T02:15:04.423Z",
+      "stdout": "Starting LoreWeaver App dev server (npm run dev)...\nLoreWeaver App server is ready. Launching Playwright...\nWaiting for page load...\nSwitching to Gameplay Cards tab...\nSelecting survivor_horde base card for Node 1...\nToggling hazard_telegraph modifier...\nApplying pending patch...\nSwitching back to WebGL H5 Emulator tab...\nWaiting for Phaser game instance to be created...\nWaiting for MainScene to become active...\nLaunching Node 1 trial programmatically...\nWaiting for SurvivorHordeAdapter to run...\nAdapter started: {'sceneKey': None, 'nodeId': 'node_1', 'adapterId': 'survivor_horde', 'status': 'running', 'hp': 100, 'progress': 0, 'timer': 30, 'score': 0, 'lastResult': None, 'errors': []}\nSimulating gameplay for 6 seconds...\nAdapter state after 6s: {'sceneKey': None, 'nodeId': 'node_1', 'adapterId': 'survivor_horde', 'status': 'running', 'hp': 100, 'progress': 0, 'timer': 24, 'score': 0, 'lastResult': None, 'errors': []}\nTriggering retreat programmatically...\nWaiting for return to MainScene...\nSuccessfully returned to MainScene!\nError terminating process group: [Errno 3] No such process\n{\n  \"gate\": \"runtime_e2e\",\n  \"target\": \"LoreWeaver/app\",\n  \"status\": \"failed\",\n  \"assertions\": {\n    \"gameInstanceCreated\": true,\n    \"runningStateObserved\": true,\n    \"timerUpdated\": true,\n    \"returnedToMainScene\": true,\n    \"consoleErrors\": 1\n  },\n  \"errors\": [\n    \"Console Error: Failed to load resource: the server responded with a status of 413 (Payload Too Large)\"\n  ]\n}\n",
       "stderr": ""
     },
     {
@@ -64,9 +64,9 @@
       "cwd": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver",
       "status": "passed",
       "exitCode": 0,
-      "startedAt": "2026-06-10T02:06:53.632Z",
-      "finishedAt": "2026-06-10T02:06:54.000Z",
-      "stdout": "{\n  \"gate\": \"content_safety_scan\",\n  \"status\": \"passed\",\n  \"createdAt\": \"2026-06-10T02:06:53.964Z\",\n  \"exportSurfaces\": [\n    \"minigame_master/core/lib\",\n    \"minigame_master/core/demo\",\n    \"LoreWeaver/src\",\n    \"LoreWeaver/dist\",\n    \"LoreWeaver/index.html\",\n    \"LoreWeaver/docs\",\n    \"LoreWeaver/data/workspaces\",\n    \"LoreWeaver/data/presets\",\n    \"LoreWeaver/workflow/reports\"\n  ],\n  \"findings\": [\n    {\n      \"file\": \"LoreWeaver/docs/LoreWeaver_v1.0_MVP.md\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/docs/LoreWeaver_v2.0_Juicing.md\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/docs/LoreWeaver_v3.0_Autonomous.md\",\n      \"term\": \"完美世界\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/docs/LoreWeaver_v3.0_Autonomous.md\",\n      \"term\": \"仙逆\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/data/workspaces/88dca351-066a-44bb-b5c0-584ebf25eb83/manifest.json\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/data/presets/guimi_preset.json\",\n      \"term\": \"诡秘之主\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/data/presets/xianxia_preset.json\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/build_gate_latest.json\",\n      \"term\": \"完美世界\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/build_gate_latest.json\",\n      \"term\": \"仙逆\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/build_gate_latest.json\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/build_gate_latest.json\",\n      \"term\": \"诡秘之主\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/content_safety_scan_latest.json\",\n      \"term\": \"完美世界\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/content_safety_scan_latest.json\",\n      \"term\": \"仙逆\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/content_safety_scan_latest.json\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/content_safety_scan_latest.json\",\n      \"term\": \"诡秘之主\",\n      \"severity\": \"note\"\n    }\n  ]\n}\n",
+      "startedAt": "2026-06-10T02:15:04.423Z",
+      "finishedAt": "2026-06-10T02:15:04.669Z",
+      "stdout": "{\n  \"gate\": \"content_safety_scan\",\n  \"status\": \"passed\",\n  \"createdAt\": \"2026-06-10T02:15:04.654Z\",\n  \"exportSurfaces\": [\n    \"minigame_master/core/lib\",\n    \"minigame_master/core/demo\",\n    \"LoreWeaver/src\",\n    \"LoreWeaver/dist\",\n    \"LoreWeaver/index.html\",\n    \"LoreWeaver/docs\",\n    \"LoreWeaver/data/workspaces\",\n    \"LoreWeaver/data/presets\",\n    \"LoreWeaver/workflow/reports\"\n  ],\n  \"findings\": [\n    {\n      \"file\": \"LoreWeaver/docs/LoreWeaver_v1.0_MVP.md\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/docs/LoreWeaver_v2.0_Juicing.md\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/docs/LoreWeaver_v3.0_Autonomous.md\",\n      \"term\": \"完美世界\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/docs/LoreWeaver_v3.0_Autonomous.md\",\n      \"term\": \"仙逆\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/data/workspaces/88dca351-066a-44bb-b5c0-584ebf25eb83/manifest.json\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/data/presets/guimi_preset.json\",\n      \"term\": \"诡秘之主\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/data/presets/xianxia_preset.json\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/build_gate_latest.json\",\n      \"term\": \"完美世界\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/build_gate_latest.json\",\n      \"term\": \"仙逆\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/build_gate_latest.json\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/build_gate_latest.json\",\n      \"term\": \"诡秘之主\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/content_safety_scan_latest.json\",\n      \"term\": \"完美世界\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/content_safety_scan_latest.json\",\n      \"term\": \"仙逆\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/content_safety_scan_latest.json\",\n      \"term\": \"凡人修仙\",\n      \"severity\": \"note\"\n    },\n    {\n      \"file\": \"LoreWeaver/workflow/reports/content_safety_scan_latest.json\",\n      \"term\": \"诡秘之主\",\n      \"severity\": \"note\"\n    }\n  ]\n}\n",
       "stderr": ""
     }
   ]

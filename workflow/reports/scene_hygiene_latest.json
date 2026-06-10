@@ -1,7 +1,7 @@
 {
   "gate": "scene_hygiene",
   "status": "passed",
-  "createdAt": "2026-06-10T01:45:30.409Z",
+  "createdAt": "2026-06-10T02:16:19.468Z",
   "checks": [
     {
       "id": "minigame_master/core/lib/gameplay/survivor_horde/SurvivorHordeAdapter.js:no_global_timers",

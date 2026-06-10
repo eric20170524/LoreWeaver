@@ -2,7 +2,7 @@
   "gate": "runtime_e2e",
   "target": "LoreWeaver/app",
   "status": "passed",
-  "createdAt": "2026-06-10T02:06:53Z",
+  "createdAt": "2026-06-10T02:28:50Z",
   "method": "Playwright against Express proxy serving LoreWeaver dev backend/frontend",
   "assertions": {
     "gameInstanceCreated": true,
@@ -31,7 +31,7 @@
       "status": "running",
       "hp": 100,
       "progress": 0,
-      "timer": 25,
+      "timer": 26,
       "score": 0,
       "lastResult": null,
       "errors": []
