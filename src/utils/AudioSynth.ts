@@ -168,6 +168,167 @@ class AudioSynth {
       // Ignored
     }
   }
+
+  public playVictoryFanfare() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    try {
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.11, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.85);
+      gain.connect(this.ctx.destination);
+
+      const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51];
+      notes.forEach((freq, index) => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        osc.type = index % 2 === 0 ? "triangle" : "sine";
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime + index * 0.08);
+        osc.connect(gain);
+        osc.start(this.ctx.currentTime + index * 0.08);
+        osc.stop(this.ctx.currentTime + 0.55 + index * 0.08);
+      });
+    } catch (e) {
+      // Ignored
+    }
+  }
+
+  private bgmOscs: OscillatorNode[] = [];
+  private bgmGain: GainNode | null = null;
+  private bossOscs: OscillatorNode[] = [];
+  private bossGain: GainNode | null = null;
+
+  public startBgm() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    // Stop any existing BGM
+    this.stopBgm();
+
+    try {
+      this.bgmGain = this.ctx.createGain();
+      this.bgmGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      this.bgmGain.gain.linearRampToValueAtTime(0.025, this.ctx.currentTime + 2.0); // Slow fade-in
+      this.bgmGain.connect(this.ctx.destination);
+
+      // Create two low drone oscillators for a nice minor chord ambient sound (A2 and E3)
+      const freqs = [110.00, 164.81]; 
+      freqs.forEach(freq => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        osc.connect(this.bgmGain!);
+        osc.start();
+        this.bgmOscs.push(osc);
+      });
+    } catch (e) {
+      console.warn("Audio Synth BGM error:", e);
+    }
+  }
+
+  public stopBgm() {
+    if (!this.ctx) return;
+    try {
+      const activeGain = this.bgmGain;
+      const activeOscs = [...this.bgmOscs];
+      
+      this.bgmGain = null;
+      this.bgmOscs = [];
+
+      if (activeGain) {
+        activeGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.0); // Slow fade-out
+        this.ctx.resume();
+        setTimeout(() => {
+          try {
+            activeOscs.forEach(osc => osc.stop());
+            activeGain.disconnect();
+          } catch (_) {}
+        }, 1200);
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  public playBossTheme() {
+    if (this.isMuted) return;
+    this.initContext();
+    if (!this.ctx) return;
+
+    this.stopBgm();
+    this.stopBossTheme();
+
+    try {
+      this.bossGain = this.ctx.createGain();
+      this.bossGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      this.bossGain.gain.linearRampToValueAtTime(0.04, this.ctx.currentTime + 1.0); // Fade-in
+      this.bossGain.connect(this.ctx.destination);
+
+      // Tense detuned saw waves for Boss combat feeling
+      const freqs = [82.41, 83.00, 123.47]; // E2 detuned + B2
+      freqs.forEach((freq, idx) => {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        osc.type = idx === 2 ? "triangle" : "sawtooth";
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        
+        // Add subtle LFO pitch modulation for tension
+        const lfo = this.ctx.createOscillator();
+        const lfoGain = this.ctx.createGain();
+        lfo.frequency.setValueAtTime(3.5, this.ctx.currentTime); // 3.5 Hz modulation
+        lfoGain.gain.setValueAtTime(1.5, this.ctx.currentTime);  // Detuning width
+        
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+        lfo.start();
+        
+        osc.connect(this.bossGain!);
+        osc.start();
+        
+        this.bossOscs.push(osc);
+        this.bossOscs.push(lfo as any); // Track LFO for clean termination
+      });
+    } catch (e) {
+      console.warn("Audio Synth Boss Theme error:", e);
+    }
+  }
+
+  public startBossTheme() {
+    this.playBossTheme();
+  }
+
+  public stopBossTheme() {
+    if (!this.ctx) return;
+    try {
+      const activeGain = this.bossGain;
+      const activeOscs = [...this.bossOscs];
+      
+      this.bossGain = null;
+      this.bossOscs = [];
+
+      if (activeGain) {
+        activeGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.8);
+        setTimeout(() => {
+          try {
+            activeOscs.forEach(osc => {
+              try { osc.stop(); } catch (_) {}
+            });
+            activeGain.disconnect();
+          } catch (_) {}
+        }, 1000);
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
 }
 
 export const synth = new AudioSynth();
+// Expose synth to window for global access inside Phaser adapters
+if (typeof window !== 'undefined') {
+  (window as any).synth = synth;
+}

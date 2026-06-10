@@ -407,7 +407,7 @@
 
 ---
 
-## Phase 11：全玩法可运行化长期规划
+## Phase 11：全玩法可运行化长期规划 -- 现阶段不考虑，除非指定要实现，不然默认跳过
 
 目标：将 Phase 1 盘点出的玩法候选逐步从“文档候选”推进到“可选择、可配置、可运行、可测试”的 Gameplay Card 资产。
 
@@ -453,3 +453,46 @@
 1. [x] 修复 `manifest.json` 膨胀递归 bug。
 2. [x] 优化玩法卡组合关系表达（包括 UI、预览、语义 diff 与元数据）。
 3. [ ] 重跑工作台与 demo 编译及 E2E 校验，确保所有 gates 通过并变绿。
+4. [x] 开展 Phase 12：深化玩法运行时与 Boss 挑战。
+5. [x] 开展 Phase 13：表现力与音频合成重塑。
+6. [x] 开展 Phase 14：结构重构与工程优化。
+
+---
+
+## Phase 12：深化玩法运行时与 Boss 挑战 (Deepening Core Gameplay Runtime)
+
+- [x] 12.1 **创建 TapReaction 独立 Adapter 模块**
+  - 放置在 `minigame_master/core/lib/gameplay/tap_reaction/TapReactionAdapter.js`
+  - 实现圆环的收缩判定、点中得分、漏掉扣除玩家生命值 (HP) 机制
+  - 导出完整的 `TestHooks` 与 `NodeResult` 数据交互
+- [x] 12.2 **创建 CollectDodge 独立 Adapter 模块**
+  - 放置在 `minigame_master/core/lib/gameplay/collect_dodge/CollectDodgeAdapter.js`
+  - 优化玩家 Capsule 的拖拽物理、灵石掉落速度及天雷/流星的碰撞箱
+- [x] 12.3 **实现关卡 Boss 战机制 (Boss Showdown)**
+  - **Tap Reaction Boss**：进度达到 80% 时生成八卦雷劫阵，Boss 周期性发射红线射线，玩家需一边清除逼近的飞弹，一边连续点击击破 Boss 的八卦弱点阵眼
+  - **Collect & Dodge Boss**：关卡最后阶段召唤雷兽 Boss，在屏幕顶部进行全屏激光横扫与密集陨石雷击，玩家必须灵活闪避并收集掉落的飞仙灵剑来重创 Boss
+- [x] 12.4 **设计精美的关卡 UI 与过渡动画 (Juicy Game UI)**
+  - 实现开场卷轴动画 (Level Intro Overlay)，显示关卡名、难度及目标提示
+  - 制作通关结算金雨粒子特效与“领取机缘 (Claim Rewards)”奖励动画，点击后真实累加资源并解锁后续节点
+  - 制作失败血幕效果 (Defeat Screen)，支持“原地重整旗鼓”与“撤退回主页”
+- [x] 12.5 **更新 LoreWeaver 运行时桥接**
+  - 在 [GameRunner.ts](file:///Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/src/game/GameRunner.ts) 的 `LevelActiveScene` 注册并按 `cardId` 分发 `rhythm_timing` (TapReaction) 与 `drag_collect_grid` (CollectDodge) 的 Phaser Adapter 实例，逐步下线原有的 Legacy 硬编码分支
+
+## Phase 13：表现力与音频合成重塑 (Polishing Expressiveness & Sound Synthesizer)
+
+- [x] 13.1 **丰富 Phaser 粒子交互**
+  - 在子弹击中怪物、灵珠被吸收、玩家受到天雷劈中时生成飞散的火花/灵能碎屑粒子
+- [x] 13.2 **升级 AudioSynth 音频引擎**
+  - 在 [AudioSynth.ts](file:///Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/src/utils/AudioSynth.ts) 引入 Web Audio FM / LFO 合成器，设计修仙标志性的铜磐余音、飞剑呼啸声、雷鸣低音等
+  - 增加长音频背景音乐 (BGM Drone)，支持进入关卡时淡入，返回主页时淡出
+
+## Phase 14：结构重构与工程优化 (Refactoring & Engineering Polish)
+
+- [x] 14.1 **重构 App.tsx 巨无霸单文件**
+  - 拆分出 `src/components/Header.tsx` (处理主题输入、Orchestrate 按钮、亮/暗主题和语言切换)
+  - 拆分出 `src/components/EmulatorPanel.tsx` (处理 Phaser 容器挂载与模拟器窗口大小缩放逻辑)
+- [x] 14.2 **实现“一键导出 Phaser 独立项目包”**
+  - 在 [main.py](file:///Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/backend/main.py) 开发 `/api/workspaces/{id}/export` 导出端点
+  - 打包生成包含 `index.html` + `core` 静态文件 + 当前配置 `manifest.json` 的单页独立运行 zip，可随时部署至 itch.io 等 Web 托管平台
+- [ ] 14.3 **Ollama 本地模型接入：暂不考虑支持**
+  - 现阶段不通过 `OLLAMA_API_BASE` 路由到本地模型；如环境变量存在，后端仅输出忽略提示，并继续使用 Gemini 或 procedural fallback。

@@ -1,19 +1,23 @@
 import os
 import uuid
 import json
+import io
 import time
 import asyncio
 import base64
 import binascii
+import html
 import math
 import shutil
 import struct
 import subprocess
 import tempfile
+import zipfile
 import zlib
 from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from .database import engine, Base, get_db
@@ -39,6 +43,8 @@ app.add_middleware(
 )
 
 LORE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+REPO_ROOT = os.path.abspath(os.path.join(LORE_ROOT, ".."))
+MINIGAME_CORE_ROOT = os.path.join(REPO_ROOT, "minigame_master", "core")
 REPORTS_DIR = os.path.join(LORE_ROOT, "workflow", "reports")
 DATA_DIR = os.path.join(LORE_ROOT, "data")
 WORKSPACES_DIR = os.path.join(DATA_DIR, "workspaces")
@@ -49,6 +55,264 @@ def get_ws_path(ws_id: str) -> str:
     path = os.path.join(WORKSPACES_DIR, ws_id)
     os.makedirs(path, exist_ok=True)
     return path
+
+def resolve_existing_ws_path(ws_id: str) -> str:
+    workspaces_root = os.path.abspath(WORKSPACES_DIR)
+    path = os.path.abspath(os.path.join(workspaces_root, ws_id))
+    if not path.startswith(workspaces_root + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid workspace id")
+    if not os.path.isdir(path):
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return path
+
+def safe_export_name(value: str, fallback: str = "loreweaver-export") -> str:
+    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in value.strip())
+    cleaned = "-".join(part for part in cleaned.split("-") if part)
+    return cleaned[:80] or fallback
+
+def add_directory_to_zip(zip_file: zipfile.ZipFile, source_dir: str, archive_root: str):
+    if not os.path.isdir(source_dir):
+        return
+    skip_dirs = {"node_modules", "__pycache__", ".git", "dist"}
+    skip_suffixes = {".pyc", ".pyo", ".DS_Store"}
+    for root, dirs, files in os.walk(source_dir):
+        dirs[:] = [item for item in dirs if item not in skip_dirs]
+        for filename in files:
+            if filename in skip_suffixes or any(filename.endswith(suffix) for suffix in skip_suffixes):
+                continue
+            absolute_path = os.path.join(root, filename)
+            rel_path = os.path.relpath(absolute_path, source_dir)
+            archive_name = os.path.join(archive_root, rel_path).replace(os.sep, "/")
+            zip_file.write(absolute_path, archive_name)
+
+def build_export_index_html(manifest: dict) -> str:
+    manifest_json = json.dumps(manifest, ensure_ascii=False, indent=2)
+    script_safe_json = manifest_json.replace("<", "\\u003c").replace("&", "\\u0026")
+    title = html.escape(str(manifest.get("title") or "LoreWeaver Export"))
+    theme_color = html.escape(str(manifest.get("themeColor") or "#10b981"))
+    return f"""<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <style>
+    :root {{ color-scheme: dark; --theme: {theme_color}; }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      background: #020617;
+      color: #e2e8f0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }}
+    main {{
+      width: min(1120px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 36px 0 48px;
+    }}
+    header {{
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: end;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+      padding-bottom: 22px;
+      margin-bottom: 24px;
+    }}
+    h1 {{ margin: 0; font-size: clamp(28px, 5vw, 52px); letter-spacing: 0; }}
+    p {{ color: #94a3b8; line-height: 1.7; }}
+    button {{
+      border: 1px solid color-mix(in srgb, var(--theme), white 15%);
+      background: var(--theme);
+      color: #020617;
+      min-height: 42px;
+      padding: 0 18px;
+      border-radius: 8px;
+      font-weight: 800;
+      cursor: pointer;
+    }}
+    .hud, .stage, .panel {{
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.72);
+      border-radius: 8px;
+    }}
+    .hud {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }}
+    .metric {{ color: #94a3b8; font-size: 13px; }}
+    .metric strong {{ display: block; color: #f8fafc; font-size: 18px; margin-top: 4px; }}
+    .layout {{
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }}
+    .stage {{ min-height: 620px; padding: 18px; position: relative; overflow: hidden; }}
+    canvas {{ width: 100%; aspect-ratio: 9 / 16; max-height: 74vh; background: #020617; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.22); }}
+    .panel {{ padding: 16px; max-height: 620px; overflow: auto; }}
+    .node {{
+      width: 100%;
+      text-align: left;
+      color: #e2e8f0;
+      background: transparent;
+      border-color: rgba(148, 163, 184, 0.2);
+      margin-bottom: 10px;
+    }}
+    .node.active {{ border-color: var(--theme); box-shadow: 0 0 0 1px color-mix(in srgb, var(--theme), transparent 45%); }}
+    .node span {{ display: block; color: #94a3b8; font-size: 12px; font-weight: 500; margin-top: 4px; }}
+    @media (max-width: 860px) {{
+      header {{ align-items: start; flex-direction: column; }}
+      .layout {{ grid-template-columns: 1fr; }}
+      canvas {{ max-height: none; }}
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>{title}</h1>
+        <p>Standalone LoreWeaver workspace export. The active manifest is embedded below and also saved as <code>manifest.json</code>.</p>
+      </div>
+      <button id="start">Start Node</button>
+    </header>
+    <section class="hud">
+      <div class="metric">Currency<strong id="currency">0</strong></div>
+      <div class="metric">Realm<strong id="realm">1</strong></div>
+      <div class="metric">Selected Node<strong id="selected">1</strong></div>
+    </section>
+    <section class="layout">
+      <div class="stage">
+        <canvas id="game" width="720" height="1280"></canvas>
+      </div>
+      <aside class="panel">
+        <h2>Nodes</h2>
+        <div id="nodes"></div>
+        <h2>Manifest</h2>
+        <pre id="manifest"></pre>
+      </aside>
+    </section>
+  </main>
+  <script id="manifest-data" type="application/json">{script_safe_json}</script>
+  <script>
+    const manifest = JSON.parse(document.getElementById("manifest-data").textContent);
+    const nodes = manifest.nodes || [];
+    let selectedIndex = 0;
+    let currency = 0;
+    let realm = 1;
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const nodeList = document.getElementById("nodes");
+    document.getElementById("manifest").textContent = JSON.stringify(manifest, null, 2);
+
+    function paint(progress = 0) {{
+      const node = nodes[selectedIndex] || {{}};
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#020617");
+      gradient.addColorStop(1, "#0f172a");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "{theme_color}";
+      ctx.globalAlpha = 0.16;
+      for (let i = 0; i < 28; i++) {{
+        const x = (i * 97 + progress * 120) % canvas.width;
+        const y = (i * 211 + progress * 420) % canvas.height;
+        ctx.beginPath();
+        ctx.arc(x, y, 18 + (i % 5) * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }}
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "{theme_color}";
+      ctx.lineWidth = 5;
+      ctx.strokeRect(48, 48, canvas.width - 96, canvas.height - 96);
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "700 44px sans-serif";
+      ctx.fillText(node.title || manifest.title || "LoreWeaver", 76, 150);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "26px sans-serif";
+      wrapText(node.intro || "Manifest loaded. Use this shell as the portable export preview.", 76, 218, canvas.width - 152, 40);
+      ctx.fillStyle = "{theme_color}";
+      ctx.font = "700 30px sans-serif";
+      ctx.fillText("Goal: " + (node.goalValue || "-") + " | Mechanic: " + (node.mechanics || node.gameplay?.cardId || "-"), 76, canvas.height - 150);
+    }}
+
+    function wrapText(text, x, y, maxWidth, lineHeight) {{
+      const words = String(text).split("");
+      let line = "";
+      for (const word of words) {{
+        const test = line + word;
+        if (ctx.measureText(test).width > maxWidth && line) {{
+          ctx.fillText(line, x, y);
+          line = word;
+          y += lineHeight;
+        }} else {{
+          line = test;
+        }}
+      }}
+      ctx.fillText(line, x, y);
+    }}
+
+    function renderNodes() {{
+      nodeList.innerHTML = "";
+      nodes.forEach((node, index) => {{
+        const button = document.createElement("button");
+        button.className = "node" + (index === selectedIndex ? " active" : "");
+        button.innerHTML = `${{node.id || index + 1}}. ${{node.title || "Untitled"}}<span>${{node.mechanics || node.gameplay?.cardId || "gameplay card"}}</span>`;
+        button.onclick = () => {{
+          selectedIndex = index;
+          document.getElementById("selected").textContent = String(node.id || index + 1);
+          renderNodes();
+          paint();
+        }};
+        nodeList.appendChild(button);
+      }});
+    }}
+
+    document.getElementById("start").onclick = () => {{
+      const started = performance.now();
+      function frame(now) {{
+        const t = Math.min((now - started) / 1800, 1);
+        paint(t);
+        if (t < 1) requestAnimationFrame(frame);
+        else {{
+          const node = nodes[selectedIndex] || {{}};
+          currency += Number(node.goalValue || 1);
+          realm = Math.max(realm, Math.min(6, selectedIndex + 1));
+          document.getElementById("currency").textContent = String(currency);
+          document.getElementById("realm").textContent = String(realm);
+        }}
+      }}
+      requestAnimationFrame(frame);
+    }};
+
+    renderNodes();
+    paint();
+  </script>
+</body>
+</html>
+"""
+
+def build_export_readme(workspace_id: str, manifest: dict) -> str:
+    title = manifest.get("title") or "LoreWeaver Export"
+    return f"""# {title}
+
+This ZIP was generated by LoreWeaver for workspace `{workspace_id}`.
+
+Contents:
+
+- `index.html` - portable standalone manifest preview shell.
+- `manifest.json` - the exported workspace game spec.
+- `core/lib/` - reusable LoreWeaver/minigame runtime library source.
+- `core/demo/` - Phaser demo projects and examples.
+
+Open `index.html` directly in a browser for a local preview. For full Phaser module demos, serve the folder with a local static server so browser module imports can resolve correctly.
+"""
 
 # Helper to resolve active stage index from progress and state
 def get_stage_index_for_job(job) -> int:
@@ -297,6 +561,34 @@ def api_save_workspace_file(ws_id: str, filename: str, payload: dict):
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/workspaces/{ws_id}/export")
+def api_export_workspace(ws_id: str):
+    ws_path = resolve_existing_ws_path(ws_id)
+    manifest_path = os.path.join(ws_path, "manifest.json")
+    if not os.path.exists(manifest_path):
+        raise HTTPException(status_code=404, detail="manifest.json not found")
+
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid manifest.json: {exc}") from exc
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
+        zip_file.writestr("index.html", build_export_index_html(manifest))
+        zip_file.writestr("README.md", build_export_readme(ws_id, manifest))
+        add_directory_to_zip(zip_file, os.path.join(MINIGAME_CORE_ROOT, "lib"), "core/lib")
+        add_directory_to_zip(zip_file, os.path.join(MINIGAME_CORE_ROOT, "demo"), "core/demo")
+
+    zip_buffer.seek(0)
+    title = safe_export_name(str(manifest.get("title") or ws_id))
+    headers = {
+        "Content-Disposition": f'attachment; filename="loreweaver-{title}.zip"'
+    }
+    return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
 
 # 🎨 Presets API
 @app.get("/api/presets")

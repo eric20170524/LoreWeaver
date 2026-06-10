@@ -45,8 +45,30 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     requires: ["Movement", "Spawner", "Timer", "Combat"]
   },
   { id: "turn_based_skill_battle", title: "回合制技能战斗", titleEn: "Turn-based skill battle", category: "base", adapter: "iframe" },
-  { id: "rhythm_timing", title: "节奏判定", titleEn: "Rhythm timing", category: "base", adapter: "iframe" },
-  { id: "drag_collect_grid", title: "拖拽采集网格", titleEn: "Drag collect grid", category: "base", adapter: "iframe" },
+  {
+    id: "rhythm_timing",
+    title: "快速聚灵",
+    titleEn: "Spiritual tap reaction",
+    category: "base",
+    adapter: "phaser",
+    victory: "吸收到达目标灵力值并战胜阵眼首领",
+    victoryEn: "Reach target energy and defeat Mandala Boss",
+    failure: "玩家生命值归零 (HP <= 0) 或雷劫超时",
+    failureEn: "Player dies (HP <= 0) or timer runs out",
+    requires: ["TapController", "ShrinkingTimer", "MandalaBoss", "Timer"]
+  },
+  {
+    id: "drag_collect_grid",
+    title: "虚空飞渡",
+    titleEn: "Void collect and dodge",
+    category: "base",
+    adapter: "phaser",
+    victory: "收集灵珠到达目标值并击败雷兽首领",
+    victoryEn: "Collect target gems and defeat Thunder Beast Boss",
+    failure: "玩家生命值归零 (HP <= 0) 或雷劫超时",
+    failureEn: "Player dies (HP <= 0) or timer runs out",
+    requires: ["DragController", "CascadePhysics", "ThunderBeastBoss", "Timer"]
+  },
   { id: "sequence_synthesis", title: "顺序合成", titleEn: "Sequence synthesis", category: "base", adapter: "iframe" },
   
   // Modifiers

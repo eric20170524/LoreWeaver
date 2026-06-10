@@ -3,9 +3,16 @@ import json
 import asyncio
 from .theme_presets import get_procedural_preset
 
+OLLAMA_SUPPORT_STATUS = "deferred_not_supported"
+
+def log_ollama_deferred_notice():
+    if os.getenv("OLLAMA_API_BASE"):
+        print("OLLAMA_API_BASE is configured but Ollama local model routing is currently deferred and not supported.")
+
 class WorldBuilderAgent:
     @staticmethod
     async def generate_gdd(theme: str) -> dict:
+        log_ollama_deferred_notice()
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             print("No GEMINI_API_KEY found, using procedural fallback.")
@@ -61,6 +68,7 @@ CRITICAL SCHEMA REQUIREMENTS (Return EXACTLY this JSON structure, no markdown ou
 
     @staticmethod
     async def adjust_gdd(current_gdd: dict, feedback: str, agent_role: str = "world_builder") -> dict:
+        log_ollama_deferred_notice()
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             print("No GEMINI_API_KEY for adjust prompt, applying mock tweak.")

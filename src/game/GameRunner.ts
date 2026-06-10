@@ -4,7 +4,9 @@ import { synth } from "../utils/AudioSynth";
 import {
   SurvivorHordeAdapter,
   HazardTelegraphModifier,
-  DefendCoreModifier
+  DefendCoreModifier,
+  TapReactionAdapter,
+  CollectDodgeAdapter
 } from "../../../minigame_master/core/lib/gameplay/index.js";
 import {
   createNodePayload,
@@ -501,74 +503,22 @@ export function initializePhaserGame(
       this.adapter = null;
       this.testHooks = null;
 
-      if (this.node.gameplay && this.node.gameplay.cardId === "survivor_horde") {
+      if (this.node.gameplay) {
         this.testHooks = new TestHooks("__LOREWEAVER_TEST_HOOKS__");
-        
-        const modifiersList: any[] = [];
-        if (this.node.gameplay.modifiers) {
-          this.node.gameplay.modifiers.forEach((modSpec: any) => {
-            if (modSpec.id === "hazard_telegraph") {
-              const defaultModConfig = {
-                intervalMs: 3600,
-                warningDelayMs: 900,
-                radius: 54,
-                damage: 18,
-                target: "random"
-              };
-              modifiersList.push(new HazardTelegraphModifier({
-                ...defaultModConfig,
-                ...modSpec.knobs
-              }));
-            } else if (modSpec.id === "defend_core") {
-              const defaultModConfig = {
-                hp: 80,
-                radius: 34,
-                color: 0x38bdf8,
-                enemyDamage: 8,
-                aggro: false
-              };
-              modifiersList.push(new DefendCoreModifier({
-                ...defaultModConfig,
-                ...modSpec.knobs
-              }));
-            }
-          });
-        }
+        const cardId = this.node.gameplay.cardId;
 
-        this.adapter = new SurvivorHordeAdapter({
-          testHooks: this.testHooks,
-          modifiers: modifiersList,
-          onEnd: (result: any) => {
-            this.handleAdapterEnd(result);
-          }
-        });
-
-        const baseKnobs = {
+        const pState = this.game.registry.get("playerState") || {};
+        const baseKnobs: any = {
           duration: this.node.durationLimit || 30,
           goalValue: this.node.goalValue,
           difficulty: this.node.difficulty,
-          resourceMultiplier: this.node.resourceMultiplier,
-          enemies: {
-            spawnIntervalMs: Math.max(400, 1000 - (this.node.difficulty - 1) * 100),
-            pool: [
-              {
-                id: "grunt",
-                hp: Math.max(1, Math.floor(this.node.difficulty * 0.8)),
-                speed: 80 + (this.node.difficulty - 1) * 8,
-                damage: 5 + this.node.difficulty * 2,
-                radius: 10,
-                color: 0x888888,
-                reward: { score: 1 }
-              }
-            ]
-          }
+          resourceMultiplier: this.node.resourceMultiplier
         };
 
         const mergedKnobs = this.node.gameplay.knobs
           ? { ...baseKnobs, ...this.node.gameplay.knobs }
           : baseKnobs;
 
-        const pState = this.game.registry.get("playerState") || {};
         const payload = createNodePayload({
           id: this.node.id,
           nodeId: `node_${this.node.id}`,
@@ -578,7 +528,7 @@ export function initializePhaserGame(
               score: this.node.goalValue
             },
             gameplay: {
-              cardId: this.node.gameplay.cardId,
+              cardId: cardId,
               knobs: mergedKnobs
             }
           },
@@ -587,7 +537,72 @@ export function initializePhaserGame(
           }
         });
 
-        this.adapter.init(payload);
+        if (cardId === "survivor_horde") {
+          const modifiersList: any[] = [];
+          if (this.node.gameplay.modifiers) {
+            this.node.gameplay.modifiers.forEach((modSpec: any) => {
+              if (modSpec.id === "hazard_telegraph") {
+                const defaultModConfig = {
+                  intervalMs: 3600,
+                  warningDelayMs: 900,
+                  radius: 54,
+                  damage: 18,
+                  target: "random"
+                };
+                modifiersList.push(new HazardTelegraphModifier({
+                  ...defaultModConfig,
+                  ...modSpec.knobs
+                }));
+              } else if (modSpec.id === "defend_core") {
+                const defaultModConfig = {
+                  hp: 80,
+                  radius: 34,
+                  color: 0x38bdf8,
+                  enemyDamage: 8,
+                  aggro: false
+                };
+                modifiersList.push(new DefendCoreModifier({
+                  ...defaultModConfig,
+                  ...modSpec.knobs
+                }));
+              }
+            });
+          }
+
+          this.adapter = new SurvivorHordeAdapter({
+            testHooks: this.testHooks,
+            modifiers: modifiersList,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            }
+          });
+        } else if (cardId === "rhythm_timing") {
+          this.adapter = new TapReactionAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            },
+            spawnParticles: (x: number, y: number, color: number) => {
+              this.spawnParticleExplosion(x, y, color);
+            }
+          });
+        } else if (cardId === "drag_collect_grid") {
+          this.adapter = new CollectDodgeAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            },
+            spawnParticles: (x: number, y: number, color: number) => {
+              this.spawnParticleExplosion(x, y, color);
+            }
+          });
+        }
+
+        if (this.adapter) {
+          this.adapter.init(payload);
+        }
       }
     }
 
@@ -627,22 +642,28 @@ export function initializePhaserGame(
         }
       });
 
-      if (this.adapter) {
-        this.adapter.create(this);
-        (window as any).__LW_SURVIVOR_DEMO__ = this.adapter;
-      } else {
-        // Spawn overall active level timers
-        this.timerBar = this.add.graphics();
-        this.gameTimer = this.time.addEvent({
-          delay: 50,
-          callback: this.tickLevelTimer,
-          callbackScope: this,
-          loop: true
-        });
+      // Play ambient drone BGM
+      synth.startBgm();
 
-        // Distribute and trigger minigame core routines
-        this.launchMechanicMinigame(width, height, col);
-      }
+      // Show level introductory overlay, and launch game only when skipped/completed
+      this.showLevelIntro(() => {
+        if (this.adapter) {
+          this.adapter.create(this);
+          (window as any).__LW_SURVIVOR_DEMO__ = this.adapter;
+        } else {
+          // Spawn overall active level timers
+          this.timerBar = this.add.graphics();
+          this.gameTimer = this.time.addEvent({
+            delay: 50,
+            callback: this.tickLevelTimer,
+            callbackScope: this,
+            loop: true
+          });
+
+          // Distribute and trigger minigame core routines
+          this.launchMechanicMinigame(width, height, col);
+        }
+      });
     }
 
     update(time: number, delta: number) {
@@ -1076,10 +1097,12 @@ export function initializePhaserGame(
     }
 
     private handleAdapterEnd(result: any) {
-      const { width, height } = this.scale;
       if (result.success) {
-        synth.playNodeSuccess();
-        onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！悟得通关造化: [${this.node.rewards}]。`);
+        // Stop combat BGM, play fanfare
+        synth.stopBossTheme();
+        synth.stopBgm();
+        synth.playVictoryFanfare();
+        onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！`);
 
         const pState = { ...this.game.registry.get("playerState") } as PlayerState;
         
@@ -1092,7 +1115,8 @@ export function initializePhaserGame(
           pState.unlockedNodeIds.push(nextId);
         }
 
-        pState.activeMultiplier += this.node.resourceMultiplier / 12.0;
+        const multiplierGain = this.node.resourceMultiplier / 12.0;
+        pState.activeMultiplier += multiplierGain;
         
         const rwdKey = spec.economy.resources[0] || "灵石";
         pState.secondaryResources[rwdKey] = (pState.secondaryResources[rwdKey] || 0) + 1;
@@ -1101,43 +1125,313 @@ export function initializePhaserGame(
         this.game.registry.get("onSaveState")(pState);
 
         this.cameras.main.flash(300, 16, 185, 129);
-        
-        this.add.text(width / 2, height / 2, "🍀 挑战成功", {
-          fontFamily: "Inter, sans-serif",
-          fontSize: "38px",
-          fontStyle: "bold",
-          color: spec.themeColor
-        }).setOrigin(0.5);
-
-        this.time.delayedCall(1400, () => {
-          this.safeRetreat();
-        });
+        this.showVictoryOverlay(multiplierGain, rwdKey);
       } else {
+        synth.stopBossTheme();
+        synth.stopBgm();
         if (result.reason === "retreated") {
           this.safeRetreat();
         } else {
           synth.playDamage();
-          onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${result.reason || "未知"}]。请重新尝试。`);
-          
+          onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${result.reason || "未知"}]。`);
           this.cameras.main.shake(250, 0.015);
-          
-          this.add.text(width / 2, height / 2, "💀 渡劫失败", {
-            fontFamily: "Inter, sans-serif",
-            fontSize: "38px",
-            fontStyle: "bold",
-            color: "#ef4444"
-          }).setOrigin(0.5);
-
-          this.time.delayedCall(1600, () => {
-            this.safeRetreat();
-          });
+          this.showDefeatOverlay(result.reason || "天劫强力，元神溃散");
         }
       }
     }
 
+    private showLevelIntro(onComplete: () => void) {
+      const { width, height } = this.scale;
+      const introContainer = this.add.container(0, 0);
+
+      const overlay = this.add.graphics();
+      overlay.fillStyle(0x020617, 0.85);
+      overlay.fillRect(0, 0, width, height);
+      introContainer.add(overlay);
+
+      const col = Phaser.Display.Color.HexStringToColor(spec.themeColor).color;
+      const panel = this.add.graphics();
+      panel.fillStyle(0x0f172a, 0.95);
+      panel.fillRoundedRect(50, height / 2 - 260, width - 100, 420, 10);
+      panel.lineStyle(2, col, 0.85);
+      panel.strokeRoundedRect(50, height / 2 - 260, width - 100, 420, 10);
+      introContainer.add(panel);
+
+      const title = this.add.text(width / 2, height / 2 - 210, `第 ${this.node.id} 劫：${this.node.title}`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        fontStyle: "bold",
+        color: spec.themeColor
+      }).setOrigin(0.5);
+
+      const descText = this.add.text(width / 2, height / 2 - 140, this.node.intro, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        color: "#94a3b8",
+        wordWrap: { width: width - 160, useAdvancedWrap: true },
+        align: "center"
+      }).setOrigin(0.5);
+
+      let mechDesc = "";
+      if (this.node.gameplay?.cardId === "survivor_horde") {
+        mechDesc = "⚔️ 割草生存：躲避敌人，利用法宝自动击杀怪物，并在最后击败降临的邪道首领。";
+      } else if (this.node.gameplay?.cardId === "rhythm_timing") {
+        mechDesc = "🔮 快速聚灵：点击屏幕上不断收缩的灵能法阵。漏掉会导致生命值受损，后期需击破劫雷法阵。";
+      } else if (this.node.gameplay?.cardId === "drag_collect_grid") {
+        mechDesc = "🍃 虚空飞渡：左右滑动躲避漫天红雷，收集绿灵珠。最后收集飞剑攻击劈落的天雷巨兽。";
+      } else {
+        mechDesc = "🔮 天道感应：体验由工作台配置的经典玩法考验。";
+      }
+
+      const mech = this.add.text(width / 2, height / 2 - 30, mechDesc, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "12px",
+        color: "#10b981",
+        wordWrap: { width: width - 160, useAdvancedWrap: true },
+        align: "center"
+      }).setOrigin(0.5);
+
+      const prompt = this.add.text(width / 2, height / 2 + 100, "—— 点击屏幕 开启考验 ——", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        fontStyle: "bold",
+        color: "#64748b"
+      }).setOrigin(0.5);
+
+      this.tweens.add({
+        targets: prompt,
+        alpha: { from: 1, to: 0.3 },
+        duration: 800,
+        yoyo: true,
+        repeat: -1
+      });
+
+      introContainer.add([title, descText, mech, prompt]);
+
+      const skipZone = this.add.zone(width / 2, height / 2, width, height).setInteractive();
+      skipZone.on("pointerdown", () => {
+        synth.playClick();
+        this.tweens.add({
+          targets: introContainer,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => {
+            introContainer.destroy();
+            skipZone.destroy();
+            onComplete();
+          }
+        });
+      });
+
+      this.time.delayedCall(2500, () => {
+        if (introContainer.active) {
+          this.tweens.add({
+            targets: introContainer,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => {
+              introContainer.destroy();
+              skipZone.destroy();
+              onComplete();
+            }
+          });
+        }
+      });
+    }
+
+    private spawnParticleExplosion(x: number, y: number, color: number) {
+      const count = 12;
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Phaser.Math.Between(60, 160);
+        const px = x + Math.cos(angle) * 8;
+        const py = y + Math.sin(angle) * 8;
+        const dot = this.add.arc(px, py, Phaser.Math.Between(2, 4), 0, 360, false, color, 0.95);
+        
+        this.tweens.add({
+          targets: dot,
+          x: px + Math.cos(angle) * speed * 0.4,
+          y: py + Math.sin(angle) * speed * 0.4,
+          alpha: 0,
+          scale: 0.1,
+          duration: Phaser.Math.Between(400, 700),
+          onComplete: () => dot.destroy()
+        });
+      }
+    }
+
+    private showVictoryOverlay(multiplierGain: number, resourceKey: string) {
+      const { width, height } = this.scale;
+      const container = this.add.container(0, 0);
+
+      const overlay = this.add.graphics();
+      overlay.fillStyle(0x020617, 0.7);
+      overlay.fillRect(0, 0, width, height);
+      container.add(overlay);
+
+      const panel = this.add.graphics();
+      panel.fillStyle(0x0f172a, 0.95);
+      panel.fillRoundedRect(60, height / 2 - 240, width - 120, 480, 12);
+      panel.lineStyle(2.5, 0xd97706, 1);
+      panel.strokeRoundedRect(60, height / 2 - 240, width - 120, 480, 12);
+      container.add(panel);
+
+      // Gold dust particles continuously
+      this.time.addEvent({
+        delay: 150,
+        callback: () => {
+          this.spawnParticleExplosion(
+            Phaser.Math.Between(80, width - 80),
+            Phaser.Math.Between(height / 2 - 200, height / 2 + 100),
+            0xd97706
+          );
+        },
+        repeat: 12
+      });
+
+      const title = this.add.text(width / 2, height / 2 - 190, "🍀 功德圆满 / SUCCESS", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "22px",
+        fontStyle: "bold",
+        color: "#f59e0b"
+      }).setOrigin(0.5);
+
+      const sub = this.add.text(width / 2, height / 2 - 130, `顺利参透第 ${this.node.id} 关：${this.node.title}`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        color: "#94a3b8"
+      }).setOrigin(0.5);
+
+      const rwdTitle = this.add.text(width / 2, height / 2 - 70, "获得天道造化奖励", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "14px",
+        fontStyle: "bold",
+        color: "#ffffff"
+      }).setOrigin(0.5);
+
+      const rwd1 = this.add.text(width / 2, height / 2 - 20, `✨ 修为挂机效率: +${(multiplierGain * 1.5).toFixed(2)}/秒`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        color: "#10b981"
+      }).setOrigin(0.5);
+
+      const rwd2 = this.add.text(width / 2, height / 2 + 20, `💎 额外获取造化: ${this.node.rewards}`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        color: "#f59e0b"
+      }).setOrigin(0.5);
+
+      const rwd3 = this.add.text(width / 2, height / 2 + 60, `💼 奇珍机缘: ${resourceKey} +1`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        color: "#38bdf8"
+      }).setOrigin(0.5);
+
+      const btn = this.add.text(width / 2, height / 2 + 150, "领取天道机缘并返回", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "14px",
+        fontStyle: "bold",
+        color: "#0f172a",
+        backgroundColor: "#f59e0b",
+        padding: { x: 20, y: 10 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      btn.on("pointerover", () => btn.setScale(1.05));
+      btn.on("pointerout", () => btn.setScale(1));
+      btn.on("pointerdown", () => {
+        synth.playClick();
+        container.destroy();
+        this.safeRetreat();
+      });
+
+      container.add([title, sub, rwdTitle, rwd1, rwd2, rwd3, btn]);
+    }
+
+    private showDefeatOverlay(reason: string) {
+      const { width, height } = this.scale;
+      const container = this.add.container(0, 0);
+
+      const overlay = this.add.graphics();
+      overlay.fillStyle(0x020617, 0.7);
+      overlay.fillRect(0, 0, width, height);
+      container.add(overlay);
+
+      const panel = this.add.graphics();
+      panel.fillStyle(0x0f172a, 0.95);
+      panel.fillRoundedRect(60, height / 2 - 180, width - 120, 360, 12);
+      panel.lineStyle(2.5, 0xef4444, 1);
+      panel.strokeRoundedRect(60, height / 2 - 180, width - 120, 360, 12);
+      container.add(panel);
+
+      const title = this.add.text(width / 2, height / 2 - 130, "💀 身死道消 / DEFEATED", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "22px",
+        fontStyle: "bold",
+        color: "#ef4444"
+      }).setOrigin(0.5);
+
+      let reasonZh = reason;
+      if (reason === "hp_zero") reasonZh = "生命元神耗尽归零";
+      else if (reason === "timer_expired") reasonZh = "劫数倒计时大限已到";
+
+      const sub = this.add.text(width / 2, height / 2 - 70, `败因: [ ${reasonZh} ]`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        color: "#94a3b8",
+        wordWrap: { width: width - 180, useAdvancedWrap: true },
+        align: "center"
+      }).setOrigin(0.5);
+
+      const desc = this.add.text(width / 2, height / 2 - 10, "天雷凶险，仙途坎坷。请重整旗鼓再试，\n或先行退回主界面积攒修为。", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "12px",
+        color: "#64748b",
+        align: "center"
+      }).setOrigin(0.5);
+
+      // Try Again Button
+      const btnRetry = this.add.text(width / 2 - 75, height / 2 + 80, "重整旗鼓", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        backgroundColor: "#10b981",
+        padding: { x: 16, y: 10 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      btnRetry.on("pointerover", () => btnRetry.setScale(1.05));
+      btnRetry.on("pointerout", () => btnRetry.setScale(1));
+      btnRetry.on("pointerdown", () => {
+        synth.playClick();
+        container.destroy();
+        this.shutdown();
+        this.scene.restart({ node: this.node });
+      });
+
+      // Retreat Button
+      const btnBack = this.add.text(width / 2 + 75, height / 2 + 80, "退回主干", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "13px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        backgroundColor: "#334155",
+        padding: { x: 16, y: 10 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      btnBack.on("pointerover", () => btnBack.setScale(1.05));
+      btnBack.on("pointerout", () => btnBack.setScale(1));
+      btnBack.on("pointerdown", () => {
+        synth.playClick();
+        container.destroy();
+        this.safeRetreat();
+      });
+
+      container.add([title, sub, desc, btnRetry, btnBack]);
+    }
+
     /* GENERAL EXIT STRATEGIES AND SCENE RESTORATION CONTROLLER */
     private handleLevelWin() {
-      synth.playNodeSuccess();
+      synth.playVictoryFanfare();
       onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！悟得通关造化: [${this.node.rewards}]。`);
 
       const pState = { ...this.game.registry.get("playerState") } as PlayerState;
@@ -1213,6 +1507,10 @@ export function initializePhaserGame(
       this.activeCollects = [];
       this.activeHazards = [];
       this.runeKeyrings = [];
+
+      // Stop Synthesizer Drones BGM and Boss Theme
+      synth.stopBgm();
+      synth.stopBossTheme();
 
       // Clean up adapter
       if (this.adapter) {

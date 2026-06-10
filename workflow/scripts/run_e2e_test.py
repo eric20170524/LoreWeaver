@@ -100,6 +100,13 @@ def read_combat_probe(page):
     }
     """)
 
+def is_ignorable_dev_console_error(text: str) -> bool:
+    return (
+        "WebSocket connection to" in text
+        and "?token=" in text
+        and "Error during WebSocket handshake" in text
+    )
+
 def write_survivor_report(report):
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     with open(REPORTS_DIR / "runtime_e2e_survivor_horde_latest.json", "w", encoding="utf-8") as f:
@@ -144,7 +151,7 @@ def run_survivor_horde_demo_test():
             page = browser.new_page(viewport={"width": 720, "height": 1280}, device_scale_factor=1)
 
             page.on("pageerror", lambda err: errors.append(f"Page Error: {err}"))
-            page.on("console", lambda msg: errors.append(f"Console Error: {msg.text}") if msg.type == "error" else None)
+            page.on("console", lambda msg: errors.append(f"Console Error: {msg.text}") if msg.type == "error" and not is_ignorable_dev_console_error(msg.text) else None)
 
             try:
                 page.goto(url)
@@ -299,9 +306,81 @@ def run_loreweaver_app_test():
             page = browser.new_page(viewport={"width": 1280, "height": 800})
 
             page.on("pageerror", lambda err: errors.append(f"Page Error: {err}"))
-            page.on("console", lambda msg: errors.append(f"Console Error: {msg.text}") if msg.type == "error" else None)
+            page.on("console", lambda msg: errors.append(f"Console Error: {msg.text}") if msg.type == "error" and not is_ignorable_dev_console_error(msg.text) else None)
 
             try:
+                def run_adapter_smoke(node_index, card_id, label):
+                    print(f"Launching {label} adapter smoke...")
+                    page.evaluate("""
+                    ({ nodeIndex, cardId }) => {
+                        const game = window.__LOREWEAVER_GAME__;
+                        const spec = game.registry.get("gameSpec");
+                        const sourceNode = spec.nodes[nodeIndex] || spec.nodes[0];
+                        const node = {
+                            ...sourceNode,
+                            goalValue: 5,
+                            durationLimit: 12,
+                            difficulty: 1,
+                            gameplay: {
+                                ...(sourceNode.gameplay || {}),
+                                cardId,
+                                knobs: {
+                                    ...((sourceNode.gameplay || {}).knobs || {}),
+                                    duration: 12,
+                                    goalValue: 5,
+                                    difficulty: 1,
+                                    spawnIntervalMs: 650,
+                                    itemSpeed: 180,
+                                    hazardRate: 0.25,
+                                    boss: {
+                                        hp: 30,
+                                        attackIntervalMs: 2000
+                                    }
+                                }
+                            }
+                        };
+                        window.__LOREWEAVER_TEST_HOOKS__ = {};
+                        game.scene.start('LevelActiveScene', { node });
+                    }
+                    """, {"nodeIndex": node_index, "cardId": card_id})
+
+                    page.wait_for_function(f"""
+                    () => {{
+                        const hooks = window.__LOREWEAVER_TEST_HOOKS__;
+                        return hooks && hooks.adapterId === "{card_id}" && hooks.status === "running";
+                    }}
+                    """, timeout=12000)
+
+                    start_state = page.evaluate("window.__LOREWEAVER_TEST_HOOKS__")
+                    page.wait_for_timeout(3200)
+                    later_state = page.evaluate("window.__LOREWEAVER_TEST_HOOKS__")
+                    assertions[f"{label}RunningStateObserved"] = start_state.get("status") == "running"
+                    assertions[f"{label}AdapterId"] = start_state.get("adapterId") == card_id
+                    assertions[f"{label}TimerUpdated"] = (
+                        isinstance(start_state.get("timer"), (int, float))
+                        and isinstance(later_state.get("timer"), (int, float))
+                        and later_state.get("timer") < start_state.get("timer")
+                    )
+                    observed[f"{label}Start"] = start_state
+                    observed[f"{label}After2s"] = later_state
+
+                    page.evaluate("""
+                    () => {
+                        const game = window.__LOREWEAVER_GAME__;
+                        const activeScene = game.scene.keys['LevelActiveScene'];
+                        if (activeScene && activeScene.adapter) {
+                            activeScene.adapter.finish(false, 'retreated');
+                        }
+                    }
+                    """)
+                    page.wait_for_function("""
+                    () => {
+                        const game = window.__LOREWEAVER_GAME__;
+                        return game && game.scene.isActive('MainScene');
+                    }
+                    """, timeout=10000)
+                    assertions[f"{label}ReturnedToMainScene"] = page.evaluate("window.__LOREWEAVER_GAME__.scene.isActive('MainScene')")
+
                 page.goto(url)
                 print("Waiting for page load...")
                 page.wait_for_timeout(3000)
@@ -415,6 +494,9 @@ def run_loreweaver_app_test():
                 is_active = page.evaluate("window.__LOREWEAVER_GAME__.scene.isActive('MainScene')")
                 assertions["returnedToMainScene"] = is_active
                 print("Successfully returned to MainScene!")
+
+                run_adapter_smoke(0, "rhythm_timing", "tapReaction")
+                run_adapter_smoke(2, "drag_collect_grid", "collectDodge")
 
             finally:
                 browser.close()
