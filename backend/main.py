@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
 from .models import Workspace, Job
 from .schemas import (
-    WorkspaceCreate, WorkspaceResponse, WorkspaceListResponse,
+    WorkspaceCreate, WorkspaceImport, WorkspaceResponse, WorkspaceListResponse,
     JobResponse, FeedbackRequest, ApproveRequest, JobModel
 )
 from .theme_presets import get_procedural_preset
@@ -66,9 +66,40 @@ def resolve_existing_ws_path(ws_id: str) -> str:
     return path
 
 def safe_export_name(value: str, fallback: str = "loreweaver-export") -> str:
-    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in value.strip())
+    cleaned = "".join(ch if (ch.isascii() and ch.isalnum()) or ch in ("-", "_") else "-" for ch in value.strip())
     cleaned = "-".join(part for part in cleaned.split("-") if part)
     return cleaned[:80] or fallback
+
+def utc_now_string() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+def read_optional_workspace_meta(source_path: str) -> dict:
+    meta_path = os.path.join(source_path, "meta.json")
+    if not os.path.exists(meta_path):
+        return {}
+    try:
+        with open(meta_path, "r", encoding="utf-8") as meta_file:
+            meta = json.load(meta_file)
+        return meta if isinstance(meta, dict) else {}
+    except Exception:
+        return {}
+
+def infer_imported_workspace_fields(payload: WorkspaceImport, source_path: str, manifest: dict) -> tuple[str, str]:
+    meta = read_optional_workspace_meta(source_path)
+    name = (payload.name or meta.get("name") or manifest.get("title") or os.path.basename(source_path)).strip()
+    theme = (payload.theme or meta.get("theme") or manifest.get("title") or "Imported LoreWeaver project").strip()
+    return name or "Imported LoreWeaver project", theme or "Imported LoreWeaver project"
+
+def workspace_copy_ignore(directory: str, names: list[str]) -> set[str]:
+    skip_names = {"node_modules", "__pycache__", ".git", "dist", ".DS_Store"}
+    ignored = set()
+    for name in names:
+        if name in skip_names or name.endswith((".pyc", ".pyo")):
+            ignored.add(name)
+            continue
+        if os.path.islink(os.path.join(directory, name)):
+            ignored.add(name)
+    return ignored
 
 def add_directory_to_zip(zip_file: zipfile.ZipFile, source_dir: str, archive_root: str):
     if not os.path.isdir(source_dir):
@@ -427,7 +458,7 @@ async def run_async_compilation(job_id: str, final_gdd: dict, db_session_maker):
         # Update workspace timestamps
         workspace = db.query(Workspace).filter(Workspace.id == job.workspace_id).first()
         if workspace:
-            now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.get_current_time() if hasattr(time, 'get_current_time') else time.gmtime())
+            now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             workspace.last_modified_at = now_str
             # Also sync physical meta
             with open(os.path.join(get_ws_path(workspace.id), "meta.json"), "r+", encoding="utf-8") as mf:
@@ -499,7 +530,7 @@ async def run_async_feedback(job_id: str, db_session_maker, message: str, agent_
 @app.post("/api/workspaces", response_model=WorkspaceResponse)
 def api_create_workspace(payload: WorkspaceCreate, db: Session = Depends(get_db)):
     ws_id = str(uuid.uuid4())
-    now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.get_current_time() if hasattr(time, 'get_current_time') else time.gmtime())
+    now_str = utc_now_string()
     
     workspace = Workspace(
         id=ws_id,
@@ -522,6 +553,58 @@ def api_create_workspace(payload: WorkspaceCreate, db: Session = Depends(get_db)
             "createdAt": now_str,
             "lastModifiedAt": now_str
         }, f, ensure_ascii=False, indent=2)
+
+    return {"success": True, "data": workspace}
+
+@app.post("/api/workspaces/import", response_model=WorkspaceResponse)
+def api_import_workspace(payload: WorkspaceImport, db: Session = Depends(get_db)):
+    source_path = os.path.abspath(os.path.expanduser(payload.source_path.strip()))
+    if not os.path.isdir(source_path):
+        raise HTTPException(status_code=404, detail="Source directory not found")
+
+    manifest_path = os.path.join(source_path, "manifest.json")
+    if not os.path.isfile(manifest_path):
+        raise HTTPException(status_code=422, detail="Selected directory must contain manifest.json")
+
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+        if not isinstance(manifest, dict):
+            raise ValueError("manifest.json must contain a JSON object")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid manifest.json: {exc}") from exc
+
+    ws_id = str(uuid.uuid4())
+    ws_dir = os.path.join(WORKSPACES_DIR, ws_id)
+    now_str = utc_now_string()
+    name, theme = infer_imported_workspace_fields(payload, source_path, manifest)
+
+    try:
+        shutil.copytree(source_path, ws_dir, ignore=workspace_copy_ignore)
+        with open(os.path.join(ws_dir, "meta.json"), "w", encoding="utf-8") as meta_file:
+            json.dump({
+                "id": ws_id,
+                "name": name,
+                "theme": theme,
+                "sourcePath": source_path,
+                "createdAt": now_str,
+                "lastModifiedAt": now_str
+            }, meta_file, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        if os.path.exists(ws_dir):
+            shutil.rmtree(ws_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=f"Failed to import workspace: {exc}") from exc
+
+    workspace = Workspace(
+        id=ws_id,
+        name=name,
+        theme=theme,
+        created_at=now_str,
+        last_modified_at=now_str
+    )
+    db.add(workspace)
+    db.commit()
+    db.refresh(workspace)
 
     return {"success": True, "data": workspace}
 
@@ -585,8 +668,11 @@ def api_export_workspace(ws_id: str):
 
     zip_buffer.seek(0)
     title = safe_export_name(str(manifest.get("title") or ws_id))
+    filename = f"loreweaver-{title}.zip"
+    import urllib.parse
+    quoted_filename = urllib.parse.quote(filename)
     headers = {
-        "Content-Disposition": f'attachment; filename="loreweaver-{title}.zip"'
+        "Content-Disposition": f'attachment; filename="{quoted_filename}"; filename*=UTF-8\'\'{quoted_filename}'
     }
     return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
 
