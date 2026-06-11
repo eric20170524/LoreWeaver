@@ -14,6 +14,35 @@ export interface GameplayAssignment {
   patchLevel: PatchLevel;
 }
 
+export interface ProgressionSystemSpec {
+  id: string;
+  title: string;
+  resource: string;
+  action: string;
+  unlocks: string[];
+  nodePayloadEffect: string;
+}
+
+export type AbilityUnlockSource = "initial" | "mainline" | "node_reward" | "hybrid";
+
+export interface AbilitySpec {
+  id: string;
+  name: string;
+  description: string;
+  unlockSource: AbilityUnlockSource;
+  unlockCondition: string;
+  gameplayTags: string[];
+  runtimeSkillIds: string[];
+  affectedNodeIds: number[];
+}
+
+export interface NodePlanningSpec {
+  mainlineHooks: string[];
+  rewardUnlocks: string[];
+  runSkillPool: string[];
+  notes?: string;
+}
+
 export interface NodeSpec {
   id: number;
   title: string;
@@ -26,6 +55,7 @@ export interface NodeSpec {
   difficulty: number;
   durationLimit: number;
   gameplay?: GameplayAssignment;
+  planning?: NodePlanningSpec;
 }
 
 export interface ManifestPatch {
@@ -68,6 +98,8 @@ export interface GameSpec {
     realms: string[]; // 6 realm names e.g., ["炼气期", "筑基期", "金丹期", "元婴期", "化神期", "返虚期"]
   };
   nodes: NodeSpec[];
+  progressionSystems?: ProgressionSystemSpec[];
+  abilityCatalog?: AbilitySpec[];
   gameplayCards?: string[];
   workbench?: WorkbenchState;
 }
@@ -78,6 +110,7 @@ export interface PlayerState {
   secondaryResources: { [key: string]: number }; // Material resources key-value
   unlockedNodeIds: number[]; // e.g. [1] (node 1 is unlocked by default, node 2 opens upon clear, etc.)
   completedNodeIds: number[]; // Nodes fully beaten
+  unlockedAbilities?: string[]; // Long-term abilities unlocked from mainline or node rewards
   activeMultiplier: number; // Combined multipliers based on nodes cleared
   clickPower: number; // Click cultivation reward multiplier
 }

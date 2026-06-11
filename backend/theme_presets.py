@@ -56,6 +56,64 @@ def get_procedural_preset(theme: str) -> dict:
                 "至高意志/Genesis"
             ]
         },
+        "progressionSystems": [
+            {
+                "id": "main_idle_growth",
+                "title": "主干积累",
+                "resource": f"{theme}精魂",
+                "action": "在主界面挂机或点击积累核心能量",
+                "unlocks": ["realm_breakthrough", "node_entry"],
+                "nodePayloadEffect": "提高节点进入资格、通关收益倍率和基础容错。"
+            },
+            {
+                "id": "realm_breakthrough",
+                "title": "境界跃迁",
+                "resource": f"{theme}精魂",
+                "action": "达到阈值后突破至下一阶段",
+                "unlocks": ["higher_nodes", "stronger_base_stats"],
+                "nodePayloadEffect": "转化为节点内生命、目标效率或难度容错。"
+            },
+            {
+                "id": "ability_mastery",
+                "title": "能力参悟",
+                "resource": f"{theme}残屑",
+                "action": "消耗稀有材料解锁或强化局内能力",
+                "unlocks": ["ability_catalog", "run_skill_pool"],
+                "nodePayloadEffect": "决定每个节点可携带或可抽取的能力池。"
+            }
+        ],
+        "abilityCatalog": [
+            {
+                "id": "starter_art",
+                "name": "入门本命术",
+                "description": "默认起手能力，保证每个节点都有清晰的局内行动方式。",
+                "unlockSource": "initial",
+                "unlockCondition": "创建项目时自动获得",
+                "gameplayTags": ["starter", "output"],
+                "runtimeSkillIds": ["starter_projectile", "tap_focus", "collect_magnet"],
+                "affectedNodeIds": [1, 2, 3, 4]
+            },
+            {
+                "id": "guard_art",
+                "name": "护身秘法",
+                "description": "主干参悟所得的防御/回复能力，将长期养成转化为节点内生存容错。",
+                "unlockSource": "mainline",
+                "unlockCondition": f"消耗 {theme}残屑 在主干能力系统中参悟",
+                "gameplayTags": ["defense", "recovery", "survival"],
+                "runtimeSkillIds": ["shield_refresh", "passive_heal", "defense_aura"],
+                "affectedNodeIds": [3, 4, 5, 6, 7, 8, 9]
+            },
+            {
+                "id": "breakthrough_art",
+                "name": "破境秘术",
+                "description": "由关键节点首通打开的爆发能力，用于 Boss、终局或高压割草关卡。",
+                "unlockSource": "node_reward",
+                "unlockCondition": "中后期节点首通奖励",
+                "gameplayTags": ["burst", "boss", "ultimate"],
+                "runtimeSkillIds": ["burst_clear", "boss_break", "ultimate_form"],
+                "affectedNodeIds": [7, 8, 9, 10, 11, 12]
+            }
+        ],
         "nodes": [
             {
                 "id": i + 1,
@@ -70,7 +128,13 @@ def get_procedural_preset(theme: str) -> dict:
                 "goalValue": 5 + i // 2 if i % 3 == 2 else 15 + i * 5,
                 "resourceMultiplier": float(f"{1.8 ** (i + 1):.1f}"),
                 "difficulty": i // 2 + 1,
-                "durationLimit": 30 + (i % 3) * 10
+                "durationLimit": 30 + (i % 3) * 10,
+                "planning": {
+                    "mainlineHooks": ["main_idle_growth", "realm_breakthrough"] + (["ability_mastery"] if i >= 2 else []),
+                    "rewardUnlocks": ["breakthrough_art"] if i in [6, 9, 11] else [],
+                    "runSkillPool": ["starter_art"] + (["guard_art"] if i >= 2 else []) + (["breakthrough_art"] if i >= 6 else []),
+                    "notes": "主干养成决定局内起手能力与首通奖励。"
+                }
             } for i in range(12)
         ]
     }

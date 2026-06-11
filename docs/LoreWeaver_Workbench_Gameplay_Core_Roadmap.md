@@ -280,6 +280,65 @@ Canvas 游戏不容易直接观测，因此 core 需要稳定测试 hook：
 - console error 捕获。
 - 最近一次 NodeResult。
 
+### 5.7 `Project Planning Contract`
+
+仅有 Gameplay Card 还不够。每个 LoreWeaver 项目都必须在企划层描述“主干长期养成如何影响局内玩法”，否则会再次出现案例项目中的断层：主干有境界/洞天/参悟设计，关卡里有临时技能三选一，但二者没有稳定数据关系。
+
+因此 `manifest.json` 的企划层需要稳定三类字段：
+
+```js
+{
+  progressionSystems: [
+    {
+      id: "ability_mastery",
+      title: "能力参悟",
+      resource: "稀有材料",
+      action: "消耗资源解锁或强化能力",
+      unlocks: ["ability_catalog", "run_skill_pool"],
+      nodePayloadEffect: "决定局内可抽取/可携带的技能池"
+    }
+  ],
+  abilityCatalog: [
+    {
+      id: "starter_art",
+      name: "入门本命术",
+      unlockSource: "initial | mainline | node_reward | hybrid",
+      unlockCondition: "创建角色时自动获得",
+      gameplayTags: ["starter", "output"],
+      runtimeSkillIds: ["starter_projectile"],
+      affectedNodeIds: [1, 2, 3]
+    }
+  ],
+  nodes: [
+    {
+      id: 1,
+      planning: {
+        mainlineHooks: ["main_idle_growth", "realm_breakthrough"],
+        rewardUnlocks: ["starter_art"],
+        runSkillPool: ["starter_art"],
+        notes: "解释主干养成与本节点玩法的连接"
+      }
+    }
+  ]
+}
+```
+
+这层合同的作用：
+
+- 让 GDD/PRD 不是只写“奖励字符串”，而是明确奖励解锁哪个能力。
+- 让主干资源、境界、被动树、宝术/技能目录与节点技能池可追踪。
+- 让 `NodePayload.playerPerks` 与 `NodePayload.inventory` 可以携带企划层能力上下文。
+- 让 Agent patch 优先修改 `progressionSystems`、`abilityCatalog`、`nodes[].planning` 与 knobs，而不是直接改 adapter/core。
+- 让运行时暂未实现的能力也能标为 planned/design-only，不误导为已可运行效果。
+
+最低规则：
+
+1. 任何“主干升级/参悟/洞天/法宝/宝术”设计，都必须落到 `progressionSystems` 或 `abilityCatalog`。
+2. 任何“节点获得技能/宝术/能力”的描述，都必须落到 `nodes[].planning.rewardUnlocks`。
+3. 任何“局内技能三选一/携带技能池”的候选，都必须落到 `nodes[].planning.runSkillPool`。
+4. runtime adapter 只能消费这些稳定字段；字段不存在时 `ensureGameplayManifest()` 只补空结构和做归一化，不能在运行时凭空创造设计事实。
+5. 具体的长期成长系统、能力目录和节点映射应由职能 Agent（World Builder / Gameplay Designer / Narrative Architect）根据主题、玩法卡和项目语料生成，或由项目 manifest 显式提供；引擎层只保留 schema、示例和校验规则。
+
 ---
 
 ## 6. Patch 分级

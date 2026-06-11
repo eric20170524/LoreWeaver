@@ -1,8 +1,10 @@
 import {
   GameSpec,
+  AbilitySpec,
   GameplayAssignment,
   GameplayModifierSpec,
   ManifestPatch,
+  NodePlanningSpec,
   RevisionRecord
 } from "../types";
 
@@ -170,6 +172,29 @@ const LEGACY_MECHANICS_TO_CARD: Record<string, string> = {
   memory_sequence: "sequence_synthesis"
 };
 
+function uniqueList(values: string[] | undefined, fallback: string[] = []): string[] {
+  const source = Array.isArray(values) ? values : fallback;
+  return Array.from(new Set(source.map((item) => String(item || "").trim()).filter(Boolean)));
+}
+
+function normalizeAbility(ability: AbilitySpec): AbilitySpec {
+  return {
+    ...ability,
+    gameplayTags: uniqueList(ability.gameplayTags),
+    runtimeSkillIds: uniqueList(ability.runtimeSkillIds),
+    affectedNodeIds: Array.from(new Set((ability.affectedNodeIds || []).map(Number).filter(Boolean)))
+  };
+}
+
+function normalizeNodePlanning(node: GameSpec["nodes"][number]): NodePlanningSpec {
+  return {
+    mainlineHooks: uniqueList(node.planning?.mainlineHooks),
+    rewardUnlocks: uniqueList(node.planning?.rewardUnlocks),
+    runSkillPool: uniqueList(node.planning?.runSkillPool),
+    notes: node.planning?.notes || ""
+  };
+}
+
 export function defaultGameplayForMechanics(mechanics: string): GameplayAssignment {
   const cardId = LEGACY_MECHANICS_TO_CARD[mechanics] || "survivor_horde";
   const card = GAMEPLAY_CARD_OPTIONS.find((item) => item.id === cardId);
@@ -188,13 +213,28 @@ export function ensureGameplayManifest(spec: GameSpec): GameSpec {
     ...GAMEPLAY_CARD_OPTIONS.map((item) => item.id)
   ]));
 
+  const progressionSystems = (spec.progressionSystems || []).map((system) => ({
+    ...system,
+    unlocks: uniqueList(system.unlocks)
+  }));
+
+  const abilityCatalog = (spec.abilityCatalog || []).map(normalizeAbility);
+
+  const nodes = spec.nodes.map((node) => {
+    const gameplay = node.gameplay || defaultGameplayForMechanics(node.mechanics);
+    const nodeWithGameplay = { ...node, gameplay };
+    return {
+      ...nodeWithGameplay,
+      planning: normalizeNodePlanning(nodeWithGameplay)
+    };
+  });
+
   return {
     ...spec,
+    progressionSystems,
+    abilityCatalog,
     gameplayCards,
-    nodes: spec.nodes.map((node) => ({
-      ...node,
-      gameplay: node.gameplay || defaultGameplayForMechanics(node.mechanics)
-    })),
+    nodes,
     workbench: {
       patches: spec.workbench?.patches || [],
       revisions: spec.workbench?.revisions || [],
@@ -342,4 +382,3 @@ export function getSpecValueByPath(spec: GameSpec, path: string): any {
   }
   return undefined;
 }
-

@@ -508,6 +508,13 @@ export function initializePhaserGame(
         const cardId = this.node.gameplay.cardId;
 
         const pState = this.game.registry.get("playerState") || {};
+        const unlockedAbilities = Array.isArray(pState.unlockedAbilities) ? pState.unlockedAbilities : [];
+        const planning = this.node.planning || {
+          mainlineHooks: [],
+          rewardUnlocks: [],
+          runSkillPool: []
+        };
+        const abilityCatalog = spec.abilityCatalog || [];
         const baseKnobs: any = {
           duration: this.node.durationLimit || 30,
           goalValue: this.node.goalValue,
@@ -527,13 +534,25 @@ export function initializePhaserGame(
             rewards: {
               score: this.node.goalValue
             },
+            planning,
+            abilityCatalog,
             gameplay: {
               cardId: cardId,
-              knobs: mergedKnobs
+              knobs: mergedKnobs,
+              runSkillPool: planning.runSkillPool
             }
           },
           playerStats: {
             hp: pState.hp || 100
+          },
+          playerPerks: [
+            ...planning.mainlineHooks,
+            ...unlockedAbilities
+          ],
+          inventory: {
+            abilities: abilityCatalog,
+            unlockedAbilities,
+            runSkillPool: planning.runSkillPool
           }
         });
 
@@ -1115,6 +1134,8 @@ export function initializePhaserGame(
           pState.unlockedNodeIds.push(nextId);
         }
 
+        const unlockedAbilityLabels = this.applyPlanningRewards(pState);
+
         const multiplierGain = this.node.resourceMultiplier / 12.0;
         pState.activeMultiplier += multiplierGain;
         
@@ -1123,6 +1144,10 @@ export function initializePhaserGame(
 
         this.game.registry.set("playerState", pState);
         this.game.registry.get("onSaveState")(pState);
+
+        if (unlockedAbilityLabels.length > 0) {
+          onLog(`✨ 新能力已写入长期企划成长：${unlockedAbilityLabels.join(" / ")}`);
+        }
 
         this.cameras.main.flash(300, 16, 185, 129);
         this.showVictoryOverlay(multiplierGain, rwdKey);
@@ -1447,6 +1472,8 @@ export function initializePhaserGame(
         pState.unlockedNodeIds.push(nextId);
       }
 
+      const unlockedAbilityLabels = this.applyPlanningRewards(pState);
+
       // Add multiplier grow
       pState.activeMultiplier += this.node.resourceMultiplier / 12.0;
       
@@ -1456,6 +1483,10 @@ export function initializePhaserGame(
 
       this.game.registry.set("playerState", pState);
       this.game.registry.get("onSaveState")(pState);
+
+      if (unlockedAbilityLabels.length > 0) {
+        onLog(`✨ 新能力已写入长期企划成长：${unlockedAbilityLabels.join(" / ")}`);
+      }
 
       // Flash feedback
       this.cameras.main.flash(300, 16, 185, 129);
@@ -1469,6 +1500,22 @@ export function initializePhaserGame(
 
       this.time.delayedCall(1400, () => {
         this.safeRetreat();
+      });
+    }
+
+    private applyPlanningRewards(pState: PlayerState) {
+      const rewardUnlocks = this.node.planning?.rewardUnlocks || [];
+      if (!Array.isArray(pState.unlockedAbilities)) {
+        pState.unlockedAbilities = [];
+      }
+
+      const newlyUnlocked = rewardUnlocks.filter((abilityId) => !pState.unlockedAbilities.includes(abilityId));
+      if (newlyUnlocked.length === 0) return [];
+
+      pState.unlockedAbilities = [...pState.unlockedAbilities, ...newlyUnlocked];
+      return newlyUnlocked.map((abilityId) => {
+        const ability = spec.abilityCatalog?.find((item) => item.id === abilityId);
+        return ability?.name || abilityId;
       });
     }
 
