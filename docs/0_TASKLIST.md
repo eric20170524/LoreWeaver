@@ -452,10 +452,28 @@
 下一步主要执行：
 1. [x] 修复 `manifest.json` 膨胀递归 bug。
 2. [x] 优化玩法卡组合关系表达（包括 UI、预览、语义 diff 与元数据）。
-3. [ ] 重跑工作台与 demo 编译及 E2E 校验，确保所有 gates 通过并变绿。
+3. [x] 重跑工作台与 demo 编译及 E2E 校验，确保所有 gates 通过并变绿。
 4. [x] 开展 Phase 12：深化玩法运行时与 Boss 挑战。
 5. [x] 开展 Phase 13：表现力与音频合成重塑。
 6. [x] 开展 Phase 14：结构重构与工程优化。
+
+---
+
+## Phase 15：深入健全核心引擎与 API 边缘处理 (Deepening Core Engine & API Boundary Handling)
+
+- [x] 15.1 **修复 `main.py` 中的 `time.get_current_time()` 遗留属性 bug**：移除 `main.py` 中不存在的 `time.get_current_time()` 属性检查，统一为标准的 `time.gmtime()`。
+- [x] 15.2 **优化 FastAPI 后端的 compilation 异步任务**：精细化 `/api/workspaces/{ws_id}/export` 打包逻辑，确保导出包中包含完整的 Phaser 适配器运行时文件。
+
+## Phase 16：前端状态管理简化与优化 (Frontend State Management & App.tsx Refactoring)
+
+- [x] 16.1 **引入状态管理机制（Zustand 或自定义 React Context Store）**：构建统一的状态管理仓库，解耦多级状态传递。
+- [x] 16.2 **精简 App.tsx 并移除冗余状态**：将 App.tsx 中的核心状态逻辑全部迁移至 Store 中，只保留顶层挂载与路由分发。
+
+## Phase 17：导出打包功能与 H5 Standalone 验证 (Export Stability & H5 Standalone Validation)
+
+- [x] 17.1 **完善一键导出独立项目包功能**：确保导出的 standalone H5 package 在解压后可通过简单的本地 Web 服务一键运行，并与 `manifest.json` 完全适配。
+- [x] 17.2 **运行全套构建与 E2E 校验，确保 Gates 保持全绿**：执行 `node workflow/scripts/run_build_gate.mjs` 进行全面集成回归。
+
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "gate": "content_safety_scan",
   "status": "passed",
-  "createdAt": "2026-06-10T02:15:04.654Z",
+  "createdAt": "2026-06-11T04:49:08.910Z",
   "exportSurfaces": [
     "minigame_master/core/lib",
     "minigame_master/core/demo",
@@ -15,22 +15,22 @@
   ],
   "findings": [
     {
-      "file": "LoreWeaver/docs/LoreWeaver_v1.0_MVP.md",
+      "file": "LoreWeaver/docs/archive/historical-prd/LoreWeaver_v1.0_MVP.md",
       "term": "凡人修仙",
       "severity": "note"
     },
     {
-      "file": "LoreWeaver/docs/LoreWeaver_v2.0_Juicing.md",
+      "file": "LoreWeaver/docs/archive/historical-prd/LoreWeaver_v2.0_Juicing.md",
       "term": "凡人修仙",
       "severity": "note"
     },
     {
-      "file": "LoreWeaver/docs/LoreWeaver_v3.0_Autonomous.md",
+      "file": "LoreWeaver/docs/archive/historical-prd/LoreWeaver_v3.0_Autonomous.md",
       "term": "完美世界",
       "severity": "note"
     },
     {
-      "file": "LoreWeaver/docs/LoreWeaver_v3.0_Autonomous.md",
+      "file": "LoreWeaver/docs/archive/historical-prd/LoreWeaver_v3.0_Autonomous.md",
       "term": "仙逆",
       "severity": "note"
     },
