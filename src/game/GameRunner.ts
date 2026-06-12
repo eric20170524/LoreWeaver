@@ -1,10 +1,9 @@
 import Phaser from "phaser";
-import { GameSpec, PlayerState, NodeSpec } from "../types";
+import { GameSpec, PlayerState, NodeSpec, GameplayModifierSpec } from "../types";
 import { synth } from "../utils/AudioSynth";
 import {
   SurvivorHordeAdapter,
-  HazardTelegraphModifier,
-  DefendCoreModifier,
+  createSurvivorHordeModifier,
   TapReactionAdapter,
   CollectDodgeAdapter
 } from "../../../minigame_master/core/lib/gameplay/index.js";
@@ -12,6 +11,23 @@ import {
   createNodePayload,
   TestHooks
 } from "../../../minigame_master/core/lib/contracts/index.js";
+
+const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
+  hazard_telegraph: {
+    intervalMs: 3600,
+    warningDelayMs: 900,
+    radius: 54,
+    damage: 18,
+    target: "random"
+  },
+  defend_core: {
+    hp: 80,
+    radius: 34,
+    color: 0x38bdf8,
+    enemyDamage: 8,
+    aggro: false
+  }
+};
 
 
 export function initializePhaserGame(
@@ -557,36 +573,21 @@ export function initializePhaserGame(
         });
 
         if (cardId === "survivor_horde") {
-          const modifiersList: any[] = [];
-          if (this.node.gameplay.modifiers) {
-            this.node.gameplay.modifiers.forEach((modSpec: any) => {
-              if (modSpec.id === "hazard_telegraph") {
-                const defaultModConfig = {
-                  intervalMs: 3600,
-                  warningDelayMs: 900,
-                  radius: 54,
-                  damage: 18,
-                  target: "random"
-                };
-                modifiersList.push(new HazardTelegraphModifier({
-                  ...defaultModConfig,
-                  ...modSpec.knobs
-                }));
-              } else if (modSpec.id === "defend_core") {
-                const defaultModConfig = {
-                  hp: 80,
-                  radius: 34,
-                  color: 0x38bdf8,
-                  enemyDamage: 8,
-                  aggro: false
-                };
-                modifiersList.push(new DefendCoreModifier({
-                  ...defaultModConfig,
-                  ...modSpec.knobs
-                }));
-              }
-            });
-          }
+          const modifiersList = (this.node.gameplay?.modifiers || []).flatMap((modSpec: GameplayModifierSpec) => {
+            try {
+              const defaultKnobs = SURVIVOR_MODIFIER_DEFAULT_KNOBS[modSpec.id] || {};
+              return [createSurvivorHordeModifier({
+                id: modSpec.id,
+                knobs: {
+                  ...defaultKnobs,
+                  ...(modSpec.knobs || {})
+                }
+              })];
+            } catch (error) {
+              onLog(`⚠️ 跳过暂不支持的 survivor_horde modifier: ${modSpec.id}`);
+              return [];
+            }
+          });
 
           this.adapter = new SurvivorHordeAdapter({
             testHooks: this.testHooks,

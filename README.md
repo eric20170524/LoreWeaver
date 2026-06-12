@@ -62,10 +62,9 @@ Current catalog examples:
 - `rhythm_timing` - timing and rhythm challenge card.
 - `drag_collect_grid` - collection/grid interaction card.
 - `sequence_synthesis` - memory or ordered synthesis card.
-- `hazard_telegraph` - implemented modifier for delayed danger zones.
-- `defend_core` - implemented modifier for defending a central objective.
-- `escort_npc`, `boss_phases`, `poison_fog`, `laser_warning` - design-stage
-  modifiers for future runtime work.
+- `hazard_telegraph`, `defend_core`, `escort_npc`, `boss_phases`,
+  `poison_fog`, `laser_warning` - implemented `survivor_horde` modifiers
+  created through the core modifier factory.
 
 ## Local Development
 

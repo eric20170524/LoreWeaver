@@ -352,8 +352,8 @@
   - 将 adapter `NodeResult` 映射回当前 `PlayerState` 解锁、奖励和保存流程。
 
 - [x] 8.3 **实现 modifier 实例化与 knobs 合并**
-  - 支持 `hazard_telegraph` 与 `defend_core` 两个已落地 modifier。
-  - 未落地的 `poison_fog`、`laser_warning`、`escort_npc`、`boss_phases` 在 UI 可选择时必须标记为 design-only 或禁用运行。
+  - 支持通过 core `createSurvivorHordeModifier` factory 实例化 `hazard_telegraph`、`defend_core`、`poison_fog`、`laser_warning`、`escort_npc`、`boss_phases`。
+  - UI 中这 6 个 `survivor_horde` modifier 均标记为 `implemented`；后续新增 modifier 若未有 runtime 实现，仍必须标记为 design-only 或禁用运行。
   - 所有 modifier 必须经过 `install/update/uninstall` 生命周期，不能在 Scene 中散落裸定时器。
 
 - [x] 8.4 **补齐工作台 TestHooks**

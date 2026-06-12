@@ -117,7 +117,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     changesEn: "Failure/Victory Condition, Ally HP",
     requires: ["NPCAI", "ObjectiveHp"],
     conflicts: ["defend_core"],
-    implementationStatus: "design_only"
+    implementationStatus: "implemented"
   },
   {
     id: "boss_phases",
@@ -132,7 +132,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     changesEn: "Boss Behavior, Victory Condition",
     requires: ["BossState", "PhaseBulletPatterns"],
     conflicts: [],
-    implementationStatus: "design_only"
+    implementationStatus: "implemented"
   },
   {
     id: "poison_fog",
@@ -147,7 +147,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     changesEn: "Map Hazard, HP Drain",
     requires: ["FogRenderer", "SafeZoneCollision"],
     conflicts: [],
-    implementationStatus: "design_only"
+    implementationStatus: "implemented"
   },
   {
     id: "laser_warning",
@@ -162,7 +162,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     changesEn: "Map Hazard, Damage Mechanism",
     requires: ["LaserRenderer", "LineCollision"],
     conflicts: [],
-    implementationStatus: "design_only"
+    implementationStatus: "implemented"
   }
 ];
 
