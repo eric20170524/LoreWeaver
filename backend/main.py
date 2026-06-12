@@ -3,6 +3,7 @@ import uuid
 import json
 import io
 import time
+import secrets
 import asyncio
 import base64
 import binascii
@@ -72,6 +73,28 @@ def safe_export_name(value: str, fallback: str = "loreweaver-export") -> str:
 
 def utc_now_string() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+def workspace_id_timestamp(created_at: Optional[str] = None) -> str:
+    if created_at:
+        try:
+            parsed = time.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
+            return time.strftime("%Y%m%d-%H%M%S", parsed)
+        except ValueError:
+            pass
+    return time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+
+def generate_workspace_id(created_at: Optional[str] = None) -> str:
+    random_digits = f"{secrets.randbelow(1_000_000):06d}"
+    return f"{workspace_id_timestamp(created_at)}-{random_digits}"
+
+def allocate_workspace_id(db: Session, created_at: str) -> str:
+    for _ in range(20):
+        ws_id = generate_workspace_id(created_at)
+        exists_in_db = db.query(Workspace).filter(Workspace.id == ws_id).first()
+        exists_on_disk = os.path.exists(os.path.join(WORKSPACES_DIR, ws_id))
+        if not exists_in_db and not exists_on_disk:
+            return ws_id
+    raise HTTPException(status_code=500, detail="Failed to allocate unique workspace id")
 
 def read_optional_workspace_meta(source_path: str) -> dict:
     meta_path = os.path.join(source_path, "meta.json")
@@ -529,8 +552,8 @@ async def run_async_feedback(job_id: str, db_session_maker, message: str, agent_
 # 📂 Workspace API Routing
 @app.post("/api/workspaces", response_model=WorkspaceResponse)
 def api_create_workspace(payload: WorkspaceCreate, db: Session = Depends(get_db)):
-    ws_id = str(uuid.uuid4())
     now_str = utc_now_string()
+    ws_id = allocate_workspace_id(db, now_str)
     
     workspace = Workspace(
         id=ws_id,
@@ -574,9 +597,9 @@ def api_import_workspace(payload: WorkspaceImport, db: Session = Depends(get_db)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Invalid manifest.json: {exc}") from exc
 
-    ws_id = str(uuid.uuid4())
-    ws_dir = os.path.join(WORKSPACES_DIR, ws_id)
     now_str = utc_now_string()
+    ws_id = allocate_workspace_id(db, now_str)
+    ws_dir = os.path.join(WORKSPACES_DIR, ws_id)
     name, theme = infer_imported_workspace_fields(payload, source_path, manifest)
 
     try:
