@@ -1,7 +1,7 @@
 {
   "gate": "runtime_feature_pack",
   "status": "passed",
-  "createdAt": "2026-06-13T02:33:16.461Z",
+  "createdAt": "2026-06-13T13:27:01.303Z",
   "workspaceRoot": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/data/workspaces/20260611-060754-719406",
   "schema": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/runtime_feature_pack.schema.json",
   "summary": {

@@ -531,6 +531,10 @@ export function initializePhaserGame(
           runSkillPool: []
         };
         const abilityCatalog = spec.abilityCatalog || [];
+        const runtimeVisuals = {
+          characterDesignCatalog: spec.characterDesignCatalog || [],
+          enemyDesignCatalog: spec.enemyDesignCatalog || []
+        };
         const baseKnobs: any = {
           duration: this.node.durationLimit || 30,
           goalValue: this.node.goalValue,
@@ -552,8 +556,10 @@ export function initializePhaserGame(
             },
             planning,
             abilityCatalog,
+            runtimeVisuals,
             gameplay: {
               cardId: cardId,
+              runtimeVisuals,
               knobs: mergedKnobs,
               runSkillPool: planning.runSkillPool
             }
