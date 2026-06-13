@@ -16,6 +16,7 @@ interface EmulatorPanelProps {
   isAuditing: boolean;
   copy: any;
   themeMode: "light" | "dark";
+  layout?: "embedded" | "window";
 }
 
 export function EmulatorPanel({
@@ -29,69 +30,82 @@ export function EmulatorPanel({
   triggerVisualAudit,
   isAuditing,
   copy,
-  themeMode
+  themeMode,
+  layout = "embedded"
 }: EmulatorPanelProps) {
+  const emulatorFrameMaxWidth = layout === "window"
+    ? `min(${currentEmuWidth}px, 92vw)`
+    : `min(${currentEmuWidth}px, 82vw, calc((100vh - 280px) * 9 / 16))`;
+  const emulatorControlsMaxWidth = `min(max(${currentEmuWidth}px, 360px), 92vw)`;
+
   return (
     <motion.div
       key="tab_emu"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
-      className="w-full flex flex-col items-center py-2 relative"
+      className={`w-full flex flex-col items-center relative ${layout === "window" ? "py-3" : "py-2"}`}
     >
       {gameSpec ? (
-        <div className="flex flex-col items-center gap-6 w-full relative">
+        <div className="flex flex-col items-center gap-5 w-full relative">
           
           {/* Ambient background glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[340px] h-[340px] rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
           <div className="absolute top-1/3 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] rounded-full bg-teal-500/5 blur-[100px] pointer-events-none" />
 
-          {/* Emulator Size Switcher */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800/80 text-xs shadow-inner z-30">
-            <span className="text-[10px] font-mono text-slate-500 px-2.5 font-bold uppercase tracking-wider">
-              {copy.emulator.sizeLabel}:
-            </span>
-            {(["compact", "standard", "large"] as const).map((sz) => (
-              <button
-                key={sz}
-                onClick={() => {
-                  setEmulatorSize(sz);
-                  synth.playClick();
-                }}
-                className={`px-3 py-1.5 rounded-lg text-3xs font-semibold font-display transition cursor-pointer select-none ${
-                  emulatorSize === sz
-                    ? "bg-emerald-500 text-slate-950 shadow font-bold"
-                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-                }`}
-              >
-                {copy.emulator.sizes[sz]}
-              </button>
-            ))}
-          </div>
-
-          {/* Phone visual chassis simulator mockup */}
-          <div 
-            style={{
-              maxWidth: `min(${currentEmuWidth}px, 82vw, calc((100vh - 280px) * 9 / 16))`
-            }}
-            className="relative w-full aspect-[9/16] bg-slate-200 dark:bg-slate-950 rounded-[40px] p-2.5 shadow-2xl ring-[14px] ring-slate-300/90 dark:ring-slate-900/90 flex flex-col border border-slate-300 dark:border-slate-800/80 overflow-hidden shadow-emerald-500/5 hover:scale-[1.01] transition-transform duration-300"
-          >
-            
-            {/* Audio Speaker notch */}
-            <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-28 h-5.5 bg-white dark:bg-slate-950 rounded-full z-40 flex items-center justify-center border border-slate-300 dark:border-slate-900 shadow-inner">
-              <div className="w-8 h-1 bg-slate-600 dark:bg-slate-800 rounded-full" />
-              <div className="w-1.5 h-1.5 bg-slate-600 dark:bg-slate-800 rounded-full ml-2" />
+          <div className="relative flex w-full justify-center pt-10">
+            {/* Floating emulator controls */}
+            <div
+              style={{ maxWidth: emulatorControlsMaxWidth }}
+              className="absolute top-0 left-1/2 z-50 flex w-full -translate-x-1/2 justify-center px-3"
+            >
+              <div className="pointer-events-auto flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 p-1 text-xs shadow-xl shadow-slate-300/40 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/90 dark:shadow-slate-950/50">
+                <span className="shrink-0 whitespace-nowrap px-2 text-[10px] font-bold font-mono uppercase tracking-wider text-slate-500">
+                  {copy.emulator.sizeLabel}:
+                </span>
+                {(["compact", "standard", "large"] as const).map((sz) => (
+                  <button
+                    key={sz}
+                    type="button"
+                    aria-pressed={emulatorSize === sz}
+                    onClick={() => {
+                      setEmulatorSize(sz);
+                      synth.playClick();
+                    }}
+                    className={`min-w-[70px] flex-1 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-3xs font-semibold font-display transition cursor-pointer select-none ${
+                      emulatorSize === sz
+                        ? "bg-emerald-500 text-slate-950 shadow font-bold"
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:hover:bg-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    {copy.emulator.sizes[sz]}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Custom canvas host */}
-            <div className="flex-1 rounded-[32px] overflow-hidden relative bg-slate-950 flex items-center justify-center shadow-inner pt-3">
-              <div
-                ref={(node) => {
-                  setPhaserContainer(node);
-                }}
-                id="phaser-canvas-container"
-                className="w-full h-full"
-              />
+            {/* Phone visual chassis simulator mockup */}
+            <div
+              style={{ maxWidth: emulatorFrameMaxWidth }}
+              className="relative w-full aspect-[9/16] bg-slate-200 dark:bg-slate-950 rounded-[40px] p-2.5 shadow-2xl ring-[14px] ring-slate-300/90 dark:ring-slate-900/90 flex flex-col border border-slate-300 dark:border-slate-800/80 overflow-hidden shadow-emerald-500/5 hover:scale-[1.01] transition-transform duration-300"
+            >
+              
+              {/* Audio Speaker notch */}
+              <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-28 h-5.5 bg-white dark:bg-slate-950 rounded-full z-40 flex items-center justify-center border border-slate-300 dark:border-slate-900 shadow-inner">
+                <div className="w-8 h-1 bg-slate-600 dark:bg-slate-800 rounded-full" />
+                <div className="w-1.5 h-1.5 bg-slate-600 dark:bg-slate-800 rounded-full ml-2" />
+              </div>
+
+              {/* Custom canvas host */}
+              <div className="flex-1 rounded-[32px] overflow-hidden relative bg-slate-950 flex items-center justify-center shadow-inner pt-3">
+                <div
+                  ref={(node) => {
+                    setPhaserContainer(node);
+                  }}
+                  id="phaser-canvas-container"
+                  className="w-full h-full"
+                />
+              </div>
             </div>
           </div>
 

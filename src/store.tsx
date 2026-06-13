@@ -38,6 +38,8 @@ interface WorkbenchContextType {
   setThemeInput: (input: string) => void;
   activeTab: "emulator" | "prd" | "gameplay" | "manifest" | "vlm";
   setActiveTab: (tab: "emulator" | "prd" | "gameplay" | "manifest" | "vlm") => void;
+  isEmulatorWindowOpen: boolean;
+  setIsEmulatorWindowOpen: (open: boolean) => void;
   emulatorSize: "compact" | "standard" | "large";
   setEmulatorSize: (size: "compact" | "standard" | "large") => void;
   currentEmuWidth: number;
@@ -97,7 +99,8 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return "light";
   });
   const [themeInput, setThemeInput] = useState("原创逆天修行传说，主打突破境界与十二重天劫");
-  const [activeTab, setActiveTab] = useState<"emulator" | "prd" | "gameplay" | "manifest" | "vlm">("emulator");
+  const [activeTab, setActiveTab] = useState<"emulator" | "prd" | "gameplay" | "manifest" | "vlm">("prd");
+  const [isEmulatorWindowOpen, setIsEmulatorWindowOpen] = useState(true);
   const [emulatorSize, setEmulatorSize] = useState<"compact" | "standard" | "large">(() => {
     const cached = localStorage.getItem("loreweaver_emulator_size");
     if (cached === "compact" || cached === "standard" || cached === "large") return cached;
@@ -444,9 +447,9 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     initWorkspaceAndSpec();
   }, []);
 
-  // Hot reload phaser stage when gameSpec updates or ActiveTab is switched to emulator
+  // Hot reload phaser stage when gameSpec updates or the emulator window is opened.
   useEffect(() => {
-    if (activeTab === "emulator" && gameSpec && phaserContainer) {
+    if (isEmulatorWindowOpen && gameSpec && phaserContainer) {
       restartGameInstance(gameSpec, phaserContainer);
     } else {
       if (phaserGameRef.current) {
@@ -455,7 +458,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       (window as any).__LOREWEAVER_GAME__ = null;
     }
-  }, [gameSpec, activeTab, phaserContainer]);
+  }, [gameSpec, isEmulatorWindowOpen, phaserContainer]);
 
   const captureCanvasDataUrl = async (canvas: HTMLCanvasElement, game: Phaser.Game | null) => {
     try {
@@ -640,6 +643,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       themeMode, setThemeMode,
       themeInput, setThemeInput,
       activeTab, setActiveTab,
+      isEmulatorWindowOpen, setIsEmulatorWindowOpen,
       emulatorSize, setEmulatorSize,
       currentEmuWidth,
       activeWorkspace, setActiveWorkspace,

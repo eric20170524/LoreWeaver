@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Play, 
@@ -7,7 +7,10 @@ import {
   Sliders, 
   Terminal, 
   Eye, 
-  Layers
+  Layers,
+  Maximize2,
+  Minimize2,
+  X
 } from "lucide-react";
 import { useWorkbench } from "./store";
 import { synth } from "./utils/AudioSynth";
@@ -28,6 +31,8 @@ export default function App() {
     setThemeInput,
     activeTab,
     setActiveTab,
+    isEmulatorWindowOpen,
+    setIsEmulatorWindowOpen,
     emulatorSize,
     setEmulatorSize,
     currentEmuWidth,
@@ -65,6 +70,7 @@ export default function App() {
   } = useWorkbench();
 
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const [isEmulatorFullscreen, setIsEmulatorFullscreen] = useState(false);
 
   // Scroll logs to bottom automatically
   useEffect(() => {
@@ -221,15 +227,21 @@ export default function App() {
               { id: "vlm", label: copy.tabs.vlm, icon: Eye }
             ].map((tab) => {
               const Icon = tab.icon;
+              const isEmulatorTab = tab.id === "emulator";
+              const isActive = isEmulatorTab ? isEmulatorWindowOpen : activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => {
-                    setActiveTab(tab.id as any);
+                    if (isEmulatorTab) {
+                      setIsEmulatorWindowOpen(true);
+                    } else {
+                      setActiveTab(tab.id as any);
+                    }
                     synth.playClick();
                   }}
                   className={`px-4 py-2 rounded text-xs font-semibold font-display tracking-wide whitespace-nowrap transition flex items-center gap-2 cursor-pointer shrink-0 border-b-2 ${
-                    activeTab === tab.id
+                    isActive
                       ? "border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/5 font-bold"
                       : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900/30"
                   }`}
@@ -245,22 +257,6 @@ export default function App() {
           <div className="flex-1 flex flex-col items-center justify-center">
             
             <AnimatePresence mode="wait">
-              {activeTab === "emulator" && (
-                <EmulatorPanel
-                  gameSpec={gameSpec}
-                  playerState={playerState}
-                  emulatorSize={emulatorSize}
-                  setEmulatorSize={setEmulatorSize}
-                  currentEmuWidth={currentEmuWidth}
-                  setPhaserContainer={setPhaserContainer}
-                  handleResetProgress={handleResetProgress}
-                  triggerVisualAudit={triggerVisualAudit}
-                  isAuditing={isAuditing}
-                  copy={copy}
-                  themeMode={themeMode}
-                />
-              )}
-
               {activeTab === "prd" && (
                 <motion.div
                   key="tab_prd"
@@ -375,6 +371,82 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <AnimatePresence>
+        {isEmulatorWindowOpen && (
+          <motion.div
+            key="emulator-window"
+            initial={{ opacity: 0, y: 18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 18, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className={`fixed ${
+              isEmulatorFullscreen
+                ? "inset-3 md:inset-5 z-[80]"
+                : "left-1/2 top-24 z-[60] w-[min(calc(100vw-2rem),760px)] -translate-x-1/2 max-h-[calc(100vh-7rem)] lg:left-auto lg:right-4 lg:top-28 lg:translate-x-0 lg:max-h-[calc(100vh-8rem)]"
+            } rounded-xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 shadow-2xl shadow-slate-300/60 dark:shadow-slate-950/70 backdrop-blur-xl overflow-hidden`}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300">
+                  <Play className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="truncate text-xs font-bold font-display text-slate-800 dark:text-slate-200">
+                    {copy.tabs.emulator}
+                  </h2>
+                  <p className="truncate text-3xs font-mono text-slate-500">
+                    {copy.emulator.engine}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEmulatorFullscreen((expanded) => !expanded);
+                    synth.playClick();
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-emerald-500/40 dark:hover:text-emerald-300 cursor-pointer"
+                  title={isEmulatorFullscreen ? "还原窗口" : "展开窗口"}
+                >
+                  {isEmulatorFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEmulatorWindowOpen(false);
+                    setIsEmulatorFullscreen(false);
+                    synth.playClick();
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-red-300 hover:text-red-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-red-900/60 dark:hover:text-red-400 cursor-pointer"
+                  title="关闭模拟器窗口"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <div className={`${isEmulatorFullscreen ? "h-[calc(100%-57px)]" : "max-h-[calc(100vh-10.75rem)] lg:max-h-[calc(100vh-11.75rem)]"} overflow-y-auto px-4 pb-4`}>
+              <EmulatorPanel
+                gameSpec={gameSpec}
+                playerState={playerState}
+                emulatorSize={emulatorSize}
+                setEmulatorSize={setEmulatorSize}
+                currentEmuWidth={currentEmuWidth}
+                setPhaserContainer={setPhaserContainer}
+                handleResetProgress={handleResetProgress}
+                triggerVisualAudit={triggerVisualAudit}
+                isAuditing={isAuditing}
+                copy={copy}
+                themeMode={themeMode}
+                layout="window"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 pointer-events-none">
         <AnimatePresence>
