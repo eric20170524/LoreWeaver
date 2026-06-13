@@ -23,17 +23,122 @@ export interface ProgressionSystemSpec {
   nodePayloadEffect: string;
 }
 
-export type AbilityUnlockSource = "initial" | "mainline" | "node_reward" | "hybrid";
+export type AbilityUnlockSource = "initial" | "mainline" | "node_reward" | "hybrid" | "finale";
 
 export interface AbilitySpec {
   id: string;
   name: string;
   description: string;
+  category?: string;
+  lineage?: string;
   unlockSource: AbilityUnlockSource;
   unlockCondition: string;
   gameplayTags: string[];
+  tags?: string[];
   runtimeSkillIds: string[];
   affectedNodeIds: number[];
+  designRole?: string;
+  characterHooks?: string[];
+  vfxConcept?: {
+    palette?: string[];
+    shapeLanguage?: string;
+    runtimeNotes?: string;
+  };
+  sfxCues?: string[];
+  balanceBudget?: {
+    phase?: string;
+    powerCurve?: string;
+    counterplay?: string;
+  };
+}
+
+export interface PassiveSkillEffectSpec {
+  target: string;
+  op: "add" | "multiply" | "set" | string;
+  value: number | string | boolean;
+}
+
+export interface PassiveSkillSpec {
+  id: string;
+  name: string;
+  treeTier: string;
+  cost: number;
+  requires?: string | null;
+  runtimeStatus?: "planned" | "implemented" | "validated" | string;
+  effects: PassiveSkillEffectSpec[];
+  affectedRuntimeSkillIds: string[];
+  description: string;
+  uiCopy?: string;
+  vfxConcept?: string;
+  sfxCue?: string;
+}
+
+export interface RuntimeVisualDesignSpec {
+  silhouette: string;
+  palette: string[];
+  stageVariants?: Array<{
+    realmRange: [number, number] | number[];
+    look: string;
+  }>;
+}
+
+export interface CharacterDesignSpec {
+  id: string;
+  name: string;
+  role: string;
+  appearsNodeIds: number[];
+  combatIdentity: string;
+  visualDesign: RuntimeVisualDesignSpec;
+  animationCues: string[];
+  skillConnections: string[];
+  audioDirection?: string;
+}
+
+export interface EnemyDesignSpec {
+  id: string;
+  name: string;
+  runtimeEnemyId: string;
+  silhouette: string;
+  palette: string[];
+  combatRead: string;
+}
+
+export interface SkillEffectSpec {
+  id: string;
+  runtimeSkillId: string;
+  shape: string;
+  palette: string[];
+  screenShake?: {
+    durationMs: number;
+    intensity: number;
+  };
+  implementation: string;
+  upgradeNote?: string;
+}
+
+export interface AudioCueSpec {
+  id: string;
+  runtimeSkillId: string;
+  synth: {
+    frequencies: number[];
+    wave: "sine" | "square" | "sawtooth" | "triangle" | string;
+    durationMs: number;
+    volume: number;
+  };
+  mixRole: string;
+  description: string;
+}
+
+export interface RuntimeFeaturePackSpec {
+  schemaVersion: string;
+  abilityCatalog: AbilitySpec[];
+  passiveSkillCatalog: PassiveSkillSpec[];
+  characterDesignCatalog: CharacterDesignSpec[];
+  enemyDesignCatalog: EnemyDesignSpec[];
+  skillEffectCatalog: SkillEffectSpec[];
+  audioCueCatalog: AudioCueSpec[];
+  requiredWorkbenchArtifacts: string[];
+  acceptanceGates: string[];
 }
 
 export interface NodePlanningSpec {
@@ -100,6 +205,12 @@ export interface GameSpec {
   nodes: NodeSpec[];
   progressionSystems?: ProgressionSystemSpec[];
   abilityCatalog?: AbilitySpec[];
+  passiveSkillCatalog?: PassiveSkillSpec[];
+  characterDesignCatalog?: CharacterDesignSpec[];
+  enemyDesignCatalog?: EnemyDesignSpec[];
+  skillEffectCatalog?: SkillEffectSpec[];
+  audioCueCatalog?: AudioCueSpec[];
+  runtimeFeaturePack?: RuntimeFeaturePackSpec;
   gameplayCards?: string[];
   workbench?: WorkbenchState;
 }

@@ -6,8 +6,25 @@ import { spawn } from "child_process";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
-const VITE_DEV_PORT = 5173;
+
+function readPort(envName: string, fallback: number) {
+  const value = process.env[envName];
+  if (!value) {
+    return fallback;
+  }
+
+  const port = Number.parseInt(value, 10);
+  if (Number.isInteger(port) && port > 0 && port <= 65535) {
+    return port;
+  }
+
+  console.warn(`Invalid ${envName} value "${value}", using ${fallback}.`);
+  return fallback;
+}
+
+const PORT = readPort("PORT", 3000);
+const VITE_DEV_PORT = readPort("VITE_DEV_PORT", 5173);
+const PYTHON_BACKEND_PORT = readPort("PYTHON_BACKEND_PORT", 8000);
 
 app.use(express.json({ limit: "10mb" }));
 
@@ -16,13 +33,13 @@ let pythonProcess: any = null;
 let viteProcess: any = null;
 
 function tryLaunchPythonBackend() {
-  console.log("Attempting to spawn Python FastAPI backend on port 8000...");
+  console.log(`Attempting to spawn Python FastAPI backend on port ${PYTHON_BACKEND_PORT}...`);
   
   try {
-    pythonProcess = spawn("python3", ["-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000"]);
+    pythonProcess = spawn("python3", ["-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", String(PYTHON_BACKEND_PORT)]);
   } catch (err) {
     try {
-      pythonProcess = spawn("python", ["-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000"]);
+      pythonProcess = spawn("python", ["-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", String(PYTHON_BACKEND_PORT)]);
     } catch (e) {
       console.error("❌ Failed to initiate Python backend process launcher:", e);
     }
@@ -97,7 +114,7 @@ process.on("SIGINT", () => {
 
 // Smart Gateway Proxy middleware to direct all APIs to the Python database engine
 app.use("/api", async (req, res) => {
-  const targetUrl = `http://127.0.0.1:8000/api${req.url}`;
+  const targetUrl = `http://127.0.0.1:${PYTHON_BACKEND_PORT}/api${req.url}`;
   try {
     const headers: Record<string, string> = {};
     for (const [key, val] of Object.entries(req.headers)) {

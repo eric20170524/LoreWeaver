@@ -1,10 +1,14 @@
 import {
   GameSpec,
   AbilitySpec,
+  AudioCueSpec,
+  CharacterDesignSpec,
+  EnemyDesignSpec,
   GameplayAssignment,
   GameplayModifierSpec,
   ManifestPatch,
   NodePlanningSpec,
+  PassiveSkillSpec,
   RevisionRecord
 } from "../types";
 
@@ -178,11 +182,51 @@ function uniqueList(values: string[] | undefined, fallback: string[] = []): stri
 }
 
 function normalizeAbility(ability: AbilitySpec): AbilitySpec {
+  const tags = uniqueList(ability.tags || ability.gameplayTags);
   return {
     ...ability,
-    gameplayTags: uniqueList(ability.gameplayTags),
+    gameplayTags: uniqueList(ability.gameplayTags, tags),
+    tags,
     runtimeSkillIds: uniqueList(ability.runtimeSkillIds),
     affectedNodeIds: Array.from(new Set((ability.affectedNodeIds || []).map(Number).filter(Boolean)))
+  };
+}
+
+function normalizePassiveSkill(passive: PassiveSkillSpec): PassiveSkillSpec {
+  return {
+    ...passive,
+    affectedRuntimeSkillIds: uniqueList(passive.affectedRuntimeSkillIds),
+    effects: Array.isArray(passive.effects) ? passive.effects : []
+  };
+}
+
+function normalizeCharacterDesign(character: CharacterDesignSpec): CharacterDesignSpec {
+  return {
+    ...character,
+    appearsNodeIds: Array.from(new Set((character.appearsNodeIds || []).map(Number).filter(Boolean))),
+    animationCues: uniqueList(character.animationCues),
+    skillConnections: uniqueList(character.skillConnections),
+    visualDesign: {
+      ...character.visualDesign,
+      palette: uniqueList(character.visualDesign?.palette)
+    }
+  };
+}
+
+function normalizeEnemyDesign(enemy: EnemyDesignSpec): EnemyDesignSpec {
+  return {
+    ...enemy,
+    palette: uniqueList(enemy.palette)
+  };
+}
+
+function normalizeAudioCue(cue: AudioCueSpec): AudioCueSpec {
+  return {
+    ...cue,
+    synth: {
+      ...cue.synth,
+      frequencies: Array.isArray(cue.synth?.frequencies) ? cue.synth.frequencies.map(Number).filter(Boolean) : []
+    }
   };
 }
 
@@ -219,6 +263,14 @@ export function ensureGameplayManifest(spec: GameSpec): GameSpec {
   }));
 
   const abilityCatalog = (spec.abilityCatalog || []).map(normalizeAbility);
+  const passiveSkillCatalog = (spec.passiveSkillCatalog || []).map(normalizePassiveSkill);
+  const characterDesignCatalog = (spec.characterDesignCatalog || []).map(normalizeCharacterDesign);
+  const enemyDesignCatalog = (spec.enemyDesignCatalog || []).map(normalizeEnemyDesign);
+  const skillEffectCatalog = (spec.skillEffectCatalog || []).map((effect) => ({
+    ...effect,
+    palette: uniqueList(effect.palette)
+  }));
+  const audioCueCatalog = (spec.audioCueCatalog || []).map(normalizeAudioCue);
 
   const nodes = spec.nodes.map((node) => {
     const gameplay = node.gameplay || defaultGameplayForMechanics(node.mechanics);
@@ -233,6 +285,11 @@ export function ensureGameplayManifest(spec: GameSpec): GameSpec {
     ...spec,
     progressionSystems,
     abilityCatalog,
+    passiveSkillCatalog,
+    characterDesignCatalog,
+    enemyDesignCatalog,
+    skillEffectCatalog,
+    audioCueCatalog,
     gameplayCards,
     nodes,
     workbench: {
@@ -242,6 +299,12 @@ export function ensureGameplayManifest(spec: GameSpec): GameSpec {
         manifest: "fresh",
         gameplayCards: "fresh",
         demo: "fresh",
+        abilityCatalog: abilityCatalog.length ? "fresh" : "stale",
+        passiveSkillCatalog: passiveSkillCatalog.length ? "fresh" : "stale",
+        characterDesignCatalog: characterDesignCatalog.length ? "fresh" : "stale",
+        enemyDesignCatalog: enemyDesignCatalog.length ? "fresh" : "stale",
+        skillEffectCatalog: skillEffectCatalog.length ? "fresh" : "stale",
+        audioCueCatalog: audioCueCatalog.length ? "fresh" : "stale",
         ...(spec.workbench?.artifactStatus || {})
       }
     }

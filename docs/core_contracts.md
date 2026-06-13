@@ -15,8 +15,23 @@
   nodeConfig: {},
   playerStats: {},
   playerPerks: [],
+  playerAbilities: [],
+  activePassives: [],
+  availableSkillPool: [],
   inventory: {},
   storyFlags: [],
+  runtimeCatalogs: {
+    abilities: [],
+    passives: [],
+    characters: [],
+    enemies: [],
+    skillEffects: [],
+    audioCues: []
+  },
+  preview: {
+    mode: "embedded",
+    scale: "fit"
+  },
   runSeed: "optional-seed",
   source: {
     workspaceId: "optional",
@@ -34,6 +49,10 @@ Required:
 Optional but recommended:
 
 - `playerStats`
+- `playerAbilities`
+- `activePassives`
+- `availableSkillPool`
+- `runtimeCatalogs`
 - `inventory`
 - `storyFlags`
 - `runSeed`
@@ -59,6 +78,7 @@ Compatibility notes:
   unlocks: {
     nodes: [],
     ages: [],
+    abilities: [],
     flags: [],
     gallery: []
   },
@@ -66,6 +86,8 @@ Compatibility notes:
     durationSec: 0,
     score: 0,
     hpRemaining: null,
+    activeSkills: [],
+    upgradedSkills: [],
     mistakes: 0
   }
 }
@@ -194,3 +216,46 @@ window.__LW_TEST_HOOKS__
 ```
 
 In iframe HTML nodes, expose them on the iframe window and mirror important result messages to the parent.
+
+---
+
+## 7. RuntimeFeaturePack
+
+`RuntimeFeaturePack` is the reusable contract for playable MVP generation. It promotes project-specific discoveries into engine-visible catalogs that can drive NodePayloads, registries, HUD, character/enemy rendering, VFX/SFX, simulator preview, and validation gates.
+
+Required catalogs:
+
+- `abilityCatalog`
+- `passiveSkillCatalog`
+- `characterDesignCatalog`
+- `enemyDesignCatalog`
+- `skillEffectCatalog`
+- `audioCueCatalog`
+
+Required first-node loop:
+
+- First playable node has `planning.runSkillPool`.
+- The initial run skill pool maps to `abilityCatalog.runtimeSkillIds`.
+- At least one first-node skill has visible VFX and audible SFX.
+- The run can demonstrate skill unlock, use, and upgrade through HUD or level-up UI.
+
+Preview contract:
+
+```js
+{
+  preview: {
+    mode: "embedded" | "floating",
+    scale: "s" | "m" | "l" | "fit" | "fullscreen",
+    canDetach: true,
+    canFullscreen: true
+  }
+}
+```
+
+Validation:
+
+```bash
+npm run check:runtime-feature-pack -- --workspace data/workspaces/<workspace-id>
+```
+
+The detailed catalog schema lives in `docs/runtime_feature_pack.schema.json`; the human-readable workflow contract lives in `docs/runtime_feature_pack_contract.md`.

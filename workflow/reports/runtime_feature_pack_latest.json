@@ -1,0 +1,41 @@
+{
+  "gate": "runtime_feature_pack",
+  "status": "passed",
+  "createdAt": "2026-06-13T02:33:16.461Z",
+  "workspaceRoot": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/data/workspaces/20260611-060754-719406",
+  "schema": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/runtime_feature_pack.schema.json",
+  "summary": {
+    "nodes": 12,
+    "abilities": 9,
+    "passiveSkills": 12,
+    "characters": 5,
+    "enemies": 13,
+    "skillEffects": 19,
+    "audioCues": 19,
+    "nodeRunSkills": 19
+  },
+  "requiredArtifacts": [
+    "abilityCatalog",
+    "passiveSkillCatalog",
+    "characterDesignCatalog",
+    "enemyDesignCatalog",
+    "skillEffectCatalog",
+    "audioCueCatalog",
+    "runtimeSkillFeedback",
+    "runtimeAbilityUnlocks",
+    "runtimeSkillHud",
+    "nodeSkillPreview",
+    "runtimeCharacterSprites",
+    "runtimeEnemySprites",
+    "firstNodeRunSkillLoop"
+  ],
+  "recommendedArtifacts": [
+    "floatingSimulatorPreview",
+    "simulatorFullscreenPreview"
+  ],
+  "errors": [],
+  "warnings": [
+    "Recommended simulator artifact is not marked fresh yet: floatingSimulatorPreview.",
+    "Recommended simulator artifact is not marked fresh yet: simulatorFullscreenPreview."
+  ]
+}
