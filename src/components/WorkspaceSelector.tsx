@@ -28,6 +28,9 @@ const WORKSPACE_COPY = {
     importPathPlaceholder: "粘贴包含 manifest.json 的本地目录路径",
     importNamePlaceholder: "显示名（可选）",
     importHelp: "导入会复制到隔离工作区，不会修改原目录。",
+    chooseFolder: "选择目录",
+    choosingFolder: "选择中",
+    chooseFolderFailed: "无法打开本地目录选择器，请手动粘贴路径。",
     importAction: "导入并继续",
     importing: "导入中",
     createTitle: "新建隔离工作区",
@@ -46,6 +49,9 @@ const WORKSPACE_COPY = {
     importPathPlaceholder: "Paste a local folder path containing manifest.json",
     importNamePlaceholder: "Display name (optional)",
     importHelp: "Import copies it into an isolated workspace and leaves the original folder unchanged.",
+    chooseFolder: "Choose Folder",
+    choosingFolder: "Choosing",
+    chooseFolderFailed: "Could not open the local folder picker. Paste the path manually.",
     importAction: "Import and Continue",
     importing: "Importing",
     createTitle: "Create Isolated Workspace",
@@ -76,6 +82,7 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
   const [workspaces, setWorkspaces] = useState<WorkspaceMeta[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isChoosingDirectory, setIsChoosingDirectory] = useState(false);
   const [newName, setNewName] = useState('');
   const [newTheme, setNewTheme] = useState('');
   const [importPath, setImportPath] = useState('');
@@ -122,6 +129,34 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
       console.error('Create error', e);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleChooseDirectory = async () => {
+    setIsChoosingDirectory(true);
+    setImportError('');
+    try {
+      const res = await fetch('/api/system/select-directory', {
+        method: 'POST',
+        headers: { 'Content-type': 'application/json' }
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json.detail || json.error || copy.chooseFolderFailed);
+      }
+      if (json.cancelled) {
+        return;
+      }
+      const selectedPath = json.data?.path || json.path;
+      if (!selectedPath) {
+        throw new Error(copy.chooseFolderFailed);
+      }
+      setImportPath(selectedPath);
+    } catch (e: any) {
+      setImportError(e.message || copy.chooseFolderFailed);
+      console.error('Choose directory error', e);
+    } finally {
+      setIsChoosingDirectory(false);
     }
   };
 
@@ -214,12 +249,24 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
                 <FolderOpen className="w-3.5 h-3.5" />
                 {copy.importTitle}
               </span>
-              <input
-                value={importPath}
-                onChange={e => setImportPath(e.target.value)}
-                placeholder={copy.importPathPlaceholder}
-                className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-cyan-500"
-              />
+              <div className="flex gap-2">
+                <input
+                  value={importPath}
+                  onChange={e => setImportPath(e.target.value)}
+                  placeholder={copy.importPathPlaceholder}
+                  className="min-w-0 flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-cyan-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleChooseDirectory}
+                  disabled={isChoosingDirectory || isImporting}
+                  title={copy.chooseFolder}
+                  className="shrink-0 w-28 flex items-center justify-center gap-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-cyan-500 text-slate-700 dark:text-slate-200 text-xs font-semibold px-2 py-1.5 rounded disabled:opacity-50 transition cursor-pointer"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  <span className="truncate">{isChoosingDirectory ? copy.choosingFolder : copy.chooseFolder}</span>
+                </button>
+              </div>
               <input
                 value={importName}
                 onChange={e => setImportName(e.target.value)}

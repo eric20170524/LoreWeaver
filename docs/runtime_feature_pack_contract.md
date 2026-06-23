@@ -18,6 +18,7 @@
 | `loreweaver/enemy-design-catalog.json` | 敌人 runtime id、轮廓、调色、战斗读法 |
 | `loreweaver/skill-effect-catalog.json` | 技能 VFX key、运行时 skill id、形状语言、调色、镜头反馈、实现备注 |
 | `loreweaver/audio-cue-catalog.json` | 技能 SFX key、运行时 skill id、WebAudio 合成参数、混音角色 |
+| `loreweaver/asset-pipeline.json` | Ability VFX/voice、generated art atlas、BGM/SFX/voice manifest、credits 与 browser verification 的流水线元数据 |
 | `loreweaver/workbench.json` | 这些产物与运行时能力的 fresh/approved/validated 状态 |
 
 机器可读字段以 [runtime_feature_pack.schema.json](/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/runtime_feature_pack.schema.json) 为准。当前工作区可以继续分文件保存，但字段语义必须兼容该 schema。
@@ -71,6 +72,16 @@ VFX/SFX catalog 必须用 `runtimeSkillId` 绑定实际技能池。
 
 要求：首关 `planning.runSkillPool` 可以记录 ability id 或 runtime skill id，但必须能解析到真实运行技能；解析后的首关可用技能必须至少有一个 VFX 和一个 SFX cue。后续技能允许先标为 planned，但不能影响首关 MVP 验收。
 
+### Asset Pipelines
+
+Runtime Feature Pack 不能只证明“catalog 写对了”，还必须证明素材生产和运行时接线存在闭环。新项目应按 [asset_pipeline_contract.md](/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/asset_pipeline_contract.md) 产出 `loreweaver/asset-pipeline.json`，覆盖三条优先流水线：
+
+- **Ability VFX Voice**：玩家技能、敌人招式、Boss/精英 callout、可选 voice manifest、VFX/SFX/voice 统一触发 hook 与 verify coverage。
+- **Game Art Asset Pipeline**：imagegen/bitmap atlas、semantic art groups、sprite clips、manifest.json、manifest.js、runtime atlas-first lookup 与真实画面验收。
+- **Game Audio Asset Pipeline**：BGM/SFX/voice/ambience coverage matrix、audio manifest、credits/provenance、runtime channel、mute/autoplay/teardown/browser fetch 验收。
+
+要求：如果项目没有外部音频或 voice 资产，必须显式记录 `calloutFallback` 或 synthesized SFX 路径；不能把“未生成资产”伪装成已接入。
+
 ---
 
 ## 3. Workbench 状态键
@@ -83,6 +94,11 @@ MVP 生成完成时，`loreweaver/workbench.json` 的 `artifactStatus` 至少包
 - `enemyDesignCatalog`
 - `skillEffectCatalog`
 - `audioCueCatalog`
+- `assetPipelineMetadata`
+- `abilityVfxVoicePipeline`
+- `artAssetPipeline`
+- `audioAssetPipeline`
+- `assetPipelineVerification`
 - `runtimeSkillFeedback`
 - `runtimeAbilityUnlocks`
 - `runtimeSkillHud`
@@ -122,12 +138,14 @@ workflow/reports/runtime_feature_pack_latest.json
 - 首关没有可验证的局内技能池。
 - 首关 ability/runtime skill 无法解析，或解析后的首关技能缺少 VFX/SFX。
 - 必要 workbench artifact 不是 fresh/approved/validated。
+- 启用 `--require-asset-pipeline` 时缺少 `loreweaver/asset-pipeline.json` 或其中三条流水线元数据。
 
 警告条件包括：
 
 - 能力缺少概念级 VFX/SFX 描述。
 - 首关没有解锁新能力，可能无法证明进度感。
 - 模拟器浮框/全屏预览状态未记录。
+- 未记录 ability VFX/voice、generated art、audio manifest 三条资产流水线。
 
 ---
 
@@ -138,6 +156,7 @@ workflow/reports/runtime_feature_pack_latest.json
 ```text
 请基于已有项目/参考 IP，按 Runtime Feature Pack Contract 生成一套可试玩 MVP。
 必须产出 ability/passive/character/enemy/VFX/SFX catalogs，并把首关做成可验证的局内技能解锁、使用和升级闭环。
+同时必须产出 loreweaver/asset-pipeline.json，记录 Ability VFX Voice、Game Art Asset Pipeline、Game Audio Asset Pipeline 三条流水线的 manifest、runtime hook、credits/provenance 与浏览器验收要求。
 所有 catalog 要映射到 runtime skill/enemy id，workbench artifactStatus 要标记 fresh。
 完成后运行 npm run check:runtime-feature-pack、项目 build 和浏览器试玩验证；若有可复用改进，继续反哺到 LoreWeaver docs/templates/prompts/scripts。
 ```

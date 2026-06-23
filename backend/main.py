@@ -9,9 +9,11 @@ import base64
 import binascii
 import html
 import math
+import platform
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import zipfile
 import zlib
@@ -123,6 +125,70 @@ def workspace_copy_ignore(directory: str, names: list[str]) -> set[str]:
         if os.path.islink(os.path.join(directory, name)):
             ignored.add(name)
     return ignored
+
+def run_directory_picker_command(command: list[str], timeout: int = 120) -> str:
+    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    if result.returncode == 0:
+        return result.stdout.strip()
+
+    stderr = result.stderr.strip()
+    if "User canceled" in stderr or "cancelled" in stderr.lower() or "canceled" in stderr.lower():
+        return ""
+    raise RuntimeError(stderr or "Directory picker failed")
+
+def select_local_directory() -> str:
+    title = "Select a LoreWeaver project folder containing manifest.json"
+    system = platform.system()
+
+    if system == "Darwin":
+        script = f'POSIX path of (choose folder with prompt "{title}")'
+        selected_path = run_directory_picker_command(["osascript", "-e", script])
+        return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+    if system == "Windows":
+        powershell = shutil.which("powershell") or shutil.which("pwsh")
+        if powershell:
+            command = (
+                "Add-Type -AssemblyName System.Windows.Forms; "
+                "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog; "
+                f"$dialog.Description = '{title}'; "
+                "$dialog.ShowNewFolderButton = $false; "
+                "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) "
+                "{ [Console]::Write($dialog.SelectedPath) }"
+            )
+            selected_path = run_directory_picker_command([powershell, "-NoProfile", "-Command", command])
+            return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+    if shutil.which("zenity"):
+        selected_path = run_directory_picker_command([
+            "zenity",
+            "--file-selection",
+            "--directory",
+            "--title",
+            title
+        ])
+        return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+    if shutil.which("kdialog"):
+        selected_path = run_directory_picker_command([
+            "kdialog",
+            "--getexistingdirectory",
+            os.path.expanduser("~")
+        ])
+        return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+    tk_script = (
+        "import tkinter as tk\n"
+        "from tkinter import filedialog\n"
+        "root = tk.Tk()\n"
+        "root.withdraw()\n"
+        "root.attributes('-topmost', True)\n"
+        f"path = filedialog.askdirectory(title={title!r})\n"
+        "print(path or '')\n"
+        "root.destroy()\n"
+    )
+    selected_path = run_directory_picker_command([sys.executable, "-c", tk_script])
+    return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
 
 def add_directory_to_zip(zip_file: zipfile.ZipFile, source_dir: str, archive_root: str):
     if not os.path.isdir(source_dir):
@@ -550,6 +616,23 @@ async def run_async_feedback(job_id: str, db_session_maker, message: str, agent_
         db.close()
 
 # 📂 Workspace API Routing
+@app.post("/api/system/select-directory")
+def api_select_directory():
+    try:
+        selected_path = select_local_directory()
+    except subprocess.TimeoutExpired as exc:
+        raise HTTPException(status_code=504, detail="Directory picker timed out") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to open directory picker: {exc}") from exc
+
+    if not selected_path:
+        return {"success": False, "cancelled": True, "data": None}
+
+    if not os.path.isdir(selected_path):
+        raise HTTPException(status_code=404, detail="Selected directory not found")
+
+    return {"success": True, "cancelled": False, "data": {"path": selected_path}}
+
 @app.post("/api/workspaces", response_model=WorkspaceResponse)
 def api_create_workspace(payload: WorkspaceCreate, db: Session = Depends(get_db)):
     now_str = utc_now_string()

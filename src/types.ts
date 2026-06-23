@@ -129,6 +129,41 @@ export interface AudioCueSpec {
   description: string;
 }
 
+export interface AbilityVfxVoicePipelineSpec {
+  abilitySpecPath: string;
+  voiceManifestPath?: string;
+  calloutFallback: string;
+  playerAbilityCoverage: string[];
+  enemyAbilityEffects: string[];
+  runtimeHooks: string[];
+  verification: string[];
+}
+
+export interface ArtAssetPipelineSpec {
+  manifestPath: string;
+  scriptManifestPath?: string;
+  groups: string[];
+  spriteClips?: string[];
+  runtimeBinding: string;
+  verification: string[];
+}
+
+export interface AudioAssetPipelineSpec {
+  manifestPath: string;
+  creditsPath?: string;
+  channels: string[];
+  coverageMatrix: string[];
+  runtimeBinding: string;
+  verification: string[];
+}
+
+export interface RuntimeAssetPipelineSpec {
+  schemaVersion: string;
+  abilityVfxVoice: AbilityVfxVoicePipelineSpec;
+  artAssets: ArtAssetPipelineSpec;
+  audioAssets: AudioAssetPipelineSpec;
+}
+
 export interface RuntimeFeaturePackSpec {
   schemaVersion: string;
   abilityCatalog: AbilitySpec[];
@@ -139,6 +174,7 @@ export interface RuntimeFeaturePackSpec {
   audioCueCatalog: AudioCueSpec[];
   requiredWorkbenchArtifacts: string[];
   acceptanceGates: string[];
+  assetPipeline?: RuntimeAssetPipelineSpec;
 }
 
 export interface NodePlanningSpec {

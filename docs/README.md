@@ -52,7 +52,9 @@ These files describe the current planning, contracts, schemas, gates, and operat
 | `LoreWeaver_Workspace_Boundaries.md` | Write boundaries between case studies, core runtime, and workbench |
 | `gameplay_inventory.md` | Active evidence inventory for gameplay cards and runtime planning |
 | `gameplay_card_schema.md` | Gameplay Card schema and review gate |
+| `precise_pipeline_1_1_to_3_3.md` | Cross-cutting generation pipeline from world DNA to QA, including World, Gameplay, Ability Runtime, Asset Pipeline, and Verification tracks |
 | `runtime_feature_pack_contract.md` | Reusable MVP feature-pack contract for abilities, passives, character/enemy design, VFX/SFX, first-node skill loops, and simulator preview status |
+| `asset_pipeline_contract.md` | First-class pipeline contract for ability VFX/voice, generated bitmap art manifests, audio manifests, credits, runtime wiring, and verification |
 | `core_contracts.md` | Stable NodePayload, NodeResult, adapter, modifier, lifecycle, and test hook contracts |
 | `patch_revision_workflow.md` | Patch/revision workflow and patch level policy |
 | `visual_audit_and_vlm_backlog.md` | Visual audit and VLM gate backlog |
@@ -65,7 +67,7 @@ These files describe the current planning, contracts, schemas, gates, and operat
 | --- | --- |
 | `gameplay_cards/` | Gameplay Card JSON files used by the workbench and planning flow |
 | `gameplay_cards/modifiers/` | Modifier card JSON files |
-| `runtime_feature_pack.schema.json` | Machine-readable schema for reusable runtime ability/passive/character/enemy/VFX/SFX feature packs |
+| `runtime_feature_pack.schema.json` | Machine-readable schema for reusable runtime ability/passive/character/enemy/VFX/SFX feature packs, including optional asset pipeline metadata |
 
 ## Archive
 

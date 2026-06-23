@@ -231,6 +231,13 @@ Required catalogs:
 - `enemyDesignCatalog`
 - `skillEffectCatalog`
 - `audioCueCatalog`
+- `assetPipeline`
+
+Required asset pipeline coverage:
+
+- Ability VFX/voice metadata covers player skills, enemy moves, callout fallback, runtime hooks, and verification.
+- Art asset metadata covers generated atlas manifests, semantic art groups, sprite clips, runtime lookup, and visual checks.
+- Audio asset metadata covers BGM/SFX/voice/ambience manifests, credits/provenance, runtime channels, and browser audio checks.
 
 Required first-node loop:
 
@@ -256,6 +263,7 @@ Validation:
 
 ```bash
 npm run check:runtime-feature-pack -- --workspace data/workspaces/<workspace-id>
+npm run check:runtime-feature-pack -- --workspace data/workspaces/<workspace-id> --require-asset-pipeline
 ```
 
-The detailed catalog schema lives in `docs/runtime_feature_pack.schema.json`; the human-readable workflow contract lives in `docs/runtime_feature_pack_contract.md`.
+The detailed catalog schema lives in `docs/runtime_feature_pack.schema.json`; the human-readable workflow contract lives in `docs/runtime_feature_pack_contract.md` and `docs/asset_pipeline_contract.md`.

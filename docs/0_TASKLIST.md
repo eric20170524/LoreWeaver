@@ -514,3 +514,36 @@
   - 打包生成包含 `index.html` + `core` 静态文件 + 当前配置 `manifest.json` 的单页独立运行 zip，可随时部署至 itch.io 等 Web 托管平台
 - [ ] 14.3 **Ollama 本地模型接入：暂不考虑支持**
   - 现阶段不通过 `OLLAMA_API_BASE` 路由到本地模型；如环境变量存在，后端仅输出忽略提示，并继续使用 Gemini 或 procedural fallback。
+
+## Phase 18：资产流水线优先接入 (Ability VFX Voice / Art / Audio Pipelines)
+
+目标：把缺失的生产级表现步骤接入 LoreWeaver，让 Runtime Feature Pack 不只检查 catalog 自洽，还检查 ability presentation、generated art、audio manifest、credits/provenance 与 browser verification 这几条关键链路。
+
+- [x] 18.1 **建立 Asset Pipeline Contract**
+  - 新增 `docs/asset_pipeline_contract.md`。
+  - 明确 `abilityVfxVoice`、`artAssets`、`audioAssets` 三条流水线的 artifact、runtime hook、manifest、verification 和 workbench status。
+
+- [x] 18.2 **接入 Runtime Feature Pack 合同与模板**
+  - `runtime_feature_pack_contract.md` 增加 `loreweaver/asset-pipeline.json`。
+  - `workflow/templates/10_RUNTIME_FEATURE_PACK.md` 增加 Ability VFX Voice、Game Art Asset Pipeline、Game Audio Asset Pipeline 三个验收章节。
+  - `step 2.3_Runtime_Feature_Pack_Prompt.md` 要求 Agent 输出 `asset_pipeline_json`。
+
+- [x] 18.3 **扩展 schema、类型与 gate**
+  - `runtime_feature_pack.schema.json` 增加可选 `assetPipeline` shape。
+  - `src/types.ts` 增加 Runtime Asset Pipeline 类型。
+  - `check_runtime_feature_pack.mjs` 读取 `loreweaver/asset-pipeline.json`，默认 warning，使用 `--require-asset-pipeline` 时转为必过 gate。
+
+- [x] 18.4 **重构 1.1 ~ 3.3 精确管线为横切流水线**
+  - 新增 `docs/precise_pipeline_1_1_to_3_3.md`。
+  - 将 World/Narrative、Gameplay、Ability Runtime、Asset Pipeline、Verification 五条轨道贯穿 1.1 到 3.3。
+  - Step 1.1 输出 `pipeline_dna`；Step 1.2 每个 node 输出 `assetBeats`、`vfxNeeds`、`audioNeeds`、`artNeeds`、`abilityRuntimeNeeds`、`verificationFocus`。
+  - Step 2.1 输出 `asset_runtime_contract`；Step 2.2 建立 asset/art/audio/enemy effect registries 与 coverage matrix；Step 2.3 总装 `asset-pipeline.json`。
+  - Step 3.1/3.2/3.3 分别消费、生产/接线、验收资产流水线。
+
+- [ ] 18.5 **把三国清版案例转为第一套资产流水线样本**
+  - 从 `minigame/three_kingdoms_brawl` 提取 `side_scrolling_brawler` 的 ability VFX/voice、imagegen atlas、audio manifest 计划。
+  - 产出可复用的 `asset-pipeline.json` 示例和 gameplay card provenance。
+
+- [ ] 18.6 **Workbench UI 展示流水线状态**
+  - 在玩法卡/Runtime Feature Pack 面板显示 asset pipeline 状态。
+  - 对缺失 voice/art/audio manifest 的 workspace 给出明确 next action，而不是只显示 catalog 数量。

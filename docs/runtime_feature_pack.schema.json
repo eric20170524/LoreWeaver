@@ -77,6 +77,9 @@
       },
       "minItems": 1,
       "uniqueItems": true
+    },
+    "assetPipeline": {
+      "$ref": "#/$defs/assetPipeline"
     }
   },
   "$defs": {
@@ -90,6 +93,141 @@
       "items": {
         "type": "string",
         "pattern": "^#?[0-9a-fA-F]{3,8}$"
+      }
+    },
+    "stringList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "assetPipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "abilityVfxVoice",
+        "artAssets",
+        "audioAssets"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "abilityVfxVoice": {
+          "$ref": "#/$defs/abilityVfxVoicePipeline"
+        },
+        "artAssets": {
+          "$ref": "#/$defs/artAssetPipeline"
+        },
+        "audioAssets": {
+          "$ref": "#/$defs/audioAssetPipeline"
+        }
+      }
+    },
+    "abilityVfxVoicePipeline": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "abilitySpecPath",
+        "calloutFallback",
+        "playerAbilityCoverage",
+        "enemyAbilityEffects",
+        "runtimeHooks",
+        "verification"
+      ],
+      "properties": {
+        "abilitySpecPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "voiceManifestPath": {
+          "type": "string"
+        },
+        "calloutFallback": {
+          "type": "string",
+          "minLength": 1
+        },
+        "playerAbilityCoverage": {
+          "$ref": "#/$defs/stringList"
+        },
+        "enemyAbilityEffects": {
+          "$ref": "#/$defs/stringList"
+        },
+        "runtimeHooks": {
+          "$ref": "#/$defs/stringList"
+        },
+        "verification": {
+          "$ref": "#/$defs/stringList"
+        }
+      }
+    },
+    "artAssetPipeline": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "manifestPath",
+        "groups",
+        "runtimeBinding",
+        "verification"
+      ],
+      "properties": {
+        "manifestPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scriptManifestPath": {
+          "type": "string"
+        },
+        "groups": {
+          "$ref": "#/$defs/stringList"
+        },
+        "spriteClips": {
+          "$ref": "#/$defs/stringList"
+        },
+        "runtimeBinding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification": {
+          "$ref": "#/$defs/stringList"
+        }
+      }
+    },
+    "audioAssetPipeline": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "manifestPath",
+        "channels",
+        "coverageMatrix",
+        "runtimeBinding",
+        "verification"
+      ],
+      "properties": {
+        "manifestPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "creditsPath": {
+          "type": "string"
+        },
+        "channels": {
+          "$ref": "#/$defs/stringList"
+        },
+        "coverageMatrix": {
+          "$ref": "#/$defs/stringList"
+        },
+        "runtimeBinding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification": {
+          "$ref": "#/$defs/stringList"
+        }
       }
     },
     "ability": {

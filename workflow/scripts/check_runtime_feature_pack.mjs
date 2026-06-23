@@ -24,7 +24,12 @@ const REQUIRED_ARTIFACTS = [
 
 const RECOMMENDED_ARTIFACTS = [
   "floatingSimulatorPreview",
-  "simulatorFullscreenPreview"
+  "simulatorFullscreenPreview",
+  "assetPipelineMetadata",
+  "abilityVfxVoicePipeline",
+  "artAssetPipeline",
+  "audioAssetPipeline",
+  "assetPipelineVerification"
 ];
 
 const FRESH_STATUSES = new Set(["fresh", "approved", "validated"]);
@@ -58,6 +63,16 @@ function readJson(filePath, errors, label) {
   }
 }
 
+function readOptionalJson(filePath, errors, label) {
+  if (!pathExists(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch (error) {
+    errors.push(`${label} is not valid JSON: ${error.message}`);
+    return null;
+  }
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -68,6 +83,16 @@ function hasText(value) {
 
 function addIfText(target, value) {
   if (hasText(value)) target.add(value);
+}
+
+function requireText(object, field, label, errors) {
+  if (!hasText(object?.[field])) errors.push(`${label}.${field} must be a non-empty string.`);
+}
+
+function requireNonEmptyList(object, field, label, errors) {
+  if (!Array.isArray(object?.[field]) || object[field].length === 0) {
+    errors.push(`${label}.${field} must be a non-empty array.`);
+  }
 }
 
 function checkUniqueIds(catalog, label, errors) {
@@ -132,6 +157,55 @@ function scanDataRegistry(workspaceRoot, runtimeSkillIds, warnings) {
   return { skillIds, vfxIds, sfxIds, passiveIds };
 }
 
+function validateAssetPipeline(assetPipeline, errors, warnings) {
+  if (!assetPipeline) return null;
+
+  if (assetPipeline.schemaVersion !== "1.0") {
+    errors.push("asset-pipeline.json.schemaVersion must be 1.0.");
+  }
+
+  const ability = assetPipeline.abilityVfxVoice || {};
+  requireText(ability, "abilitySpecPath", "assetPipeline.abilityVfxVoice", errors);
+  requireText(ability, "calloutFallback", "assetPipeline.abilityVfxVoice", errors);
+  requireNonEmptyList(ability, "playerAbilityCoverage", "assetPipeline.abilityVfxVoice", errors);
+  requireNonEmptyList(ability, "enemyAbilityEffects", "assetPipeline.abilityVfxVoice", errors);
+  requireNonEmptyList(ability, "runtimeHooks", "assetPipeline.abilityVfxVoice", errors);
+  requireNonEmptyList(ability, "verification", "assetPipeline.abilityVfxVoice", errors);
+  if (!hasText(ability.voiceManifestPath) && ability.calloutFallback === "voice") {
+    warnings.push("assetPipeline.abilityVfxVoice uses voice fallback but has no voiceManifestPath.");
+  }
+
+  const art = assetPipeline.artAssets || {};
+  requireText(art, "manifestPath", "assetPipeline.artAssets", errors);
+  requireText(art, "runtimeBinding", "assetPipeline.artAssets", errors);
+  requireNonEmptyList(art, "groups", "assetPipeline.artAssets", errors);
+  requireNonEmptyList(art, "verification", "assetPipeline.artAssets", errors);
+  if (!asArray(art.groups).some((group) => ["heroes", "characters", "actors"].includes(group))) {
+    warnings.push("assetPipeline.artAssets.groups does not mention heroes, characters, or actors.");
+  }
+  if (!asArray(art.groups).includes("enemies")) {
+    warnings.push("assetPipeline.artAssets.groups does not mention enemies.");
+  }
+
+  const audio = assetPipeline.audioAssets || {};
+  requireText(audio, "manifestPath", "assetPipeline.audioAssets", errors);
+  requireText(audio, "runtimeBinding", "assetPipeline.audioAssets", errors);
+  requireNonEmptyList(audio, "channels", "assetPipeline.audioAssets", errors);
+  requireNonEmptyList(audio, "coverageMatrix", "assetPipeline.audioAssets", errors);
+  requireNonEmptyList(audio, "verification", "assetPipeline.audioAssets", errors);
+  if (!hasText(audio.creditsPath)) {
+    warnings.push("assetPipeline.audioAssets.creditsPath is empty; generated/searched audio needs provenance before public export.");
+  }
+
+  return {
+    abilityPlayerCoverage: asArray(ability.playerAbilityCoverage).length,
+    abilityEnemyEffects: asArray(ability.enemyAbilityEffects).length,
+    artGroups: asArray(art.groups).length,
+    audioChannels: asArray(audio.channels).length,
+    audioCoverage: asArray(audio.coverageMatrix).length
+  };
+}
+
 const { workspaceRoot, reportPath, jsonOnly } = loadWorkspace();
 const errors = [];
 const warnings = [];
@@ -144,6 +218,9 @@ const enemyDesignCatalog = readJson(path.join(workspaceRoot, "loreweaver", "enem
 const skillEffectCatalog = readJson(path.join(workspaceRoot, "loreweaver", "skill-effect-catalog.json"), errors, "skill-effect-catalog.json");
 const audioCueCatalog = readJson(path.join(workspaceRoot, "loreweaver", "audio-cue-catalog.json"), errors, "audio-cue-catalog.json");
 const workbench = readJson(path.join(workspaceRoot, "loreweaver", "workbench.json"), errors, "workbench.json");
+const assetPipelineFile = readOptionalJson(path.join(workspaceRoot, "loreweaver", "asset-pipeline.json"), errors, "asset-pipeline.json");
+const assetPipeline = assetPipelineFile || manifest?.runtimeFeaturePack?.assetPipeline || null;
+const requireAssetPipeline = process.argv.includes("--require-asset-pipeline");
 
 checkCatalogArray(abilityCatalog, "ability-catalog.json", errors);
 checkCatalogArray(passiveSkillCatalog, "passive-skill-catalog.json", errors);
@@ -358,7 +435,34 @@ for (const artifact of REQUIRED_ARTIFACTS) {
 }
 for (const artifact of RECOMMENDED_ARTIFACTS) {
   if (!FRESH_STATUSES.has(artifactStatus[artifact])) {
-    warnings.push(`Recommended simulator artifact is not marked fresh yet: ${artifact}.`);
+    warnings.push(`Recommended artifact is not marked fresh yet: ${artifact}.`);
+  }
+}
+
+let assetPipelineSummary = null;
+if (!assetPipeline) {
+  const message = "loreweaver/asset-pipeline.json is missing; ability VFX/voice, generated art, and audio manifest pipelines are not recorded.";
+  if (requireAssetPipeline) {
+    errors.push(message);
+  } else {
+    warnings.push(message);
+  }
+} else {
+  assetPipelineSummary = validateAssetPipeline(assetPipeline, errors, warnings);
+}
+
+if (requireAssetPipeline) {
+  const requiredPipelineArtifacts = [
+    "assetPipelineMetadata",
+    "abilityVfxVoicePipeline",
+    "artAssetPipeline",
+    "audioAssetPipeline",
+    "assetPipelineVerification"
+  ];
+  for (const artifact of requiredPipelineArtifacts) {
+    if (!FRESH_STATUSES.has(artifactStatus[artifact])) {
+      errors.push(`workbench.artifactStatus.${artifact} must be fresh, approved, or validated when --require-asset-pipeline is used.`);
+    }
   }
 }
 
@@ -376,7 +480,9 @@ const report = {
     enemies: asArray(enemyDesignCatalog).length,
     skillEffects: asArray(skillEffectCatalog).length,
     audioCues: asArray(audioCueCatalog).length,
-    nodeRunSkills: nodeRunSkillIds.size
+    nodeRunSkills: nodeRunSkillIds.size,
+    assetPipeline: Boolean(assetPipeline),
+    assetPipelineSummary
   },
   requiredArtifacts: REQUIRED_ARTIFACTS,
   recommendedArtifacts: RECOMMENDED_ARTIFACTS,
@@ -395,6 +501,7 @@ if (jsonOnly) {
   console.log(`- abilities/passives: ${report.summary.abilities}/${report.summary.passiveSkills}`);
   console.log(`- characters/enemies: ${report.summary.characters}/${report.summary.enemies}`);
   console.log(`- VFX/SFX cues: ${report.summary.skillEffects}/${report.summary.audioCues}`);
+  console.log(`- asset pipeline: ${report.summary.assetPipeline ? "present" : "missing"}`);
   console.log(`- report: ${reportPath}`);
   if (warnings.length) {
     console.log("Warnings:");
