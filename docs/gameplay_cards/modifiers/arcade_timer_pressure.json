@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arcade_timer_pressure",
+  "title": "Arcade Timer Pressure",
+  "category": "time_pressure_modifier",
+  "status": "candidate",
+  "modifierFor": ["side_scrolling_brawler", "hazard_collect_waves"],
+  "knobs": {
+    "baseLimitSec": { "type": "number", "default": 78, "min": 5, "max": 600, "patchLevel": "L1" },
+    "chapterLimitsSec": { "type": "array", "default": [], "patchLevel": "L1" },
+    "bossBonusSec": { "type": "number", "default": 18, "min": 0, "max": 180, "patchLevel": "L1" },
+    "enemyBonusSec": { "type": "number", "default": 2, "min": 0, "max": 60, "patchLevel": "L1" },
+    "maxEnemyBonusSec": { "type": "number", "default": 14, "min": 0, "max": 180, "patchLevel": "L1" },
+    "minLimitSec": { "type": "number", "default": 55, "min": 1, "max": 600, "patchLevel": "L1" },
+    "hurryAtSec": { "type": "number", "default": 10, "min": 0, "max": 120, "patchLevel": "L1" },
+    "timeoutDamage": { "type": "number", "default": 14, "min": 0, "max": 999, "patchLevel": "L1" },
+    "timeoutPulseSec": { "type": "number", "default": 1.2, "min": 0.1, "max": 30, "patchLevel": "L1" }
+  },
+  "requiredCoreSystems": ["GameplayModifier", "ArcadeTimer", "Timer", "HP", "HUD", "WebAudioSynth", "TestHooks"],
+  "sourceProvenance": [
+    "minigame/three_kingdoms_brawl/js/arcade-timer.js",
+    "minigame/three_kingdoms_brawl/js/game-data.js",
+    "minigame/three_kingdoms_brawl/js/game.js",
+    "minigame/three_kingdoms_brawl/js/verify-scenarios.js"
+  ],
+  "knownRisks": [
+    "timeout penalties must not tick while paused, during intros, or after node completion",
+    "HURRY and TIME OVER events should be observable in TestHooks for deterministic E2E checks",
+    "timer pressure can conflict with dialogue-heavy or accessibility-sensitive nodes"
+  ]
+}

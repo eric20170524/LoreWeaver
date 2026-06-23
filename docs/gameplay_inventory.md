@@ -260,19 +260,81 @@
 
 ---
 
-## 6. 跨项目共同合同
+## 6. Three Kingdoms Brawl
 
-### 6.1 三类节点容器协议
+项目路径：`minigame/three_kingdoms_brawl`
+
+技术形态：Vanilla HTML/CSS/JS + Canvas 主画面 + Pixi/WebGL 特效层 + WebAudio + 静态 H5 启动脚本。它应作为 private case library 与 mechanics extraction 来源，第一阶段只抽机制、参数、验证方法和资产管线，不把具体题材表达或单例运行时代码迁入 LoreWeaver core。
+
+### 6.1 主干、清版循环与 modifier
+
+| 来源文件 | 玩法类型 | 核心行为 | 胜利条件 | 失败条件 | 可调参数 | 依赖 core 能力 | 抽象建议 | 已知坑/备注 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `README.md`、`js/game-data.js`、`js/game.js` | `side_scrolling_brawler` | 横向推进，在触发点锁屏，清掉本屏敌人/Boss 后继续向右推进 | 全部章节/波次清完并回传 NodeResult | HP 归零、命数耗尽、放弃续关、时间压力导致死亡 | 关卡长度、玩家数量、角色数值、敌人表、波次表、Boss 表、道具表、奖励表 | GameplayAdapter、WaveManager、LockScreenController、ActorController、HitboxResolver、DropTable、NodeResult、TestHooks | 新增基础 Gameplay Card，状态 `candidate` | 源项目是 Canvas + Pixi 特效层，原生迁入 Phaser adapter 是 L3 任务，短期优先 iframe 承载 |
+| `js/game-data.js`、`js/game.js` | `locked_screen_wave` | 玩家推进到 `triggerX` 后锁住屏幕和右边界，刷出敌人，清屏后解除推进 | 当前波敌人全部死亡 | 玩家在锁屏波次内被击败 | `triggerX`、`lockX`、`cameraMax`、enemy spawns、Boss intro、clear drops | WaveManager、LockScreenController、CameraController、ActorSpawner、DropTable | modifier | camera clamp、玩家 clamp、wave active 状态必须同源，否则多人边界容易错位 |
+| `js/game-data.js`、`js/stage-renderer.js`、`js/game.js` | `hazard_telegraph_lane` | 在清版 lane 上预警滚木、火油、炮火、乱箭等区域，延迟后造成伤害或迫使跳避/换线 | 躲过危险并继续清屏 | 被机关击中、超时或被敌人夹击 | hazard type、warning、life、interval、rx/ry、damage、color | TelegraphRenderer、Collision、Timer、LaneDepth、VFX | 复用/扩展 `hazard_telegraph` modifier | 预警范围必须和实际 hit area 一致；跳跃 dodge 也要进入 telemetry |
+| `js/arcade-timer.js`、`js/game-data.js`、`js/game.js` | `arcade_timer_pressure` | 每波独立 TIME 倒计时，低时触发 HURRY，归零后周期扣血 | 在压力惩罚杀死玩家前清屏 | TIME OVER 后持续扣血到失败 | `baseLimit`、`chapterLimits`、`bossBonus`、`enemyBonus`、`hurryAt`、`timeoutDamage`、`timeoutPulse` | ArcadeTimer、Timer、HP、HUD、WebAudioSynth、TestHooks | modifier | 暂停、章节/Boss intro、node 结束后都不能继续 tick |
+| `js/arcade-session.js`、`js/player-life.js`、`js/input-controller.js`、`js/game.js` | `arcade_credit_continue` | 投币增加 CREDIT，开局/续关扣 CREDIT，Game Over 后可继续复归 | 扣费后复归并继续当前 run | CREDIT 不足或玩家拒绝续关 | max credits、start credits、start/continue cost、respawn invuln、input mapping | ArcadeSession、LifeStock、InputMapper、HUD、NodeResult | modifier | 不能让 continue 流重复发送 NodeResult；不要把 CREDIT 自动映射为外层经济资源 |
+| `js/input-controller.js`、`js/game-data.js`、`js/game.js` | `local_coop_4p` | 1-4P 键盘、手柄、WebHID、触屏虚拟控件统一成 per-player action frame | 多人共同清屏 | 输入冲突、玩家被 camera/lock clamp 卡死 | keyboard layouts、gamepad slots、deadzone、button threshold、touch controls、edge actions | LocalCoopInput、GamepadMapper、TouchControls、HUD、CameraController | modifier | 四套键盘和浏览器快捷键冲突风险高；gamepad 与 keyboard 必须共享 edge-trigger 语义 |
+| `js/game-data.js`、`js/game.js`、`js/verify-scenarios.js` | `elemental_directional_combo` | 根据方向轴 + 普攻/重击触发 forward/back/up/down 方向组合技，并按角色 element 选 VFX/命中盒 | 用组合技打开波次缺口、达成连击事件或 Boss 压制 | 输入窗口不清、锁身过长、方向相对朝向误判 | directions、strengths、axis threshold、lock/cooldown、element tags、ranged overrides | InputMapper、AbilityCatalog、HitboxResolver、ProjectileSystem、VFX、SFX | modifier + ability catalog 输入 | 元素名、技能名和 callout 需要 catalog 化，公开导出时去具体表达 |
+| `js/route-events.js`、`js/branch-rooms.js`、`js/game.js` | `branch_route_chain` | 每波按 speedClear/noDamage/jumpDodge/comboClear/secretCache 等条件结算支线事件，多事件达成后开启连续路线奖励/军需房 | 达成单事件或完整 branch chain | 条件未达成或重复奖励 | event specs、condition types、branch specs、prompt duration、reward items、room template | RouteConditionEvaluator、RewardSpawner、BranchRoomBuilder、Telemetry、TestHooks | modifier | route key 必须稳定，重试/续关不能重复发奖；支线房在不支持 side-room 的 runtime 中要可降级 |
+| `js/score-awards.js`、`js/game-data.js` | `score_extend_1up` | 分数达到阈值后给生命最少的可用玩家奖命 | 达到阈值并未超过 max lives | max lives 已满或没有有效玩家 | thresholds、max lives、recipient policy | ScoreSystem、LifeStock、HUD、Telemetry | 后续 modifier | 对非街机主题可改写为 extra chance / shield charge 等中性资源 |
+| `assets/imagegen/README.md`、`assets/imagegen/manifest.json`、`assets/imagegen/manifest.js` | `generated_brawler_atlas_pipeline` | imagegen atlas 切片，派生角色/敌人/Boss 动作帧、道具、场景件、装饰和 sheet manifest | runtime 优先加载真实 PNG，verify 能报告加载数和关键 art key | manifest 缺失、贴图 key 漂移、fallback 掩盖美术缺口 | atlas source、semantic groups、clip names、manifest paths、style lock、verification keys | RuntimeFeaturePack、AssetManifest、SpriteClipResolver、VisualGate | Runtime Feature Pack asset pipeline 样例 | 资产和题材表达保留在 case library；core 只吸收合同、manifest 形状和验证方法 |
+
+### 6.2 源码参数快照
+
+| 来源文件 | 关键参数 |
+| --- | --- |
+| `js/game-data.js` | `PLAYER_START_LIVES = 2`、`MAX_PLAYER_LIVES = 6`、`INVENTORY_LIMIT = 6`、`SCORE_EXTEND_THRESHOLDS = [5000, 12000, 24000, 42000, 65000]` |
+| `js/game-data.js` | `ARCADE_TIMER_CONFIG` 含 `baseLimit = 78`、10 个 chapter limit、`bossBonus = 18`、`enemyBonus = 2`、`maxEnemyBonus = 14`、`minLimit = 55`、`hurryAt = 10`、`timeoutDamage = 14`、`timeoutPulse = 1.2` |
+| `js/game-data.js` | 5 名英雄含 `role`、`hp`、`speed`、`damage`、`heavy`、`range`、`element`、`palette`；敌人和 Boss 含 `hp/speed/damage/range/score/size/artKey` 等运行时字段 |
+| `js/game-data.js` | 10 个章节、21 个波次；每波含 `chapter`、`triggerX`、`lockX`、`cameraMax`、`name`、`hint`、`hazard`、`bossIntro`、`enemies` |
+| `js/route-events.js` | 13 个 route event，条件枚举包括 `speedClear`、`noDamage`、`jumpDodge`、`comboClear`、`secretCache`；4 条连续 branch chain，奖励含 score 与 items |
+| `js/arcade-session.js` | `maxCredits` 默认 9，状态包含 `credits`、`inserted`、`continues`、`canStart`、`canContinue` |
+| `assets/imagegen/README.md` | 当前 manifest 暴露 491 个 imagegen PNG leaves：462 个 actor animation frame，加上 item、setpiece、prop、decoration slice；同时输出 individual frames 与 combo sprite sheets |
+| `README.md`、`js/verify-scenarios.js` | `?verify=1` 可验证 `arcadeTimer`、`creditContinue`、`routeEvents`、`clearCampaign`、`skillEffects`、`lifeStock`、imagegen 加载数、十关 21 波通关等场景 |
+
+### 6.3 第一阶段抽取结论
+
+已新增候选卡片：
+
+- `side_scrolling_brawler`
+- `locked_screen_wave`
+- `branch_route_chain`
+- `arcade_timer_pressure`
+- `arcade_credit_continue`
+- `elemental_directional_combo`
+- `local_coop_4p`
+
+短期接入顺序：
+
+1. 先把它作为机制案例进入 inventory 与 Gameplay Card，不迁移运行时代码。
+2. 使用 `node_iframe_microgame` 做可运行 iframe demo，因为源项目本身是静态 H5，并且 Core Contract 已允许 iframe 通过 Base64 JSON 接收 NodePayload。
+3. 把角色、敌人、Boss、技能效果、WebAudio cue、imagegen atlas manifest 整理成 Runtime Feature Pack catalogs 样例。
+4. 等 iframe 与卡片验证稳定后，再评估 `SideScrollingBrawlerAdapter`；这属于 L3 adapter 工作，不应与第一阶段混在一起。
+
+边界要求：
+
+- LoreWeaver core 只吸收机制、参数、合同和测试方法。
+- 具体角色名、地名、阵营、章节表达、专属素材与美术 provenance 保留在 `minigame` case library。
+- 公开导出前必须做去题材化审查；private case library 可以保留完整案例用于 mechanics extraction。
+
+---
+
+## 7. 跨项目共同合同
+
+### 7.1 三类节点容器协议
 
 | 来源 | 进入节点 | 节点运行 | 返回结果 | 主要风险 | core 抽象 |
 | --- | --- | --- | --- | --- | --- |
 | `Path_to_Immortality` | 主页面创建 iframe，并用 Base64 JSON query 传 payload | 独立 HTML/Canvas 页面自己跑 loop | `postMessage({ type: "NODE_RESULT", reward })` | message schema 漂移、iframe 未清理、返回后主干刷新 | `NodeContainer` + `NodePayload` + `NodeResult` |
+| `three_kingdoms_brawl` | 短期应由 LoreWeaver iframe node 打开静态 H5，并传入 NodePayload；原项目自身是独立页面启动 | Canvas 主画面 + Pixi/WebGL 特效层 + WebAudio；多玩家输入和街机 session 自管 | 第一阶段需要补 `postMessage`/NodeResult adapter；原项目当前以本地 UI 结算为主 | HTML case 可以低风险承载，native adapter 则涉及引擎不一致和多人/锁屏/计时状态 | `node_iframe_microgame` + `side_scrolling_brawler`，后续 `SideScrollingBrawlerAdapter` |
 | `xianni` | Phaser `scene.start(nodeScene, data)` | Node Scene 直接继承/覆盖基类 | `scene.start('MainScene', { nodeResult })` | Store/Scene 耦合、timer/modal 清理不统一 | `GameplayAdapter.end(result)` + `SceneLifecycle` |
 | `perfectworld_dahuang` | `NodeBridge.launchNode` 查 registry、校验 realm、停止 IdleEngine、启动 Scene | Node Scene + UI Scene 双场景运行 | `NodeBridge.returnToMain(scene, result)` 写 Store 后回主干 | NodeBridge 仍直接写 Store；UI Scene 清理需强制 | `NodeBridge` + `RewardApplier` + `SceneLifecycle` |
 | `gals_panic` | Ren'Py screen/displayable 进入小游戏 | Displayable 持有几何、遮罩、敌人、HUD | 写 persistent/gallery 或回剧情 label | 与引擎渲染/存档耦合 | 跨引擎 `GameplayCard`，先不进 Phaser adapter |
 | `Lingmai_DualCultivation` | Ren'Py screen + Python 配置表 | 点位拖拽、轨迹采样、分支权重 | 写阶段状态/画廊/分支结果 | 视觉差分与机制耦合 | `PointMap`、`PathAnalyzer`、`BranchState` utility |
 
-### 6.2 应进入 core 的最小合同
+### 7.2 应进入 core 的最小合同
 
 | 合同 | 必须解决的问题 | 来源证据 | 第一版范围 |
 | --- | --- | --- | --- |
@@ -284,17 +346,19 @@
 | `SceneLifecycle` | 统一清理 timer、physics、UI Scene、modal、transition lock | xianni `time.removeAllEvents()`；perfectworld `scene.stop(uiSceneKey)` 与 IdleEngine shutdown | `start/pause/resume/end/cleanup`，失败时可观测 |
 | `TestHooks` | 让 Build/E2E gate 不靠肉眼猜 | Path iframe 状态、Phaser HP/timer/kills/result、Ren'Py persistent 状态 | 暴露当前 node、hp、timer、kills、result、console errors |
 
-### 6.3 当前优先级判断
+### 7.3 当前优先级判断
 
 1. `Path_to_Immortality` 仍是第一优先级案例源：它证明了一个主干可以容纳十几种轻量微玩法，且 iframe/postMessage 协议天然适合“局部 patch、局部验证”。
 2. `node_iframe_microgame` 应作为 LoreWeaver 工作台的第一条节点容器协议先稳定下来，因为它最适合多玩法并行实验。
 3. `survivor_horde` 应作为 Phaser core 的第一条 adapter，因为 `xianni` 与 `perfectworld_dahuang` 都有真实实现，而且 modifier 经验足够密集。
-4. Ren'Py 两个样本暂不迁入 Phaser core，但它们提供了重要 utility 候选：几何路径、区域占领、点位配置、轨迹评分、分支状态。
+4. `three_kingdoms_brawl` 应作为 `side_scrolling_brawler` 的案例矿场先进入 Gameplay Card + modifier + iframe demo，不急着原生迁入 core。
+5. Ren'Py 两个样本暂不迁入 Phaser core，但它们提供了重要 utility 候选：几何路径、区域占领、点位配置、轨迹评分、分支状态。
 
 ---
 
-## 7. 下一步
+## 8. 下一步
 
 1. 将 `survivor_horde` 从“玩法卡”推进到 core adapter 骨架：先沉淀接口、上下文和配置命名，不急着整段搬代码。
 2. 先抽 `hazard_telegraph` 与 `defend_core` 两个 modifier：一个覆盖激光/雷击/漩涡，一个覆盖阵眼/城墙/护送类目标。
 3. 为 `node_iframe_microgame` 补一份最小 demo 计划，确保 Path 类 HTML 单页节点也能走统一 `NodePayload`/`NodeResult`。
+4. 为 `three_kingdoms_brawl` 补 iframe NodePayload/NodeResult demo，并把 imagegen atlas、英雄/敌人/技能/音效整理成 Runtime Feature Pack 样例。
