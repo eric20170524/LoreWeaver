@@ -27,7 +27,7 @@
 
 - [x] 0.1 **确认产品定位**
   - 定位为“AI 辅助的个人游戏工作台”，不是一次性游戏生成器。
-  - 记录到 `LoreWeaver_Workbench_Gameplay_Core_Roadmap.md`。
+  - 记录到 `LoreWeaver/docs/roadmap/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md`。
 
 - [x] 0.2 **确认三层资产分工**
   - `minigame`：真实小游戏案例库。
@@ -37,7 +37,7 @@
 - [x] 0.3 **补齐目录约定文档**
   - 明确 `minigame`、`minigame_master/core`、`LoreWeaver` 之间的写入边界。
   - 明确哪些文件允许 Agent 改，哪些文件必须人工授权。
-  - 已输出到 `LoreWeaver/docs/LoreWeaver_Workspace_Boundaries.md`。
+  - 已输出到 `LoreWeaver/docs/architecture/LoreWeaver_Workspace_Boundaries.md`。
 
 ---
 
@@ -47,43 +47,43 @@
 
 - [x] 1.1 **建立 Gameplay Inventory 表结构**
   - 字段包括：来源文件、玩法类型、核心行为、胜利条件、失败条件、可调参数、依赖 core 能力、是否可抽为 modifier、已知坑、适合题材、不适合题材。
-  - 已输出到 `LoreWeaver/docs/gameplay_inventory.md`。
+  - 已输出到 `LoreWeaver/docs/gameplay/gameplay_inventory.md`。
 
 - [x] 1.2 **重点盘点 `minigame/Path_to_Immortality`**
   - 覆盖 `index.html`、`battle.html`、`node1.html` 到 `node17.html`、`docs/tasklist.md`。
   - 重点识别：挂机修炼、年龄/境界节点解锁、iframe/postMessage 节点通信、Base64 Payload、Web Audio ASMR、Canvas 微交互、通用回合战斗、成就/法宝/功法/剧情 flag。
   - 第一批玩法候选：连线采集、压力点击生存、弹幕射击、迷宫探索、能量平衡、快速反应点选、平台逃亡、节奏冥想、观察捕捉、炼丹顺序合成、拖拽聚合、机关拼图、剑阵连线、闪避反击、纯剧情分支、落雷收集。
   - 这是当前最高优先级案例库来源。
-  - 已写入 `LoreWeaver/docs/gameplay_inventory.md`，并补充源码参数快照。
+  - 已写入 `LoreWeaver/docs/gameplay/gameplay_inventory.md`，并补充源码参数快照。
 
 - [x] 1.3 **盘点 `minigame/xianni`**
   - 覆盖 `nodes/node1.js` 到 `nodes/node12.js`。
   - 重点识别：割草生存、毒雾、激光预警、防守核心、采集结晶、天雷麻痹、阵基突破、护送 NPC、禁魔区域、心魔镜像、Boss 多阶段弹幕。
   - 标注哪些是基础玩法，哪些是 modifier。
-  - 已写入 `LoreWeaver/docs/gameplay_inventory.md`。
+  - 已写入 `LoreWeaver/docs/gameplay/gameplay_inventory.md`。
 
 - [x] 1.4 **盘点 `minigame/perfectworld_dahuang`**
   - 覆盖 `nodes/`、`systems/NodeBridge.js`、`js/data.js`、`docs/` 中的关卡设计。
   - 重点识别主干成长、Node 进入/结算、割草生存、护送、攻城、Boss 挑战等可复用机制。
-  - 已写入 `LoreWeaver/docs/gameplay_inventory.md`。
+  - 已写入 `LoreWeaver/docs/gameplay/gameplay_inventory.md`。
 
 - [x] 1.5 **盘点 `minigame/gals_panic`**
   - 覆盖 `docs/`、`game/scripts/logic.rpy`、`game/cdd/cdd_gals_panic.rpy`、`game/scripts/gallery.rpy`。
   - 重点识别：Ren'Py 自定义 Displayable、Qix/区域占领、轨迹闭合检测、多边形面积、敌人与线段碰撞、动态图库加载、阶段推进、画廊持久化、测试脚本。
   - 暂不直接进入 Phaser core，先沉淀为跨引擎玩法卡候选。
-  - 初版已写入 `LoreWeaver/docs/gameplay_inventory.md`。
+  - 初版已写入 `LoreWeaver/docs/gameplay/gameplay_inventory.md`。
 
 - [x] 1.6 **盘点 `minigame/Lingmai_DualCultivation`**
   - 覆盖 `docs/`、`game/logic.py`、`game/script_new.rpy`、`game/screens.rpy`。
   - 重点识别：Ren'Py 视觉交互、点位图、拖拽轨迹评分、阶段分支、图层/差分状态、画廊解锁、角色配置表。
   - 暂不直接进入 Phaser core，先抽取“点位拖拽/轨迹评分/阶段分支”机制经验。
-  - 初版已写入 `LoreWeaver/docs/gameplay_inventory.md`。
+  - 初版已写入 `LoreWeaver/docs/gameplay/gameplay_inventory.md`。
 
 - [x] 1.7 **对比跨项目共同合同**
   - 对比 HTML iframe/postMessage、Phaser Scene.start、Ren'Py screen/displayable 三类节点通信。
   - 对比 NodePayload、NodeResult、Store/Persistent、SceneLifecycle、UI Scene、E2E 可观测点。
   - 输出“应进入 core 的最小合同”清单。
-  - 已写入 `LoreWeaver/docs/gameplay_inventory.md` 与 `LoreWeaver/docs/core_contracts.md`。
+  - 已写入 `LoreWeaver/docs/gameplay/gameplay_inventory.md` 与 `LoreWeaver/docs/architecture/core_contracts.md`。
 
 - [x] 1.8 **整理第一批候选玩法卡**
   - `node_iframe_microgame`：HTML 单页节点容器与 postMessage 通信。
@@ -109,7 +109,7 @@
 
 - [x] 2.1 **定义 Gameplay Card schema**
   - 字段包括：`id`、`title`、`category`、`runtimeAdapter`、`inputs`、`objectives`、`failure`、`knobs`、`requiredCoreSystems`、`testFixture`、`sourceProvenance`。
-  - 已输出到 `LoreWeaver/docs/gameplay_card_schema.md`。
+  - 已输出到 `LoreWeaver/docs/gameplay/gameplay_card_schema.md`。
 
 - [x] 2.2 **创建第一张玩法卡：`survivor_horde`**
   - 来源：`minigame/xianni` 与 `minigame/perfectworld_dahuang`。
@@ -131,7 +131,7 @@
   - 必须有最小 demo 或可运行 adapter。
   - 必须有 E2E 或测试 hook。
   - 必须记录适合/不适合题材与常见失败点。
-  - 已写入 `LoreWeaver/docs/gameplay_card_schema.md`。
+  - 已写入 `LoreWeaver/docs/gameplay/gameplay_card_schema.md`。
 
 ---
 
@@ -142,12 +142,12 @@
 - [x] 3.1 **定义 `NodePayload`**
   - 主干进入关卡时传入：`nodeId`、`nodeConfig`、`playerStats`、`playerPerks`、`inventory`、`runSeed`。
   - 明确字段默认值和向后兼容策略。
-  - 已写入 `LoreWeaver/docs/core_contracts.md` 与 `minigame_master/core/lib/contracts/NodeContracts.js`。
+  - 已写入 `LoreWeaver/docs/architecture/core_contracts.md` 与 `minigame_master/core/lib/contracts/NodeContracts.js`。
 
 - [x] 3.2 **定义 `NodeResult`**
   - 关卡结束时回传：`success`、`reason`、`rewards`、`penalties`、`flags`、`telemetry`。
   - 明确撤退、失败、通关、超时的 reason 枚举。
-  - 已写入 `LoreWeaver/docs/core_contracts.md` 与 `minigame_master/core/lib/contracts/NodeContracts.js`。
+  - 已写入 `LoreWeaver/docs/architecture/core_contracts.md` 与 `minigame_master/core/lib/contracts/NodeContracts.js`。
 
 - [x] 3.3 **定义 `GameplayAdapter` 基类**
   - 最小接口：`init(payload)`、`create(scene)`、`update(time, delta)`、`pause()`、`resume()`、`destroy()`、`end(result)`。
@@ -162,12 +162,12 @@
 - [x] 3.5 **定义 `SceneLifecycle` 规范**
   - 统一处理：启动、暂停、恢复、撤退、转场锁、计时器清理、物理碰撞清理、UI Scene 停止。
   - 沉淀历史坑：切场景前必须清理并行 UI Scene、定时器和物理组。
-  - 已写入 `LoreWeaver/docs/core_contracts.md` 与 `minigame_master/core/lib/contracts/SceneLifecycle.js`。
+  - 已写入 `LoreWeaver/docs/architecture/core_contracts.md` 与 `minigame_master/core/lib/contracts/SceneLifecycle.js`。
 
 - [x] 3.6 **定义 `TestHooks`**
   - 暴露：当前 scene key、node id、HP、倒计时、击杀数、结算状态、最近 NodeResult、console error。
   - 为 Playwright E2E 提供稳定观测点。
-  - 已写入 `LoreWeaver/docs/core_contracts.md` 与 `minigame_master/core/lib/contracts/TestHooks.js`。
+  - 已写入 `LoreWeaver/docs/architecture/core_contracts.md` 与 `minigame_master/core/lib/contracts/TestHooks.js`。
 
 ---
 
@@ -229,7 +229,7 @@
 - [x] 5.2 **建立 patch 对象格式**
   - 字段：`target`、`operation`、`before`、`after`、`reason`、`invalidates`、`patchLevel`。
   - patchLevel 支持 L0-L4。
-  - 已写入 `src/types.ts`、`src/utils/gameplayManifest.ts` 与 `docs/patch_revision_workflow.md`。
+  - 已写入 `src/types.ts`、`src/utils/gameplayManifest.ts` 与 `docs/workflow/patch_revision_workflow.md`。
 
 - [x] 5.3 **建立 revision 记录**
   - 每次 approve 后创建 revision。
@@ -306,18 +306,18 @@
 - [x] 7.1 **版权与同人合规处理**
   - 当前后置。
   - 后续集中处理：用户自带语料、风格化致敬、敏感词扫描、逐字引用限制、导出前清理。
-  - 已建立 `docs/copyright_and_fanwork_deferred_policy.md` 与 `workflow/scripts/content_safety_scan.mjs`。
+  - 已建立 `docs/policy/copyright_and_fanwork_deferred_policy.md` 与 `workflow/scripts/content_safety_scan.mjs`。
   - 已对 export surfaces 执行扫描并清理 UI placeholder 中的具体 IP 示例；报告写入 `workflow/reports/content_safety_scan_latest.json`。
 
 - [x] 7.2 **视觉审计与 VLM**
   - 后置到核心玩法闭环稳定之后。
   - 先保证 Build/E2E/TestHooks 可靠。
-  - 已输出 `docs/visual_audit_and_vlm_backlog.md`，明确 VLM 在 deterministic gates 之后执行。
+  - 已输出 `docs/workflow/visual_audit_and_vlm_backlog.md`，明确 VLM 在 deterministic gates 之后执行。
 
 - [x] 7.3 **多 Agent 角色深化**
   - 后置到 patch/revision/gate 稳定之后。
   - Agent 角色应围绕 artifact ownership，而不是围绕漂亮称号扩张。
-  - 已输出 `docs/agent_roles_artifact_ownership.md`，按 artifact ownership 划分角色与 patch 权限。
+  - 已输出 `docs/workflow/agent_roles_artifact_ownership.md`，按 artifact ownership 划分角色与 patch 权限。
 
 ---
 
@@ -520,21 +520,21 @@
 目标：把缺失的生产级表现步骤接入 LoreWeaver，让 Runtime Feature Pack 不只检查 catalog 自洽，还检查 ability presentation、generated art、audio manifest、credits/provenance 与 browser verification 这几条关键链路。
 
 - [x] 18.1 **建立 Asset Pipeline Contract**
-  - 新增 `docs/asset_pipeline_contract.md`。
+  - 新增 `docs/contracts/asset_pipeline_contract.md`。
   - 明确 `abilityVfxVoice`、`artAssets`、`audioAssets` 三条流水线的 artifact、runtime hook、manifest、verification 和 workbench status。
 
 - [x] 18.2 **接入 Runtime Feature Pack 合同与模板**
-  - `runtime_feature_pack_contract.md` 增加 `loreweaver/asset-pipeline.json`。
+  - `docs/contracts/runtime_feature_pack_contract.md` 增加 `loreweaver/asset-pipeline.json`。
   - `workflow/templates/10_RUNTIME_FEATURE_PACK.md` 增加 Ability VFX Voice、Game Art Asset Pipeline、Game Audio Asset Pipeline 三个验收章节。
   - `step 2.3_Runtime_Feature_Pack_Prompt.md` 要求 Agent 输出 `asset_pipeline_json`。
 
 - [x] 18.3 **扩展 schema、类型与 gate**
-  - `runtime_feature_pack.schema.json` 增加可选 `assetPipeline` shape。
+  - `docs/contracts/runtime_feature_pack.schema.json` 增加可选 `assetPipeline` shape。
   - `src/types.ts` 增加 Runtime Asset Pipeline 类型。
   - `check_runtime_feature_pack.mjs` 读取 `loreweaver/asset-pipeline.json`，默认 warning，使用 `--require-asset-pipeline` 时转为必过 gate。
 
 - [x] 18.4 **重构 1.1 ~ 3.3 精确管线为横切流水线**
-  - 新增 `docs/precise_pipeline_1_1_to_3_3.md`。
+  - 新增 `docs/workflow/precise_pipeline_1_1_to_3_3.md`。
   - 将 World/Narrative、Gameplay、Ability Runtime、Asset Pipeline、Verification 五条轨道贯穿 1.1 到 3.3。
   - Step 1.1 输出 `pipeline_dna`；Step 1.2 每个 node 输出 `assetBeats`、`vfxNeeds`、`audioNeeds`、`artNeeds`、`abilityRuntimeNeeds`、`verificationFocus`。
   - Step 2.1 输出 `asset_runtime_contract`；Step 2.2 建立 asset/art/audio/enemy effect registries 与 coverage matrix；Step 2.3 总装 `asset-pipeline.json`。

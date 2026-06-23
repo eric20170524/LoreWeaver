@@ -88,8 +88,8 @@ Agent output should prefer L0-L2. L3-L4 should be rare and explicitly tied to a 
 
 | Artifact | Owner | Notes |
 | --- | --- | --- |
-| `gameplay_inventory.md` | LoreWeaver docs | Evidence and analysis from case studies |
-| `gameplay_card_schema.md` | LoreWeaver docs | Contract for machine-readable cards |
+| `gameplay/gameplay_inventory.md` | LoreWeaver docs | Evidence and analysis from case studies |
+| `gameplay/gameplay_card_schema.md` | LoreWeaver docs | Contract for machine-readable cards |
 | `gameplay_cards/*.json` | LoreWeaver docs | Workbench-facing library cards |
 | `contracts/*.js` | `minigame_master/core` | Stable runtime interface definitions |
 | Gameplay adapter source | `minigame_master/core/lib/gameplay` | Only after card + test expectations exist |

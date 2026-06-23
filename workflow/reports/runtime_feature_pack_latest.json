@@ -3,7 +3,7 @@
   "status": "failed",
   "createdAt": "2026-06-23T06:18:37.774Z",
   "workspaceRoot": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver",
-  "schema": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/runtime_feature_pack.schema.json",
+  "schema": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/contracts/runtime_feature_pack.schema.json",
   "summary": {
     "nodes": 0,
     "abilities": 0,

@@ -266,4 +266,4 @@ npm run check:runtime-feature-pack -- --workspace data/workspaces/<workspace-id>
 npm run check:runtime-feature-pack -- --workspace data/workspaces/<workspace-id> --require-asset-pipeline
 ```
 
-The detailed catalog schema lives in `docs/runtime_feature_pack.schema.json`; the human-readable workflow contract lives in `docs/runtime_feature_pack_contract.md` and `docs/asset_pipeline_contract.md`.
+The detailed catalog schema lives in `../contracts/runtime_feature_pack.schema.json`; the human-readable workflow contract lives in `../contracts/runtime_feature_pack_contract.md` and `../contracts/asset_pipeline_contract.md`.

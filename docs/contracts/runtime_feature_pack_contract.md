@@ -21,7 +21,7 @@
 | `loreweaver/asset-pipeline.json` | Ability VFX/voice、generated art atlas、BGM/SFX/voice manifest、credits 与 browser verification 的流水线元数据 |
 | `loreweaver/workbench.json` | 这些产物与运行时能力的 fresh/approved/validated 状态 |
 
-机器可读字段以 [runtime_feature_pack.schema.json](/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/runtime_feature_pack.schema.json) 为准。当前工作区可以继续分文件保存，但字段语义必须兼容该 schema。
+机器可读字段以 [runtime_feature_pack.schema.json](runtime_feature_pack.schema.json) 为准。当前工作区可以继续分文件保存，但字段语义必须兼容该 schema。
 
 ---
 
@@ -74,7 +74,7 @@ VFX/SFX catalog 必须用 `runtimeSkillId` 绑定实际技能池。
 
 ### Asset Pipelines
 
-Runtime Feature Pack 不能只证明“catalog 写对了”，还必须证明素材生产和运行时接线存在闭环。新项目应按 [asset_pipeline_contract.md](/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/asset_pipeline_contract.md) 产出 `loreweaver/asset-pipeline.json`，覆盖三条优先流水线：
+Runtime Feature Pack 不能只证明“catalog 写对了”，还必须证明素材生产和运行时接线存在闭环。新项目应按 [asset_pipeline_contract.md](asset_pipeline_contract.md) 产出 `loreweaver/asset-pipeline.json`，覆盖三条优先流水线：
 
 - **Ability VFX Voice**：玩家技能、敌人招式、Boss/精英 callout、可选 voice manifest、VFX/SFX/voice 统一触发 hook 与 verify coverage。
 - **Game Art Asset Pipeline**：imagegen/bitmap atlas、semantic art groups、sprite clips、manifest.json、manifest.js、runtime atlas-first lookup 与真实画面验收。

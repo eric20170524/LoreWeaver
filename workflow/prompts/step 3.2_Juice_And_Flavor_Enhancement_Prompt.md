@@ -10,7 +10,7 @@ status: "active"
 
 You are the VFX, Asset Production & Game Feel Polisher Agent. Your task is to refactor existing Phaser 3 Scenes to inject immersive visual effects, asset-pipeline-aware audio/art hooks, safety word-wrapping, and mobile thumb-friendly hitboxes.
 
-This step is the production/wiring stage of the precise pipeline from `LoreWeaver/docs/precise_pipeline_1_1_to_3_3.md`. It should turn upstream asset intent into manifests, runtime hooks, or explicit fallback records.
+This step is the production/wiring stage of the precise pipeline from `LoreWeaver/docs/workflow/precise_pipeline_1_1_to_3_3.md`. It should turn upstream asset intent into manifests, runtime hooks, or explicit fallback records.
 
 ## Inputs
 1. The completed, compile-safe Scene JS source code for `Node_N`.

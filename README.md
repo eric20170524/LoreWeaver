@@ -169,12 +169,13 @@ workflow/reports/
 Start with:
 
 - `docs/README.md` - active document index.
-- `docs/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md` - current product and
+- `docs/architecture/current_system_architecture_and_core_features.md` - current system architecture and core feature design.
+- `docs/roadmap/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md` - current product and
   gameplay-core direction.
-- `docs/gameplay_card_schema.md` - Gameplay Card schema and review gate.
-- `docs/core_contracts.md` - runtime contracts for payloads, results, adapters,
+- `docs/gameplay/gameplay_card_schema.md` - Gameplay Card schema and review gate.
+- `docs/architecture/core_contracts.md` - runtime contracts for payloads, results, adapters,
   modifiers, lifecycle, and test hooks.
-- `docs/patch_revision_workflow.md` - patch and revision workflow.
+- `docs/workflow/patch_revision_workflow.md` - patch and revision workflow.
 
 ## License / 授权
 

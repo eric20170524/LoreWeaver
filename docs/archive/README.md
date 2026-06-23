@@ -4,7 +4,7 @@ This directory stores historical analysis and reference material that should not
 
 ## `historical-prd/`
 
-Older versioned PRDs and architecture whitepapers. These capture prior product framing and design ambition, but current planning should follow `../0_TASKLIST.md` and `../LoreWeaver_Workbench_Gameplay_Core_Roadmap.md`.
+Older versioned PRDs and architecture whitepapers. These capture prior product framing and design ambition, but current planning should follow `../roadmap/0_TASKLIST.md` and `../roadmap/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md`.
 
 ## `reference/`
 

@@ -35,31 +35,60 @@ flowchart TD
 - When a reusable runtime change is made, also check whether any named target workspace must be synced or regenerated. A passing core build does not prove a git-ignored workspace artifact changed.
 - If a request can plausibly refer to more than one surface, ask one clarifying question before editing. Do not guess between Workbench UI, engine runtime, target workspace artifact, and legacy reference project.
 
-For the full boundary policy, read `LoreWeaver_Workspace_Boundaries.md` before making architectural or runtime edits.
+For the full boundary policy, read `architecture/LoreWeaver_Workspace_Boundaries.md` before making architectural or runtime edits.
 
 ---
 
 This directory is split into active workbench documents and archived reference material.
 
-## Active Documents
+## Active Documents By Category
 
 These files describe the current planning, contracts, schemas, gates, and operating rules.
 
+### Architecture
+
 | File | Purpose |
 | --- | --- |
-| `0_TASKLIST.md` | Current roadmap and execution backlog |
-| `LoreWeaver_Workbench_Gameplay_Core_Roadmap.md` | Current product and gameplay-core direction |
-| `LoreWeaver_Workspace_Boundaries.md` | Write boundaries between case studies, core runtime, and workbench |
-| `gameplay_inventory.md` | Active evidence inventory for gameplay cards and runtime planning |
-| `gameplay_card_schema.md` | Gameplay Card schema and review gate |
-| `precise_pipeline_1_1_to_3_3.md` | Cross-cutting generation pipeline from world DNA to QA, including World, Gameplay, Ability Runtime, Asset Pipeline, and Verification tracks |
-| `runtime_feature_pack_contract.md` | Reusable MVP feature-pack contract for abilities, passives, character/enemy design, VFX/SFX, first-node skill loops, and simulator preview status |
-| `asset_pipeline_contract.md` | First-class pipeline contract for ability VFX/voice, generated bitmap art manifests, audio manifests, credits, runtime wiring, and verification |
-| `core_contracts.md` | Stable NodePayload, NodeResult, adapter, modifier, lifecycle, and test hook contracts |
-| `patch_revision_workflow.md` | Patch/revision workflow and patch level policy |
-| `visual_audit_and_vlm_backlog.md` | Visual audit and VLM gate backlog |
-| `agent_roles_artifact_ownership.md` | Agent roles organized by artifact ownership |
-| `copyright_and_fanwork_deferred_policy.md` | Current fanwork and export cleanup policy |
+| `architecture/current_system_architecture_and_core_features.md` | Current implemented architecture and core feature design |
+| `architecture/LoreWeaver_Workspace_Boundaries.md` | Write boundaries between case studies, core runtime, and workbench |
+| `architecture/core_contracts.md` | Stable NodePayload, NodeResult, adapter, modifier, lifecycle, and test hook contracts |
+
+### Roadmap
+
+| File | Purpose |
+| --- | --- |
+| `roadmap/0_TASKLIST.md` | Current roadmap and execution backlog |
+| `roadmap/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md` | Current product and gameplay-core direction |
+
+### Gameplay Library
+
+| File | Purpose |
+| --- | --- |
+| `gameplay/gameplay_inventory.md` | Active evidence inventory for gameplay cards and runtime planning |
+| `gameplay/gameplay_card_schema.md` | Gameplay Card schema and review gate |
+
+### Contracts
+
+| File | Purpose |
+| --- | --- |
+| `contracts/runtime_feature_pack_contract.md` | Reusable MVP feature-pack contract for abilities, passives, character/enemy design, VFX/SFX, first-node skill loops, and simulator preview status |
+| `contracts/runtime_feature_pack.schema.json` | Machine-readable Runtime Feature Pack schema |
+| `contracts/asset_pipeline_contract.md` | Ability VFX/voice, generated bitmap art, audio manifest, runtime wiring, and verification contract |
+
+### Workflow And Gates
+
+| File | Purpose |
+| --- | --- |
+| `workflow/precise_pipeline_1_1_to_3_3.md` | Cross-cutting generation pipeline from world DNA to QA |
+| `workflow/patch_revision_workflow.md` | Patch/revision workflow and patch level policy |
+| `workflow/visual_audit_and_vlm_backlog.md` | Visual audit and VLM gate backlog |
+| `workflow/agent_roles_artifact_ownership.md` | Agent roles organized by artifact ownership |
+
+### Policy
+
+| File | Purpose |
+| --- | --- |
+| `policy/copyright_and_fanwork_deferred_policy.md` | Current fanwork and export cleanup policy |
 
 ## Machine-Readable Assets
 
@@ -67,7 +96,7 @@ These files describe the current planning, contracts, schemas, gates, and operat
 | --- | --- |
 | `gameplay_cards/` | Gameplay Card JSON files used by the workbench and planning flow |
 | `gameplay_cards/modifiers/` | Modifier card JSON files |
-| `runtime_feature_pack.schema.json` | Machine-readable schema for reusable runtime ability/passive/character/enemy/VFX/SFX feature packs, including optional asset pipeline metadata |
+| `contracts/runtime_feature_pack.schema.json` | Machine-readable schema for reusable runtime ability/passive/character/enemy/VFX/SFX feature packs, including optional asset pipeline metadata |
 
 ## Archive
 

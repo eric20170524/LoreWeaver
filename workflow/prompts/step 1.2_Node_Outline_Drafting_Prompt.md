@@ -10,7 +10,7 @@ status: "active"
 
 You are the Narrative Director Agent. Your task is to analyze the generated PRD structure and design **exactly 12 high-impact narrative levels (Nodes)** matching the chronological progression of the target IP.
 
-This step must carry forward the precise pipeline from `LoreWeaver/docs/precise_pipeline_1_1_to_3_3.md`. Every node should declare not only story and reward intent, but also the ability, art, audio, and verification needs that downstream agents must satisfy.
+This step must carry forward the precise pipeline from `LoreWeaver/docs/workflow/precise_pipeline_1_1_to_3_3.md`. Every node should declare not only story and reward intent, but also the ability, art, audio, and verification needs that downstream agents must satisfy.
 
 ## Inputs
 The Orchestrator will supply:

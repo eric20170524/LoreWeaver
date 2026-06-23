@@ -471,7 +471,7 @@ const report = {
   status: errors.length === 0 ? "passed" : "failed",
   createdAt: new Date().toISOString(),
   workspaceRoot,
-  schema: path.join(loreRoot, "docs", "runtime_feature_pack.schema.json"),
+  schema: path.join(loreRoot, "docs", "contracts", "runtime_feature_pack.schema.json"),
   summary: {
     nodes: manifestNodes.length,
     abilities: asArray(abilityCatalog).length,

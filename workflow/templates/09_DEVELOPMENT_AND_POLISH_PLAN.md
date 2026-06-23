@@ -138,8 +138,8 @@ AC：
   - `minigame_master/workflow/prompts/step 3_Atmosphere_Programming.md`
   - `minigame_master/workflow/templates/`
 - 对 LoreWeaver 工作区，还必须检查是否应上提到：
-  - `LoreWeaver/docs/runtime_feature_pack_contract.md`
-  - `LoreWeaver/docs/runtime_feature_pack.schema.json`
+  - `LoreWeaver/docs/contracts/runtime_feature_pack_contract.md`
+  - `LoreWeaver/docs/contracts/runtime_feature_pack.schema.json`
   - `LoreWeaver/workflow/templates/10_RUNTIME_FEATURE_PACK.md`
   - `LoreWeaver/workflow/prompts/step 2.3_Runtime_Feature_Pack_Prompt.md`
   - `LoreWeaver/workflow/scripts/check_runtime_feature_pack.mjs`

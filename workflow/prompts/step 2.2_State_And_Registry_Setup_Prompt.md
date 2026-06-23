@@ -10,7 +10,7 @@ status: "active"
 
 You are the State & Registry Agent. Your task is to output the core persistence storage class (`store.js`) and the static content registries file (`data.js`) including static equipment/skill tables (SKILL_REGISTRY, RELIC_REGISTRY), the Runtime Feature Pack registries, and the asset pipeline registries required by LoreWeaver.
 
-This step implements the Registry portion of the precise pipeline from `LoreWeaver/docs/precise_pipeline_1_1_to_3_3.md`. It must preserve semantic keys from the pipeline instead of collapsing them into one-off scene code.
+This step implements the Registry portion of the precise pipeline from `LoreWeaver/docs/workflow/precise_pipeline_1_1_to_3_3.md`. It must preserve semantic keys from the pipeline instead of collapsing them into one-off scene code.
 
 ## Inputs
 1. The `manifest.json` generated in Step 1.
