@@ -19,7 +19,9 @@ export const INITIAL_PLAYER_STATE: PlayerState = {
   completedNodeIds: [],
   unlockedAbilities: [],
   activeMultiplier: 1.0,
-  clickPower: 1.5
+  clickPower: 1.5,
+  storyFlags: [],
+  unlockedPassives: []
 };
 
 const normalizePlayerState = (state: Partial<PlayerState> | null | undefined): PlayerState => ({
@@ -28,7 +30,9 @@ const normalizePlayerState = (state: Partial<PlayerState> | null | undefined): P
   secondaryResources: state?.secondaryResources || {},
   unlockedNodeIds: Array.isArray(state?.unlockedNodeIds) ? state.unlockedNodeIds : [1],
   completedNodeIds: Array.isArray(state?.completedNodeIds) ? state.completedNodeIds : [],
-  unlockedAbilities: Array.isArray(state?.unlockedAbilities) ? state.unlockedAbilities : []
+  unlockedAbilities: Array.isArray(state?.unlockedAbilities) ? state.unlockedAbilities : [],
+  storyFlags: Array.isArray(state?.storyFlags) ? state.storyFlags : [],
+  unlockedPassives: Array.isArray(state?.unlockedPassives) ? state.unlockedPassives : []
 });
 
 interface WorkbenchContextType {
@@ -114,12 +118,28 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
   const currentEmuWidth = emuWidths[emulatorSize] || 440;
 
-  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceMeta | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceMeta | null>(() => {
+    if (typeof window !== "undefined" && (window as any).__LOREWEAVER_EMBEDDED_SPEC__) {
+      const embedded = (window as any).__LOREWEAVER_EMBEDDED_SPEC__;
+      return {
+        id: "static-export",
+        name: embedded.title || "Exported Game",
+        theme: embedded.themeColor || "#10b981",
+        createdAt: new Date().toISOString()
+      };
+    }
+    return null;
+  });
   const [currentJob, setCurrentJob] = useState<any>(null);
   const [isOrchestrating, setIsOrchestrating] = useState(false);
   const [orchestrationStage, setOrchestrationStage] = useState<number | null>(null);
   const [orchestrationLogs, setOrchestrationLogs] = useState<string[]>([]);
-  const [gameSpec, setGameSpec] = useState<GameSpec | null>(null);
+  const [gameSpec, setGameSpec] = useState<GameSpec | null>(() => {
+    if (typeof window !== "undefined" && (window as any).__LOREWEAVER_EMBEDDED_SPEC__) {
+      return (window as any).__LOREWEAVER_EMBEDDED_SPEC__;
+    }
+    return null;
+  });
   const [pendingPatch, setPendingPatch] = useState<ManifestPatch | null>(null);
   const [playerState, setPlayerState] = useState<PlayerState>(() => {
     const cached = localStorage.getItem("loreweaver_player_state");
@@ -382,6 +402,10 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Run initial default loading on startup
   useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).__LOREWEAVER_EMBEDDED_SPEC__) {
+      addLog("⚓ Standalone H5 运行模式。修真画轴与企划剧本已嵌入并装载！");
+      return;
+    }
     addLog("⚓ 本地同人数据库连接成功（SQLite Buffer OK）。修真画轴已就绪。");
     const initWorkspaceAndSpec = async () => {
       try {

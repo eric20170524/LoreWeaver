@@ -73,6 +73,15 @@ function readOptionalJson(filePath, errors, label) {
   }
 }
 
+function readOptionalJsonLoose(filePath) {
+  if (!pathExists(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -117,18 +126,67 @@ function checkCatalogArray(catalog, label, errors) {
 }
 
 function loadWorkspace() {
-  const workspaceArg = argValue("--workspace") || process.env.LW_WORKSPACE || process.cwd();
-  const workspaceRoot = path.resolve(process.cwd(), workspaceArg);
+  const explicitWorkspaceArg = argValue("--workspace") || process.env.LW_WORKSPACE || null;
+  const workspaceSelection = explicitWorkspaceArg
+    ? {
+        root: path.resolve(process.cwd(), explicitWorkspaceArg),
+        reason: argValue("--workspace") ? "cli" : "env"
+      }
+    : resolveDefaultWorkspace();
   const reportArg = argValue("--report");
   const reportPath = reportArg
     ? path.resolve(process.cwd(), reportArg)
     : path.join(reportsDir, "runtime_feature_pack_latest.json");
 
   return {
-    workspaceRoot,
+    workspaceRoot: workspaceSelection.root,
+    workspaceSelectionReason: workspaceSelection.reason,
     reportPath,
     jsonOnly: process.argv.includes("--json")
   };
+}
+
+function isWorkspaceRoot(candidateRoot) {
+  return pathExists(path.join(candidateRoot, "manifest.json"));
+}
+
+function workspaceSortTimestamp(workspaceRoot) {
+  const meta = readOptionalJsonLoose(path.join(workspaceRoot, "meta.json")) || {};
+  const timestamp = Date.parse(meta.lastModifiedAt || meta.last_modified_at || meta.createdAt || meta.created_at || "");
+  if (Number.isFinite(timestamp)) return timestamp;
+  try {
+    return fs.statSync(workspaceRoot).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+function findLatestWorkspaceRoot() {
+  const workspacesRoot = path.join(loreRoot, "data", "workspaces");
+  if (!pathExists(workspacesRoot)) return null;
+
+  const candidates = fs
+    .readdirSync(workspacesRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(workspacesRoot, entry.name))
+    .filter(isWorkspaceRoot)
+    .sort((a, b) => workspaceSortTimestamp(b) - workspaceSortTimestamp(a));
+
+  return candidates[0] || null;
+}
+
+function resolveDefaultWorkspace() {
+  const cwdRoot = path.resolve(process.cwd());
+  if (isWorkspaceRoot(cwdRoot)) {
+    return { root: cwdRoot, reason: "cwd" };
+  }
+
+  const latestWorkspaceRoot = findLatestWorkspaceRoot();
+  if (latestWorkspaceRoot) {
+    return { root: latestWorkspaceRoot, reason: "latest-workspace" };
+  }
+
+  return { root: cwdRoot, reason: "cwd-fallback" };
 }
 
 function scanDataRegistry(workspaceRoot, runtimeSkillIds, warnings) {
@@ -206,7 +264,7 @@ function validateAssetPipeline(assetPipeline, errors, warnings) {
   };
 }
 
-const { workspaceRoot, reportPath, jsonOnly } = loadWorkspace();
+const { workspaceRoot, workspaceSelectionReason, reportPath, jsonOnly } = loadWorkspace();
 const errors = [];
 const warnings = [];
 
@@ -471,6 +529,7 @@ const report = {
   status: errors.length === 0 ? "passed" : "failed",
   createdAt: new Date().toISOString(),
   workspaceRoot,
+  workspaceSelectionReason,
   schema: path.join(loreRoot, "docs", "contracts", "runtime_feature_pack.schema.json"),
   summary: {
     nodes: manifestNodes.length,

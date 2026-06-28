@@ -93,6 +93,17 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
 
   const loadWorkspaces = async () => {
+    if (typeof window !== "undefined" && (window as any).__LOREWEAVER_EMBEDDED_SPEC__) {
+      const embedded = (window as any).__LOREWEAVER_EMBEDDED_SPEC__;
+      setWorkspaces([{
+        id: "static-export",
+        name: embedded.title || "Exported Game",
+        theme: embedded.themeColor || "#10b981",
+        createdAt: ""
+      }]);
+      return;
+    }
+
     try {
       const res = await fetch('/api/workspaces');
       const json = await res.json();

@@ -1,6 +1,7 @@
 import Phaser from "phaser";
-import { GameSpec, PlayerState, NodeSpec, GameplayModifierSpec } from "../types";
+import { GameSpec, PlayerState, NodeSpec, GameplayModifierSpec, NodeResult } from "../types";
 import { synth } from "../utils/AudioSynth";
+import { RewardApplier } from "../utils/RewardApplier";
 import {
   SurvivorHordeAdapter,
   createSurvivorHordeModifier,
@@ -489,6 +490,8 @@ export function initializePhaserGame(
     
     private adapter: any = null;
     private testHooks: any = null;
+    private activeIframe: HTMLIFrameElement | null = null;
+    private iframeListener: ((ev: MessageEvent) => void) | null = null;
 
     // Tap Reaction lists
     private spawnTimer!: Phaser.Time.TimerEvent;
@@ -673,7 +676,9 @@ export function initializePhaserGame(
 
       // Show level introductory overlay, and launch game only when skipped/completed
       this.showLevelIntro(() => {
-        if (this.adapter) {
+        if (this.node.gameplay?.adapter === "iframe") {
+          this.launchIframeContainer(width, height);
+        } else if (this.adapter) {
           this.adapter.create(this);
           (window as any).__LW_SURVIVOR_DEMO__ = this.adapter;
         } else {
@@ -1131,31 +1136,40 @@ export function initializePhaserGame(
         onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！`);
 
         const pState = { ...this.game.registry.get("playerState") } as PlayerState;
-        
-        if (!pState.completedNodeIds.includes(this.node.id)) {
-          pState.completedNodeIds.push(this.node.id);
-        }
-
-        const nextId = this.node.id + 1;
-        if (nextId <= 12 && !pState.unlockedNodeIds.includes(nextId)) {
-          pState.unlockedNodeIds.push(nextId);
-        }
-
-        const unlockedAbilityLabels = this.applyPlanningRewards(pState);
-
-        const multiplierGain = this.node.resourceMultiplier / 12.0;
-        pState.activeMultiplier += multiplierGain;
-        
+        const r = result.reward || {};
         const rwdKey = spec.economy.resources[0] || "灵石";
-        pState.secondaryResources[rwdKey] = (pState.secondaryResources[rwdKey] || 0) + 1;
+        const secondaryResources = r.secondaryResources || { [rwdKey]: 1 };
+        const unlockedAbilities = r.unlockedAbilities || this.node.planning?.rewardUnlocks || [];
+        const storyFlags = r.storyFlags || [];
 
-        this.game.registry.set("playerState", pState);
-        this.game.registry.get("onSaveState")(pState);
+        const nodeResult: NodeResult = {
+          success: true,
+          rewards: {
+            multiplierGain: r.multiplierGain ?? (this.node.resourceMultiplier / 12.0),
+            secondaryResources,
+            unlockedAbilities,
+            unlockedPassives: r.unlockedPassives || [],
+            storyFlags,
+            unlockNextNode: r.unlockNextNode !== false
+          }
+        };
+
+        const nextState = RewardApplier.apply(pState, this.node, nodeResult);
+
+        const newlyUnlocked = (nodeResult.rewards?.unlockedAbilities || []).filter(id => !pState.unlockedAbilities?.includes(id));
+        const unlockedAbilityLabels = newlyUnlocked.map((abilityId) => {
+          const ability = spec.abilityCatalog?.find((item) => item.id === abilityId);
+          return ability?.name || abilityId;
+        });
+
+        this.game.registry.set("playerState", nextState);
+        this.game.registry.get("onSaveState")(nextState);
 
         if (unlockedAbilityLabels.length > 0) {
           onLog(`✨ 新能力已写入长期企划成长：${unlockedAbilityLabels.join(" / ")}`);
         }
 
+        const multiplierGain = nodeResult.rewards?.multiplierGain ?? (this.node.resourceMultiplier / 12.0);
         this.cameras.main.flash(300, 16, 185, 129);
         this.showVictoryOverlay(multiplierGain, rwdKey);
       } else {
@@ -1461,35 +1475,32 @@ export function initializePhaserGame(
       container.add([title, sub, desc, btnRetry, btnBack]);
     }
 
-    /* GENERAL EXIT STRATEGIES AND SCENE RESTORATION CONTROLLER */
     private handleLevelWin() {
       synth.playVictoryFanfare();
       onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！悟得通关造化: [${this.node.rewards}]。`);
 
       const pState = { ...this.game.registry.get("playerState") } as PlayerState;
-      
-      // Update registration variables
-      if (!pState.completedNodeIds.includes(this.node.id)) {
-        pState.completedNodeIds.push(this.node.id);
-      }
-
-      // Unlock subsequent node sequentially
-      const nextId = this.node.id + 1;
-      if (nextId <= 12 && !pState.unlockedNodeIds.includes(nextId)) {
-        pState.unlockedNodeIds.push(nextId);
-      }
-
-      const unlockedAbilityLabels = this.applyPlanningRewards(pState);
-
-      // Add multiplier grow
-      pState.activeMultiplier += this.node.resourceMultiplier / 12.0;
-      
-      // Seed material resources randomly based on clearing
       const rwdKey = spec.economy.resources[0] || "灵石";
-      pState.secondaryResources[rwdKey] = (pState.secondaryResources[rwdKey] || 0) + 1;
+      
+      const nodeResult: NodeResult = {
+        success: true,
+        rewards: {
+          multiplierGain: this.node.resourceMultiplier / 12.0,
+          secondaryResources: { [rwdKey]: 1 },
+          unlockedAbilities: this.node.planning?.rewardUnlocks || []
+        }
+      };
 
-      this.game.registry.set("playerState", pState);
-      this.game.registry.get("onSaveState")(pState);
+      const nextState = RewardApplier.apply(pState, this.node, nodeResult);
+
+      const newlyUnlocked = (nodeResult.rewards?.unlockedAbilities || []).filter(id => !pState.unlockedAbilities?.includes(id));
+      const unlockedAbilityLabels = newlyUnlocked.map((abilityId) => {
+        const ability = spec.abilityCatalog?.find((item) => item.id === abilityId);
+        return ability?.name || abilityId;
+      });
+
+      this.game.registry.set("playerState", nextState);
+      this.game.registry.get("onSaveState")(nextState);
 
       if (unlockedAbilityLabels.length > 0) {
         onLog(`✨ 新能力已写入长期企划成长：${unlockedAbilityLabels.join(" / ")}`);
@@ -1544,6 +1555,138 @@ export function initializePhaserGame(
       });
     }
 
+    private launchIframeContainer(width: number, height: number) {
+      const parentEl = this.game.canvas.parentElement;
+      if (!parentEl) {
+        onLog(`❌ 无法找到容器 DOM 挂载 iframe。`);
+        this.handleLevelLoss("IFRAME MOUNT FAILURE");
+        return;
+      }
+
+      onLog(`📂 正在加载独立 H5 玩法容器 [节点 ${this.node.id}: ${this.node.title}]...`);
+
+      const iframe = document.createElement("iframe");
+      iframe.src = `./nodes/node${this.node.id}.html`;
+      iframe.style.position = "absolute";
+      iframe.style.top = "0px";
+      iframe.style.left = "0px";
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.border = "none";
+      iframe.style.zIndex = "100";
+      iframe.style.background = "#020617";
+
+      parentEl.appendChild(iframe);
+      this.activeIframe = iframe;
+
+      this.iframeListener = (ev: MessageEvent) => {
+        if (!ev.data) return;
+        if (ev.data.type === "NODE_RESULT") {
+          const reward = ev.data.reward || {};
+          onLog(`📥 H5 玩法容器回传奖励数据: ${JSON.stringify(reward)}`);
+
+          const success = reward.success !== false;
+          this.handleIframeResult(success, reward);
+        } else if (ev.data.type === "NODE_CLOSE" || ev.data.type === "NODE_EXIT") {
+          onLog(`🚪 H5 玩法容器请求退出。`);
+          this.handleIframeResult(false, { reason: "retreated" });
+        }
+      };
+
+      window.addEventListener("message", this.iframeListener);
+    }
+
+    private handleIframeResult(success: boolean, reward: any) {
+      if (this.activeIframe) {
+        if (this.activeIframe.parentElement) {
+          this.activeIframe.parentElement.removeChild(this.activeIframe);
+        }
+        this.activeIframe = null;
+      }
+      if (this.iframeListener) {
+        window.removeEventListener("message", this.iframeListener);
+        this.iframeListener = null;
+      }
+
+      if (success) {
+        synth.stopBossTheme();
+        synth.stopBgm();
+        synth.playVictoryFanfare();
+        onLog(`💎 功德圆满！独立 H5 玩法容器 [节点 ${this.node.id}: ${this.node.title}] 通关成功！`);
+
+        const pState = { ...this.game.registry.get("playerState") } as PlayerState;
+        const rwdKey = spec.economy.resources[0] || "灵石";
+
+        const mappedSecondary: { [key: string]: number } = {};
+        if (typeof reward.qi === "number") {
+          mappedSecondary[rwdKey] = reward.qi;
+        } else if (reward.secondaryResources) {
+          Object.assign(mappedSecondary, reward.secondaryResources);
+        } else {
+          mappedSecondary[rwdKey] = 1;
+        }
+
+        const mappedAbilities: string[] = [];
+        if (reward.skill) {
+          mappedAbilities.push(reward.skill);
+        }
+        if (reward.unlockedAbilities) {
+          mappedAbilities.push(...reward.unlockedAbilities);
+        }
+        if (mappedAbilities.length === 0 && this.node.planning?.rewardUnlocks) {
+          mappedAbilities.push(...this.node.planning.rewardUnlocks);
+        }
+
+        const mappedFlags: string[] = [];
+        if (reward.storyFlags) {
+          mappedFlags.push(...reward.storyFlags);
+        } else if (reward.relic) {
+          mappedFlags.push(reward.relic);
+        }
+
+        const nodeResult: NodeResult = {
+          success: true,
+          rewards: {
+            multiplierGain: reward.multiplierGain ?? (reward.xp ? reward.xp / 300.0 : this.node.resourceMultiplier / 12.0),
+            secondaryResources: mappedSecondary,
+            unlockedAbilities: mappedAbilities,
+            storyFlags: mappedFlags,
+            unlockNextNode: reward.unlockNextNode !== false
+          }
+        };
+
+        const nextState = RewardApplier.apply(pState, this.node, nodeResult);
+
+        const newlyUnlocked = (nodeResult.rewards?.unlockedAbilities || []).filter(id => !pState.unlockedAbilities?.includes(id));
+        const unlockedAbilityLabels = newlyUnlocked.map((abilityId) => {
+          const ability = spec.abilityCatalog?.find((item) => item.id === abilityId);
+          return ability?.name || abilityId;
+        });
+
+        this.game.registry.set("playerState", nextState);
+        this.game.registry.get("onSaveState")(nextState);
+
+        if (unlockedAbilityLabels.length > 0) {
+          onLog(`✨ 新能力已写入长期企划成长：${unlockedAbilityLabels.join(" / ")}`);
+        }
+
+        const multiplierGain = nodeResult.rewards?.multiplierGain ?? (this.node.resourceMultiplier / 12.0);
+        this.cameras.main.flash(300, 16, 185, 129);
+        this.showVictoryOverlay(multiplierGain, rwdKey);
+      } else {
+        synth.stopBossTheme();
+        synth.stopBgm();
+        if (reward.reason === "retreated") {
+          this.safeRetreat();
+        } else {
+          synth.playDamage();
+          onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${reward.reason || "挑战失败"}]。`);
+          this.cameras.main.shake(250, 0.015);
+          this.showDefeatOverlay(reward.reason || "天劫强力，元神溃散");
+        }
+      }
+    }
+
     private safeRetreat() {
       // Cleans everything before shutdown (Ensures 0% leakage risk)
       this.shutdown();
@@ -1561,6 +1704,18 @@ export function initializePhaserGame(
       this.activeCollects = [];
       this.activeHazards = [];
       this.runeKeyrings = [];
+
+      // Clean up active iframe if any
+      if (this.activeIframe) {
+        if (this.activeIframe.parentElement) {
+          this.activeIframe.parentElement.removeChild(this.activeIframe);
+        }
+        this.activeIframe = null;
+      }
+      if (this.iframeListener) {
+        window.removeEventListener("message", this.iframeListener);
+        this.iframeListener = null;
+      }
 
       // Stop Synthesizer Drones BGM and Boss Theme
       synth.stopBgm();

@@ -260,6 +260,8 @@ export interface PlayerState {
   unlockedAbilities?: string[]; // Long-term abilities unlocked from mainline or node rewards
   activeMultiplier: number; // Combined multipliers based on nodes cleared
   clickPower: number; // Click cultivation reward multiplier
+  storyFlags?: string[]; // Story flags or decisions
+  unlockedPassives?: string[]; // Passive skills unlocked from tree
 }
 
 export interface AuditCheck {
@@ -274,4 +276,17 @@ export interface AuditReport {
   vlm_feedback: string;
   prompt_reflow_diff: string;
   proposed_patches?: ManifestPatch[];
+}
+
+export interface NodeResult {
+  success: boolean;
+  reason?: string;
+  rewards?: {
+    multiplierGain?: number;
+    secondaryResources?: { [key: string]: number };
+    unlockedAbilities?: string[];
+    unlockedPassives?: string[];
+    storyFlags?: string[];
+    unlockNextNode?: boolean;
+  };
 }

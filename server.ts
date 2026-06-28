@@ -141,8 +141,8 @@ app.use("/api", async (req, res) => {
       res.setHeader(name, value);
     });
 
-    const bodyText = await proxyRes.text();
-    return res.send(bodyText);
+    const bodyBuffer = Buffer.from(await proxyRes.arrayBuffer());
+    return res.send(bodyBuffer);
   } catch (proxyError: any) {
     console.error("Gateway proxy to Python has failed:", proxyError.message);
     return res.status(502).json({ 

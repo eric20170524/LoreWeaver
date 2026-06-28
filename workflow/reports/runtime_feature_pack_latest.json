@@ -1,20 +1,27 @@
 {
   "gate": "runtime_feature_pack",
-  "status": "failed",
-  "createdAt": "2026-06-23T06:18:37.774Z",
-  "workspaceRoot": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver",
+  "status": "passed",
+  "createdAt": "2026-06-28T04:11:34.072Z",
+  "workspaceRoot": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/data/workspaces/20260611-060754-719406",
+  "workspaceSelectionReason": "latest-workspace",
   "schema": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/contracts/runtime_feature_pack.schema.json",
   "summary": {
-    "nodes": 0,
-    "abilities": 0,
-    "passiveSkills": 0,
-    "characters": 0,
-    "enemies": 0,
-    "skillEffects": 0,
-    "audioCues": 0,
-    "nodeRunSkills": 0,
-    "assetPipeline": false,
-    "assetPipelineSummary": null
+    "nodes": 12,
+    "abilities": 9,
+    "passiveSkills": 12,
+    "characters": 5,
+    "enemies": 13,
+    "skillEffects": 19,
+    "audioCues": 19,
+    "nodeRunSkills": 19,
+    "assetPipeline": true,
+    "assetPipelineSummary": {
+      "abilityPlayerCoverage": 1,
+      "abilityEnemyEffects": 3,
+      "artGroups": 6,
+      "audioChannels": 4,
+      "audioCoverage": 8
+    }
   },
   "requiredArtifacts": [
     "abilityCatalog",
@@ -40,44 +47,9 @@
     "audioAssetPipeline",
     "assetPipelineVerification"
   ],
-  "errors": [
-    "manifest.json is missing: /Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/manifest.json",
-    "ability-catalog.json is missing: /Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/loreweaver/ability-catalog.json",
-    "passive-skill-catalog.json is missing: /Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/loreweaver/passive-skill-catalog.json",
-    "character-design-catalog.json is missing: /Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/loreweaver/character-design-catalog.json",
-    "enemy-design-catalog.json is missing: /Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/loreweaver/enemy-design-catalog.json",
-    "skill-effect-catalog.json is missing: /Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/loreweaver/skill-effect-catalog.json",
-    "audio-cue-catalog.json is missing: /Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/loreweaver/audio-cue-catalog.json",
-    "workbench.json is missing: /Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/loreweaver/workbench.json",
-    "ability-catalog.json must be a non-empty array.",
-    "passive-skill-catalog.json must be a non-empty array.",
-    "character-design-catalog.json must be a non-empty array.",
-    "enemy-design-catalog.json must be a non-empty array.",
-    "skill-effect-catalog.json must be a non-empty array.",
-    "audio-cue-catalog.json must be a non-empty array.",
-    "manifest.json must include at least one playable node.",
-    "workbench.artifactStatus.abilityCatalog must be fresh, approved, or validated.",
-    "workbench.artifactStatus.passiveSkillCatalog must be fresh, approved, or validated.",
-    "workbench.artifactStatus.characterDesignCatalog must be fresh, approved, or validated.",
-    "workbench.artifactStatus.enemyDesignCatalog must be fresh, approved, or validated.",
-    "workbench.artifactStatus.skillEffectCatalog must be fresh, approved, or validated.",
-    "workbench.artifactStatus.audioCueCatalog must be fresh, approved, or validated.",
-    "workbench.artifactStatus.runtimeSkillFeedback must be fresh, approved, or validated.",
-    "workbench.artifactStatus.runtimeAbilityUnlocks must be fresh, approved, or validated.",
-    "workbench.artifactStatus.runtimeSkillHud must be fresh, approved, or validated.",
-    "workbench.artifactStatus.nodeSkillPreview must be fresh, approved, or validated.",
-    "workbench.artifactStatus.runtimeCharacterSprites must be fresh, approved, or validated.",
-    "workbench.artifactStatus.runtimeEnemySprites must be fresh, approved, or validated.",
-    "workbench.artifactStatus.firstNodeRunSkillLoop must be fresh, approved, or validated."
-  ],
+  "errors": [],
   "warnings": [
     "Recommended artifact is not marked fresh yet: floatingSimulatorPreview.",
-    "Recommended artifact is not marked fresh yet: simulatorFullscreenPreview.",
-    "Recommended artifact is not marked fresh yet: assetPipelineMetadata.",
-    "Recommended artifact is not marked fresh yet: abilityVfxVoicePipeline.",
-    "Recommended artifact is not marked fresh yet: artAssetPipeline.",
-    "Recommended artifact is not marked fresh yet: audioAssetPipeline.",
-    "Recommended artifact is not marked fresh yet: assetPipelineVerification.",
-    "loreweaver/asset-pipeline.json is missing; ability VFX/voice, generated art, and audio manifest pipelines are not recorded."
+    "Recommended artifact is not marked fresh yet: simulatorFullscreenPreview."
   ]
 }

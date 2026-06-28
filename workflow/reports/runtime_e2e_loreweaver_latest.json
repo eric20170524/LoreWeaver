@@ -2,47 +2,137 @@
   "gate": "runtime_e2e",
   "target": "LoreWeaver/app",
   "status": "passed",
-  "createdAt": "2026-06-11T04:49:08Z",
+  "createdAt": "2026-06-28T04:11:24Z",
   "method": "Playwright against Express proxy serving LoreWeaver dev backend/frontend",
   "assertions": {
     "gameInstanceCreated": true,
-    "runningStateObserved": true,
-    "timerUpdated": true,
-    "returnedToMainScene": true,
+    "mainSceneObserved": true,
+    "canvasCreated": true,
+    "canvasNonblank": true,
+    "survivorHordeRunningStateObserved": true,
+    "survivorHordeAdapterId": true,
+    "survivorHordeTimerUpdated": true,
+    "survivorHordeRewardReturned": true,
+    "survivorHordeNodeCompleted": true,
+    "survivorHordeNextNodeUnlocked": true,
+    "saveRestoredCompletedNode": true,
+    "saveRestoredNextUnlock": true,
     "tapReactionRunningStateObserved": true,
     "tapReactionAdapterId": true,
     "tapReactionTimerUpdated": true,
     "tapReactionReturnedToMainScene": true,
+    "saveStillPersistedCompletedNode": true,
+    "saveStillPersistedNextUnlock": true,
     "collectDodgeRunningStateObserved": true,
     "collectDodgeAdapterId": true,
     "collectDodgeTimerUpdated": true,
     "collectDodgeReturnedToMainScene": true,
+    "exportHasIndexHtml": true,
+    "exportHasManifestJson": true,
+    "exportHasReadmeMd": true,
+    "exportHasAssets": true,
+    "exportHasNodes": true,
+    "exportHasScenes": true,
+    "exportHasJs": true,
+    "exportHasSystems": true,
+    "exportHasLoreweaver": true,
+    "exportIndexHtmlHasEmbeddedSpec": true,
+    "exportIndexUsesRelativeAssets": true,
+    "exportReadmeDescribesPlayableH5": true,
+    "exportStaticEmbeddedSpec": true,
+    "exportStaticGameInstanceCreated": true,
+    "exportStaticCanvasCreated": true,
+    "exportStaticCanvasNonblank": true,
+    "exportSurvivorHordeRunningStateObserved": true,
+    "exportSurvivorHordeAdapterId": true,
+    "exportSurvivorHordeTimerUpdated": true,
+    "exportSurvivorHordeRewardReturned": true,
+    "exportSurvivorHordeNodeCompleted": true,
+    "exportSurvivorHordeNextNodeUnlocked": true,
+    "exportTapReactionRunningStateObserved": true,
+    "exportTapReactionAdapterId": true,
+    "exportTapReactionTimerUpdated": true,
+    "exportTapReactionReturnedToMainScene": true,
+    "exportCollectDodgeRunningStateObserved": true,
+    "exportCollectDodgeAdapterId": true,
+    "exportCollectDodgeTimerUpdated": true,
+    "exportCollectDodgeReturnedToMainScene": true,
     "consoleErrors": 0
   },
   "observedState": {
-    "duringRunStart": {
+    "initialCanvas": {
+      "present": true,
+      "width": 720,
+      "height": 1280,
+      "dataUrlLength": 193898,
+      "nonBlank": true
+    },
+    "survivorHordeStart": {
       "sceneKey": null,
       "nodeId": "node_1",
       "adapterId": "survivor_horde",
       "status": "running",
       "hp": 100,
       "progress": 0,
-      "timer": 30,
+      "timer": 12,
       "score": 0,
       "lastResult": null,
       "errors": []
     },
-    "duringRunAfter6s": {
+    "survivorHordeAfter2s": {
       "sceneKey": null,
       "nodeId": "node_1",
       "adapterId": "survivor_horde",
       "status": "running",
       "hp": 100,
       "progress": 0,
-      "timer": 24,
+      "timer": 9,
       "score": 0,
       "lastResult": null,
       "errors": []
+    },
+    "survivorHordeStateBeforeSuccess": {},
+    "survivorHordeStateAfterSuccess": {
+      "currentRealmIndex": 0,
+      "mainCurrencyCount": 0,
+      "secondaryResources": {
+        "狻猊骨文/Suan Ni Bone Script": 1
+      },
+      "unlockedNodeIds": [
+        1,
+        2
+      ],
+      "completedNodeIds": [
+        1
+      ],
+      "unlockedAbilities": [
+        "suan_ni_baoshu"
+      ],
+      "activeMultiplier": 1.1,
+      "clickPower": 1.5,
+      "storyFlags": [],
+      "unlockedPassives": []
+    },
+    "restoredState": {
+      "currentRealmIndex": 0,
+      "mainCurrencyCount": 0,
+      "secondaryResources": {
+        "狻猊骨文/Suan Ni Bone Script": 1
+      },
+      "unlockedNodeIds": [
+        1,
+        2
+      ],
+      "completedNodeIds": [
+        1
+      ],
+      "unlockedAbilities": [
+        "suan_ni_baoshu"
+      ],
+      "activeMultiplier": 1.1,
+      "clickPower": 1.5,
+      "storyFlags": [],
+      "unlockedPassives": []
     },
     "tapReactionStart": {
       "sceneKey": null,
@@ -68,6 +158,27 @@
       "lastResult": null,
       "errors": []
     },
+    "persistedStateBeforeCollectDodge": {
+      "currentRealmIndex": 0,
+      "mainCurrencyCount": 0,
+      "secondaryResources": {
+        "狻猊骨文/Suan Ni Bone Script": 1
+      },
+      "unlockedNodeIds": [
+        1,
+        2
+      ],
+      "completedNodeIds": [
+        1
+      ],
+      "unlockedAbilities": [
+        "suan_ni_baoshu"
+      ],
+      "activeMultiplier": 1.1,
+      "clickPower": 1.5,
+      "storyFlags": [],
+      "unlockedPassives": []
+    },
     "collectDodgeStart": {
       "sceneKey": null,
       "nodeId": "node_3",
@@ -91,9 +202,252 @@
       "score": 0,
       "lastResult": null,
       "errors": []
-    }
+    },
+    "exportZipFiles": [
+      "manifest.json",
+      "README.md",
+      "index.html",
+      "assets/index-2B7Ly2ev.js",
+      "assets/index-D95VZnoW.css",
+      "nodes/node11.html",
+      "nodes/node4.js",
+      "nodes/node5.js",
+      "nodes/node1.js",
+      "nodes/node11.js",
+      "nodes/node10.js",
+      "nodes/node8.js",
+      "nodes/node8.html",
+      "nodes/node9.js",
+      "nodes/node12.js",
+      "nodes/node6.js",
+      "nodes/node2.js",
+      "nodes/node12.html",
+      "nodes/node3.js",
+      "nodes/node7.js",
+      "scenes/MenuScene.js",
+      "scenes/PerkTreeScene.js",
+      "scenes/BootScene.js",
+      "scenes/LevelUpScene.js",
+      "scenes/MainScene.js",
+      "scenes/GameOverScene.js",
+      "scenes/AbilityCodexScene.js",
+      "js/store.js",
+      "js/main.js",
+      "js/data.js",
+      "js/IdleEngine.js",
+      "systems/NodeBridge.js",
+      "loreweaver/economy.json",
+      "loreweaver/enemy-design-catalog.json",
+      "loreweaver/asset-pipeline.json",
+      "loreweaver/project.json",
+      "loreweaver/skill-effect-catalog.json",
+      "loreweaver/art-asset-manifest.json",
+      "loreweaver/audio-cue-catalog.json",
+      "loreweaver/workbench.json",
+      "loreweaver/progression-systems.json",
+      "loreweaver/passive-skill-catalog.json",
+      "loreweaver/README.md",
+      "loreweaver/gameplay-cards.json",
+      "loreweaver/character-design-catalog.json",
+      "loreweaver/ability-catalog.json",
+      "loreweaver/audio-provenance.md",
+      "loreweaver/nodes/node-12-final-battle.json",
+      "loreweaver/nodes/node-03-xushenjie.json",
+      "loreweaver/nodes/node-06-yaodu.json",
+      "loreweaver/nodes/node-01-dahuang.json",
+      "loreweaver/nodes/node-04-kunpeng-nest.json",
+      "loreweaver/nodes/node-02-baiduan.json",
+      "loreweaver/nodes/node-07-three-thousand-states.json",
+      "loreweaver/nodes/node-08-xiangu.json",
+      "loreweaver/nodes/node-10-imperial-pass.json",
+      "loreweaver/nodes/node-11-foreign-land.json",
+      "loreweaver/nodes/node-09-tianshen-academy.json",
+      "loreweaver/nodes/node-05-shidu.json",
+      "css/style.css",
+      "utils/UIHelper.js",
+      "utils/AudioManager.js",
+      "utils/VFX.js",
+      "core/lib/main.js",
+      "core/lib/commonlib.md",
+      "core/lib/ui/ButtonBuilder.js",
+      "core/lib/ui/ModalManager.js",
+      "core/lib/scenes/MenuScene.js",
+      "core/lib/scenes/AchievementScene.js",
+      "core/lib/scenes/BootScene.js",
+      "core/lib/scenes/PlayScene.js",
+      "core/lib/scenes/GameOverScene.js",
+      "core/lib/core/Store.js",
+      "core/lib/core/EventBus.js",
+      "core/lib/contracts/SceneLifecycle.js",
+      "core/lib/contracts/NodeContracts.js",
+      "core/lib/contracts/index.js",
+      "core/lib/contracts/TestHooks.js",
+      "core/lib/utils/Random.js",
+      "core/lib/utils/GraphicsDrawer.js",
+      "core/lib/utils/AnimalFactory.js",
+      "core/lib/utils/Colors.js",
+      "core/lib/audio/WebAudioSynth.js",
+      "core/lib/juice/VFX.js",
+      "core/lib/gameplay/GameplayAdapter.js",
+      "core/lib/gameplay/index.js",
+      "core/lib/gameplay/GameplayModifier.js",
+      "core/lib/gameplay/survivor_horde/SurvivorHordeAdapter.js",
+      "core/lib/gameplay/survivor_horde/index.js",
+      "core/lib/gameplay/survivor_horde/modifiers/registry.js",
+      "core/lib/gameplay/survivor_horde/modifiers/PoisonFogModifier.js",
+      "core/lib/gameplay/survivor_horde/modifiers/DefendCoreModifier.js",
+      "core/lib/gameplay/survivor_horde/modifiers/LaserWarningModifier.js",
+      "core/lib/gameplay/survivor_horde/modifiers/HazardTelegraphModifier.js",
+      "core/lib/gameplay/survivor_horde/modifiers/BossPhasesModifier.js",
+      "core/lib/gameplay/survivor_horde/modifiers/EscortNpcModifier.js",
+      "core/lib/gameplay/tap_reaction/TapReactionAdapter.js",
+      "core/lib/gameplay/tap_reaction/index.js",
+      "core/lib/gameplay/collect_dodge/index.js",
+      "core/lib/gameplay/collect_dodge/CollectDodgeAdapter.js",
+      "core/lib/graphics/GraphicsGen.js",
+      "core/lib/systems/GameBridge.js",
+      "core/lib/systems/VoiceManager.js",
+      "core/lib/systems/QuestionSystem.js",
+      "core/lib/systems/NPCManager.js",
+      "core/lib/systems/ParticleSystem.js",
+      "core/lib/interaction/InteractionHelper.js"
+    ],
+    "exportStaticInitialCanvas": {
+      "present": true,
+      "width": 720,
+      "height": 1280,
+      "dataUrlLength": 193702,
+      "nonBlank": true
+    },
+    "exportSurvivorHordeStart": {
+      "sceneKey": null,
+      "nodeId": "node_1",
+      "adapterId": "survivor_horde",
+      "status": "running",
+      "hp": 100,
+      "progress": 0,
+      "timer": 6,
+      "score": 0,
+      "lastResult": null,
+      "errors": []
+    },
+    "exportSurvivorHordeAfter2s": {
+      "sceneKey": null,
+      "nodeId": "node_1",
+      "adapterId": "survivor_horde",
+      "status": "running",
+      "hp": 100,
+      "progress": 0,
+      "timer": 3,
+      "score": 0,
+      "lastResult": null,
+      "errors": []
+    },
+    "exportSurvivorHordeStateBeforeSuccess": {},
+    "exportSurvivorHordeStateAfterSuccess": {
+      "currentRealmIndex": 0,
+      "mainCurrencyCount": 0,
+      "secondaryResources": {
+        "狻猊骨文/Suan Ni Bone Script": 1
+      },
+      "unlockedNodeIds": [
+        1,
+        2
+      ],
+      "completedNodeIds": [
+        1
+      ],
+      "unlockedAbilities": [
+        "suan_ni_baoshu"
+      ],
+      "activeMultiplier": 1.1,
+      "clickPower": 1.5,
+      "storyFlags": [],
+      "unlockedPassives": []
+    },
+    "exportTapReactionStart": {
+      "sceneKey": null,
+      "nodeId": "node_1",
+      "adapterId": "rhythm_timing",
+      "status": "running",
+      "hp": 100,
+      "progress": 0,
+      "timer": 6,
+      "score": 0,
+      "lastResult": null,
+      "errors": []
+    },
+    "exportTapReactionAfter2s": {
+      "sceneKey": null,
+      "nodeId": "node_1",
+      "adapterId": "rhythm_timing",
+      "status": "running",
+      "hp": 80,
+      "progress": 0,
+      "timer": 3,
+      "score": 0,
+      "lastResult": null,
+      "errors": []
+    },
+    "exportCollectDodgeStart": {
+      "sceneKey": null,
+      "nodeId": "node_3",
+      "adapterId": "drag_collect_grid",
+      "status": "running",
+      "hp": 100,
+      "progress": 0,
+      "timer": 6,
+      "score": 0,
+      "lastResult": null,
+      "errors": []
+    },
+    "exportCollectDodgeAfter2s": {
+      "sceneKey": null,
+      "nodeId": "node_3",
+      "adapterId": "drag_collect_grid",
+      "status": "running",
+      "hp": 100,
+      "progress": 0,
+      "timer": 3,
+      "score": 0,
+      "lastResult": null,
+      "errors": []
+    },
+    "exportSmokeMatrix": [
+      {
+        "cardId": "survivor_horde",
+        "flow": "static_export_success_reward_unlock"
+      },
+      {
+        "cardId": "rhythm_timing",
+        "flow": "static_export_running_retreat_return"
+      },
+      {
+        "cardId": "drag_collect_grid",
+        "flow": "static_export_running_retreat_return"
+      }
+    ],
+    "exportStaticServer": {
+      "url": "http://127.0.0.1:53767/",
+      "stdout": "",
+      "stderr": "127.0.0.1 - - [28/Jun/2026 12:11:02] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 12:11:02] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 12:11:02] \"GET /assets/index-D95VZnoW.css HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 12:11:02] \"GET /assets/index-2B7Ly2ev.js HTTP/1.1\" 200 -\n"
+    },
+    "smokeMatrix": [
+      {
+        "cardId": "survivor_horde",
+        "flow": "success_reward_unlock_save_restore"
+      },
+      {
+        "cardId": "rhythm_timing",
+        "flow": "running_retreat_return"
+      },
+      {
+        "cardId": "drag_collect_grid",
+        "flow": "running_retreat_return"
+      }
+    ]
   },
   "errors": [],
-  "stdout": "\n> react-example@0.0.0 dev\n> tsx server.ts\n\n◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]\nAttempting to spawn Python FastAPI backend on port 8000...\nAttempting to spawn Vite frontend on port 5173...\nLoreWeaver platform dev proxy successfully running on http://localhost:3000\n[Vite stdout]: VITE v6.4.3  ready in 183 ms\n[Vite stdout]: ➜  Local:   http://127.0.0.1:5173/\n[Python stdout]: INFO:     127.0.0.1:53261 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53261 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53261 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53261 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53261 - \"GET /api/workspaces/88dca351-066a-44bb-b5c0-584ebf25eb83/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53261 - \"GET /api/workspaces/88dca351-066a-44bb-b5c0-584ebf25eb83/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53275 - \"POST /api/workspaces/88dca351-066a-44bb-b5c0-584ebf25eb83/files/manifest.json HTTP/1.1\" 200 OK\n",
-  "stderr": "[Python stderr]: /Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/pydantic/_internal/_config.py:383: UserWarning: Valid config keys have changed in V2:\n* 'orm_mode' has been renamed to 'from_attributes'\n  warnings.warn(message, UserWarning)\n[Python stderr]: INFO:     Started server process [50582]\n[Python stderr]: INFO:     Waiting for application startup.\n[Python stderr]: INFO:     Application startup complete.\n[Python stderr]: INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)\n"
+  "stdout": "\n> react-example@0.0.0 dev\n> bash scripts/dev-restart.sh\n\nPreparing LoreWeaver dev server...\nOK: Express gateway port 3000 is free.\nOK: Vite frontend port 5173 is free.\nOK: FastAPI backend port 8000 is free.\nStarting LoreWeaver on http://localhost:3000 ...\n◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }\nAttempting to spawn Python FastAPI backend on port 8000...\nAttempting to spawn Vite frontend on port 5173...\nLoreWeaver platform dev proxy successfully running on http://localhost:3000\n[Vite stdout]: VITE v6.4.3  ready in 319 ms\n[Vite stdout]: ➜  Local:   http://127.0.0.1:5173/\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53743 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53763 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53766 - \"GET /api/workspaces/20260611-060754-719406/export HTTP/1.1\" 200 OK\n",
+  "stderr": "[Python stderr]: INFO:     Started server process [31417]\n[Python stderr]: INFO:     Waiting for application startup.\nINFO:     Application startup complete.\n[Python stderr]: INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)\n"
 }

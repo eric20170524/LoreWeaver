@@ -85,6 +85,14 @@ Antigravity 不应自行把 L1/L2 任务扩展成 L3/L4。Codex reviewer 发现 
 - `verified`：代码和必要 gate 已通过。
 - `blocked`：需要人类决策或外部条件。
 
+`verified` 是强状态，不能只改状态字段。把任务标为 `verified` 前，必须同时满足：
+
+- `requiredGate` 中每个 gate 都有对应的 `verificationEvidence` 记录；未运行的 gate 必须写明原因和替代证据。
+- 有机器可复查的 report 时，必须记录 report 路径；没有 report 的命令要记录命令、结果摘要和运行日期。
+- `review.md` 必须有对应任务的 review 记录，说明 reviewer 看过哪些证据。
+- `state.md` / `handoff.md` 不能与 `tasks.md` 的任务状态冲突。
+- 不能因为“实现看起来完成”就标 `verified`；必须先跑完或明确豁免受影响 gate。
+
 任务格式：
 
 ```markdown
@@ -98,6 +106,14 @@ Antigravity 不应自行把 L1/L2 任务扩展成 L3/L4。Codex reviewer 发现 
 - invalidates: `gate:build`, `gate:e2e`
 - requiredGate: `npm run build`, `npm run lint`
 - doneCriteria:
+  - ...
+- verificationEvidence:
+  - gate: `npm run build`
+    result: passed
+    report: n/a
+    runAt: YYYY-MM-DD
+    note: one-line terminal/result summary
+- residualRisk:
   - ...
 ```
 
@@ -190,6 +206,8 @@ Codex review 必须先读 `review_request.md`，再看实际 diff、被修改文
 - P3：命名、文档、轻微一致性问题。
 
 如果没有问题，明确写“通过”，把 `tasks.md` 中对应任务状态更新为 `verified`，并在 `review.md` 记录本次 review。必要时更新 `state.md` 指向下一个任务。
+
+把任务改成 `verified` 的同一个 patch 必须同步更新 `verificationEvidence`。如果 review 只更新状态、不更新证据，后续 Agent 应视为状态不可信并重新验证。
 
 如果有问题，把任务状态改为 `changes_requested`，并在 `review.md` 给出文件路径、行号、原因和期望修复。Antigravity 返工时必须读取最新 `review.md`。
 

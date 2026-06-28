@@ -11,7 +11,8 @@
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "check:runtime-feature-pack": "node workflow/scripts/check_runtime_feature_pack.mjs"
+    "check:runtime-feature-pack": "node workflow/scripts/check_runtime_feature_pack.mjs",
+    "check:docs-collab": "node workflow/scripts/check_docs_collab_evidence.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
