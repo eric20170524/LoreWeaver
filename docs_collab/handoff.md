@@ -41,7 +41,7 @@ All tracked Path-standard slices are verified:
 
 - Root build still warns that the main JS bundle is larger than 500 kB.
 - Runtime Feature Pack recommends `floatingSimulatorPreview` and `simulatorFullscreenPreview`; these are still not marked fresh.
-- Workspace files under `LoreWeaver/data/workspaces/20260611-060754-719406` are git-ignored local deliverables; tracked source mirrors also exist under `minigame/perfectworld_dahuang`.
+- Workspace files under `LoreWeaver/data/workspaces/20260611-060754-719406` are git-ignored local deliverables. Note that `minigame/perfectworld_dahuang` is a committed static source mirror/testing fixture in the repository used for independent offline execution and E2E validation. It should be manually synchronized on workspace changes, but it is not a strict byte-by-byte copy of the dynamic export ZIP or the active workspace.
 - The current atlas is mechanically wired but visually basic; richer generated sprites and animation clips remain a polish pass.
 
 ## Status Sync Guard

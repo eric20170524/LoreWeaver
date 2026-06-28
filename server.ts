@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import dotenv from "dotenv";
 import { spawn } from "child_process";
 
@@ -32,12 +33,38 @@ app.use(express.json({ limit: "10mb" }));
 let pythonProcess: any = null;
 let viteProcess: any = null;
 
+function getPythonCommand(): string {
+  if (process.env.VIRTUAL_ENV) {
+    const envPython = path.join(process.env.VIRTUAL_ENV, "bin", "python");
+    if (fs.existsSync(envPython)) return envPython;
+    const envPython3 = path.join(process.env.VIRTUAL_ENV, "bin", "python3");
+    if (fs.existsSync(envPython3)) return envPython3;
+  }
+
+  const parentVenv = path.join(process.cwd(), "..", "venv");
+  const parentPython = path.join(parentVenv, "bin", "python");
+  if (fs.existsSync(parentPython)) return parentPython;
+  const parentPython3 = path.join(parentVenv, "bin", "python3");
+  if (fs.existsSync(parentPython3)) return parentPython3;
+
+  const localVenv = path.join(process.cwd(), "venv");
+  const localPython = path.join(localVenv, "bin", "python");
+  if (fs.existsSync(localPython)) return localPython;
+  const localPython3 = path.join(localVenv, "bin", "python3");
+  if (fs.existsSync(localPython3)) return localPython3;
+
+  return "python3";
+}
+
 function tryLaunchPythonBackend() {
-  console.log(`Attempting to spawn Python FastAPI backend on port ${PYTHON_BACKEND_PORT}...`);
+  const pythonCmd = getPythonCommand();
+  console.log(`Attempting to spawn Python FastAPI backend using "${pythonCmd}" on port ${PYTHON_BACKEND_PORT}...`);
   
   try {
-    pythonProcess = spawn("python3", ["-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", String(PYTHON_BACKEND_PORT)]);
+    pythonProcess = spawn(pythonCmd, ["-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", String(PYTHON_BACKEND_PORT)]);
   } catch (err) {
+    console.warn(`⚠️ Failed to spawn Python backend using "${pythonCmd}":`, err);
+    console.log("Trying system 'python' fallback...");
     try {
       pythonProcess = spawn("python", ["-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", String(PYTHON_BACKEND_PORT)]);
     } catch (e) {

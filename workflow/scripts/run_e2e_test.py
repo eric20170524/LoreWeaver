@@ -146,6 +146,8 @@ def run_survivor_horde_demo_test():
 
     port = find_open_port()
     url = f"http://127.0.0.1:{port}/"
+    stdout_file = tempfile.TemporaryFile(mode="w+t")
+    stderr_file = tempfile.TemporaryFile(mode="w+t")
     proc = subprocess.Popen(
         [
             str(vite_bin),
@@ -158,8 +160,8 @@ def run_survivor_horde_demo_test():
             "--strictPort"
         ],
         cwd=str(REPO_ROOT),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=stdout_file,
+        stderr=stderr_file,
         text=True
     )
 
@@ -265,7 +267,19 @@ def run_survivor_horde_demo_test():
     except Exception as exc:
         errors.append(f"Interaction failure: {exc}")
     finally:
-        stdout, stderr = stop_process(proc)
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+        stdout_file.seek(0)
+        stderr_file.seek(0)
+        stdout = stdout_file.read()
+        stderr = stderr_file.read()
+        stdout_file.close()
+        stderr_file.close()
 
     assertions["consoleErrors"] = len([err for err in errors if err.startswith("Console Error:")])
     passed = not errors and all(value is True for key, value in assertions.items() if key != "consoleErrors")
@@ -311,11 +325,13 @@ def run_loreweaver_app_test():
     python_env_bin = find_python_env_bin()
     if python_env_bin:
         env["PATH"] = python_env_bin + os.pathsep + env.get("PATH", "")
+    stdout_file = tempfile.TemporaryFile(mode="w+t")
+    stderr_file = tempfile.TemporaryFile(mode="w+t")
     proc = subprocess.Popen(
         ["npm", "run", "dev"],
         cwd=str(LORE_ROOT),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=stdout_file,
+        stderr=stderr_file,
         text=True,
         env=env,
         preexec_fn=os.setsid
@@ -825,9 +841,20 @@ def run_loreweaver_app_test():
     finally:
         try:
             os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            proc.wait(timeout=5)
         except Exception as kill_err:
             print(f"Error terminating process group: {kill_err}")
-        stdout, stderr = proc.communicate()
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                proc.wait(timeout=5)
+            except Exception:
+                pass
+        stdout_file.seek(0)
+        stderr_file.seek(0)
+        stdout = stdout_file.read()
+        stderr = stderr_file.read()
+        stdout_file.close()
+        stderr_file.close()
 
     assertions["consoleErrors"] = len([err for err in errors if err.startswith("Console Error:")])
     passed = not errors and all(value is True for key, value in assertions.items() if key != "consoleErrors")
