@@ -30,6 +30,170 @@ const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
   }
 };
 
+type RunSkillState = {
+  id: string;
+  label: string;
+  level: number;
+};
+
+type FirstNodeGrowthEvent = {
+  type: "collection" | "skill_level" | "skill_unlock";
+  milestone?: string;
+  amount?: number;
+  score?: number;
+  skillId?: string;
+  level?: number;
+  before?: Record<string, number | null>;
+  after?: Record<string, number | null>;
+  atMs: number;
+};
+
+type FirstNodeGrowthState = {
+  enabled: boolean;
+  collectionSource: string;
+  growthTrigger: string;
+  runtimeMutation: string;
+  playerFeedback: string;
+  combatImpact: string;
+  triggerThreshold: number;
+  collectedEssence: number;
+  lastObservedScore: number;
+  activeSkills: RunSkillState[];
+  mutationStats: {
+    weaponDamage: number;
+    playerHp: number | null;
+  };
+  combatStats: {
+    bulletDamageBefore: number;
+    bulletDamageAfter: number;
+    healedHp: number;
+    unlockedAoE: boolean;
+  };
+  lastFeedback: string;
+  events: FirstNodeGrowthEvent[];
+};
+
+type ImageGenFrameSpec = {
+  frame?: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  };
+};
+
+const IMAGEGEN_ATLAS_TEXTURE_KEY = "lw_imagegen_combat_atlas";
+const IMAGEGEN_MANIFEST_CACHE_KEY = "lw_imagegen_manifest";
+const IMAGEGEN_TEXTURE_BINDINGS: Array<{ frameKey: string; textureKey: string; group: string }> = [
+  { frameKey: "shihao_young_runtime", textureKey: "lw_runtime_player_shihao", group: "heroes" },
+  { frameKey: "enemy_wild_rhino", textureKey: "lw_enemy_wild_rhino", group: "enemies" },
+  { frameKey: "enemy_green_scaled_eagle", textureKey: "lw_enemy_green_scaled_eagle", group: "enemies" },
+  { frameKey: "enemy_rock_golem", textureKey: "lw_enemy_rock_golem", group: "enemies" },
+  { frameKey: "enemy_qiongqi_cub", textureKey: "lw_enemy_qiongqi_cub", group: "enemies" },
+  { frameKey: "skill_fist_projectile", textureKey: "lw_skill_fist_projectile", group: "projectiles" },
+  { frameKey: "pickup_blood_essence", textureKey: "lw_pickup_blood_essence", group: "items" },
+  { frameKey: "vfx_effect_frame", textureKey: "lw_vfx_effect_frame", group: "vfx" }
+];
+
+function shouldLoadStaticImageGenAssets() {
+  return typeof window !== "undefined" && Boolean((window as any).__LOREWEAVER_EMBEDDED_SPEC__);
+}
+
+function publishImageGenArtStatus(patch: Record<string, any>) {
+  if (typeof window === "undefined") return;
+
+  const previous = (window as any).__LOREWEAVER_ART_PIPELINE__ || {};
+  (window as any).__LOREWEAVER_ART_PIPELINE__ = {
+    ...previous,
+    ...patch,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function preloadImageGenAtlas(scene: Phaser.Scene) {
+  if (!shouldLoadStaticImageGenAssets()) {
+    publishImageGenArtStatus({
+      status: "skipped_dev_no_static_assets",
+      manifestPath: null,
+      atlasPath: null,
+      expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
+      loadedCount: 0,
+      loadedKeys: [],
+      missingKeys: IMAGEGEN_TEXTURE_BINDINGS.map((binding) => binding.textureKey)
+    });
+    return;
+  }
+
+  publishImageGenArtStatus({
+    status: "loading",
+    manifestPath: "assets/imagegen/manifest.json",
+    atlasPath: "assets/imagegen/atlas.png",
+    expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
+    loadedCount: 0,
+    loadedKeys: [],
+    missingKeys: []
+  });
+
+  scene.load.json(IMAGEGEN_MANIFEST_CACHE_KEY, "assets/imagegen/manifest.json");
+  scene.load.image(IMAGEGEN_ATLAS_TEXTURE_KEY, "assets/imagegen/atlas.png");
+  scene.load.on("loaderror", (file: any) => {
+    publishImageGenArtStatus({
+      status: "error",
+      manifestError: `failed to load ${file?.src || file?.key || "unknown imagegen asset"}`
+    });
+  });
+}
+
+function copyAtlasFrameToTexture(scene: Phaser.Scene, manifest: any, binding: { frameKey: string; textureKey: string; group: string }) {
+  const frameSpec = manifest?.frames?.[binding.frameKey] as ImageGenFrameSpec | undefined;
+  const frame = frameSpec?.frame;
+  if (!frame || !scene.textures.exists(IMAGEGEN_ATLAS_TEXTURE_KEY)) return false;
+
+  const atlasTexture = scene.textures.get(IMAGEGEN_ATLAS_TEXTURE_KEY);
+  const sourceImage = atlasTexture.getSourceImage() as CanvasImageSource;
+  if (!sourceImage) return false;
+
+  if (scene.textures.exists(binding.textureKey)) {
+    scene.textures.remove(binding.textureKey);
+  }
+
+  const canvasTexture = scene.textures.createCanvas(binding.textureKey, frame.w, frame.h);
+  const ctx = canvasTexture.getContext();
+  ctx.clearRect(0, 0, frame.w, frame.h);
+  ctx.drawImage(sourceImage, frame.x, frame.y, frame.w, frame.h, 0, 0, frame.w, frame.h);
+  canvasTexture.refresh();
+  return true;
+}
+
+function installImageGenAtlasTextures(scene: Phaser.Scene) {
+  if (!shouldLoadStaticImageGenAssets()) return;
+
+  const manifest = scene.cache.json.get(IMAGEGEN_MANIFEST_CACHE_KEY);
+  const loadedKeys: string[] = [];
+  const missingKeys: string[] = [];
+  const groups: Record<string, string[]> = {};
+
+  for (const binding of IMAGEGEN_TEXTURE_BINDINGS) {
+    if (copyAtlasFrameToTexture(scene, manifest, binding)) {
+      loadedKeys.push(binding.textureKey);
+      groups[binding.group] = [...(groups[binding.group] || []), binding.textureKey];
+    } else {
+      missingKeys.push(binding.textureKey);
+    }
+  }
+
+  publishImageGenArtStatus({
+    status: loadedKeys.length > 0 ? "loaded" : "error",
+    generatedAtlasStatus: manifest?.generatedAtlasStatus || "unknown",
+    expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
+    loadedCount: loadedKeys.length,
+    loadedKeys,
+    missingKeys,
+    groups,
+    frameKeys: Object.keys(manifest?.frames || {})
+  });
+}
+
 
 export function initializePhaserGame(
   parentEl: HTMLElement,
@@ -45,8 +209,13 @@ export function initializePhaserGame(
       super({ key: "BootScene" });
     }
 
+    preload() {
+      preloadImageGenAtlas(this);
+    }
+
     create() {
       const { width, height } = this.scale;
+      installImageGenAtlasTextures(this);
       
       // Draw background
       const bg = this.add.graphics();
@@ -490,6 +659,8 @@ export function initializePhaserGame(
     
     private adapter: any = null;
     private testHooks: any = null;
+    private runGrowthState: FirstNodeGrowthState | null = null;
+    private growthHUD: Phaser.GameObjects.Text | null = null;
     private activeIframe: HTMLIFrameElement | null = null;
     private iframeListener: ((ev: MessageEvent) => void) | null = null;
 
@@ -521,6 +692,8 @@ export function initializePhaserGame(
       this.livesCount = 3;
       this.adapter = null;
       this.testHooks = null;
+      this.runGrowthState = null;
+      this.growthHUD = null;
 
       if (this.node.gameplay) {
         this.testHooks = new TestHooks("__LOREWEAVER_TEST_HOOKS__");
@@ -631,6 +804,7 @@ export function initializePhaserGame(
 
         if (this.adapter) {
           this.adapter.init(payload);
+          this.setupFirstNodeGrowthLoop(cardId);
         }
       }
     }
@@ -702,6 +876,7 @@ export function initializePhaserGame(
         this.adapter.update(time, delta);
         const testState = this.adapter.getTestState();
         if (testState) {
+          this.observeFirstNodeGrowth(testState);
           this.scoreHUD.setText(`目标进度：${testState.score} / ${this.node.goalValue}`);
           this.livesHUD.setText(`生命精力：${Math.ceil(testState.hp)}`);
           
@@ -745,6 +920,217 @@ export function initializePhaserGame(
         fontFamily: "JetBrains Mono, monospace",
         fontSize: "13px",
         color: "#10b981"
+      });
+
+      if (this.runGrowthState?.enabled) {
+        this.growthHUD = this.add.text(32, height - 72, "", {
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "12px",
+          color: "#fbbf24"
+        });
+        this.refreshGrowthHUD();
+      }
+    }
+
+    private setupFirstNodeGrowthLoop(cardId: string) {
+      if (this.node.id !== 1 || cardId !== "survivor_horde" || !this.adapter) return;
+
+      const baseDamage = Number(this.adapter.config?.weapon?.bulletDamage || 2);
+      this.runGrowthState = {
+        enabled: true,
+        collectionSource: "beast_essence_score_from_survivor_horde_collectibles",
+        growthTrigger: "Collect 2 early beast-essence score motes",
+        runtimeMutation: "activeSkills[].level and adapter.config.weapon.bulletDamage",
+        playerFeedback: "Growth HUD, floating skill text, particle burst, and loot cue",
+        combatImpact: "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+        triggerThreshold: 2,
+        collectedEssence: 0,
+        lastObservedScore: 0,
+        activeSkills: [
+          {
+            id: "primordial_fist",
+            label: this.getRuntimeSkillLabel("primordial_fist"),
+            level: 1
+          }
+        ],
+        mutationStats: {
+          weaponDamage: baseDamage,
+          playerHp: this.readAdapterHp()
+        },
+        combatStats: {
+          bulletDamageBefore: baseDamage,
+          bulletDamageAfter: baseDamage,
+          healedHp: 0,
+          unlockedAoE: false
+        },
+        lastFeedback: "awaiting_collection",
+        events: []
+      };
+
+      this.publishGrowthState();
+    }
+
+    private observeFirstNodeGrowth(testState: any) {
+      const growth = this.runGrowthState;
+      if (!growth?.enabled || !this.adapter || this.adapter.status !== "running") return;
+
+      const score = Math.max(0, Math.floor(Number(testState?.score || 0)));
+      if (score > growth.lastObservedScore) {
+        const amount = score - growth.lastObservedScore;
+        growth.lastObservedScore = score;
+        growth.collectedEssence += amount;
+        growth.events.push({
+          type: "collection",
+          amount,
+          score,
+          atMs: Math.round(this.time.now || 0)
+        });
+      }
+
+      if (growth.collectedEssence >= 2) {
+        this.applyFirstNodeGrowthMilestone("primordial_fist_lv2");
+      }
+
+      if (growth.collectedEssence >= 4) {
+        this.applyFirstNodeGrowthMilestone("suan_ni_roar_unlock");
+      }
+
+      this.refreshGrowthHUD();
+      this.publishGrowthState();
+    }
+
+    private applyFirstNodeGrowthMilestone(milestone: string) {
+      const growth = this.runGrowthState;
+      if (!growth || growth.events.some((event) => event.milestone === milestone)) return;
+
+      const before = this.readGrowthMutationStats();
+
+      if (milestone === "primordial_fist_lv2") {
+        const skill = growth.activeSkills.find((item) => item.id === "primordial_fist");
+        if (skill) {
+          skill.level = Math.max(skill.level, 2);
+        }
+
+        const currentDamage = Number(this.adapter?.config?.weapon?.bulletDamage || 2);
+        this.adapter.config.weapon.bulletDamage = Math.max(currentDamage + 2, Math.ceil(currentDamage * 1.6));
+        growth.lastFeedback = `${this.getRuntimeSkillLabel("primordial_fist")} Lv.2`;
+        this.showGrowthFeedback("基础拳 Lv.2，拳罡更重", 0xf59e0b);
+        growth.events.push({
+          type: "skill_level",
+          milestone,
+          skillId: "primordial_fist",
+          level: 2,
+          before,
+          after: this.readGrowthMutationStats(),
+          atMs: Math.round(this.time.now || 0)
+        });
+      } else if (milestone === "suan_ni_roar_unlock") {
+        growth.activeSkills.push({
+          id: "suan_ni_roar",
+          label: this.getRuntimeSkillLabel("suan_ni_roar"),
+          level: 1
+        });
+
+        const currentDamage = Number(this.adapter?.config?.weapon?.bulletDamage || 2);
+        this.adapter.config.weapon.bulletDamage = currentDamage + 3;
+        growth.combatStats.unlockedAoE = true;
+        growth.lastFeedback = `${this.getRuntimeSkillLabel("suan_ni_roar")} unlocked`;
+        this.showGrowthFeedback("临阵参悟：狻猊怒啸", 0xfacc15);
+        growth.events.push({
+          type: "skill_unlock",
+          milestone,
+          skillId: "suan_ni_roar",
+          level: 1,
+          before,
+          after: this.readGrowthMutationStats(),
+          atMs: Math.round(this.time.now || 0)
+        });
+      }
+
+      const after = this.readGrowthMutationStats();
+      growth.mutationStats.weaponDamage = after.weaponDamage || 0;
+      growth.mutationStats.playerHp = after.playerHp;
+      growth.combatStats.bulletDamageAfter = after.weaponDamage || growth.combatStats.bulletDamageAfter;
+      this.refreshGrowthHUD();
+    }
+
+    private getRuntimeSkillLabel(skillId: string) {
+      const directLabels: Record<string, string> = {
+        primordial_fist: "原始真解·基础拳",
+        suan_ni_roar: "狻猊宝术·怒啸",
+        willow_blessing: "柳神赐福·回春"
+      };
+      if (directLabels[skillId]) return directLabels[skillId];
+
+      const ability = spec.abilityCatalog?.find((item) => item.runtimeSkillIds?.includes(skillId));
+      return ability?.name || skillId;
+    }
+
+    private readAdapterHp() {
+      const hp = this.adapter?.state?.hp;
+      return typeof hp === "number" ? hp : null;
+    }
+
+    private readGrowthMutationStats() {
+      return {
+        weaponDamage: Number(this.adapter?.config?.weapon?.bulletDamage || 0),
+        playerHp: this.readAdapterHp()
+      };
+    }
+
+    private refreshGrowthHUD() {
+      if (!this.growthHUD || !this.runGrowthState) return;
+
+      const growth = this.runGrowthState;
+      const skills = growth.activeSkills
+        .map((skill) => `${skill.label} Lv.${skill.level}`)
+        .join(" / ");
+      this.growthHUD.setText(`血气参悟：${growth.collectedEssence}/${growth.triggerThreshold} · ${skills}`);
+    }
+
+    private showGrowthFeedback(text: string, color: number) {
+      synth.playLoot();
+      const { width, height } = this.scale;
+      const fx = this.add.text(width / 2, height - 118, text, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "15px",
+        fontStyle: "bold",
+        color: "#fff7d6",
+        backgroundColor: "rgba(15, 23, 42, 0.72)",
+        padding: { x: 10, y: 6 }
+      }).setOrigin(0.5).setDepth(20);
+
+      this.spawnParticleExplosion(width / 2, height / 2, color);
+      this.cameras.main.flash(160, 245, 158, 11);
+      this.tweens.add({
+        targets: fx,
+        y: height - 150,
+        alpha: 0,
+        duration: 1200,
+        onComplete: () => fx.destroy()
+      });
+    }
+
+    private publishGrowthState() {
+      if (!this.testHooks || !this.runGrowthState) return;
+
+      const growth = this.runGrowthState;
+      this.testHooks.update({
+        growth: {
+          enabled: growth.enabled,
+          collectionSource: growth.collectionSource,
+          growthTrigger: growth.growthTrigger,
+          runtimeMutation: growth.runtimeMutation,
+          playerFeedback: growth.playerFeedback,
+          combatImpact: growth.combatImpact,
+          triggerThreshold: growth.triggerThreshold,
+          collectedEssence: growth.collectedEssence,
+          activeSkills: growth.activeSkills.map((skill) => ({ ...skill })),
+          mutationStats: { ...growth.mutationStats },
+          combatStats: { ...growth.combatStats },
+          lastFeedback: growth.lastFeedback,
+          events: growth.events.slice(-8)
+        }
       });
     }
 

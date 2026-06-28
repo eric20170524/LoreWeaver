@@ -2,7 +2,7 @@
   "gate": "runtime_e2e",
   "target": "LoreWeaver/app",
   "status": "passed",
-  "createdAt": "2026-06-28T04:11:24Z",
+  "createdAt": "2026-06-28T08:32:11Z",
   "method": "Playwright against Express proxy serving LoreWeaver dev backend/frontend",
   "assertions": {
     "gameInstanceCreated": true,
@@ -12,6 +12,11 @@
     "survivorHordeRunningStateObserved": true,
     "survivorHordeAdapterId": true,
     "survivorHordeTimerUpdated": true,
+    "survivorHordeGrowthCollectionSource": true,
+    "survivorHordeGrowthCollectedEnough": true,
+    "survivorHordeGrowthSkillMutation": true,
+    "survivorHordeGrowthCombatImpact": true,
+    "survivorHordeGrowthFeedback": true,
     "survivorHordeRewardReturned": true,
     "survivorHordeNodeCompleted": true,
     "survivorHordeNextNodeUnlocked": true,
@@ -36,6 +41,9 @@
     "exportHasJs": true,
     "exportHasSystems": true,
     "exportHasLoreweaver": true,
+    "exportHasImagegenAtlas": true,
+    "exportHasImagegenManifest": true,
+    "exportHasImagegenScriptManifest": true,
     "exportIndexHtmlHasEmbeddedSpec": true,
     "exportIndexUsesRelativeAssets": true,
     "exportReadmeDescribesPlayableH5": true,
@@ -43,9 +51,20 @@
     "exportStaticGameInstanceCreated": true,
     "exportStaticCanvasCreated": true,
     "exportStaticCanvasNonblank": true,
+    "exportArtAtlasLoaded": true,
+    "exportArtAtlasLoadedCount": true,
+    "exportArtPlayerTextureLoaded": true,
+    "exportArtEnemyTextureLoaded": true,
     "exportSurvivorHordeRunningStateObserved": true,
     "exportSurvivorHordeAdapterId": true,
     "exportSurvivorHordeTimerUpdated": true,
+    "exportSurvivorHordeUsesAtlasPlayerTexture": true,
+    "exportSurvivorHordeUsesAtlasEnemyTexture": true,
+    "exportSurvivorHordeGrowthCollectionSource": true,
+    "exportSurvivorHordeGrowthCollectedEnough": true,
+    "exportSurvivorHordeGrowthSkillMutation": true,
+    "exportSurvivorHordeGrowthCombatImpact": true,
+    "exportSurvivorHordeGrowthFeedback": true,
     "exportSurvivorHordeRewardReturned": true,
     "exportSurvivorHordeNodeCompleted": true,
     "exportSurvivorHordeNextNodeUnlocked": true,
@@ -64,7 +83,7 @@
       "present": true,
       "width": 720,
       "height": 1280,
-      "dataUrlLength": 193898,
+      "dataUrlLength": 193934,
       "nonBlank": true
     },
     "survivorHordeStart": {
@@ -77,7 +96,36 @@
       "timer": 12,
       "score": 0,
       "lastResult": null,
-      "errors": []
+      "errors": [],
+      "growth": {
+        "enabled": true,
+        "collectionSource": "beast_essence_score_from_survivor_horde_collectibles",
+        "growthTrigger": "Collect 2 early beast-essence score motes",
+        "runtimeMutation": "activeSkills[].level and adapter.config.weapon.bulletDamage",
+        "playerFeedback": "Growth HUD, floating skill text, particle burst, and loot cue",
+        "combatImpact": "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+        "triggerThreshold": 2,
+        "collectedEssence": 0,
+        "activeSkills": [
+          {
+            "id": "primordial_fist",
+            "label": "原始真解·基础拳",
+            "level": 1
+          }
+        ],
+        "mutationStats": {
+          "weaponDamage": 2,
+          "playerHp": 100
+        },
+        "combatStats": {
+          "bulletDamageBefore": 2,
+          "bulletDamageAfter": 2,
+          "healedHp": 0,
+          "unlockedAoE": false
+        },
+        "lastFeedback": "awaiting_collection",
+        "events": []
+      }
     },
     "survivorHordeAfter2s": {
       "sceneKey": null,
@@ -89,7 +137,116 @@
       "timer": 9,
       "score": 0,
       "lastResult": null,
-      "errors": []
+      "errors": [],
+      "growth": {
+        "enabled": true,
+        "collectionSource": "beast_essence_score_from_survivor_horde_collectibles",
+        "growthTrigger": "Collect 2 early beast-essence score motes",
+        "runtimeMutation": "activeSkills[].level and adapter.config.weapon.bulletDamage",
+        "playerFeedback": "Growth HUD, floating skill text, particle burst, and loot cue",
+        "combatImpact": "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+        "triggerThreshold": 2,
+        "collectedEssence": 0,
+        "activeSkills": [
+          {
+            "id": "primordial_fist",
+            "label": "原始真解·基础拳",
+            "level": 1
+          }
+        ],
+        "mutationStats": {
+          "weaponDamage": 2,
+          "playerHp": 100
+        },
+        "combatStats": {
+          "bulletDamageBefore": 2,
+          "bulletDamageAfter": 2,
+          "healedHp": 0,
+          "unlockedAoE": false
+        },
+        "lastFeedback": "awaiting_collection",
+        "events": []
+      }
+    },
+    "survivorHordeGrowthBefore": {
+      "enabled": true,
+      "collectionSource": "beast_essence_score_from_survivor_horde_collectibles",
+      "growthTrigger": "Collect 2 early beast-essence score motes",
+      "runtimeMutation": "activeSkills[].level and adapter.config.weapon.bulletDamage",
+      "playerFeedback": "Growth HUD, floating skill text, particle burst, and loot cue",
+      "combatImpact": "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+      "triggerThreshold": 2,
+      "collectedEssence": 0,
+      "activeSkills": [
+        {
+          "id": "primordial_fist",
+          "label": "原始真解·基础拳",
+          "level": 1
+        }
+      ],
+      "mutationStats": {
+        "weaponDamage": 2,
+        "playerHp": 100
+      },
+      "combatStats": {
+        "bulletDamageBefore": 2,
+        "bulletDamageAfter": 2,
+        "healedHp": 0,
+        "unlockedAoE": false
+      },
+      "lastFeedback": "awaiting_collection",
+      "events": []
+    },
+    "survivorHordeGrowthAfter": {
+      "enabled": true,
+      "collectionSource": "beast_essence_score_from_survivor_horde_collectibles",
+      "growthTrigger": "Collect 2 early beast-essence score motes",
+      "runtimeMutation": "activeSkills[].level and adapter.config.weapon.bulletDamage",
+      "playerFeedback": "Growth HUD, floating skill text, particle burst, and loot cue",
+      "combatImpact": "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+      "triggerThreshold": 2,
+      "collectedEssence": 2,
+      "activeSkills": [
+        {
+          "id": "primordial_fist",
+          "label": "原始真解·基础拳",
+          "level": 2
+        }
+      ],
+      "mutationStats": {
+        "weaponDamage": 4,
+        "playerHp": 100
+      },
+      "combatStats": {
+        "bulletDamageBefore": 2,
+        "bulletDamageAfter": 4,
+        "healedHp": 0,
+        "unlockedAoE": false
+      },
+      "lastFeedback": "原始真解·基础拳 Lv.2",
+      "events": [
+        {
+          "type": "collection",
+          "amount": 2,
+          "score": 2,
+          "atMs": 9347
+        },
+        {
+          "type": "skill_level",
+          "milestone": "primordial_fist_lv2",
+          "skillId": "primordial_fist",
+          "level": 2,
+          "before": {
+            "weaponDamage": 2,
+            "playerHp": 100
+          },
+          "after": {
+            "weaponDamage": 4,
+            "playerHp": 100
+          },
+          "atMs": 9347
+        }
+      ]
     },
     "survivorHordeStateBeforeSuccess": {},
     "survivorHordeStateAfterSuccess": {
@@ -151,7 +308,7 @@
       "nodeId": "node_1",
       "adapterId": "rhythm_timing",
       "status": "running",
-      "hp": 90,
+      "hp": 80,
       "progress": 0,
       "timer": 9,
       "score": 0,
@@ -207,8 +364,11 @@
       "manifest.json",
       "README.md",
       "index.html",
-      "assets/index-2B7Ly2ev.js",
+      "assets/index-D-k_eF0j.js",
       "assets/index-D95VZnoW.css",
+      "assets/imagegen/manifest.js",
+      "assets/imagegen/manifest.json",
+      "assets/imagegen/atlas.png",
       "nodes/node11.html",
       "nodes/node4.js",
       "nodes/node5.js",
@@ -264,6 +424,7 @@
       "loreweaver/nodes/node-09-tianshen-academy.json",
       "loreweaver/nodes/node-05-shidu.json",
       "css/style.css",
+      "utils/RuntimeSprites.js",
       "utils/UIHelper.js",
       "utils/AudioManager.js",
       "utils/VFX.js",
@@ -316,8 +477,58 @@
       "present": true,
       "width": 720,
       "height": 1280,
-      "dataUrlLength": 193702,
+      "dataUrlLength": 194666,
       "nonBlank": true
+    },
+    "exportArtPipeline": {
+      "status": "loaded",
+      "manifestPath": "assets/imagegen/manifest.json",
+      "atlasPath": "assets/imagegen/atlas.png",
+      "expectedCount": 8,
+      "loadedCount": 8,
+      "loadedKeys": [
+        "lw_runtime_player_shihao",
+        "lw_enemy_wild_rhino",
+        "lw_enemy_green_scaled_eagle",
+        "lw_enemy_rock_golem",
+        "lw_enemy_qiongqi_cub",
+        "lw_skill_fist_projectile",
+        "lw_pickup_blood_essence",
+        "lw_vfx_effect_frame"
+      ],
+      "missingKeys": [],
+      "updatedAt": "2026-06-28T08:31:52.401Z",
+      "generatedAtlasStatus": "present",
+      "groups": {
+        "heroes": [
+          "lw_runtime_player_shihao"
+        ],
+        "enemies": [
+          "lw_enemy_wild_rhino",
+          "lw_enemy_green_scaled_eagle",
+          "lw_enemy_rock_golem",
+          "lw_enemy_qiongqi_cub"
+        ],
+        "projectiles": [
+          "lw_skill_fist_projectile"
+        ],
+        "items": [
+          "lw_pickup_blood_essence"
+        ],
+        "vfx": [
+          "lw_vfx_effect_frame"
+        ]
+      },
+      "frameKeys": [
+        "shihao_young_runtime",
+        "enemy_wild_rhino",
+        "enemy_green_scaled_eagle",
+        "enemy_rock_golem",
+        "enemy_qiongqi_cub",
+        "skill_fist_projectile",
+        "pickup_blood_essence",
+        "vfx_effect_frame"
+      ]
     },
     "exportSurvivorHordeStart": {
       "sceneKey": null,
@@ -329,7 +540,36 @@
       "timer": 6,
       "score": 0,
       "lastResult": null,
-      "errors": []
+      "errors": [],
+      "growth": {
+        "enabled": true,
+        "collectionSource": "beast_essence_score_from_survivor_horde_collectibles",
+        "growthTrigger": "Collect 2 early beast-essence score motes",
+        "runtimeMutation": "activeSkills[].level and adapter.config.weapon.bulletDamage",
+        "playerFeedback": "Growth HUD, floating skill text, particle burst, and loot cue",
+        "combatImpact": "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+        "triggerThreshold": 2,
+        "collectedEssence": 0,
+        "activeSkills": [
+          {
+            "id": "primordial_fist",
+            "label": "原始真解·基础拳",
+            "level": 1
+          }
+        ],
+        "mutationStats": {
+          "weaponDamage": 2,
+          "playerHp": 100
+        },
+        "combatStats": {
+          "bulletDamageBefore": 2,
+          "bulletDamageAfter": 2,
+          "healedHp": 0,
+          "unlockedAoE": false
+        },
+        "lastFeedback": "awaiting_collection",
+        "events": []
+      }
     },
     "exportSurvivorHordeAfter2s": {
       "sceneKey": null,
@@ -341,7 +581,170 @@
       "timer": 3,
       "score": 0,
       "lastResult": null,
-      "errors": []
+      "errors": [],
+      "growth": {
+        "enabled": true,
+        "collectionSource": "beast_essence_score_from_survivor_horde_collectibles",
+        "growthTrigger": "Collect 2 early beast-essence score motes",
+        "runtimeMutation": "activeSkills[].level and adapter.config.weapon.bulletDamage",
+        "playerFeedback": "Growth HUD, floating skill text, particle burst, and loot cue",
+        "combatImpact": "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+        "triggerThreshold": 2,
+        "collectedEssence": 0,
+        "activeSkills": [
+          {
+            "id": "primordial_fist",
+            "label": "原始真解·基础拳",
+            "level": 1
+          }
+        ],
+        "mutationStats": {
+          "weaponDamage": 2,
+          "playerHp": 100
+        },
+        "combatStats": {
+          "bulletDamageBefore": 2,
+          "bulletDamageAfter": 2,
+          "healedHp": 0,
+          "unlockedAoE": false
+        },
+        "lastFeedback": "awaiting_collection",
+        "events": []
+      }
+    },
+    "exportSurvivorHordeArtRuntimeUsage": {
+      "playerTexture": "lw_runtime_player_shihao",
+      "enemyTexture": "lw_enemy_wild_rhino",
+      "artStatus": {
+        "status": "loaded",
+        "manifestPath": "assets/imagegen/manifest.json",
+        "atlasPath": "assets/imagegen/atlas.png",
+        "expectedCount": 8,
+        "loadedCount": 8,
+        "loadedKeys": [
+          "lw_runtime_player_shihao",
+          "lw_enemy_wild_rhino",
+          "lw_enemy_green_scaled_eagle",
+          "lw_enemy_rock_golem",
+          "lw_enemy_qiongqi_cub",
+          "lw_skill_fist_projectile",
+          "lw_pickup_blood_essence",
+          "lw_vfx_effect_frame"
+        ],
+        "missingKeys": [],
+        "updatedAt": "2026-06-28T08:31:52.401Z",
+        "generatedAtlasStatus": "present",
+        "groups": {
+          "heroes": [
+            "lw_runtime_player_shihao"
+          ],
+          "enemies": [
+            "lw_enemy_wild_rhino",
+            "lw_enemy_green_scaled_eagle",
+            "lw_enemy_rock_golem",
+            "lw_enemy_qiongqi_cub"
+          ],
+          "projectiles": [
+            "lw_skill_fist_projectile"
+          ],
+          "items": [
+            "lw_pickup_blood_essence"
+          ],
+          "vfx": [
+            "lw_vfx_effect_frame"
+          ]
+        },
+        "frameKeys": [
+          "shihao_young_runtime",
+          "enemy_wild_rhino",
+          "enemy_green_scaled_eagle",
+          "enemy_rock_golem",
+          "enemy_qiongqi_cub",
+          "skill_fist_projectile",
+          "pickup_blood_essence",
+          "vfx_effect_frame"
+        ]
+      }
+    },
+    "exportSurvivorHordeGrowthBefore": {
+      "enabled": true,
+      "collectionSource": "beast_essence_score_from_survivor_horde_collectibles",
+      "growthTrigger": "Collect 2 early beast-essence score motes",
+      "runtimeMutation": "activeSkills[].level and adapter.config.weapon.bulletDamage",
+      "playerFeedback": "Growth HUD, floating skill text, particle burst, and loot cue",
+      "combatImpact": "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+      "triggerThreshold": 2,
+      "collectedEssence": 0,
+      "activeSkills": [
+        {
+          "id": "primordial_fist",
+          "label": "原始真解·基础拳",
+          "level": 1
+        }
+      ],
+      "mutationStats": {
+        "weaponDamage": 2,
+        "playerHp": 100
+      },
+      "combatStats": {
+        "bulletDamageBefore": 2,
+        "bulletDamageAfter": 2,
+        "healedHp": 0,
+        "unlockedAoE": false
+      },
+      "lastFeedback": "awaiting_collection",
+      "events": []
+    },
+    "exportSurvivorHordeGrowthAfter": {
+      "enabled": true,
+      "collectionSource": "beast_essence_score_from_survivor_horde_collectibles",
+      "growthTrigger": "Collect 2 early beast-essence score motes",
+      "runtimeMutation": "activeSkills[].level and adapter.config.weapon.bulletDamage",
+      "playerFeedback": "Growth HUD, floating skill text, particle burst, and loot cue",
+      "combatImpact": "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+      "triggerThreshold": 2,
+      "collectedEssence": 2,
+      "activeSkills": [
+        {
+          "id": "primordial_fist",
+          "label": "原始真解·基础拳",
+          "level": 2
+        }
+      ],
+      "mutationStats": {
+        "weaponDamage": 4,
+        "playerHp": 100
+      },
+      "combatStats": {
+        "bulletDamageBefore": 2,
+        "bulletDamageAfter": 4,
+        "healedHp": 0,
+        "unlockedAoE": false
+      },
+      "lastFeedback": "原始真解·基础拳 Lv.2",
+      "events": [
+        {
+          "type": "collection",
+          "amount": 2,
+          "score": 2,
+          "atMs": 8743
+        },
+        {
+          "type": "skill_level",
+          "milestone": "primordial_fist_lv2",
+          "skillId": "primordial_fist",
+          "level": 2,
+          "before": {
+            "weaponDamage": 2,
+            "playerHp": 100
+          },
+          "after": {
+            "weaponDamage": 4,
+            "playerHp": 100
+          },
+          "atMs": 8743
+        }
+      ]
     },
     "exportSurvivorHordeStateBeforeSuccess": {},
     "exportSurvivorHordeStateAfterSuccess": {
@@ -428,9 +831,9 @@
       }
     ],
     "exportStaticServer": {
-      "url": "http://127.0.0.1:53767/",
+      "url": "http://127.0.0.1:54023/",
       "stdout": "",
-      "stderr": "127.0.0.1 - - [28/Jun/2026 12:11:02] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 12:11:02] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 12:11:02] \"GET /assets/index-D95VZnoW.css HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 12:11:02] \"GET /assets/index-2B7Ly2ev.js HTTP/1.1\" 200 -\n"
+      "stderr": "127.0.0.1 - - [28/Jun/2026 16:31:52] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 16:31:52] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 16:31:52] \"GET /assets/index-D95VZnoW.css HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 16:31:52] \"GET /assets/index-D-k_eF0j.js HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 16:31:52] \"GET /assets/imagegen/atlas.png HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 16:31:52] \"GET /assets/imagegen/manifest.json HTTP/1.1\" 200 -\n"
     },
     "smokeMatrix": [
       {
@@ -448,6 +851,6 @@
     ]
   },
   "errors": [],
-  "stdout": "\n> react-example@0.0.0 dev\n> bash scripts/dev-restart.sh\n\nPreparing LoreWeaver dev server...\nOK: Express gateway port 3000 is free.\nOK: Vite frontend port 5173 is free.\nOK: FastAPI backend port 8000 is free.\nStarting LoreWeaver on http://localhost:3000 ...\n◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }\nAttempting to spawn Python FastAPI backend on port 8000...\nAttempting to spawn Vite frontend on port 5173...\nLoreWeaver platform dev proxy successfully running on http://localhost:3000\n[Vite stdout]: VITE v6.4.3  ready in 319 ms\n[Vite stdout]: ➜  Local:   http://127.0.0.1:5173/\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53690 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53743 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53742 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53763 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53766 - \"GET /api/workspaces/20260611-060754-719406/export HTTP/1.1\" 200 OK\n",
-  "stderr": "[Python stderr]: INFO:     Started server process [31417]\n[Python stderr]: INFO:     Waiting for application startup.\nINFO:     Application startup complete.\n[Python stderr]: INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)\n"
+  "stdout": "\n> react-example@0.0.0 dev\n> bash scripts/dev-restart.sh\n\nPreparing LoreWeaver dev server...\nOK: Express gateway port 3000 is free.\nOK: Vite frontend port 5173 is free.\nOK: FastAPI backend port 8000 is free.\nStarting LoreWeaver on http://localhost:3000 ...\n◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }\nAttempting to spawn Python FastAPI backend on port 8000...\nAttempting to spawn Vite frontend on port 5173...\nLoreWeaver platform dev proxy successfully running on http://localhost:3000\n[Vite stdout]: VITE v6.4.3  ready in 265 ms\n[Vite stdout]: ➜  Local:   http://127.0.0.1:5173/\n[Python stdout]: INFO:     127.0.0.1:53939 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53939 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53939 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53942 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53939 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53939 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53971 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53971 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53971 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53971 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53971 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:53971 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:54009 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:54009 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:54009 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:54010 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:54009 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:54009 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:54019 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:54022 - \"GET /api/workspaces/20260611-060754-719406/export HTTP/1.1\" 200 OK\n",
+  "stderr": "[Python stderr]: INFO:     Started server process [11836]\nINFO:     Waiting for application startup.\nINFO:     Application startup complete.\nINFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)\n"
 }

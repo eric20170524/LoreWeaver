@@ -798,6 +798,10 @@ window.__LOREWEAVER_EMBEDDED_SPEC__ = {json.dumps(manifest, ensure_ascii=False)}
         if os.path.exists(dist_assets_dir):
             add_directory_to_zip(zip_file, dist_assets_dir, "assets")
 
+        ws_assets_dir = os.path.join(ws_path, "assets")
+        if os.path.exists(ws_assets_dir):
+            add_directory_to_zip(zip_file, ws_assets_dir, "assets")
+
         ws_nodes_dir = os.path.join(ws_path, "nodes")
         if os.path.exists(ws_nodes_dir):
             add_directory_to_zip(zip_file, ws_nodes_dir, "nodes")

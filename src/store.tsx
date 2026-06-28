@@ -136,7 +136,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [orchestrationLogs, setOrchestrationLogs] = useState<string[]>([]);
   const [gameSpec, setGameSpec] = useState<GameSpec | null>(() => {
     if (typeof window !== "undefined" && (window as any).__LOREWEAVER_EMBEDDED_SPEC__) {
-      return (window as any).__LOREWEAVER_EMBEDDED_SPEC__;
+      return ensureGameplayManifest((window as any).__LOREWEAVER_EMBEDDED_SPEC__);
     }
     return null;
   });

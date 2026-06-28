@@ -57,3 +57,33 @@
 - Workspace files under `data/workspaces/20260611-060754-719406` are git-ignored even though they are part of this local deliverable.
 - Root build still warns that the main JS bundle is larger than 500 kB.
 - Runtime feature pack still recommends fresh `floatingSimulatorPreview` and `simulatorFullscreenPreview`.
+
+## LW-007 Review Request
+
+- agent: Codex
+- task: `LW-007`
+- status: needs_review
+- patchLevel: L3
+- changedFiles: `src/game/GameRunner.ts`, `workflow/scripts/run_e2e_test.py`, `data/workspaces/20260611-060754-719406/nodes/node1.js`, `data/workspaces/20260611-060754-719406/js/data.js`, `data/workspaces/20260611-060754-719406/loreweaver/nodes/node-01-dahuang.json`, `data/workspaces/20260611-060754-719406/manifest.json`, `docs_collab/*`, runtime reports
+- diffSummary: Added first-node growth state, HUD/test-hook publishing, deterministic E2E pickup assertions, workspace node EXP-to-skill mutation, and planning metadata for `collectionSource -> growthTrigger -> runtimeMutation -> combatImpact`.
+- implementationNotes: The app adapter now upgrades `primordial_fist` to Lv.2 after two early beast-essence score pickups and mutates `adapter.config.weapon.bulletDamage`; the reference workspace node mirrors the pattern through early EXP thresholds.
+- commandsRun: `npm run lint`; `npm run build`; `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406`; `python3 -m py_compile workflow/scripts/run_e2e_test.py backend/main.py`; `venv/bin/python workflow/scripts/run_e2e_test.py --game loreweaver`
+- gates: all listed commands passed; E2E passed for app and static export growth assertions with zero console errors.
+- skippedGates: strict asset pipeline runtime implementation gate is outside LW-007 and remains tracked as `LW-006`.
+- knownRisks: deterministic adapter pickup injection verifies the resource-to-skill contract, while manual pointer-driven pickup play is still represented by adapter smoke coverage.
+- reviewer: Codex
+
+## LW-006 Review Request
+
+- agent: Codex
+- task: `LW-006`
+- status: needs_review
+- patchLevel: L3
+- changedFiles: `src/game/GameRunner.ts`, `src/store.tsx`, `backend/main.py`, `workflow/scripts/run_e2e_test.py`, `data/workspaces/20260611-060754-719406/assets/imagegen/*`, `data/workspaces/20260611-060754-719406/utils/RuntimeSprites.js`, `data/workspaces/20260611-060754-719406/nodes/node1.js`, `data/workspaces/20260611-060754-719406/loreweaver/art-asset-manifest.json`, `data/workspaces/20260611-060754-719406/loreweaver/asset-pipeline.json`, `data/workspaces/20260611-060754-719406/manifest.json`, runtime reports
+- diffSummary: Added atlas-first static-export texture loading, workspace asset copying into export ZIPs, browser/runtime art status assertions, workspace RuntimeSprites atlas slicing, and split metadata updates.
+- implementationNotes: Static export now loads `assets/imagegen/manifest.json` and `atlas.png`, slices frames into Phaser texture keys used by `SurvivorHordeAdapter`, and reports `window.__LOREWEAVER_ART_PIPELINE__`; workspace node1 mirrors atlas-first lookup through `window.__DAHUANG_ART_PIPELINE__`.
+- commandsRun: `npm run lint`; `npm run build`; `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline`; workspace `npm run manifest:build`; workspace `npm run manifest:check`; workspace `npm run loreweaver:check`; workspace `npm run ability:check`; `venv/bin/python workflow/scripts/run_e2e_test.py --game loreweaver`
+- gates: all listed commands passed; E2E confirmed export atlas files, loaded atlas count, and live atlas-backed player/enemy textures with zero console errors.
+- skippedGates: none for LW-006.
+- knownRisks: current atlas is mechanically wired but visually basic and covers the first-node core set; later node-specific enemies and richer animation clips need a future art pass.
+- reviewer: Codex

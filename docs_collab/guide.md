@@ -215,6 +215,52 @@ Codex review 必须先读 `review_request.md`，再看实际 diff、被修改文
 
 根据改动范围选择验证，不要机械全跑，也不要跳过受影响 gate。
 
+## AssetPipeline 实现任务要求
+
+AssetPipeline 不等于只补 `loreweaver/asset-pipeline.json`、`art-asset-manifest.json` 或 `workbench.artifactStatus`。这些 metadata 只能证明项目知道自己需要哪些资产；真正的实现任务必须证明资产进入 runtime、出现在真实玩法里，并能被 gate 或浏览器证据复查。
+
+当目标涉及 AssetPipeline 时，Codex 必须在 `tasks.md` 中拆出独立任务，不要只在 `guide.md` 或总结里描述。任务至少覆盖：
+
+- 生产或接入可检查的 atlas / spritesheet / audio manifest，并记录 provenance。
+- manifest 同时提供 runtime 可读取形态；浏览器 `fetch` 受限时必须有 script manifest fallback。
+- runtime lookup 使用 generated atlas first、simple fallback last；fallback 必须可见地记录状态，不能静默盖过缺失资产。
+- 覆盖玩家、敌人、道具、projectile/VFX、setpiece/decoration 和 Workbench 预览，不只替换菜单或文档截图。
+- 暴露 expected/loaded asset count、manifest error、关键 group/key 列表和 sprite clip 覆盖。
+- 用真实局内截图、E2E、frame-difference/contact-sheet 或等价证据证明资产不是空图、静态重复帧或未被 runtime 使用。
+- 严格资产 gate 通过后，仍要区分 `metadata complete` 与 `runtime implemented`；不能把前者标成后者。
+
+默认 patch level：
+
+- L2：catalog、manifest、workbench 状态和任务文档。
+- L3：runtime loader、adapter asset resolver、导出模板 asset 接线。
+- L4：schema、export contract 或核心 runtime asset contract。
+
+推荐 required gate：
+
+```bash
+cd LoreWeaver
+npm run check:runtime-feature-pack -- --workspace data/workspaces/[workspace-id] --require-asset-pipeline
+npm run build
+python3 workflow/scripts/run_e2e_test.py --game loreweaver
+```
+
+如果改动影响静态 H5 导出，还必须补 export smoke 证据；如果视觉审计不可用，至少记录 deterministic screenshot / canvas pixel / loaded asset count 证据。
+
+## 首关技能成长闭环
+
+首个 playable node 是玩法真实性 gate，不是单纯 smoke target。分析或验收第一关时，必须把“收集能量/经验/掉落”追到“技能状态变化”和“战斗能力变化”，否则只能证明场景能运行，不能证明关卡能玩通。
+
+首关相关任务必须写清：
+
+- `collectionSource`：玩家收集或击杀获得的能量、经验、灵魂、资源或等价对象。
+- `growthTrigger`：达到阈值后触发升级、三选一、技能解锁、技能 level up 或被动生效。
+- `runtimeMutation`：实际变更的字段，例如 `activeSkills[].level`、新增 runtime skill、cooldown/damage/radius/heal/shield 变化。
+- `playerFeedback`：HUD、浮字、VFX、SFX 或 modal 必须展示技能变化。
+- `combatImpact`：变化后能明显改善清怪、生存或 Boss 应对，不能只是文案增加。
+- `testAssertion`：E2E 或手动证据要记录变化前后状态；不能只关闭 `LevelUpScene` 或只断言无 console error。
+
+如果玩家“没有技能提升导致始终失败”，优先按首关成长闭环缺失处理，而不是先归为渲染、输入或通用 runtime bug。修复任务应先保证早期一次可复现的技能提升，再做数值微调。
+
 基础命令：
 
 ```bash

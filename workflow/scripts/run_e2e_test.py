@@ -490,6 +490,100 @@ def run_loreweaver_app_test():
                     observed[f"{label}Start"] = start_state
                     observed[f"{label}After2s"] = later_state
 
+                def verify_first_node_growth_loop(label):
+                    print(f"Verifying {label} first-node growth loop...")
+                    before_growth = page.evaluate("window.__LOREWEAVER_TEST_HOOKS__?.growth || null")
+                    page.evaluate("""
+                    () => {
+                        const game = window.__LOREWEAVER_GAME__;
+                        const activeScene = game?.scene?.keys?.LevelActiveScene;
+                        const adapter = activeScene?.adapter;
+                        if (!activeScene || !adapter || typeof adapter.spawnCollectible !== 'function') {
+                            throw new Error('Active survivor_horde adapter is not available for growth probe.');
+                        }
+                        for (let i = 0; i < 2; i += 1) {
+                            const collectible = adapter.spawnCollectible(adapter.player.x, adapter.player.y, { score: 1 });
+                            adapter.handleCollectibleOverlap(adapter.player, collectible);
+                        }
+                    }
+                    """)
+                    page.wait_for_function("""
+                    () => {
+                        const growth = window.__LOREWEAVER_TEST_HOOKS__?.growth;
+                        if (!growth) return false;
+                        const fist = growth.activeSkills?.find((skill) => skill.id === 'primordial_fist');
+                        const hasLevelEvent = growth.events?.some((event) => event.milestone === 'primordial_fist_lv2');
+                        return growth.collectedEssence >= 2
+                            && fist?.level >= 2
+                            && growth.combatStats?.bulletDamageAfter > growth.combatStats?.bulletDamageBefore
+                            && hasLevelEvent;
+                    }
+                    """, timeout=5000)
+                    after_growth = page.evaluate("window.__LOREWEAVER_TEST_HOOKS__?.growth || null")
+                    observed[f"{label}GrowthBefore"] = before_growth
+                    observed[f"{label}GrowthAfter"] = after_growth
+
+                    active_skills = after_growth.get("activeSkills", []) if after_growth else []
+                    fist = next((skill for skill in active_skills if skill.get("id") == "primordial_fist"), {})
+                    before_damage = (after_growth or {}).get("combatStats", {}).get("bulletDamageBefore")
+                    after_damage = (after_growth or {}).get("combatStats", {}).get("bulletDamageAfter")
+                    assertions[f"{label}GrowthCollectionSource"] = (after_growth or {}).get("collectionSource") == "beast_essence_score_from_survivor_horde_collectibles"
+                    assertions[f"{label}GrowthCollectedEnough"] = (after_growth or {}).get("collectedEssence", 0) >= 2
+                    assertions[f"{label}GrowthSkillMutation"] = fist.get("level", 0) >= 2
+                    assertions[f"{label}GrowthCombatImpact"] = isinstance(before_damage, (int, float)) and isinstance(after_damage, (int, float)) and after_damage > before_damage
+                    assertions[f"{label}GrowthFeedback"] = any(
+                        event.get("milestone") == "primordial_fist_lv2"
+                        for event in (after_growth or {}).get("events", [])
+                    )
+
+                def verify_export_art_pipeline_loaded():
+                    page.wait_for_function("""
+                    () => {
+                        const status = window.__LOREWEAVER_ART_PIPELINE__;
+                        return status
+                            && status.status === 'loaded'
+                            && status.loadedCount >= 5
+                            && status.loadedKeys?.includes('lw_runtime_player_shihao')
+                            && status.loadedKeys?.includes('lw_enemy_wild_rhino');
+                    }
+                    """, timeout=10000)
+                    art_status = page.evaluate("window.__LOREWEAVER_ART_PIPELINE__")
+                    observed["exportArtPipeline"] = art_status
+                    assertions["exportArtAtlasLoaded"] = art_status.get("status") == "loaded"
+                    assertions["exportArtAtlasLoadedCount"] = art_status.get("loadedCount", 0) >= 5
+                    assertions["exportArtPlayerTextureLoaded"] = "lw_runtime_player_shihao" in art_status.get("loadedKeys", [])
+                    assertions["exportArtEnemyTextureLoaded"] = "lw_enemy_wild_rhino" in art_status.get("loadedKeys", [])
+
+                def verify_export_art_runtime_usage(label):
+                    runtime_art = page.evaluate("""
+                    () => {
+                        const game = window.__LOREWEAVER_GAME__;
+                        const activeScene = game?.scene?.keys?.LevelActiveScene;
+                        const adapter = activeScene?.adapter;
+                        if (!adapter) return null;
+                        let enemy = adapter.groups?.enemies?.getChildren?.()
+                            ?.find((item) => item.texture?.key?.startsWith('lw_enemy_'));
+                        if (!enemy && typeof adapter.spawnEnemy === 'function') {
+                            enemy = adapter.spawnEnemy({
+                                id: 'wild_rhino',
+                                hp: 3,
+                                speed: 30,
+                                damage: 1,
+                                radius: 13,
+                                reward: { score: 1 }
+                            });
+                        }
+                        return {
+                            playerTexture: adapter.player?.texture?.key || null,
+                            enemyTexture: enemy?.texture?.key || null,
+                            artStatus: window.__LOREWEAVER_ART_PIPELINE__ || null
+                        };
+                    }
+                    """)
+                    observed[f"{label}ArtRuntimeUsage"] = runtime_art
+                    assertions[f"{label}UsesAtlasPlayerTexture"] = runtime_art and runtime_art.get("playerTexture") == "lw_runtime_player_shihao"
+                    assertions[f"{label}UsesAtlasEnemyTexture"] = runtime_art and str(runtime_art.get("enemyTexture", "")).startswith("lw_enemy_")
+
                 def retreat_active_adapter(label):
                     page.evaluate("""
                     () => {
@@ -592,6 +686,7 @@ def run_loreweaver_app_test():
                 assertions["canvasNonblank"] = bool(canvas_probe.get("nonBlank"))
 
                 start_adapter_smoke(0, "survivor_horde", "survivorHorde")
+                verify_first_node_growth_loop("survivorHorde")
                 finish_active_adapter_success("survivorHorde")
 
                 print("Reloading to verify saved progression restores...")
@@ -651,6 +746,9 @@ def run_loreweaver_app_test():
                         assertions["exportHasJs"] = any(name.startswith("js/") for name in namelist)
                         assertions["exportHasSystems"] = any(name.startswith("systems/") for name in namelist)
                         assertions["exportHasLoreweaver"] = any(name.startswith("loreweaver/") for name in namelist)
+                        assertions["exportHasImagegenAtlas"] = "assets/imagegen/atlas.png" in namelist
+                        assertions["exportHasImagegenManifest"] = "assets/imagegen/manifest.json" in namelist
+                        assertions["exportHasImagegenScriptManifest"] = "assets/imagegen/manifest.js" in namelist
 
                         index_content = zf.read("index.html").decode("utf-8")
                         readme_content = zf.read("README.md").decode("utf-8")
@@ -687,8 +785,11 @@ def run_loreweaver_app_test():
                         observed["exportStaticInitialCanvas"] = export_canvas_probe
                         assertions["exportStaticCanvasCreated"] = bool(export_canvas_probe.get("present"))
                         assertions["exportStaticCanvasNonblank"] = bool(export_canvas_probe.get("nonBlank"))
+                        verify_export_art_pipeline_loaded()
 
                         start_adapter_smoke(0, "survivor_horde", "exportSurvivorHorde", duration=6)
+                        verify_export_art_runtime_usage("exportSurvivorHorde")
+                        verify_first_node_growth_loop("exportSurvivorHorde")
                         finish_active_adapter_success("exportSurvivorHorde")
                         start_adapter_smoke(0, "rhythm_timing", "exportTapReaction", duration=6)
                         retreat_active_adapter("exportTapReaction")
@@ -1195,6 +1296,47 @@ def run_test(game_name, node_id=None, grant_state_str=None):
                         active = page.evaluate("window.game.scene.scenes.find(s => s.sys.isActive() && !s.scene.key.endsWith('UI')).scene.key")
                         if active != f"Node{node}Scene":
                             raise Exception(f"Failed to enter Node {node} scene. Active: {active}")
+
+                        if node == 1:
+                            print("Running physical pickup and skill growth E2E validation for Node 1...")
+                            # 1. Check initial active skills
+                            initial_skills = page.evaluate("""
+                            () => {
+                                const activeScene = window.game.scene.scenes.find(s => s.sys.isActive() && s.scene.key === 'Node1Scene');
+                                return activeScene ? activeScene.activeSkills.map(s => ({ id: s.id, level: s.level })) : [];
+                            }
+                            """)
+                            print(f"Node 1 initial skills: {initial_skills}")
+                            if not any(s['id'] == 'primordial_fist' for s in initial_skills):
+                                raise Exception(f"Expected Node 1 to start with primordial_fist, but got: {initial_skills}")
+
+                            # 2. Spawn a pickup at player's location and overlap it
+                            page.evaluate("""
+                            () => {
+                                const activeScene = window.game.scene.scenes.find(s => s.sys.isActive() && s.scene.key === 'Node1Scene');
+                                if (activeScene) {
+                                    // Spawn essence with 15 exp (triggers level up, nextExp starts at 12)
+                                    activeScene.spawnPickup(activeScene.player.x, activeScene.player.y, 15, []);
+                                }
+                            }
+                            """)
+                            page.wait_for_timeout(1500) # Wait for LevelUpScene to auto-choose
+
+                            # 3. Check active skills after collection
+                            grown_skills = page.evaluate("""
+                            () => {
+                                const activeScene = window.game.scene.scenes.find(s => s.sys.isActive() && s.scene.key === 'Node1Scene');
+                                return activeScene ? activeScene.activeSkills.map(s => ({ id: s.id, level: s.level })) : [];
+                            }
+                            """)
+                            print(f"Node 1 grown skills: {grown_skills}")
+                            has_growth = (len(grown_skills) > len(initial_skills)) or any(
+                                next(s['level'] for s in grown_skills if s['id'] == g['id']) > g['level']
+                                for g in initial_skills if any(x['id'] == g['id'] for x in grown_skills)
+                            )
+                            if not has_growth:
+                                raise Exception(f"First Node growth loop failed! Skills before: {initial_skills}, after: {grown_skills}")
+                            print("Physical pickup collection and skill growth validation passed.")
 
                         # Wait 5 seconds
                         page.wait_for_timeout(5000)

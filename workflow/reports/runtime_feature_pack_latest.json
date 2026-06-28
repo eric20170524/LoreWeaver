@@ -1,9 +1,9 @@
 {
   "gate": "runtime_feature_pack",
   "status": "passed",
-  "createdAt": "2026-06-28T04:11:34.072Z",
+  "createdAt": "2026-06-28T08:27:44.643Z",
   "workspaceRoot": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/data/workspaces/20260611-060754-719406",
-  "workspaceSelectionReason": "latest-workspace",
+  "workspaceSelectionReason": "cli",
   "schema": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/docs/contracts/runtime_feature_pack.schema.json",
   "summary": {
     "nodes": 12,

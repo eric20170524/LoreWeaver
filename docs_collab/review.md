@@ -96,3 +96,46 @@ Verification reviewed:
 Residual risk:
 
 - The export smoke verifies the three runtime-ready cards, not every one of the 12 narrative nodes.
+
+## LW-007
+
+- reviewer: Codex
+- result: passed
+- reviewedAt: 2026-06-28
+
+Findings: none.
+
+Verification reviewed:
+
+- `npm run lint` passed in `LoreWeaver`.
+- `npm run build` passed in `LoreWeaver`, with the known large-bundle warning.
+- `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406` passed and wrote `workflow/reports/runtime_feature_pack_latest.json`.
+- `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver` passed and wrote `workflow/reports/runtime_e2e_loreweaver_latest.json`.
+- E2E assertions covered first-node growth collection source, `primordial_fist` Lv.2 mutation, bullet-damage combat impact, feedback event, reward return, next unlock, save restore, and the same growth checks in extracted static export smoke.
+
+Residual risk:
+
+- Later nodes still need similar resource-to-skill-loop assertions.
+- The first-node growth assertion uses deterministic adapter pickup injection for reproducibility; full manual pointer collection can be added as a later polish test.
+
+## LW-006
+
+- reviewer: Codex
+- result: passed
+- reviewedAt: 2026-06-28
+
+Findings: none.
+
+Verification reviewed:
+
+- `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline` passed and wrote `workflow/reports/runtime_feature_pack_latest.json`.
+- `npm run build` passed in `LoreWeaver`, with the known large-bundle warning.
+- `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver` passed and wrote `workflow/reports/runtime_e2e_loreweaver_latest.json`.
+- E2E verified export ZIP inclusion of `assets/imagegen/atlas.png`, `assets/imagegen/manifest.json`, and `assets/imagegen/manifest.js`.
+- Static export runtime reported atlas load status/counts and live survivor_horde player/enemy texture keys from the atlas-backed runtime path.
+- Workspace checks passed: `npm run manifest:build`, `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check`, and ES module import of `utils/RuntimeSprites.js`.
+
+Residual risk:
+
+- The current atlas is mechanically wired but visually simple; richer generated art and per-action animation clips should be a follow-up polish/art pass.
+- Atlas coverage focuses on first-node player/enemy/projectile/pickup/VFX keys; later node-specific enemies still use documented procedural fallback.

@@ -145,3 +145,90 @@
     note: export ZIP shape and extracted static-server runtime smoke passed with zero console errors.
 - residualRisk:
   - Export smoke verifies the three runtime-ready cards, not all 12 narrative nodes.
+
+## LW-006: Implement Runtime AssetPipeline Beyond Metadata
+
+- status: verified
+- owner: Codex
+- reviewer: Codex
+- patchLevel: L3
+- targetArtifact: `data/workspaces/20260611-060754-719406/assets/imagegen/*`, `data/workspaces/20260611-060754-719406/loreweaver/art-asset-manifest.json`, `data/workspaces/20260611-060754-719406/loreweaver/asset-pipeline.json`, runtime asset loader / resolver paths, gameplay nodes, export template asset copy paths
+- invalidates: `gate:asset-pipeline`, `gate:runtime-feature-pack`, `gate:e2e`, `gate:export`, `gate:build`
+- requiredGate: `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline`, `npm run build`, `python3 workflow/scripts/run_e2e_test.py --game loreweaver`, export static smoke if export paths change
+- doneCriteria:
+  - Checked-in generated bitmap atlas or spritesheet assets exist for first-class player, enemies, pickups/projectiles, VFX cues, and at least one setpiece/decoration group.
+  - `art-asset-manifest.json` points to real runtime-loadable manifest files and no longer reports `generatedAtlasStatus: not_present` unless the task is explicitly blocked and documented.
+  - Runtime rendering uses atlas-first lookup for player, enemies, pickups/projectiles, VFX previews, and Workbench/gameplay previews, with simple procedural fallback last.
+  - Runtime exposes expected/loaded counts, manifest load errors, important group keys, and sprite clip coverage for review.
+  - Browser evidence proves generated assets appear in actual combat and exported H5, not only in catalog metadata or preview thumbnails.
+  - Stale generated/procedural fallback references are removed or documented as intentional fallback policy.
+- verificationEvidence:
+  - gate: `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline`
+    result: passed
+    report: `LoreWeaver/workflow/reports/runtime_feature_pack_latest.json`
+    runAt: 2026-06-28
+    note: strict asset-pipeline mode passed with atlas manifest, script manifest, art metadata, and runtime verification records present.
+  - gate: `npm run build` in `LoreWeaver`
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: production build passed after adding export atlas loading and static-export manifest normalization; the existing large-bundle warning remains.
+  - gate: `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver`
+    result: passed
+    report: `LoreWeaver/workflow/reports/runtime_e2e_loreweaver_latest.json`
+    runAt: 2026-06-28
+    note: export ZIP included `assets/imagegen/atlas.png`, JSON/script manifests, loaded atlas count, and live survivor_horde player/enemy atlas texture usage with zero console errors.
+  - gate: workspace manifest and runtime checks
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: `npm run manifest:build`, `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check`, and `node --experimental-default-type=module -e "import('./utils/RuntimeSprites.js')"` passed in the reference workspace.
+- residualRisk:
+  - Atlas art quality and animation richness may need a second art pass after the pipeline is mechanically wired.
+  - Current atlas covers first-node player/enemy/projectile/pickup/VFX keys; later node-specific enemies and richer animation clips still fall back to documented procedural placeholders.
+
+## LW-007: Restore First Node Energy-To-Skill Growth Loop
+
+- status: verified
+- owner: Codex
+- reviewer: Codex
+- patchLevel: L3
+- targetArtifact: `src/game/GameRunner.ts`, `data/workspaces/20260611-060754-719406/nodes/node1.js`, `data/workspaces/20260611-060754-719406/js/data.js`, `data/workspaces/20260611-060754-719406/loreweaver/nodes/node-01-dahuang.json`, `data/workspaces/20260611-060754-719406/manifest.json`, `workflow/scripts/run_e2e_test.py`
+- invalidates: `gate:e2e`, `gate:runtime-feature-pack`, `gate:first-node-skill-loop`, `gate:gameplay-balance`
+- requiredGate: `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406`, `npm run build`, `python3 workflow/scripts/run_e2e_test.py --game loreweaver`
+- doneCriteria:
+  - First node has a documented `collectionSource -> growthTrigger -> runtimeMutation -> combatImpact` chain for energy/experience/pickups.
+  - Collecting the intended early resource reliably causes at least one visible runtime skill unlock or level increase before failure pressure makes the node unwinnable.
+  - Skill growth mutates real combat state such as `activeSkills[].level`, active skill count, cooldown, damage, radius, heal, shield, or equivalent runtime fields.
+  - HUD, floating text, VFX, and SFX make the skill change visible; the player is not left with only resource-count feedback.
+  - E2E records skill state before and after the growth trigger and asserts that the first node can reach a non-stuck success or controlled retreat path.
+  - Balance is tuned so first-node failure is not caused by missing skill growth; remaining failures must be attributable to player action or explicit fail conditions.
+- verificationEvidence:
+  - gate: `npm run lint` in `LoreWeaver`
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: TypeScript check passed after adding first-node growth state and E2E assertions.
+  - gate: `npm run build` in `LoreWeaver`
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: production build passed; the existing bundle-size warning remains.
+  - gate: `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406`
+    result: passed
+    report: `LoreWeaver/workflow/reports/runtime_feature_pack_latest.json`
+    runAt: 2026-06-28
+    note: runtime feature pack still passes with first-node growth metadata present; simulator preview warnings remain.
+  - gate: `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver`
+    result: passed
+    report: `LoreWeaver/workflow/reports/runtime_e2e_loreweaver_latest.json`
+    runAt: 2026-06-28
+    note: app and static export smoke both asserted first-node growth collection source, skill mutation, combat impact, feedback event, success reward return, and next-node unlock.
+  - gate: `python3 -m py_compile workflow/scripts/run_e2e_test.py backend/main.py`
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: E2E script and backend Python syntax passed.
+- residualRisk:
+  - Later nodes may need similar resource-to-skill-loop assertions after the first-node pattern is verified.
+  - E2E uses deterministic adapter pickup injection for the growth assertion; manual physics collection remains covered indirectly by adapter smoke rather than a full manual-play path.
