@@ -20,7 +20,7 @@ import zlib
 from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from .database import engine, Base, get_db
@@ -745,6 +745,16 @@ def api_get_workspace_file(ws_id: str, filename: str):
         return {"success": True, "data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/workspaces/{ws_id}/asset-files/{file_path:path}")
+def api_get_workspace_asset_file(ws_id: str, file_path: str):
+    ws_path = resolve_existing_ws_path(ws_id)
+    absolute_path = os.path.abspath(os.path.join(ws_path, file_path))
+    if not absolute_path.startswith(os.path.abspath(ws_path) + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid workspace asset path")
+    if not os.path.isfile(absolute_path):
+        raise HTTPException(status_code=404, detail="Workspace asset file not found")
+    return FileResponse(absolute_path)
 
 @app.post("/api/workspaces/{ws_id}/files/{filename}")
 def api_save_workspace_file(ws_id: str, filename: str, payload: dict):

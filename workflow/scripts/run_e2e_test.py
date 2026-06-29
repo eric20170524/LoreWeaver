@@ -552,7 +552,7 @@ def run_loreweaver_app_test():
                         for event in (after_growth or {}).get("events", [])
                     )
 
-                def verify_export_art_pipeline_loaded():
+                def verify_art_pipeline_loaded(label):
                     page.wait_for_function("""
                     () => {
                         const status = window.__LOREWEAVER_ART_PIPELINE__;
@@ -564,13 +564,13 @@ def run_loreweaver_app_test():
                     }
                     """, timeout=10000)
                     art_status = page.evaluate("window.__LOREWEAVER_ART_PIPELINE__")
-                    observed["exportArtPipeline"] = art_status
-                    assertions["exportArtAtlasLoaded"] = art_status.get("status") == "loaded"
-                    assertions["exportArtAtlasLoadedCount"] = art_status.get("loadedCount", 0) >= 5
-                    assertions["exportArtPlayerTextureLoaded"] = "lw_runtime_player_shihao" in art_status.get("loadedKeys", [])
-                    assertions["exportArtEnemyTextureLoaded"] = "lw_enemy_wild_rhino" in art_status.get("loadedKeys", [])
-                    assertions["exportArtGeneratedWithImagegen"] = art_status.get("generationStatus") == "generated_with_builtin_imagegen"
-                    assertions["exportArtProvenanceReported"] = art_status.get("provenancePath") == "assets/imagegen/provenance.json"
+                    observed[f"{label}ArtPipeline"] = art_status
+                    assertions[f"{label}ArtAtlasLoaded"] = art_status.get("status") == "loaded"
+                    assertions[f"{label}ArtAtlasLoadedCount"] = art_status.get("loadedCount", 0) >= 5
+                    assertions[f"{label}ArtPlayerTextureLoaded"] = "lw_runtime_player_shihao" in art_status.get("loadedKeys", [])
+                    assertions[f"{label}ArtEnemyTextureLoaded"] = "lw_enemy_wild_rhino" in art_status.get("loadedKeys", [])
+                    assertions[f"{label}ArtGeneratedWithImagegen"] = art_status.get("generationStatus") == "generated_with_builtin_imagegen"
+                    assertions[f"{label}ArtProvenanceReported"] = art_status.get("provenancePath") == "assets/imagegen/provenance.json"
 
                 def verify_export_art_runtime_usage(label):
                     runtime_art = page.evaluate("""
@@ -702,8 +702,10 @@ def run_loreweaver_app_test():
                 observed["initialCanvas"] = canvas_probe
                 assertions["canvasCreated"] = bool(canvas_probe.get("present"))
                 assertions["canvasNonblank"] = bool(canvas_probe.get("nonBlank"))
+                verify_art_pipeline_loaded("app")
 
                 start_adapter_smoke(0, "survivor_horde", "survivorHorde")
+                verify_export_art_runtime_usage("survivorHorde")
                 verify_first_node_growth_loop("survivorHorde")
                 finish_active_adapter_success("survivorHorde")
 
@@ -805,7 +807,7 @@ def run_loreweaver_app_test():
                         observed["exportStaticInitialCanvas"] = export_canvas_probe
                         assertions["exportStaticCanvasCreated"] = bool(export_canvas_probe.get("present"))
                         assertions["exportStaticCanvasNonblank"] = bool(export_canvas_probe.get("nonBlank"))
-                        verify_export_art_pipeline_loaded()
+                        verify_art_pipeline_loaded("export")
 
                         start_adapter_smoke(0, "survivor_horde", "exportSurvivorHorde", duration=6)
                         verify_export_art_runtime_usage("exportSurvivorHorde")

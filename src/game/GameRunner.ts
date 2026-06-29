@@ -95,8 +95,41 @@ const IMAGEGEN_TEXTURE_BINDINGS: Array<{ frameKey: string; textureKey: string; g
   { frameKey: "vfx_effect_frame", textureKey: "lw_vfx_effect_frame", group: "vfx" }
 ];
 
-function shouldLoadStaticImageGenAssets() {
-  return typeof window !== "undefined" && Boolean((window as any).__LOREWEAVER_EMBEDDED_SPEC__);
+type ImageGenAssetPaths = {
+  manifestPath: string;
+  atlasPath: string;
+  provenancePath: string;
+  sourceImagePath: string;
+  transparentSourceImagePath: string;
+  mode: "static_export" | "workspace_live";
+};
+
+type PhaserGameOptions = {
+  workspaceId?: string | null;
+};
+
+function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths | null {
+  if (typeof window !== "undefined" && Boolean((window as any).__LOREWEAVER_EMBEDDED_SPEC__)) {
+    return {
+      manifestPath: "assets/imagegen/manifest.json",
+      atlasPath: "assets/imagegen/atlas.png",
+      provenancePath: "assets/imagegen/provenance.json",
+      sourceImagePath: "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+      transparentSourceImagePath: "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
+      mode: "static_export"
+    };
+  }
+
+  if (!workspaceId) return null;
+  const workspacePrefix = `/api/workspaces/${encodeURIComponent(workspaceId)}/asset-files`;
+  return {
+    manifestPath: `${workspacePrefix}/assets/imagegen/manifest.json`,
+    atlasPath: `${workspacePrefix}/assets/imagegen/atlas.png`,
+    provenancePath: `${workspacePrefix}/assets/imagegen/provenance.json`,
+    sourceImagePath: `${workspacePrefix}/assets/imagegen/source/generated-sprite-atlas-20260628.png`,
+    transparentSourceImagePath: `${workspacePrefix}/assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png`,
+    mode: "workspace_live"
+  };
 }
 
 function publishImageGenArtStatus(patch: Record<string, any>) {
@@ -110,10 +143,10 @@ function publishImageGenArtStatus(patch: Record<string, any>) {
   };
 }
 
-function preloadImageGenAtlas(scene: Phaser.Scene) {
-  if (!shouldLoadStaticImageGenAssets()) {
+function preloadImageGenAtlas(scene: Phaser.Scene, paths: ImageGenAssetPaths | null) {
+  if (!paths) {
     publishImageGenArtStatus({
-      status: "skipped_dev_no_static_assets",
+      status: "skipped_no_workspace_assets",
       manifestPath: null,
       atlasPath: null,
       expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
@@ -126,16 +159,20 @@ function preloadImageGenAtlas(scene: Phaser.Scene) {
 
   publishImageGenArtStatus({
     status: "loading",
-    manifestPath: "assets/imagegen/manifest.json",
-    atlasPath: "assets/imagegen/atlas.png",
+    mode: paths.mode,
+    manifestPath: paths.manifestPath,
+    atlasPath: paths.atlasPath,
+    provenancePath: paths.provenancePath,
+    sourceImage: paths.sourceImagePath,
+    transparentSourceImage: paths.transparentSourceImagePath,
     expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
     loadedCount: 0,
     loadedKeys: [],
     missingKeys: []
   });
 
-  scene.load.json(IMAGEGEN_MANIFEST_CACHE_KEY, "assets/imagegen/manifest.json");
-  scene.load.image(IMAGEGEN_ATLAS_TEXTURE_KEY, "assets/imagegen/atlas.png");
+  scene.load.json(IMAGEGEN_MANIFEST_CACHE_KEY, paths.manifestPath);
+  scene.load.image(IMAGEGEN_ATLAS_TEXTURE_KEY, paths.atlasPath);
   scene.load.on("loaderror", (file: any) => {
     publishImageGenArtStatus({
       status: "error",
@@ -165,8 +202,8 @@ function copyAtlasFrameToTexture(scene: Phaser.Scene, manifest: any, binding: { 
   return true;
 }
 
-function installImageGenAtlasTextures(scene: Phaser.Scene) {
-  if (!shouldLoadStaticImageGenAssets()) return;
+function installImageGenAtlasTextures(scene: Phaser.Scene, paths: ImageGenAssetPaths | null) {
+  if (!paths) return;
 
   const manifest = scene.cache.json.get(IMAGEGEN_MANIFEST_CACHE_KEY);
   const loadedKeys: string[] = [];
@@ -184,6 +221,7 @@ function installImageGenAtlasTextures(scene: Phaser.Scene) {
 
   publishImageGenArtStatus({
     status: loadedKeys.length > 0 ? "loaded" : "error",
+    mode: paths.mode,
     generatedAtlasStatus: manifest?.generatedAtlasStatus || "unknown",
     generationStatus: manifest?.generationStatus || "unknown",
     provenancePath: manifest?.provenancePath || null,
@@ -204,8 +242,10 @@ export function initializePhaserGame(
   spec: GameSpec,
   playerState: PlayerState,
   onSaveState: (state: PlayerState) => void,
-  onLog: (text: string) => void
+  onLog: (text: string) => void,
+  options: PhaserGameOptions = {}
 ): Phaser.Game {
+  const imageGenAssetPaths = getImageGenAssetPaths(options.workspaceId);
   
   // Custom scenes configuration
   class BootScene extends Phaser.Scene {
@@ -214,12 +254,12 @@ export function initializePhaserGame(
     }
 
     preload() {
-      preloadImageGenAtlas(this);
+      preloadImageGenAtlas(this, imageGenAssetPaths);
     }
 
     create() {
       const { width, height } = this.scale;
-      installImageGenAtlasTextures(this);
+      installImageGenAtlasTextures(this, imageGenAssetPaths);
       
       // Draw background
       const bg = this.add.graphics();

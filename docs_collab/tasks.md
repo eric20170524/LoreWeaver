@@ -136,7 +136,7 @@
   - gate: `npm run build` in `LoreWeaver`
     result: passed
     report: n/a
-    runAt: 2026-06-28
+    runAt: 2026-06-29
     note: production assets were rebuilt before export smoke; build keeps the known large-bundle warning.
   - gate: `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver`
     result: passed
@@ -302,17 +302,17 @@
   - gate: workspace `npm run build`
     result: passed
     report: n/a
-    runAt: 2026-06-28
+    runAt: 2026-06-29
     note: Workspace Vite build passed after aligning the build target with the existing top-level-await data loader.
   - gate: `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver`
     result: passed
     report: `LoreWeaver/workflow/reports/runtime_e2e_loreweaver_latest.json`
-    runAt: 2026-06-28
-    note: E2E verified app and static export smoke, generated atlas loading, generated provenance reporting, exported `assets/imagegen/provenance.json`, exported source image, live atlas-backed survivor_horde player/enemy textures, and first-node growth assertions.
+    runAt: 2026-06-29
+    note: E2E verified workbench live app and static export smoke, generated atlas loading, generated provenance reporting, exported `assets/imagegen/provenance.json`, exported source image, live workbench survivor_horde player/enemy atlas texture usage, static export survivor_horde player/enemy atlas texture usage, and first-node growth assertions.
   - gate: `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline`
     result: passed
     report: `LoreWeaver/workflow/reports/runtime_feature_pack_latest.json`
-    runAt: 2026-06-28
+    runAt: 2026-06-29
     note: Strict asset pipeline gate passed with runtime art provenance requirements enabled.
 - residualRisk:
   - Later node-specific enemies may still need broader art coverage after the first-node generated art pass.

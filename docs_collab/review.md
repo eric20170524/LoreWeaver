@@ -166,18 +166,19 @@ Residual risk:
 
 - reviewer: Codex
 - result: passed
-- reviewedAt: 2026-06-28
+- reviewedAt: 2026-06-29
 
 Findings: none.
 
 Verification reviewed:
 
 - `RuntimeSprites.js` now exposes generation status, source image path, transparent source image path, and provenance path through `window.__DAHUANG_ART_PIPELINE__`.
-- Static export `GameRunner.ts` reports `generationStatus`, `provenancePath`, and source image paths through `window.__LOREWEAVER_ART_PIPELINE__`.
-- `workflow/scripts/run_e2e_test.py` now asserts exported provenance/source files and runtime `generated_with_builtin_imagegen` status.
+- Workbench live `GameRunner.ts` now loads workspace imagegen assets through the backend asset-file route; static export still loads relative `assets/imagegen/*`.
+- `GameRunner.ts` reports `generationStatus`, `provenancePath`, and source image paths through `window.__LOREWEAVER_ART_PIPELINE__`.
+- `workflow/scripts/run_e2e_test.py` now asserts app-side atlas load, app-side survivor_horde player/enemy atlas texture usage, exported provenance/source files, and static export runtime `generated_with_builtin_imagegen` status.
 - Root `npm run build` passed with the known large-bundle warning.
 - Workspace `npm run build` passed after setting Vite build target to `esnext`.
-- Full `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver` passed, including static export generated-art provenance assertions and atlas-backed player/enemy runtime usage.
+- Full `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver` passed, including workbench live generated-art assertions, static export generated-art provenance assertions, and atlas-backed player/enemy runtime usage in both paths.
 
 Residual risk:
 

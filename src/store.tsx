@@ -300,7 +300,8 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           specToUse,
           playerState,
           handleSaveState,
-          addLog
+          addLog,
+          { workspaceId: activeWorkspace?.id || null }
         );
         phaserGameRef.current = game;
         (window as any).__LOREWEAVER_GAME__ = game;
@@ -538,7 +539,8 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         gameSpec,
         playerState,
         () => undefined,
-        () => undefined
+        () => undefined,
+        { workspaceId: activeWorkspace?.id || null }
       );
       await new Promise((resolve) => window.setTimeout(resolve, 800));
       const canvas = tempHost.querySelector("canvas") as HTMLCanvasElement | null;

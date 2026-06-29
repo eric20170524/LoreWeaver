@@ -4,7 +4,7 @@
 - activeWorkspace: `LoreWeaver/data/workspaces/20260611-060754-719406`
 - currentTask: `none`
 - currentOwner: none
-- lastUpdated: 2026-06-28
+- lastUpdated: 2026-06-29
 
 ## Current Findings
 
@@ -19,7 +19,7 @@
 - Runtime bitmap atlas wiring is present for export and workspace runtimes: the static H5 package carries `assets/imagegen/*`, reports atlas loaded counts, and survivor_horde uses atlas-backed player/enemy textures (fixed in LW-006).
 - First-node energy collection now mutates runtime skill state and combat damage in the app adapter and reference workspace node; E2E asserts the growth loop in app and static export smoke (fixed in LW-007).
 - Generated bitmap art is now a separate mandatory step before pipeline wiring: the reference workspace includes built-in imagegen source art, chroma-keyed RGBA source, runtime atlas, and `assets/imagegen/provenance.json` (fixed in LW-008).
-- Runtime/export art wiring now reports generation status and provenance; E2E asserts exported source/provenance files and static runtime `generated_with_builtin_imagegen` status (fixed in LW-009).
+- Workbench live runtime and static export art wiring now report generation status and provenance; E2E asserts app-side atlas load, live survivor_horde atlas-backed player/enemy textures, exported source/provenance files, and static runtime `generated_with_builtin_imagegen` status (fixed in LW-009).
 - Remaining non-blocking warnings: root build bundle size over 500 kB; runtime feature pack recommends fresh `floatingSimulatorPreview` and `simulatorFullscreenPreview`.
 
 ## Next Recommended Action
