@@ -142,6 +142,10 @@ export interface AbilityVfxVoicePipelineSpec {
 export interface ArtAssetPipelineSpec {
   manifestPath: string;
   scriptManifestPath?: string;
+  provenancePath: string;
+  sourceImagePaths: string[];
+  generationRequired?: boolean;
+  generationStatus: string;
   groups: string[];
   spriteClips?: string[];
   runtimeBinding: string;

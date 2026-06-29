@@ -185,6 +185,10 @@ function installImageGenAtlasTextures(scene: Phaser.Scene) {
   publishImageGenArtStatus({
     status: loadedKeys.length > 0 ? "loaded" : "error",
     generatedAtlasStatus: manifest?.generatedAtlasStatus || "unknown",
+    generationStatus: manifest?.generationStatus || "unknown",
+    provenancePath: manifest?.provenancePath || null,
+    sourceImage: manifest?.sourceImage || null,
+    transparentSourceImage: manifest?.transparentSourceImage || null,
     expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
     loadedCount: loadedKeys.length,
     loadedKeys,

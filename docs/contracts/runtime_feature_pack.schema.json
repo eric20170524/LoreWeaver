@@ -170,6 +170,9 @@
       "additionalProperties": true,
       "required": [
         "manifestPath",
+        "provenancePath",
+        "sourceImagePaths",
+        "generationStatus",
         "groups",
         "runtimeBinding",
         "verification"
@@ -181,6 +184,20 @@
         },
         "scriptManifestPath": {
           "type": "string"
+        },
+        "provenancePath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceImagePaths": {
+          "$ref": "#/$defs/stringList"
+        },
+        "generationRequired": {
+          "type": "boolean"
+        },
+        "generationStatus": {
+          "type": "string",
+          "minLength": 1
         },
         "groups": {
           "$ref": "#/$defs/stringList"

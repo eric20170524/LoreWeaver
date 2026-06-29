@@ -1,5 +1,5 @@
 **结论**
-LoreWeaver 现在不是空壳，已经有“工作台 + manifest + gameplay card + core adapter + gate”的主架构；围绕参考 workspace `20260611-060754-719406` 的第一轮达标任务已经拆成 `LW-001` 到 `LW-007` 并在 `LoreWeaver/docs_collab/tasks.md` 中完成验证。
+LoreWeaver 现在不是空壳，已经有“工作台 + manifest + gameplay card + core adapter + gate”的主架构；围绕参考 workspace `20260611-060754-719406` 的第一轮达标任务已经拆成 `LW-001` 到 `LW-009` 并在 `LoreWeaver/docs_collab/tasks.md` 中完成验证。
 
 本文件是目标级索引，具体状态、证据和 review 以 `tasks.md`、`review.md`、`state.md` 为准。
 
@@ -9,7 +9,7 @@ LoreWeaver 现在不是空壳，已经有“工作台 + manifest + gameplay card
 - 工作台运行时：`GameRunner.ts` 已接入 `survivor_horde`、`rhythm_timing`、`drag_collect_grid` 三类 Phaser adapter，见 [GameRunner.ts](/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/src/game/GameRunner.ts:581)。
 - 参照样例：`Path_to_Immortality` 有 `index + battle + node1-node17`，每个节点独立玩法并通过 `postMessage` 回传奖励，设计记录在 [tasklist.md](/Users/lm/pyProj/hungry-for-knowledge/minigame/Path_to_Immortality/docs/tasklist.md:1)。
 - 当前强样本 workspace `20260611-060754-719406` 有 12 个节点、9 个能力、12 个被动、13 个敌人、19 个 VFX、19 个音频 cue，基础 Runtime Feature Pack 检查通过。
-- 严格资产流水线已经拆成 metadata 与 runtime 两层：`LW-002` 补齐 metadata，`LW-006` 接入 runtime atlas / manifest / export smoke。
+- 严格资产流水线现在拆成三层硬要求：`LW-002` 补齐 metadata，`LW-008` 先生成可追溯 bitmap 美术资产，`LW-009` 再接入 runtime atlas / manifest / export smoke。`LW-006` 保留为历史接线任务，但不能再单独代表“美术资产已生成”。
 - 通用导出已由 `LW-005` 升级为完整 H5 playable export，不再只是“manifest 预览 shell + core 源码”。
 - 第一关“收集能量/经验但技能不成长导致失败”的问题已作为 `LW-007` 单独纳入任务链，并要求 E2E 断言技能状态 mutation 与战斗影响。
 
@@ -24,8 +24,10 @@ LoreWeaver 现在不是空壳，已经有“工作台 + manifest + gameplay card
 | 节点运行时矩阵、故事与奖励绑定 | `LW-003` | verified |
 | 多节点 E2E smoke 矩阵 | `LW-004` | verified |
 | 完整静态 H5 playable export | `LW-005` | verified |
-| AssetPipeline runtime atlas / manifest / export 接线 | `LW-006` | verified |
+| AssetPipeline runtime atlas / manifest / export 接线 | `LW-006` | verified, historical wiring pass |
 | 第一关能量到技能成长闭环 | `LW-007` | verified |
+| 生成可追溯 bitmap 美术资产 | `LW-008` | verified |
+| 将生成美术接入 runtime/export 管线 | `LW-009` | verified |
 
 # 以 LoreWeaver/data/workspaces/20260611-060754-719406 为例的达标任务清单
 
@@ -56,7 +58,8 @@ LoreWeaver 现在不是空壳，已经有“工作台 + manifest + gameplay card
    - 为成熟 workspace 生成 `loreweaver/asset-pipeline.json`。
    - 覆盖 ability VFX/voice、generated art atlas、audio manifest、credits/provenance、browser verification。
    - 让 `--require-asset-pipeline` gate 通过，而不是停留在 warning。
-   - 关联：`LW-002` 已补 metadata；`LW-006` 已补 runtime atlas / script manifest / static export 接线。剩余是美术质量、动作帧丰富度和后续节点覆盖，不再是基础接线缺失。
+   - 关联：`LW-002` 已补 metadata；`LW-006` 已补 runtime atlas / script manifest / static export 接线。
+   - 更新口径：`LW-006` 的小型 atlas 只能证明接线可行，不能证明“生成美术”完成。`LW-008` 已补真实生成资产与 provenance，`LW-009` 已补 runtime/export 接入验证；两个任务均为必需项，不能用 procedural/canvas 占位替代。
 
 6. **修 gate 与工具链**
    - 修 `check-loreweaver-runtime.mjs`：它当前误判动态生成的 `ENEMY_VISUAL_DESIGN`。
@@ -75,7 +78,7 @@ LoreWeaver 现在不是空壳，已经有“工作台 + manifest + gameplay card
    - 拆分当前 2.2 MB 左右主 bundle，减少 H5 首屏负担。
    - 明确移动端 9:16、触控热区、文本不溢出、BGM 不叠播、scene teardown 无泄漏。
    - 导出前跑内容安全/IP 文案扫描，版权合规可以后置，但必须成为最终 gate。
-   - 关联：尚未创建独立 LW 任务；`state.md` 当前把 bundle splitting、richer atlas art/animation 和 simulator preview status 标为下一批 optional polish。
+- 关联：`LW-008` / `LW-009` 已把 richer generated art 从 optional polish 提升为必需任务并完成首轮验证；bundle splitting、全节点美术覆盖和 simulator preview status 仍可后置。
 
 # 注意：
 - LoreWeaver/docs_collab/guide.md 是 Codex 和 Antigravity 协作的规约，一起协作完成上面任务目标；

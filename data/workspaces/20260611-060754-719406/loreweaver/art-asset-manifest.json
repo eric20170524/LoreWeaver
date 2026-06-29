@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "1.0",
+  "mode": "generated_bitmap_atlas",
+  "generationStatus": "generated_with_builtin_imagegen",
+  "provenancePath": "assets/imagegen/provenance.json",
+  "sourceImages": [
+    "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+    "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png"
+  ],
+  "runtimeEntryPoints": [
+    "utils/RuntimeSprites.js:preloadImagegenAtlas",
+    "utils/RuntimeSprites.js:createAtlasFrameTexture",
+    "nodes/node1.js:createCombatTextures",
+    "nodes/node1.js:createPlayerTexture",
+    "nodes/node1.js:createEnemyTexture",
+    "nodes/node1.js:createSkillProjectileTexture",
+    "utils/VFX.js:playSkillEffect"
+  ],
+  "groups": {
+    "heroes": [
+      {
+        "key": "shihao_young_runtime",
+        "source": "character-design-catalog.json:shi_hao_young",
+        "runtimeTexture": true,
+        "clipCoverage": [
+          "idle",
+          "move-placeholder",
+          "attack-vfx",
+          "hurt-hitflash"
+        ]
+      }
+    ],
+    "characters": [
+      "shi_hao_young",
+      "liu_shen",
+      "shi_yi_rival",
+      "huo_linger_projection",
+      "anlan_projection"
+    ],
+    "enemies": [
+      "wild_rhino",
+      "green_scaled_eagle",
+      "rock_golem",
+      "bandit_cultivator",
+      "burrow_wyrm",
+      "sky_predator",
+      "human_genius",
+      "genius_beast",
+      "huo_linger_projection",
+      "shi_yi_projection",
+      "qiongqi_cub",
+      "ancient_beast_king",
+      "shi_yi_phantom"
+    ],
+    "items": [
+      "bloodEssence",
+      "suanBoneScript",
+      "pureBlood"
+    ],
+    "props": [
+      "skill_fist_projectile",
+      "particle",
+      "skill_particle"
+    ],
+    "setpieces": [
+      "runtime combat arena",
+      "node-specific hazard telegraphs"
+    ],
+    "decorations": [
+      "procedural rings",
+      "line beams",
+      "particle bursts",
+      "screen flash"
+    ]
+  },
+  "spriteClips": [
+    "idle",
+    "move-placeholder",
+    "attack-vfx",
+    "cast",
+    "hurt",
+    "death-placeholder"
+  ],
+  "generatedAtlasStatus": "present",
+  "atlasManifestPath": "assets/imagegen/manifest.json",
+  "scriptManifestPath": "assets/imagegen/manifest.js",
+  "atlasImagePath": "assets/imagegen/atlas.png",
+  "fallbackPolicy": "Imagegen bitmap atlas is the first runtime lookup for player, first-node enemies, projectile, pickup, and VFX particle textures. Procedural Phaser textures remain a visible last-resort fallback and are reported through runtime art status.",
+  "verification": {
+    "expectedRuntimeTextureGroups": [
+      "heroes",
+      "enemies",
+      "projectiles",
+      "particles",
+      "vfx"
+    ],
+    "checks": [
+      "createCombatTextures creates player, enemy, projectile, and particle textures",
+      "ENEMY_VISUAL_DESIGN resolves every enemy-design-catalog runtimeEnemyId",
+      "VFX.playSkillEffect covers every skill-effect-catalog id used by SKILL_POOL_REGISTRY",
+      "runtime_feature_pack gate checks catalog and runtime id consistency",
+      "workspace build verifies JSON import attributes and Phaser runtime bundle"
+    ],
+    "runtimeStatusGlobals": [
+      "window.__LOREWEAVER_ART_PIPELINE__",
+      "window.__DAHUANG_ART_PIPELINE__"
+    ],
+    "browserAssertions": [
+      "exportArtAtlasLoaded",
+      "exportArtAtlasLoadedCount",
+      "exportSurvivorHordeUsesAtlasPlayerTexture",
+      "exportSurvivorHordeUsesAtlasEnemyTexture"
+    ]
+  }
+}

@@ -2,7 +2,7 @@
   "gate": "runtime_e2e",
   "target": "LoreWeaver/app",
   "status": "passed",
-  "createdAt": "2026-06-28T13:23:58Z",
+  "createdAt": "2026-06-28T14:42:45Z",
   "method": "Playwright against Express proxy serving LoreWeaver dev backend/frontend",
   "assertions": {
     "gameInstanceCreated": true,
@@ -44,6 +44,8 @@
     "exportHasImagegenAtlas": true,
     "exportHasImagegenManifest": true,
     "exportHasImagegenScriptManifest": true,
+    "exportHasImagegenProvenance": true,
+    "exportHasImagegenSource": true,
     "exportIndexHtmlHasEmbeddedSpec": true,
     "exportIndexUsesRelativeAssets": true,
     "exportReadmeDescribesPlayableH5": true,
@@ -55,6 +57,8 @@
     "exportArtAtlasLoadedCount": true,
     "exportArtPlayerTextureLoaded": true,
     "exportArtEnemyTextureLoaded": true,
+    "exportArtGeneratedWithImagegen": true,
+    "exportArtProvenanceReported": true,
     "exportSurvivorHordeRunningStateObserved": true,
     "exportSurvivorHordeAdapterId": true,
     "exportSurvivorHordeTimerUpdated": true,
@@ -83,7 +87,7 @@
       "present": true,
       "width": 720,
       "height": 1280,
-      "dataUrlLength": 194442,
+      "dataUrlLength": 194262,
       "nonBlank": true
     },
     "survivorHordeStart": {
@@ -134,7 +138,7 @@
       "status": "running",
       "hp": 100,
       "progress": 0,
-      "timer": 10,
+      "timer": 9,
       "score": 0,
       "lastResult": null,
       "errors": [],
@@ -229,7 +233,7 @@
           "type": "collection",
           "amount": 2,
           "score": 2,
-          "atMs": 19895
+          "atMs": 11102
         },
         {
           "type": "skill_level",
@@ -244,7 +248,7 @@
             "weaponDamage": 4,
             "playerHp": 100
           },
-          "atMs": 19895
+          "atMs": 11102
         }
       ]
     },
@@ -308,9 +312,9 @@
       "nodeId": "node_1",
       "adapterId": "rhythm_timing",
       "status": "running",
-      "hp": 100,
+      "hp": 80,
       "progress": 0,
-      "timer": 10,
+      "timer": 9,
       "score": 0,
       "lastResult": null,
       "errors": []
@@ -364,11 +368,14 @@
       "manifest.json",
       "README.md",
       "index.html",
-      "assets/index-D-k_eF0j.js",
       "assets/index-D95VZnoW.css",
+      "assets/index-DYfUDWoa.js",
+      "assets/imagegen/provenance.json",
       "assets/imagegen/manifest.js",
       "assets/imagegen/manifest.json",
       "assets/imagegen/atlas.png",
+      "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+      "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
       "nodes/node11.html",
       "nodes/node4.js",
       "nodes/node5.js",
@@ -477,7 +484,7 @@
       "present": true,
       "width": 720,
       "height": 1280,
-      "dataUrlLength": 194230,
+      "dataUrlLength": 194346,
       "nonBlank": true
     },
     "exportArtPipeline": {
@@ -497,8 +504,12 @@
         "lw_vfx_effect_frame"
       ],
       "missingKeys": [],
-      "updatedAt": "2026-06-28T13:23:30.463Z",
+      "updatedAt": "2026-06-28T14:42:26.396Z",
       "generatedAtlasStatus": "present",
+      "generationStatus": "generated_with_builtin_imagegen",
+      "provenancePath": "assets/imagegen/provenance.json",
+      "sourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+      "transparentSourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
       "groups": {
         "heroes": [
           "lw_runtime_player_shihao"
@@ -578,7 +589,7 @@
       "status": "running",
       "hp": 100,
       "progress": 0,
-      "timer": 4,
+      "timer": 3,
       "score": 0,
       "lastResult": null,
       "errors": [],
@@ -632,8 +643,12 @@
           "lw_vfx_effect_frame"
         ],
         "missingKeys": [],
-        "updatedAt": "2026-06-28T13:23:30.463Z",
+        "updatedAt": "2026-06-28T14:42:26.396Z",
         "generatedAtlasStatus": "present",
+        "generationStatus": "generated_with_builtin_imagegen",
+        "provenancePath": "assets/imagegen/provenance.json",
+        "sourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+        "transparentSourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
         "groups": {
           "heroes": [
             "lw_runtime_player_shihao"
@@ -727,7 +742,7 @@
           "type": "collection",
           "amount": 2,
           "score": 2,
-          "atMs": 17286
+          "atMs": 8690
         },
         {
           "type": "skill_level",
@@ -742,7 +757,7 @@
             "weaponDamage": 4,
             "playerHp": 100
           },
-          "atMs": 17286
+          "atMs": 8690
         }
       ]
     },
@@ -831,9 +846,9 @@
       }
     ],
     "exportStaticServer": {
-      "url": "http://127.0.0.1:61992/",
+      "url": "http://127.0.0.1:52572/",
       "stdout": "",
-      "stderr": "127.0.0.1 - - [28/Jun/2026 21:23:30] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 21:23:30] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 21:23:30] \"GET /assets/index-D-k_eF0j.js HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 21:23:30] \"GET /assets/index-D95VZnoW.css HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 21:23:30] \"GET /assets/imagegen/manifest.json HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 21:23:30] \"GET /assets/imagegen/atlas.png HTTP/1.1\" 200 -\n"
+      "stderr": "127.0.0.1 - - [28/Jun/2026 22:42:26] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 22:42:26] \"GET / HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 22:42:26] \"GET /assets/index-D95VZnoW.css HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 22:42:26] \"GET /assets/index-DYfUDWoa.js HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 22:42:26] \"GET /assets/imagegen/manifest.json HTTP/1.1\" 200 -\n127.0.0.1 - - [28/Jun/2026 22:42:26] \"GET /assets/imagegen/atlas.png HTTP/1.1\" 200 -\n"
     },
     "smokeMatrix": [
       {
@@ -851,6 +866,6 @@
     ]
   },
   "errors": [],
-  "stdout": "\n> react-example@0.0.0 dev\n> bash scripts/dev-restart.sh\n\nPreparing LoreWeaver dev server...\nOK: Express gateway port 3000 is free.\nOK: Vite frontend port 5173 is free.\nOK: FastAPI backend port 8000 is free.\nStarting LoreWeaver on http://localhost:3000 ...\n◇ injected env (0) from .env // tip: ⌘ override existing { override: true }\nAttempting to spawn Python FastAPI backend using \"/Users/lm/pyProj/hungry-for-knowledge/venv/bin/python\" on port 8000...\nAttempting to spawn Vite frontend on port 5173...\nLoreWeaver platform dev proxy successfully running on http://localhost:3000\n[Vite stdout]: VITE v6.4.3  ready in 360 ms\n\n  ➜  Local:   http://127.0.0.1:5173/\n[Python stdout]: INFO:     127.0.0.1:61909 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61911 - \"GET /api/workspaces HTTP/1.1\" 200 OK\nINFO:     127.0.0.1:61913 - \"GET /api/workspaces HTTP/1.1\" 200 OK\nINFO:     127.0.0.1:61912 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61909 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61911 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61909 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61909 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61909 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61909 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61909 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61909 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61942 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61942 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61942 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61943 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61942 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61942 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61974 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61974 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61975 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61974 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61974 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61974 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61988 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:61991 - \"GET /api/workspaces/20260611-060754-719406/export HTTP/1.1\" 200 OK\n",
-  "stderr": "[Python stderr]: INFO:     Started server process [47674]\n[Python stderr]: INFO:     Waiting for application startup.\nINFO:     Application startup complete.\n[Python stderr]: INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)\n"
+  "stdout": "\n> react-example@0.0.0 dev\n> bash scripts/dev-restart.sh\n\nPreparing LoreWeaver dev server...\nOK: Express gateway port 3000 is free.\nOK: Vite frontend port 5173 is free.\nOK: FastAPI backend port 8000 is free.\nStarting LoreWeaver on http://localhost:3000 ...\n◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }\nAttempting to spawn Python FastAPI backend using \"/Users/lm/pyProj/hungry-for-knowledge/venv/bin/python\" on port 8000...\nAttempting to spawn Vite frontend on port 5173...\nLoreWeaver platform dev proxy successfully running on http://localhost:3000\n[Vite stdout]: VITE v6.4.3  ready in 239 ms\n[Vite stdout]: ➜  Local:   http://127.0.0.1:5173/\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52500 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52553 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52553 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52553 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52554 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52553 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52553 - \"GET /api/workspaces/20260611-060754-719406/files/manifest.json HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52567 - \"GET /api/workspaces HTTP/1.1\" 200 OK\n[Python stdout]: INFO:     127.0.0.1:52570 - \"GET /api/workspaces/20260611-060754-719406/export HTTP/1.1\" 200 OK\n",
+  "stderr": "[Python stderr]: INFO:     Started server process [436]\nINFO:     Waiting for application startup.\n[Python stderr]: INFO:     Application startup complete.\n[Python stderr]: INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)\n"
 }

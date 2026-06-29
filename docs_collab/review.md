@@ -139,3 +139,47 @@ Residual risk:
 
 - The current atlas is mechanically wired but visually simple; richer generated art and per-action animation clips should be a follow-up polish/art pass.
 - Atlas coverage focuses on first-node player/enemy/projectile/pickup/VFX keys; later node-specific enemies still use documented procedural fallback.
+
+## LW-008
+
+- reviewer: Codex
+- result: passed
+- reviewedAt: 2026-06-28
+
+Findings: none.
+
+Verification reviewed:
+
+- Built-in imagegen produced a project-bound 4x2 sprite atlas source and the source was copied into `assets/imagegen/source/`.
+- Local processing created `generated-sprite-atlas-20260628-transparent.png` and replaced the runtime `assets/imagegen/atlas.png` with a 256x128 RGBA atlas.
+- `assets/imagegen/provenance.json` records generation tool, prompt, source paths, atlas path, frame order, dimensions, post-processing, and SHA-256 hashes.
+- JSON/provenance parse checks passed.
+- Strict `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline` passed with generated-art provenance requirements enabled.
+- Workspace `manifest:check`, `loreweaver:check`, `ability:check`, and `RuntimeSprites.js` import smoke passed.
+
+Residual risk:
+
+- Generated coverage currently focuses on first-node/core combat art.
+- Static frames are not yet full per-action animation sheets.
+
+## LW-009
+
+- reviewer: Codex
+- result: passed
+- reviewedAt: 2026-06-28
+
+Findings: none.
+
+Verification reviewed:
+
+- `RuntimeSprites.js` now exposes generation status, source image path, transparent source image path, and provenance path through `window.__DAHUANG_ART_PIPELINE__`.
+- Static export `GameRunner.ts` reports `generationStatus`, `provenancePath`, and source image paths through `window.__LOREWEAVER_ART_PIPELINE__`.
+- `workflow/scripts/run_e2e_test.py` now asserts exported provenance/source files and runtime `generated_with_builtin_imagegen` status.
+- Root `npm run build` passed with the known large-bundle warning.
+- Workspace `npm run build` passed after setting Vite build target to `esnext`.
+- Full `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver` passed, including static export generated-art provenance assertions and atlas-backed player/enemy runtime usage.
+
+Residual risk:
+
+- E2E still covers the current runtime-ready cards rather than every narrative node.
+- Broader node-specific generated art and action animation sheets remain future expansion work.

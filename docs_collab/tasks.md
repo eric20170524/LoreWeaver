@@ -149,6 +149,7 @@
 ## LW-006: Implement Runtime AssetPipeline Beyond Metadata
 
 - status: verified
+- scopeCorrection: 2026-06-28 audit found this task verified runtime wiring, not high-quality generated art production. Going forward, generated bitmap art and runtime pipeline wiring are separate mandatory tasks: `LW-008` then `LW-009`.
 - owner: Codex
 - reviewer: Codex
 - patchLevel: L3
@@ -184,7 +185,7 @@
     runAt: 2026-06-28
     note: `npm run manifest:build`, `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check`, and `node --experimental-default-type=module -e "import('./utils/RuntimeSprites.js')"` passed in the reference workspace.
 - residualRisk:
-  - Atlas art quality and animation richness may need a second art pass after the pipeline is mechanically wired.
+  - Atlas art quality and animation richness require `LW-008`; this is now mandatory, not optional polish.
   - Current atlas covers first-node player/enemy/projectile/pickup/VFX keys; later node-specific enemies and richer animation clips still fall back to documented procedural placeholders.
 
 ## LW-007: Restore First Node Energy-To-Skill Growth Loop
@@ -232,3 +233,87 @@
 - residualRisk:
   - Later nodes may need similar resource-to-skill-loop assertions after the first-node pattern is verified.
   - E2E uses deterministic adapter pickup injection for the growth assertion; manual physics collection remains covered indirectly by adapter smoke rather than a full manual-play path.
+
+## LW-008: Generate Canonical Bitmap Art Assets
+
+- status: verified
+- owner: Codex
+- reviewer: Codex
+- patchLevel: L3
+- targetArtifact: `data/workspaces/20260611-060754-719406/assets/imagegen/source/*`, `data/workspaces/20260611-060754-719406/assets/imagegen/atlas.png`, `data/workspaces/20260611-060754-719406/assets/imagegen/provenance.json`, `data/workspaces/20260611-060754-719406/loreweaver/art-asset-manifest.json`, `data/workspaces/20260611-060754-719406/loreweaver/asset-pipeline.json`
+- invalidates: `gate:asset-generation`, `gate:asset-pipeline`, `gate:runtime-feature-pack`, `gate:e2e`, `gate:export`, `gate:build`
+- requiredGate: generated source images exist with provenance, atlas dimensions and frame keys match manifest, `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline`, workspace manifest/runtime checks
+- dependsOn: none
+- blocks: `LW-009`
+- doneCriteria:
+  - Generated bitmap art is produced with an explicit generation method and prompt provenance; hand-drawn procedural placeholders do not satisfy this task.
+  - Source generated image files are checked into the workspace under `assets/imagegen/source/` or an equivalent tracked project path.
+  - `provenance.json` records tool/mode, prompts, generated source paths, final atlas path, frame keys, creation date, and any local post-processing.
+  - The final atlas includes first-class player, first-node enemies, boss, pickup, projectile, VFX, and at least one setpiece/decoration frame.
+  - `manifest.json` and `manifest.js` frame keys match the generated atlas, and `art-asset-manifest.json` no longer relies on ambiguous `generatedAtlasStatus: present` without source provenance.
+  - Existing procedural/canvas art can remain only as documented last-resort fallback and cannot be counted as generated art.
+- verificationEvidence:
+  - gate: built-in `image_gen` generation plus local atlas slicing
+    result: passed
+    report: `data/workspaces/20260611-060754-719406/assets/imagegen/provenance.json`
+    runAt: 2026-06-28
+    note: Generated source sprite sheet was copied into `assets/imagegen/source/`, chroma-keyed to RGBA, sliced into a 4x2 64px-frame runtime atlas, and recorded with prompt, source paths, final atlas path, frame order, dimensions, and SHA-256 hashes.
+  - gate: JSON/provenance parse check
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: `provenance.json`, `manifest.json`, `art-asset-manifest.json`, and `asset-pipeline.json` parse as valid JSON.
+  - gate: `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline`
+    result: passed
+    report: `LoreWeaver/workflow/reports/runtime_feature_pack_latest.json`
+    runAt: 2026-06-28
+    note: Strict mode now requires `artAssetGeneration`, `assetPipeline.artAssets.provenancePath`, generated source images, and final atlas provenance.
+  - gate: workspace manifest/runtime checks
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check`, and ES module import of `utils/RuntimeSprites.js` passed in the reference workspace.
+- residualRisk:
+  - Current generated atlas covers first-node core gameplay art; later node-specific enemies still need broader generated coverage.
+  - This pass creates static sprite frames, not full per-action animation sheets.
+
+## LW-009: Wire Generated Art Into Runtime And Export
+
+- status: verified
+- owner: Codex
+- reviewer: Codex
+- patchLevel: L3
+- targetArtifact: runtime asset loader / resolver paths, gameplay nodes, Workbench/gameplay previews, export template asset copy paths, E2E browser assertions
+- invalidates: `gate:asset-pipeline`, `gate:runtime-feature-pack`, `gate:e2e`, `gate:export`, `gate:build`
+- requiredGate: `LW-008` complete, `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline`, `npm run build`, `python3 workflow/scripts/run_e2e_test.py --game loreweaver` or documented blocker with targeted browser/runtime smoke
+- dependsOn: `LW-008`
+- doneCriteria:
+  - Runtime rendering uses the generated atlas as the first lookup for player, enemies, boss, pickups/projectiles, VFX, setpieces/decorations, and Workbench/gameplay previews where available.
+  - Runtime exposes expected/loaded counts, generated source provenance status, important group keys, manifest errors, and fallback usage.
+  - Static export includes generated source provenance and generated atlas/manifest files, not only runtime code.
+  - Browser evidence proves generated art appears in actual combat and exported H5; metadata-only or preview-only usage does not satisfy this task.
+  - Fallback procedural paths remain last-resort, visibly reported, and are not allowed to mask missing generated assets in strict mode.
+- verificationEvidence:
+  - gate: `npm run build` in `LoreWeaver`
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: Root production build passed with the known large-bundle warning.
+  - gate: workspace `npm run build`
+    result: passed
+    report: n/a
+    runAt: 2026-06-28
+    note: Workspace Vite build passed after aligning the build target with the existing top-level-await data loader.
+  - gate: `venv/bin/python LoreWeaver/workflow/scripts/run_e2e_test.py --game loreweaver`
+    result: passed
+    report: `LoreWeaver/workflow/reports/runtime_e2e_loreweaver_latest.json`
+    runAt: 2026-06-28
+    note: E2E verified app and static export smoke, generated atlas loading, generated provenance reporting, exported `assets/imagegen/provenance.json`, exported source image, live atlas-backed survivor_horde player/enemy textures, and first-node growth assertions.
+  - gate: `npm run check:runtime-feature-pack -- --workspace data/workspaces/20260611-060754-719406 --require-asset-pipeline`
+    result: passed
+    report: `LoreWeaver/workflow/reports/runtime_feature_pack_latest.json`
+    runAt: 2026-06-28
+    note: Strict asset pipeline gate passed with runtime art provenance requirements enabled.
+- residualRisk:
+  - Later node-specific enemies may still need broader art coverage after the first-node generated art pass.
+  - E2E proves runtime atlas usage for current runtime-ready cards; it still does not automatically play every narrative node.

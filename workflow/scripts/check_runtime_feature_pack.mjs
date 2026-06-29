@@ -27,6 +27,7 @@ const RECOMMENDED_ARTIFACTS = [
   "simulatorFullscreenPreview",
   "assetPipelineMetadata",
   "abilityVfxVoicePipeline",
+  "artAssetGeneration",
   "artAssetPipeline",
   "audioAssetPipeline",
   "assetPipelineVerification"
@@ -215,7 +216,7 @@ function scanDataRegistry(workspaceRoot, runtimeSkillIds, warnings) {
   return { skillIds, vfxIds, sfxIds, passiveIds };
 }
 
-function validateAssetPipeline(assetPipeline, errors, warnings) {
+function validateAssetPipeline(assetPipeline, workspaceRoot, errors, warnings) {
   if (!assetPipeline) return null;
 
   if (assetPipeline.schemaVersion !== "1.0") {
@@ -235,14 +236,43 @@ function validateAssetPipeline(assetPipeline, errors, warnings) {
 
   const art = assetPipeline.artAssets || {};
   requireText(art, "manifestPath", "assetPipeline.artAssets", errors);
+  requireText(art, "provenancePath", "assetPipeline.artAssets", errors);
+  requireText(art, "generationStatus", "assetPipeline.artAssets", errors);
   requireText(art, "runtimeBinding", "assetPipeline.artAssets", errors);
   requireNonEmptyList(art, "groups", "assetPipeline.artAssets", errors);
+  requireNonEmptyList(art, "sourceImagePaths", "assetPipeline.artAssets", errors);
   requireNonEmptyList(art, "verification", "assetPipeline.artAssets", errors);
   if (!asArray(art.groups).some((group) => ["heroes", "characters", "actors"].includes(group))) {
     warnings.push("assetPipeline.artAssets.groups does not mention heroes, characters, or actors.");
   }
   if (!asArray(art.groups).includes("enemies")) {
     warnings.push("assetPipeline.artAssets.groups does not mention enemies.");
+  }
+  if (art.provenancePath) {
+    const provenancePath = path.join(workspaceRoot, art.provenancePath);
+    const provenance = readJson(provenancePath, errors, "assetPipeline.artAssets.provenance");
+    if (provenance) {
+      requireText(provenance, "tool", "assetPipeline.artAssets.provenance", errors);
+      requireText(provenance, "mode", "assetPipeline.artAssets.provenance", errors);
+      requireText(provenance, "prompt", "assetPipeline.artAssets.provenance", errors);
+      requireNonEmptyList(provenance, "sourceImages", "assetPipeline.artAssets.provenance", errors);
+      requireNonEmptyList(provenance, "frameOrder", "assetPipeline.artAssets.provenance", errors);
+      requireText(provenance.finalAtlas || {}, "path", "assetPipeline.artAssets.provenance.finalAtlas", errors);
+
+      for (const source of asArray(provenance.sourceImages)) {
+        if (!hasText(source?.path)) {
+          errors.push("assetPipeline.artAssets.provenance.sourceImages entries must include path.");
+          continue;
+        }
+        if (!pathExists(path.join(workspaceRoot, source.path))) {
+          errors.push(`Generated art source image is missing: ${source.path}`);
+        }
+      }
+
+      if (hasText(provenance.finalAtlas?.path) && !pathExists(path.join(workspaceRoot, provenance.finalAtlas.path))) {
+        errors.push(`Generated final atlas is missing: ${provenance.finalAtlas.path}`);
+      }
+    }
   }
 
   const audio = assetPipeline.audioAssets || {};
@@ -259,6 +289,7 @@ function validateAssetPipeline(assetPipeline, errors, warnings) {
     abilityPlayerCoverage: asArray(ability.playerAbilityCoverage).length,
     abilityEnemyEffects: asArray(ability.enemyAbilityEffects).length,
     artGroups: asArray(art.groups).length,
+    artGeneratedSources: asArray(art.sourceImagePaths).length,
     audioChannels: asArray(audio.channels).length,
     audioCoverage: asArray(audio.coverageMatrix).length
   };
@@ -506,13 +537,14 @@ if (!assetPipeline) {
     warnings.push(message);
   }
 } else {
-  assetPipelineSummary = validateAssetPipeline(assetPipeline, errors, warnings);
+  assetPipelineSummary = validateAssetPipeline(assetPipeline, workspaceRoot, errors, warnings);
 }
 
 if (requireAssetPipeline) {
   const requiredPipelineArtifacts = [
     "assetPipelineMetadata",
     "abilityVfxVoicePipeline",
+    "artAssetGeneration",
     "artAssetPipeline",
     "audioAssetPipeline",
     "assetPipelineVerification"

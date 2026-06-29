@@ -569,6 +569,8 @@ def run_loreweaver_app_test():
                     assertions["exportArtAtlasLoadedCount"] = art_status.get("loadedCount", 0) >= 5
                     assertions["exportArtPlayerTextureLoaded"] = "lw_runtime_player_shihao" in art_status.get("loadedKeys", [])
                     assertions["exportArtEnemyTextureLoaded"] = "lw_enemy_wild_rhino" in art_status.get("loadedKeys", [])
+                    assertions["exportArtGeneratedWithImagegen"] = art_status.get("generationStatus") == "generated_with_builtin_imagegen"
+                    assertions["exportArtProvenanceReported"] = art_status.get("provenancePath") == "assets/imagegen/provenance.json"
 
                 def verify_export_art_runtime_usage(label):
                     runtime_art = page.evaluate("""
@@ -765,6 +767,8 @@ def run_loreweaver_app_test():
                         assertions["exportHasImagegenAtlas"] = "assets/imagegen/atlas.png" in namelist
                         assertions["exportHasImagegenManifest"] = "assets/imagegen/manifest.json" in namelist
                         assertions["exportHasImagegenScriptManifest"] = "assets/imagegen/manifest.js" in namelist
+                        assertions["exportHasImagegenProvenance"] = "assets/imagegen/provenance.json" in namelist
+                        assertions["exportHasImagegenSource"] = "assets/imagegen/source/generated-sprite-atlas-20260628.png" in namelist
 
                         index_content = zf.read("index.html").decode("utf-8")
                         readme_content = zf.read("README.md").decode("utf-8")
