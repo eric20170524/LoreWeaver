@@ -121,7 +121,7 @@ Patch Level 用来约束风险和 review 强度。项目可以扩展定义，但
 
 ## 状态机
 
-`tasks.md` 中每个任务使用以下状态之一：
+协作中使用以下状态。`todo` 到 `blocked` 用于 `tasks.md` 中的任务；`closed` 只用于交接或需求级收尾记录。
 
 - `todo`：未开始。
 - `claimed`：某个 Agent 已领取，必须写明领取者和时间。
@@ -131,6 +131,7 @@ Patch Level 用来约束风险和 review 强度。项目可以扩展定义，但
 - `changes_requested`：review 未通过，等待返工。
 - `verified`：代码和必要 gate 已通过。
 - `blocked`：需要人类决策或外部条件。
+- `closed`：本轮交接已由 Codex 最终确认完成，Antigravity 可以结束该协作轮次；仅用于 `handoff.md`、`review_request.md` 或需求级收尾记录，不用于未完成任务。
 
 `verified` 是强状态，不能只改状态字段。把任务标为 `verified` 前，必须同时满足：
 
@@ -147,10 +148,14 @@ Patch Level 用来约束风险和 review 强度。项目可以扩展定义，但
 ## TASK-001: 任务名
 
 - status: todo
+- requirementId: REQ-001
+- iteration: 1
+- iterationGoal: 主路径可用
 - owner: Antigravity
 - reviewer: Codex
 - patchLevel: L2
 - targetArtifact: `path/to/file-or-module`
+- sourceReview: n/a
 - invalidates: `gate:build`, `gate:test`, `gate:e2e`
 - requiredGate: `npm run build`, `npm test`
 - doneCriteria:
@@ -168,6 +173,88 @@ Patch Level 用来约束风险和 review 强度。项目可以扩展定义，但
 每次只允许一个 Agent 领取一个 `claimed` / `in_progress` 任务。领取前必须确认没有同一文件或同一模块的进行中任务。
 
 如果任务因为 Codex 先行探索而进入 `waiting_for_antigravity`，Antigravity 接手前必须先读取最新 `handoff.md`、`review_request.md`、`git diff` 和相关文件；接手后再把任务状态改为 `claimed` 或 `in_progress`。
+
+## 需求级多轮迭代协议
+
+任务级 `verified` 只代表单个任务已通过 review 和 gate，不代表整个人类需求已经成熟交付。非平凡需求必须在 `state.md` 中记录需求级状态，并通过多轮迭代逐步从“能用”推进到“完整、可交付”。
+
+适用范围：
+
+- L0 和简单 L1 文档、文案、配置任务可以一轮完成。
+- L2 及以上需求默认至少经过三轮需求级迭代，除非人类明确要求快速修复或明确豁免。
+- 用户可感知体验、跨模块行为、核心流程、发布产物和高风险 L3/L4 需求，即使第一轮任务全部 `verified`，也不能直接视为需求完成。
+
+三轮默认节奏：
+
+1. Iteration 1：主路径可用。目标是让核心流程成立，重点验证 happy path、架构方向、接口边界和基本 gate。
+2. Iteration 2：边界和完整性。目标是补齐异常路径、状态流、兼容性、测试、文档遗漏和 review 中发现的非阻断问题。
+3. Iteration 3：验收和打磨。目标是面向最终使用场景检查体验、回归、可维护性、交付细节和剩余风险。
+
+### 迭代压缩与豁免
+
+默认三轮可以被压缩，但不能被隐式跳过。只有满足以下任一条件时，Codex 才能把 L2/L3 需求压缩到少于三轮：
+
+- 人类明确要求快速完成、快速修复、先交静态 demo 或明确接受当前风险。
+- 当前交付物是本地静态 demo、一次性原型或无生产发布路径，且剩余风险已被记录。
+- 后续迭代只会重复已覆盖的 gate，Codex 能给出更强或等价的替代证据。
+
+压缩时必须在 `state.md` 明确记录：
+
+- `compressionReason`：为什么可以压缩。
+- `skippedIterations`：跳过了哪些默认迭代，例如边界完整性、验收打磨。
+- `replacementEvidence`：用哪些证据替代被跳过迭代，例如 Antigravity browser smoke、Codex business-state smoke、syntax/HTTP gate、人工明确验收。
+- `residualRisks`：被压缩后仍保留的风险，例如未跑移动端截图、生产级账号/后端未接入、native share 未实际调用。
+
+如果这些字段缺失，后续 Agent 不应仅凭 `requirement_ready` 判断需求已经完成三轮；应先补齐记录或重新进入下一轮迭代。
+
+需求级状态写在 `state.md`，推荐使用：
+
+- `iteration_1_main_path`：第一轮，核心路径实现中。
+- `iteration_2_completeness`：第二轮，边界和完整性完善中。
+- `iteration_3_hardening`：第三轮，验收、回归和打磨中。
+- `iteration_followup`：三轮后仍有明确后续项，继续按风险拆分任务。
+- `requirement_ready`：需求级 review 已通过，可以交给人类验收或合并。
+- `accepted`：人类已确认验收。
+- `blocked`：需要人类决策或外部条件。
+
+迭代回流规则：
+
+- 每轮 Codex review 结束后，必须把发现分成两类：当前任务必须返工的问题进入 `changes_requested`；下一轮完善项生成新的 TASK，并标明 `iteration`、`iterationGoal` 和 `sourceReview`。
+- Antigravity 默认只领取当前 `activeIteration` 的任务。需要跨轮处理时，必须在 `handoff.md` 或 `tasks.md` 说明原因。
+- required gate 可以随迭代增加：第一轮可以聚焦 build / 单测 / smoke；第二轮补边界、contract、集成测试；第三轮补回归、视觉、发布 smoke 或人工验收证据。
+- 不能因为所有当前任务 `verified` 就自动把需求标为 `requirement_ready`。Codex 必须做一次需求级 review，确认迭代目标、任务证据、gate 证据和剩余风险一致。
+- 如果第三轮后仍有 P1/P2 问题，不强行通过；把需求状态改为 `iteration_followup` 或 `blocked`，并明确下一轮目标。
+- 如果人类明确要求跳过三轮迭代，`state.md` 必须记录豁免原因、跳过的迭代、替代证据和剩余风险。
+
+`state.md` 中推荐记录需求级状态：
+
+```markdown
+## Requirement Status
+
+- requirementId: REQ-001
+- requestSummary:
+- requirementStatus: iteration_1_main_path
+- activeIteration: 1
+- activeIterationGoal: 主路径可用
+- iterationsCompleted:
+  - iteration: 1
+    goal: 主路径可用
+    result:
+    review: `review.md#...`
+- requirementReadyCriteria:
+  - 核心路径、边界路径、回归 gate 和交付说明均有证据。
+- remainingRisks:
+  - ...
+- finalReviewer: Codex
+```
+
+把需求标为 `requirement_ready` 前，至少要满足：
+
+- `state.md` 中 `iterationsCompleted` 覆盖当前需求要求的全部迭代，或写明豁免原因。
+- `tasks.md` 中本需求相关任务均为 `verified`，或剩余任务明确移出本轮范围并记录风险。
+- `review.md` 中有需求级最终 review，说明看过哪些任务、diff、gate 和剩余风险。
+- 受影响 gate 有可复查证据；未运行 gate 有跳过原因、替代证据和补跑责任人。
+- 人类原始 Acceptance Criteria 已逐条对应到任务、证据或明确的范围外说明。
 
 ## 文件写入与交接协议
 
@@ -264,6 +351,34 @@ Codex review 必须先读 `review_request.md`，再看实际 diff、被修改文
 把任务改成 `verified` 的同一个 patch 必须同步更新 `verificationEvidence`。如果 review 只更新状态、不更新证据，后续 Agent 应视为状态不可信并重新验证。
 
 如果有问题，把任务状态改为 `changes_requested`，并在 `review.md` 给出文件路径、行号、原因和期望修复。返工时必须读取最新 `review.md`。
+
+### 6. Codex 协作收尾通知
+
+当 Codex review 通过并且本轮分配给 Antigravity 的任务全部 `verified` 后，Codex 必须做一次明确的协作收尾通知，避免另一个 Agent 继续等待或重复接手。
+
+收尾要求：
+
+- 将 `handoff.md` 的本轮交接状态更新为 `closed`，或在缺少 `handoff.md` 时创建同结构收尾记录。
+- 在 `handoff.md` 或 `review_request.md` 中写明：所有本轮 Antigravity 任务已完成、Codex 已完成最终 review、Antigravity 可以结束该协作轮次。
+- 如果还需要下一轮迭代，不得写 `closed`；应保持或创建新的 `todo` / `waiting_for_antigravity` / `needs_review` 状态，并写清下一个接手动作。
+- 如果 Codex 使用了可关闭的子 Agent 或工作线程，应在确认不再需要后关闭它，并在最终回复中说明本轮协作已收口。
+
+推荐收尾句式：
+
+```markdown
+## Codex Closeout
+
+All assigned Antigravity tasks for this handoff are verified. Codex final review has passed. Antigravity may stop this run.
+```
+
+### 7. Codex 做需求级迭代判断
+
+当当前 iteration 的任务全部 `verified` 后，Codex 必须回到 `state.md` 做需求级判断：
+
+- 如果当前轮目标未达成，继续生成同一 iteration 的补充任务。
+- 如果当前轮目标已达成但需求还未完成三轮迭代，更新 `state.md` 到下一轮状态，并把 review 中的完善项拆成下一轮 TASK。
+- 如果三轮目标均已达成，执行需求级最终 review；通过后才能把 `requirementStatus` 改为 `requirement_ready`。
+- 如果发现问题需要人类判断，改为 `blocked`，并写清决策点、备选方案和推荐路径。
 
 ## 验证与 Gate
 
@@ -373,6 +488,8 @@ npm run smoke:dist
 ## Handoff
 
 - agent:
+- requirementId:
+- iteration:
 - task:
 - status:
 - patchLevel:
@@ -389,6 +506,8 @@ npm run smoke:dist
 ## Review Request
 
 - agent: Antigravity
+- requirementId:
+- iteration:
 - task:
 - status: needs_review
 - patchLevel:
@@ -408,6 +527,8 @@ npm run smoke:dist
 ## Review
 
 - task:
+- requirementId:
+- iteration:
 - verdict: pass | changes_requested | blocked
 - filesReviewed:
 - commandsChecked:
@@ -428,5 +549,6 @@ npm run smoke:dist
 1. Codex 读取 `state.md` 和 `tasks.md`。
 2. 如果有 `needs_review`，先 review。
 3. 如果有 `waiting_for_antigravity`，优先提醒或交接给 Antigravity 执行层接手，不直接由 Codex 标为完成。
-4. 如果没有待 review 或待 Antigravity 接手任务，选择最前面的 `todo` 任务并写清执行计划。
-5. 如果状态文件缺失，先基于当前人类目标创建最小 `state.md` / `tasks.md` 草案，再等人类确认或继续执行低风险 L0/L1 文档任务。
+4. 如果当前 requirement 还没有 `requirement_ready`，优先选择当前 `activeIteration` 中最前面的 `todo` 任务；如果没有 `todo`，先做需求级迭代判断并生成下一轮任务。
+5. 如果没有待 review、待 Antigravity 接手或待迭代任务，选择最前面的 `todo` 任务并写清执行计划。
+6. 如果状态文件缺失，先基于当前人类目标创建最小 `state.md` / `tasks.md` 草案，再等人类确认或继续执行低风险 L0/L1 文档任务。
