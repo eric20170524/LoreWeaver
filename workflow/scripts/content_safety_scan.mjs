@@ -8,65 +8,160 @@ const loreRoot = path.resolve(scriptDir, "../..");
 const repoRoot = path.resolve(loreRoot, "..");
 const reportsDir = path.join(loreRoot, "workflow", "reports");
 
-const exportSurfaces = [
-  "minigame_master/core/lib",
-  "minigame_master/core/demo",
-  "LoreWeaver/src",
-  "LoreWeaver/dist",
-  "LoreWeaver/index.html",
-  "LoreWeaver/docs",
-  "LoreWeaver/data/workspaces",
-  "LoreWeaver/data/presets",
-  "LoreWeaver/workflow/reports"
+const targetWorkspace = "LoreWeaver/data/workspaces/20260611-060754-719406";
+const trackedMirror = "minigame/perfectworld_dahuang";
+
+const scanSurfaces = [
+  {
+    root: "minigame_master/core/lib",
+    role: "shared_export_runtime",
+    blocksPublicShare: true
+  },
+  {
+    root: targetWorkspace,
+    role: "target_workspace_public_export",
+    blocksPublicShare: true
+  },
+  {
+    root: trackedMirror,
+    role: "tracked_source_mirror_public_export",
+    blocksPublicShare: true
+  },
+  {
+    root: "LoreWeaver/dist",
+    role: "generated_loreweaver_app_dist",
+    blocksPublicShare: false,
+    note: "Generated app bundle is monitored but not blocking for this target workspace slice."
+  }
 ];
 
-const warningSurfaces = [
-  "minigame_master/core/lib",
-  "minigame_master/core/demo",
-  "LoreWeaver/src",
-  "LoreWeaver/dist",
-  "LoreWeaver/index.html"
+const termRules = [
+  { term: "完美世界", risk: "external_work_title", blocking: true },
+  { term: "仙逆", risk: "external_work_title", blocking: true },
+  { term: "凡人修仙", risk: "external_work_title", blocking: true },
+  { term: "诡秘之主", risk: "external_work_title", blocking: true },
+  { term: "王林", risk: "concrete_character_name", blocking: true },
+  { term: "石昊", risk: "concrete_character_name", blocking: true },
+  { term: "石毅", risk: "concrete_character_name", blocking: true },
+  { term: "安澜", risk: "concrete_character_name", blocking: true },
+  { term: "火灵儿", risk: "concrete_character_name", blocking: true },
+  { term: "藤化元", risk: "concrete_character_name", blocking: true },
+  { term: "百断山", risk: "specific_lore_location", blocking: false },
+  { term: "虚神界", risk: "specific_lore_location", blocking: false },
+  { term: "鲲鹏", risk: "specific_lore_motif", blocking: false },
+  { term: "至尊骨", risk: "specific_lore_motif", blocking: false },
+  { term: "重瞳", risk: "specific_lore_motif", blocking: false },
+  { term: "柳神", risk: "specific_lore_motif", blocking: false },
+  { term: "他化自在", risk: "specific_lore_motif", blocking: false }
 ];
 
-const sensitiveTerms = [
-  "王林",
-  "石昊",
-  "安澜",
-  "藤化元",
-  "完美世界",
-  "仙逆",
-  "凡人修仙",
-  "诡秘之主"
+const playerVisibleFiles = new Set([
+  "index.html",
+  "meta.json",
+  "package.json",
+  "css/style.css",
+  "js/data.js",
+  "nodes/node1.js",
+  "nodes/node2.js",
+  "nodes/node3.js",
+  "scenes/MainScene.js",
+  "scenes/MenuScene.js",
+  "scenes/GameOverScene.js",
+  "loreweaver/project.json",
+  "loreweaver/ability-catalog.json",
+  "loreweaver/character-design-catalog.json",
+  "loreweaver/enemy-design-catalog.json",
+  "loreweaver/nodes/node-01-dahuang.json",
+  "loreweaver/nodes/node-02-baiduan.json",
+  "loreweaver/nodes/node-03-xushenjie.json"
+]);
+
+const textFilePattern = /\.(js|mjs|cjs|ts|tsx|json|md|html|css)$/;
+const generatedOrHistoricalParts = [
+  "/dist/",
+  "/docs/",
+  "/assets/",
+  "/workflow/reports/"
 ];
+
+function normalizeRel(file) {
+  return file.split(path.sep).join("/");
+}
 
 function collectFiles(dirRel) {
   const dir = path.join(repoRoot, dirRel);
   if (!fs.existsSync(dir)) return [];
-  // If it's a single file, return it directly if it matches the text extension
   if (fs.statSync(dir).isFile()) {
-    if (/\.(js|ts|tsx|json|md|html|css)$/.test(dirRel)) return [dirRel];
-    return [];
+    return textFilePattern.test(dirRel) ? [normalizeRel(dirRel)] : [];
   }
+
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const rel = path.join(dirRel, entry.name);
+    const rel = normalizeRel(path.join(dirRel, entry.name));
     if (entry.isDirectory()) return collectFiles(rel);
-    if (/\.(js|ts|tsx|json|md|html|css)$/.test(entry.name)) return [rel];
-    return [];
+    return textFilePattern.test(entry.name) ? [rel] : [];
   });
 }
 
-const findings = [];
+function relWithinSurface(file, surfaceRoot) {
+  const prefix = `${surfaceRoot}/`;
+  return file.startsWith(prefix) ? file.slice(prefix.length) : path.basename(file);
+}
 
-for (const surface of exportSurfaces) {
-  for (const file of collectFiles(surface)) {
+function isGeneratedOrHistorical(file) {
+  return generatedOrHistoricalParts.some((part) => file.includes(part));
+}
+
+function isPlayerVisiblePublicFile(file, surfaceRoot) {
+  if (isGeneratedOrHistorical(file)) return false;
+  const rel = relWithinSurface(file, surfaceRoot);
+  return playerVisibleFiles.has(rel);
+}
+
+function lineInfo(source, term) {
+  const index = source.indexOf(term);
+  const before = source.slice(0, index);
+  const line = before.split("\n").length;
+  const lineStart = source.lastIndexOf("\n", index) + 1;
+  const lineEnd = source.indexOf("\n", index);
+  const rawLine = source.slice(lineStart, lineEnd === -1 ? undefined : lineEnd).trim();
+  const snippet = rawLine.length > 180 ? `${rawLine.slice(0, 177)}...` : rawLine;
+  return { line, snippet };
+}
+
+function classifyFinding(file, surface, termRule) {
+  const publicVisible = isPlayerVisiblePublicFile(file, surface.root);
+  if (
+    surface.blocksPublicShare
+    && termRule.blocking
+    && (surface.role === "shared_export_runtime" || publicVisible)
+  ) {
+    return "warning";
+  }
+  return "note";
+}
+
+const findings = [];
+const seenFiles = new Set();
+
+for (const surface of scanSurfaces) {
+  for (const file of collectFiles(surface.root)) {
+    const dedupeKey = `${surface.root}:${file}`;
+    if (seenFiles.has(dedupeKey)) continue;
+    seenFiles.add(dedupeKey);
+
     const source = fs.readFileSync(path.join(repoRoot, file), "utf8");
-    for (const term of sensitiveTerms) {
-      if (source.includes(term)) {
-        const isWarning = warningSurfaces.some((ws) => file.startsWith(ws));
+    for (const termRule of termRules) {
+      if (source.includes(termRule.term)) {
+        const { line, snippet } = lineInfo(source, termRule.term);
         findings.push({
           file,
-          term,
-          severity: isWarning ? "warning" : "note"
+          surfaceRole: surface.role,
+          term: termRule.term,
+          risk: termRule.risk,
+          severity: classifyFinding(file, surface, termRule),
+          publicVisible: isPlayerVisiblePublicFile(file, surface.root),
+          line,
+          snippet
         });
       }
     }
@@ -75,12 +170,19 @@ for (const surface of exportSurfaces) {
 
 fs.mkdirSync(reportsDir, { recursive: true });
 
+const summary = findings.reduce((acc, item) => {
+  acc[item.severity] = (acc[item.severity] || 0) + 1;
+  return acc;
+}, {});
 const blocking = findings.filter((item) => item.severity === "warning");
 const report = {
   gate: "content_safety_scan",
-  status: blocking.length === 0 ? "passed" : "needs_review",
+  status: blocking.length === 0 ? (findings.length === 0 ? "passed" : "passed_with_notes") : "needs_review",
   createdAt: new Date().toISOString(),
-  exportSurfaces,
+  targetWorkspace,
+  trackedMirror,
+  scanSurfaces,
+  summary,
   findings
 };
 

@@ -21,6 +21,99 @@ interface GameplayPanelProps {
   onQueueGameplayPatch: (nodeId: number, nextGameplay: GameplayAssignment, reason: string) => void;
 }
 
+const renderKnobInput = (
+  def: any,
+  value: any,
+  onChange: (val: any) => void
+) => {
+  switch (def.type) {
+    case "boolean":
+      const boolVal = !!value;
+      return (
+        <button
+          type="button"
+          onClick={() => onChange(!boolVal)}
+          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-1 focus:ring-emerald-500/40 ${
+            boolVal ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              boolVal ? 'translate-x-4' : 'translate-x-0'
+            }`}
+          />
+        </button>
+      );
+    case "enum":
+      return (
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full max-w-[200px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-2.5 py-1 text-2xs focus:outline-none focus:ring-1 focus:ring-emerald-500/40 text-slate-850 dark:text-slate-200 font-sans"
+        >
+          {def.values?.map((val: string) => (
+            <option key={val} value={val}>{val}</option>
+          ))}
+        </select>
+      );
+    case "number":
+    case "integer":
+      const numVal = typeof value === "number" ? value : Number(value) || def.default || 0;
+      const step = def.type === "integer" ? 1 : 0.1;
+      const min = def.min !== undefined ? def.min : 0;
+      const max = def.max !== undefined ? def.max : 100;
+      return (
+        <div className="flex items-center gap-3 w-full font-sans">
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={numVal}
+            onChange={(e) => onChange(def.type === "integer" ? parseInt(e.target.value, 10) : parseFloat(e.target.value))}
+            className="flex-1 accent-emerald-500 h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer"
+          />
+          <input
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={numVal}
+            onChange={(e) => {
+              const v = def.type === "integer" ? parseInt(e.target.value, 10) : parseFloat(e.target.value);
+              if (!isNaN(v)) onChange(v);
+            }}
+            className="w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-1.5 py-0.5 text-2xs focus:outline-none focus:ring-1 focus:ring-emerald-500/40 text-slate-800 dark:text-slate-200 text-center font-mono"
+          />
+        </div>
+      );
+    case "array":
+      const arrVal = Array.isArray(value) ? value : [value];
+      return (
+        <input
+          type="text"
+          value={arrVal.join(", ")}
+          onChange={(e) => {
+            const list = e.target.value.split(/[,，]/).map(x => x.trim()).filter(Boolean);
+            const parsedList = list.map(x => isNaN(Number(x)) ? x : Number(x));
+            onChange(parsedList);
+          }}
+          placeholder="e.g. 0.66, 0.33"
+          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-2.5 py-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-emerald-500/40 text-slate-800 dark:text-slate-200 font-mono"
+        />
+      );
+    default:
+      return (
+        <input
+          type="text"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-2.5 py-1 text-2xs focus:outline-none focus:ring-1 focus:ring-emerald-500/40 text-slate-800 dark:text-slate-200"
+        />
+      );
+  }
+};
+
 export function GameplayPanel({
   gameSpec,
   locale,
@@ -518,6 +611,118 @@ export function GameplayPanel({
                 </div>
 
               </div>
+              
+              {/* Knobs configuration panel at the bottom of the card */}
+              {(() => {
+                const baseCardOpt = GAMEPLAY_CARD_OPTIONS.find((c) => c.id === gameplay.cardId);
+                const baseHasKnobs = baseCardOpt && baseCardOpt.knobs && Object.keys(baseCardOpt.knobs).length > 0;
+                const activeModsWithKnobs = gameplay.modifiers.map((modSpec) => {
+                  const opt = GAMEPLAY_CARD_OPTIONS.find((c) => c.id === modSpec.id);
+                  return { modSpec, opt };
+                }).filter(({ opt }) => opt && opt.knobs && Object.keys(opt.knobs).length > 0);
+
+                if (!baseHasKnobs && activeModsWithKnobs.length === 0) return null;
+
+                return (
+                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800/60 space-y-4">
+                    <div className="flex items-center gap-2 text-2xs uppercase tracking-wider font-mono font-bold text-slate-500">
+                      <Settings className="w-3.5 h-3.5 text-slate-400" />
+                      {lc.knobsTitle}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Base Card Knobs */}
+                      {baseHasKnobs && baseCardOpt?.knobs && (
+                        <div className="bg-slate-50/40 dark:bg-slate-950/20 rounded-lg p-3.5 border border-slate-200/50 dark:border-slate-850/50 space-y-3">
+                          <div className="text-2xs font-bold text-slate-700 dark:text-slate-300 border-b border-slate-200/40 dark:border-slate-800/40 pb-1.5 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            {lc.baseKnobs}
+                          </div>
+                          <div className="space-y-3.5">
+                            {Object.entries(baseCardOpt.knobs).map(([key, def]: [string, any]) => {
+                              const val = gameplay.knobs?.[key] !== undefined ? gameplay.knobs[key] : def.default;
+                              return (
+                                <div key={key} className="space-y-1.5">
+                                  <div className="flex justify-between items-center text-[10px]">
+                                    <span className="font-bold text-slate-600 dark:text-slate-400 font-mono">{key}</span>
+                                    <span className="text-slate-500">{locale === "en" ? def.descriptionEn : def.description}</span>
+                                  </div>
+                                  {renderKnobInput(
+                                    def,
+                                    val,
+                                    (newVal: any) => {
+                                      const nextGameplay = {
+                                        ...gameplay,
+                                        knobs: {
+                                          ...(gameplay.knobs || {}),
+                                          [key]: newVal
+                                        },
+                                        patchLevel: "L2" as const
+                                      };
+                                      onQueueGameplayPatch(node.id, nextGameplay, `Update base card knob: ${key} = ${newVal}`);
+                                    }
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Modifiers Knobs */}
+                      {activeModsWithKnobs.length > 0 && (
+                        <div className="bg-slate-50/40 dark:bg-slate-950/20 rounded-lg p-3.5 border border-slate-200/50 dark:border-slate-850/50 space-y-4">
+                          {activeModsWithKnobs.map(({ modSpec, opt }) => (
+                            <div key={modSpec.id} className="space-y-3">
+                              <div className="text-2xs font-bold text-slate-700 dark:text-slate-300 border-b border-slate-200/40 dark:border-slate-800/40 pb-1.5 flex items-center gap-1.5 font-sans">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                {locale === "zh" ? `机制参数 - ${opt?.title}` : `Modifier - ${opt?.titleEn || opt?.title}`}
+                              </div>
+                              <div className="space-y-3.5 font-sans">
+                                {Object.entries(opt!.knobs!).map(([key, def]: [string, any]) => {
+                                  const val = modSpec.knobs?.[key] !== undefined ? modSpec.knobs[key] : def.default;
+                                  return (
+                                    <div key={key} className="space-y-1.5">
+                                      <div className="flex justify-between items-center text-[10px]">
+                                        <span className="font-bold text-slate-600 dark:text-slate-400 font-mono">{key}</span>
+                                        <span className="text-slate-500">{locale === "en" ? def.descriptionEn : def.description}</span>
+                                      </div>
+                                      {renderKnobInput(
+                                        def,
+                                        val,
+                                        (newVal: any) => {
+                                          const nextMods = gameplay.modifiers.map((m) => {
+                                            if (m.id === modSpec.id) {
+                                              return {
+                                                ...m,
+                                                knobs: {
+                                                  ...(m.knobs || {}),
+                                                  [key]: newVal
+                                                }
+                                              };
+                                            }
+                                            return m;
+                                          });
+                                          const nextGameplay = {
+                                            ...gameplay,
+                                            modifiers: nextMods,
+                                            patchLevel: "L2" as const
+                                          };
+                                          onQueueGameplayPatch(node.id, nextGameplay, `Update modifier ${modSpec.id} knob: ${key} = ${newVal}`);
+                                        }
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           );
         })}
@@ -572,7 +777,9 @@ const LOCAL_COPY = {
     designOnlyWarning: "草案 (包含仅设计机制，模拟器将只运行基础玩法)",
     noModifier: "未选择挂载机制",
     requiresLabel: "依赖:",
-    changesLabel: "改变领域:"
+    changesLabel: "改变领域:",
+    knobsTitle: "配置参数 (Gameplay Knobs)",
+    baseKnobs: "基础玩法参数"
   },
   en: {
     comboEditor: "Gameplay Combination Editor",
@@ -593,7 +800,9 @@ const LOCAL_COPY = {
     designOnlyWarning: "Draft (Contains design-only modifiers, emulator will run base card only)",
     noModifier: "No modifiers active",
     requiresLabel: "Requires:",
-    changesLabel: "Changes:"
+    changesLabel: "Changes:",
+    knobsTitle: "Gameplay Knobs",
+    baseKnobs: "Base Gameplay Parameters"
   }
 };
 
