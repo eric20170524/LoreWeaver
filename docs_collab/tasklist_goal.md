@@ -4,7 +4,7 @@
 
 ## Request
 
-继续把 `LoreWeaver/data/workspaces/20260611-060754-719406` 建设成一款真正成熟的移动端 H5 游戏。此前以 `minigame/Path_to_Immortality` 和 `minigame/three_kingdoms_brawl` 的约 8/10 成熟度为参照，但当前成果与最终 9/10 目标仍有明显差距。
+继续把 `LoreWeaver/data/workspaces/20260611-060754-719406` 建设成一款真正成熟的移动端 H5 游戏。此前以 `/Users/lm/pyProj/doc/GameLib/minigame/Path_to_Immortality` 和 `/Users/lm/pyProj/doc/GameLib/minigame/three_kingdoms_brawl` 的约 8/10 成熟度为参照，但当前成果与最终 9/10 目标仍有明显差距。
 
 要求先进行深入、批判性的差距复核，再输出可逐步落地、可验证、可持续执行的任务计划，并继续实现直至目标完成。遇到普通产品、技术、架构和实现取舍时由 Agent 自主决策；只有涉及不可逆存档迁移、公开 IP 方向、付费或受限资产授权、外部账号/密钥、发布策略等确实需要人类参与的事项才提出协作请求。
 

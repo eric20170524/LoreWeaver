@@ -90,8 +90,7 @@ def get_procedural_preset(theme: str) -> dict:
                 "unlockSource": "initial",
                 "unlockCondition": "创建项目时自动获得",
                 "gameplayTags": ["starter", "output"],
-                "runtimeSkillIds": ["starter_projectile", "tap_focus", "collect_magnet"],
-                "affectedNodeIds": [1, 2, 3, 4]
+                "runtimeSkillIds": ["starter_projectile", "tap_focus", "collect_magnet"]
             },
             {
                 "id": "guard_art",
@@ -100,8 +99,7 @@ def get_procedural_preset(theme: str) -> dict:
                 "unlockSource": "mainline",
                 "unlockCondition": f"消耗 {theme}残屑 在主干能力系统中参悟",
                 "gameplayTags": ["defense", "recovery", "survival"],
-                "runtimeSkillIds": ["shield_refresh", "passive_heal", "defense_aura"],
-                "affectedNodeIds": [3, 4, 5, 6, 7, 8, 9]
+                "runtimeSkillIds": ["shield_refresh", "passive_heal", "defense_aura"]
             },
             {
                 "id": "breakthrough_art",
@@ -110,8 +108,7 @@ def get_procedural_preset(theme: str) -> dict:
                 "unlockSource": "node_reward",
                 "unlockCondition": "中后期节点首通奖励",
                 "gameplayTags": ["burst", "boss", "ultimate"],
-                "runtimeSkillIds": ["burst_clear", "boss_break", "ultimate_form"],
-                "affectedNodeIds": [7, 8, 9, 10, 11, 12]
+                "runtimeSkillIds": ["burst_clear", "boss_break", "ultimate_form"]
             }
         ],
         "nodes": [

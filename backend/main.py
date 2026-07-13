@@ -542,9 +542,7 @@ async def run_async_compilation(job_id: str, final_gdd: dict, db_session_maker):
         await asyncio.sleep(1.5)
 
         # Write merged manifest to physically loaded directory
-        file_path = os.path.join(get_ws_path(job.workspace_id), "manifest.json")
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(final_gdd, f, ensure_ascii=False, indent=2)
+        save_split_manifest(job.workspace_id, final_gdd)
 
         job.status = "completed"
         job.progress = "🎉 [Master_Reflow] 管线完美落地！配置清单、脚手架、代码工厂、ASMR 声相滤波已完全编译部署至工作沙盒中。"
@@ -734,8 +732,81 @@ def api_get_workspace(ws_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Workspace not found")
     return {"success": True, "data": workspace}
 
+def load_assembled_manifest(ws_id: str) -> dict:
+    ws_path = resolve_existing_ws_path(ws_id)
+    manifest_path = os.path.join(ws_path, "manifest.json")
+    if not os.path.exists(manifest_path):
+        raise HTTPException(status_code=404, detail="manifest.json not found")
+        
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to parse manifest: {exc}")
+        
+    nodes_dir = os.path.join(ws_path, "loreweaver", "nodes")
+    if os.path.isdir(nodes_dir):
+        node_files = sorted([f for f in os.listdir(nodes_dir) if f.endswith(".json")])
+        loaded_nodes = []
+        for nf in node_files:
+            try:
+                with open(os.path.join(nodes_dir, nf), "r", encoding="utf-8") as f:
+                    loaded_nodes.append(json.load(f))
+            except:
+                pass
+        if loaded_nodes:
+            loaded_nodes.sort(key=lambda x: x.get("id", 0))
+            manifest["nodes"] = loaded_nodes
+
+    catalogs_dir = os.path.join(ws_path, "loreweaver", "catalogs")
+    if os.path.isdir(catalogs_dir):
+        for cat_file in os.listdir(catalogs_dir):
+            if cat_file.endswith(".json"):
+                key = cat_file[:-5]
+                try:
+                    with open(os.path.join(catalogs_dir, cat_file), "r", encoding="utf-8") as f:
+                        manifest[key] = json.load(f)
+                except:
+                    pass
+                    
+    return manifest
+
+def save_split_manifest(ws_id: str, manifest: dict):
+    ws_path = resolve_existing_ws_path(ws_id)
+    manifest_path = os.path.join(ws_path, "manifest.json")
+    
+    nodes = manifest.pop("nodes", None)
+    if nodes is not None:
+        nodes_dir = os.path.join(ws_path, "loreweaver", "nodes")
+        os.makedirs(nodes_dir, exist_ok=True)
+        for node in nodes:
+            node_id = node.get("id", 0)
+            prefix = f"node-{node_id:02d}"
+            existing_files = [f for f in os.listdir(nodes_dir) if f.startswith(prefix) and f.endswith(".json")]
+            filename = existing_files[0] if existing_files else f"{prefix}.json"
+            with open(os.path.join(nodes_dir, filename), "w", encoding="utf-8") as f:
+                json.dump(node, f, ensure_ascii=False, indent=2)
+
+    catalogs_dir = os.path.join(ws_path, "loreweaver", "catalogs")
+    catalog_keys = ["abilityCatalog", "passiveSkillCatalog", "characterDesignCatalog", "enemyDesignCatalog", "skillEffectCatalog", "audioCueCatalog"]
+    for key in catalog_keys:
+        if key in manifest:
+            data = manifest.pop(key)
+            os.makedirs(catalogs_dir, exist_ok=True)
+            with open(os.path.join(catalogs_dir, f"{key}.json"), "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+                
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+
 @app.get("/api/workspaces/{ws_id}/files/{filename}")
 def api_get_workspace_file(ws_id: str, filename: str):
+    if filename == "manifest.json":
+        try:
+            return {"success": True, "data": load_assembled_manifest(ws_id)}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+            
     file_path = os.path.join(get_ws_path(ws_id), filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
@@ -758,26 +829,23 @@ def api_get_workspace_asset_file(ws_id: str, file_path: str):
 
 @app.post("/api/workspaces/{ws_id}/files/{filename}")
 def api_save_workspace_file(ws_id: str, filename: str, payload: dict):
-    file_path = os.path.join(get_ws_path(ws_id), filename)
     try:
         content_data = payload.get("data", payload)
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(content_data, f, ensure_ascii=False, indent=2)
+        if filename == "manifest.json":
+            save_split_manifest(ws_id, content_data)
+        else:
+            file_path = os.path.join(get_ws_path(ws_id), filename)
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(content_data, f, ensure_ascii=False, indent=2)
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/workspaces/{ws_id}/export")
 def api_export_workspace(ws_id: str):
-    ws_path = resolve_existing_ws_path(ws_id)
-    manifest_path = os.path.join(ws_path, "manifest.json")
-    if not os.path.exists(manifest_path):
-        raise HTTPException(status_code=404, detail="manifest.json not found")
-
     try:
-        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
-            manifest = json.load(manifest_file)
-    except json.JSONDecodeError as exc:
+        manifest = load_assembled_manifest(ws_id)
+    except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Invalid manifest.json: {exc}") from exc
 
     zip_buffer = io.BytesIO()

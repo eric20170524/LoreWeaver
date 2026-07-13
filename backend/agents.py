@@ -56,8 +56,7 @@ CRITICAL SCHEMA REQUIREMENTS (Return EXACTLY this JSON structure, no markdown ou
       "unlockSource": "Must be one of: initial, mainline, node_reward, hybrid",
       "unlockCondition": "Readable requirement or first-clear source",
       "gameplayTags": ["output", "defense", "mobility", "control", "burst"],
-      "runtimeSkillIds": ["stable runtime skill ids or planned ids"],
-      "affectedNodeIds": [1, 2, 3]
+      "runtimeSkillIds": ["stable runtime skill ids or planned ids"]
     }}
   ],
   "nodes": [
