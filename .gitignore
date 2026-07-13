@@ -7,11 +7,20 @@ coverage/
 .env*
 !.env.example
 
-# Runtime database and state
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+venv/
+.venv/
+
+# LoreWeaver Local Runtime State & Database
 data/loreweaver.db
 data/workspaces/*/reports/
 data/workspaces/*/tests/
 data/workspaces/*/scripts/
+data/workspaces/*/dist/
+data/workspaces/*/node_modules/
 **/source/
 docs_collab/screenshots/
 package-lock.json
