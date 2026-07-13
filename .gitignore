@@ -6,3 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Runtime database and state
+data/loreweaver.db
+data/workspaces/*/reports/
+data/workspaces/*/tests/
+data/workspaces/*/scripts/
+**/source/
+docs_collab/screenshots/
+package-lock.json
