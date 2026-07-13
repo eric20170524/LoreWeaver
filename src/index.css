@@ -3,10 +3,29 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --slate-950: #020617;
+  --slate-900: #0f172a;
+  --slate-800: #1e293b;
+  --slate-700: #334155;
+}
+
+.dark {
+  --slate-950: #0f172a;
+  --slate-900: #1e293b;
+  --slate-800: #334155;
+  --slate-700: #475569;
+}
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-slate-950: var(--slate-950);
+  --color-slate-900: var(--slate-900);
+  --color-slate-800: var(--slate-800);
+  --color-slate-700: var(--slate-700);
 }
 
 /* Custom glowing effects */
@@ -29,7 +48,7 @@ body {
 }
 
 body.dark {
-  background-color: #030712;
+  background-color: var(--slate-950);
   color: #f1f5f9;
 }
 

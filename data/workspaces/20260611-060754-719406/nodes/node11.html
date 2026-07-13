@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>节点十一：裂隙炼成 · 战备合成 - 星渊试炼</title>
+<meta name="theme-color" content="#0d0f13" />
+<style>
+  :root{
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --ink:#f0ede6;--gold:#f4d77e;--jade:#6fd8c4;--muted:#a8b4c2;
+    --ok:#2dd4aa;--danger:#ff5757;--warning:#ffb347;
+    --bg1:#0a0d15;--bg2:#141a26;--bg3:#1e2533;
+    --card:#1a2130dd;--card-hover:#212938dd;
+    --shadow:0 12px 40px rgba(0,0,0,.35);--shadow-hover:0 16px 50px rgba(0,0,0,.45);
+    --glow:0 0 20px rgba(111,216,196,.3);--gold-glow:0 0 15px rgba(244,215,126,.25);
+  }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1400px 900px at 65% -5%, rgba(116,180,220,.12), transparent 70%),
+      radial-gradient(800px 600px at 35% 100%, rgba(244,215,126,.08), transparent 60%),
+      linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+    color:var(--ink);font-family:'LXGW WenKai','Kaiti SC','STKaiti','Songti SC','Noto Serif SC',serif;
+  }
+  .app {
+    display: flex; flex-direction: column; min-height: 100vh;
+    max-width: 1024px; margin: 0 auto;
+    padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
+    box-sizing: border-box; gap: .6rem;
+  }
+  header, .main-container, .footer { width: 100%; max-width: 100%; box-sizing: border-box; }
+  header{
+    display:flex;justify-content:space-between;align-items:center;padding:.8rem 1rem;
+    background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02));
+    backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06);
+    border-radius: 0 0 16px 16px; margin-bottom: .4rem;
+  }
+  header h1{font-size:1.1rem;margin:0;text-shadow:var(--gold-glow)}
+  .main-container{
+    flex-grow:1;
+    padding:.8rem 1rem;
+    display:grid;grid-template-columns:1fr 340px; gap:1rem;
+  }
+  @media (max-width: 1024px){
+    .main-container{padding: .4rem .5rem; gap: .6rem;}
+    .main-container{grid-template-columns:1fr}
+    header, .main-container, .footer { width: 100%; max-width: 100%; box-sizing: border-box; }
+  }
+  .panel{
+    background:var(--card);border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;box-shadow:var(--shadow);padding:1rem;
+    transition:all 0.3s ease;backdrop-filter:blur(8px);
+  }
+  .panel:hover{box-shadow:var(--shadow-hover)}
+  .hud{display:flex;gap:.6rem;flex-wrap:wrap}
+  .pill{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+    padding:.4rem .7rem;border-radius:999px;font-size:.85rem;
+  }
+  .workbench{
+    display:grid;grid-template-columns: 1fr 300px; gap:1rem;
+  }
+  @media (max-width: 1024px){
+    .main-container{padding: .4rem .5rem; gap: .6rem;}
+    .workbench{grid-template-columns:1fr}
+  }
+  .furnace-wrap{
+    position:relative;min-height:420px;
+    background:linear-gradient(135deg,#141a21,#0e1217);
+    border-radius:14px;border:2px dashed rgba(111,216,196,.35);
+    box-shadow:inset 0 0 30px rgba(111,216,196,.15), var(--shadow);
+    overflow:hidden;
+    transition: box-shadow .2s ease, border-color .2s ease;
+  }
+  canvas#stage{width:100%;height:420px;display:block}
+  .ingredients{
+    display:flex;flex-wrap:wrap;gap:.6rem;align-content:flex-start;
+  }
+  .ing{
+    user-select:none;
+    display:flex;align-items:center;gap:.5rem;
+    background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.15);border-radius:12px;
+    padding:.5rem .6rem;min-width:120px;
+    cursor:pointer; /* [OPTIMIZED] Changed from 'grab' to 'pointer' */
+    box-shadow:var(--shadow);
+    transition:all 0.2s ease;
+  }
+  .ing:hover { /* [OPTIMIZED] Added hover effect for better affordance */
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--glow), var(--shadow-hover);
+  }
+  .ing:active{transform:scale(.98)} /* Retained for click feedback */
+  .ing.correct-next{
+    border-color:rgba(45,212,170,.6);
+    box-shadow:0 0 15px rgba(45,212,170,.3), var(--shadow);
+  }
+  .ing .dot{width:14px;height:14px;border-radius:50%}
+  .ing b{color:var(--gold)}
+  .controls{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem}
+  .btn{
+    appearance:none;border:none;
+    background:linear-gradient(135deg,#2d3a4a,#1f2a37);
+    color:var(--ink);border-radius:12px;padding:.7rem .9rem;font-size:.95rem;
+    border:1px solid rgba(255,255,255,.12);cursor:pointer;
+    transition:all 0.2s ease;font-family:inherit;
+    box-shadow:var(--shadow);
+  }
+  .btn:hover{
+    transform:translateY(-1px);box-shadow:var(--shadow-hover);
+    background:linear-gradient(135deg,#34415a,#243242);
+  }
+  .btn.ok{
+    background:linear-gradient(135deg,#2a4a35,#1d3526);
+    border-color:rgba(111,216,196,.3);
+  }
+  .btn.ok:hover{
+    background:linear-gradient(135deg,#31543d,#213c2a);
+    box-shadow:var(--glow), var(--shadow-hover);
+  }
+  .btn.warn{
+    background:linear-gradient(135deg,#4a2a2a,#3d1f1f);
+    border-color:rgba(255,87,87,.3);
+  }
+  .btn.warn:hover{
+    background:linear-gradient(135deg,#543131,#452424);
+    box-shadow:0 0 20px rgba(255,87,87,.3), var(--shadow-hover);
+  }
+  .bar{
+    height:12px;background:rgba(14,20,26,.6);border-radius:999px;
+    border:1px solid rgba(255,255,255,.1);overflow:hidden;margin:.5rem 0;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,.3);
+  }
+  .bar span{
+    display:block;height:100%;
+    background:linear-gradient(90deg,#6fd8c4,#4a9eff,#74d8c4);
+    width:0%;transition:width 0.3s ease;
+    box-shadow:0 0 10px rgba(111,216,196,.5);
+  }
+  .log{
+    height:150px;overflow:auto;margin-top:.6rem;padding:.6rem;
+    background:rgba(0,0,0,.3);border-radius:12px;
+    border:1px solid rgba(255,255,255,.1);font-size:.9rem;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,.3);
+  }
+  .aside-note p{margin:.35rem 0;color:var(--muted)}
+  .footer{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:.6rem 1rem;border-top:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));
+    border-radius: 16px 16px 0 0; margin-top: .4rem;
+  }
+  .current-step{
+    background:rgba(45,212,170,.1);
+    border:1px solid rgba(45,212,170,.3);
+    border-radius:8px;
+    padding:.5rem;
+    margin-bottom:.5rem;
+    text-align:center;
+    color:var(--jade);
+    font-weight:bold;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>节点：66 岁 · 冲击结丹准备（合成炼丹）</h1>
+    <div class="hud">
+      <div class="pill">传入境界：<b id="realm">-</b></div>
+      <div class="pill">灵气：<b id="qi">0</b></div>
+      <div class="pill">修为：<b id="xp">0</b></div>
+      <div class="pill" style="color:var(--jade)">目标：按顺序炼成丹药 · 避免爆炉</div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <section class="panel">
+      <div class="workbench">
+        <div class="furnace-wrap" id="dropZone">
+          <canvas id="stage"></canvas>
+        </div>
+        <div>
+          <div class="current-step" id="currentStep">
+            当前步骤：投入「玄玉芝」
+          </div>
+          
+          <h3 style="color:var(--gold);text-shadow:var(--gold-glow);margin:.2rem 0 .4rem">炼丹材料</h3>
+          <div class="ingredients" id="ingredients"></div>
+
+          <div style="margin-top:.8rem;color:var(--gold);font-weight:bold">炉温与进度</div>
+          <div class="bar"><span id="heatBar"></span></div>
+          <div class="bar"><span id="progressBar"></span></div>
+
+          <div class="controls">
+            <button class="btn ok" id="btnHint">提示/引导</button>
+            <button class="btn" id="btnRetry" style="display:none">重新炼制</button>
+            <button class="btn warn" id="btnExit">放弃节点返回</button>
+          </div>
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel aside-note">
+      <h3 style="color:var(--gold);text-shadow:var(--gold-glow)">节点说明</h3>
+      <p>为冲击结丹做准备，需先炼制大量丹药。按指示顺序将灵草<strong style="color:var(--jade)">点击</strong>投入炼丹炉，顺序错误会引发爆炉，需重新炼制。</p>
+      <ul>
+        <li><strong style="color:var(--jade)">点击</strong>右侧灵草即可投料。</li>
+        <li>完成一轮配方后自动凝丹，可获得"丹药堆"。</li>
+        <li>爆炉会清空进度，但可立即"重新炼制"。</li>
+      </ul>
+      <h4 style="color:var(--jade)">示例奖励（成功）</h4>
+      <ul>
+        <li style="color:var(--ok)">灵气 +500</li>
+        <li style="color:var(--ok)">修为 +800</li>
+        <li style="color:var(--warning)">获得：大量丹药（用于结丹准备）</li>
+        <li style="color:var(--jade)">解锁 126 岁节点</li>
+      </ul>
+      <div style="margin-top:1rem;padding:.8rem;background:rgba(0,0,0,.2);border-radius:12px;border:1px solid rgba(255,255,255,.1)">
+        <h5 style="color:var(--gold);margin-top:0">操作提示</h5>
+        <p style="font-size:.85rem;color:var(--muted);margin:0">
+          • <strong style="color:var(--jade)">点击</strong>正确的材料即可完成投料。<br>
+          • 每步成功投料将短暂升温，请控制节奏，避免连续误投导致爆炉。<br>
+          • 如爆炉，请点击"重新炼制"。完成后会自动回传奖励并关闭窗口。
+        </p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="footer">
+    <div>六十有六：闭关炼丹，夯实结丹之基。</div>
+    <div><small style="color:var(--muted)">完成后自动向主界面发送奖励 · ASMR音效版</small></div>
+  </div>
+</div>
+
+<script>
+// == 优化说明 (Optimization Notes) ==
+// 原有功能: 通过拖拽(Drag & Drop)方式将材料投放到炼丹炉中。此方式在移动端体验不佳。
+// 优化方案:
+// 1. 移除拖拽功能：删除了 DragManager 类和相关的拖拽事件监听器及CSS。
+// 2. 改为点击投放：为材料列表(#ingredients)添加了点击事件监听器。现在用户只需点击材料即可投放。
+// 3. 简化操作：点击比拖拽更直接，减少了误操作（如拖拽到错误位置）。
+// 4. 兼容性提升：点击操作在 PC 和移动端都有良好的原生支持。
+// 5. UI调整：更新了CSS，将材料的鼠标指针改为 pointer，并添加了更清晰的 hover 效果，以提示其可点击。
+// ===================================
+
+// 音效管理器
+class SoundManager {
+  constructor() {
+    this.audioContext = null;
+    this.masterGain = null;
+    this.volume = 0.7;
+    this.initialize();
+  }
+
+  async initialize() {
+    try {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterGain = this.audioContext.createGain();
+      this.masterGain.connect(this.audioContext.destination);
+      this.masterGain.gain.value = this.volume;
+    } catch (error) {
+      console.warn('音效系统初始化失败:', error);
+    }
+  }
+
+  createTone(frequency, duration, type = 'sine', volume = 0.3) {
+    if (!this.audioContext) return;
+    
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(this.masterGain);
+    
+    oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+    oscillator.type = type;
+    
+    gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+    
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + duration);
+  }
+
+  playClick() { this.createTone(420, 0.06, 'sine', 0.22); }
+  playHover() { this.createTone(300, 0.04, 'sine', 0.12); }
+  playSuccess() { this.createTone(660, 0.12, 'sine', 0.35); }
+  playPerfect() { this.createTone(880, 0.12, 'sine', 0.45); }
+  playError() { this.createTone(200, 0.16, 'square', 0.22); }
+  playExplosion() { this.createTone(120, 0.6, 'sawtooth', 0.5); }
+  playBrewing() { 
+    [440, 520, 600].forEach((freq, index) => 
+      setTimeout(() => this.createTone(freq, 0.14, 'sine', 0.38), index * 90)
+    ); 
+  }
+  playComplete() { 
+    [523, 659, 784, 1047].forEach((freq, index) => 
+      setTimeout(() => this.createTone(freq, 0.22, 'sine', 0.52), index * 140)
+    ); 
+  }
+}
+
+// 游戏状态管理
+class GameState {
+  constructor() {
+    this.isRunning = true;
+    this.currentStep = 0;
+    this.heat = 20;
+    this.progress = 0;
+    this.recipe = [
+      {id: 'xuan-yu-zhi', name: '玄玉芝', color: '#9fe0ff', desc: '冷引稳炉，平缓火势'},
+      {id: 'chi-huo-guo', name: '赤火果', color: '#ff6b6b', desc: '火性澎湃，助催化'},
+      {id: 'ling-sui-cao', name: '灵髓草', color: '#6fd8c4', desc: '中和凝练，化液成丹'}
+    ];
+    this.extraMaterials = [
+      {id: 'feng-lan-ye', name: '风兰叶', color: '#b4ffda', desc: '芳香清心'},
+      {id: 'xue-yan', name: '雪盐', color: '#f4d77e', desc: '提纯杂质'},
+      {id: 'hei-mu-zhi', name: '黑木脂', color: '#c9b6a8', desc: '粘凝剂'}
+    ];
+  }
+
+  reset() {
+    this.isRunning = true;
+    this.currentStep = 0;
+    this.heat = 20;
+    this.progress = 0;
+  }
+
+  getCurrentRequiredMaterial() {
+    return this.currentStep < this.recipe.length ? this.recipe[this.currentStep] : null;
+  }
+
+  getAllMaterials() {
+    return [...this.recipe, ...this.extraMaterials];
+  }
+
+  isCorrectMaterial(materialId) {
+    const required = this.getCurrentRequiredMaterial();
+    return required && required.id === materialId;
+  }
+
+  processCorrectInput() {
+    const step = this.currentStep;
+    
+    // 调整炉温
+    if (step === 0) this.heat = Math.max(10, this.heat - 10);
+    if (step === 1) this.heat = Math.min(100, this.heat + 25);
+    if (step === 2) this.heat = Math.max(20, this.heat - 5);
+    
+    // 增加进度
+    this.progress += 100 / this.recipe.length;
+    this.currentStep++;
+    
+    return this.currentStep >= this.recipe.length;
+  }
+
+  processIncorrectInput() {
+    this.isRunning = false;
+    this.heat = Math.min(100, this.heat + 30);
+    this.progress = Math.max(0, this.progress - 30);
+  }
+}
+
+// 视觉效果管理
+class VisualEffects {
+  constructor(canvas, context) {
+    this.canvas = canvas;
+    this.ctx = context;
+    this.smokeTime = 0;
+    this.flashAlpha = 0;
+    this.shakeIntensity = 0;
+    this.furnace = { centerX: 0, centerY: 0, radius: 0 };
+    this.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  }
+
+  updateCanvasSize() {
+    this.devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = this.canvas.getBoundingClientRect();
+    this.canvas.width = Math.max(360, Math.floor(rect.width * this.devicePixelRatio));
+    this.canvas.height = 420 * this.devicePixelRatio;
+    this.updateFurnaceGeometry();
+  }
+
+  updateFurnaceGeometry() {
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    this.furnace.centerX = width * 0.5;
+    this.furnace.centerY = height * 0.58;
+    this.furnace.radius = Math.min(width, height) * 0.16;
+  }
+
+  triggerFlash() {
+    this.flashAlpha = 0.6;
+  }
+
+  triggerShake() {
+    this.shakeIntensity = 18;
+  }
+
+  render(gameState) {
+    const width = this.canvas.width;
+    const height = this.canvas.height;
+    
+    this.ctx.clearRect(0, 0, width, height);
+    
+    // 背景渐变
+    const backgroundGradient = this.ctx.createLinearGradient(0, 0, 0, height);
+    backgroundGradient.addColorStop(0, 'hsl(190, 35%, 16%)');
+    backgroundGradient.addColorStop(1, 'hsl(210, 30%, 10%)');
+    this.ctx.fillStyle = backgroundGradient;
+    this.ctx.fillRect(0, 0, width, height);
+
+    // 星点装饰
+    this.renderStars();
+
+    // 法阵底座
+    this.renderMagicCircle(width, height);
+
+    // 震动效果
+    const shakeX = this.shakeIntensity > 0 ? (Math.random() * this.shakeIntensity - this.shakeIntensity / 2) : 0;
+    const shakeY = this.shakeIntensity > 0 ? (Math.random() * this.shakeIntensity - this.shakeIntensity / 2) : 0;
+
+    this.ctx.save();
+    this.ctx.translate(shakeX, shakeY);
+
+    // 炉体
+    this.renderFurnaceBody(gameState);
+
+    // 炉内火焰
+    this.renderFlame(gameState);
+
+    // 烟雾
+    this.renderSmoke();
+
+    // 外圈光环
+    this.renderAura();
+
+    // 闪光效果
+    this.renderFlash();
+
+    // 步骤提示
+    this.renderStepHint(gameState);
+
+    this.ctx.restore();
+
+    // 更新动画状态
+    this.updateAnimationState();
+  }
+
+  renderStars() {
+    const currentTime = performance.now();
+    for (let i = 0; i < 50; i++) {
+      const x = (i * 97 + currentTime / 18) % this.canvas.width;
+      const y = (i * 53 + currentTime / 23) % this.canvas.height;
+      this.ctx.fillStyle = 'rgba(180,255,236,.10)';
+      this.ctx.fillRect(x, y, 2, 2);
+    }
+  }
+
+  renderMagicCircle(width, height) {
+    const baseY = height * 0.72;
+    this.ctx.save();
+    this.ctx.translate(width * 0.5, baseY);
+
+    const plateRadius = Math.min(width, height) * 0.28;
+    const radialGradient = this.ctx.createRadialGradient(0, 0, plateRadius * 0.2, 0, 0, plateRadius);
+    radialGradient.addColorStop(0, 'rgba(111,216,196,0.25)');
+    radialGradient.addColorStop(0.6, 'rgba(111,216,196,0.12)');
+    radialGradient.addColorStop(1, 'transparent');
+    
+    this.ctx.fillStyle = radialGradient;
+    this.ctx.beginPath();
+    this.ctx.arc(0, 0, plateRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.strokeStyle = 'rgba(244,215,126,0.35)';
+    this.ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, plateRadius * 0.3 + i * plateRadius * 0.12, 0, Math.PI * 2);
+      this.ctx.stroke();
+    }
+    
+    this.ctx.restore();
+  }
+
+  renderFurnaceBody(gameState) {
+    // 炉体底座
+    this.ctx.fillStyle = 'rgba(40,52,66,0.9)';
+    if (this.ctx.roundRect) {
+      this.ctx.beginPath();
+      this.ctx.roundRect(
+        this.furnace.centerX - this.furnace.radius * 1.6,
+        this.furnace.centerY + this.furnace.radius * 0.9,
+        this.furnace.radius * 3.2,
+        this.furnace.radius * 0.9,
+        10
+      );
+      this.ctx.fill();
+    } else {
+      this.ctx.fillRect(
+        this.furnace.centerX - this.furnace.radius * 1.6,
+        this.furnace.centerY + this.furnace.radius * 0.9,
+        this.furnace.radius * 3.2,
+        this.furnace.radius * 0.9
+      );
+    }
+
+    // 炉体主体
+    const bodyRadius = this.furnace.radius * 1.05;
+    const temperatureGlow = Math.min(1, gameState.heat / 100);
+    const bodyGradient = this.ctx.createRadialGradient(
+      this.furnace.centerX, this.furnace.centerY, bodyRadius * 0.1,
+      this.furnace.centerX, this.furnace.centerY, bodyRadius * 1.2
+    );
+    bodyGradient.addColorStop(0, `rgba(255,200,140,${0.18 + 0.45 * temperatureGlow})`);
+    bodyGradient.addColorStop(1, 'rgba(60,80,100,0.95)');
+    
+    this.ctx.fillStyle = bodyGradient;
+    this.ctx.beginPath();
+    this.ctx.arc(this.furnace.centerX, this.furnace.centerY, bodyRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+  }
+
+  renderFlame(gameState) {
+    this.ctx.save();
+    this.ctx.beginPath();
+    this.ctx.arc(this.furnace.centerX, this.furnace.centerY, this.furnace.radius, 0, Math.PI * 2);
+    this.ctx.clip();
+
+    const temperatureGlow = Math.min(1, gameState.heat / 100);
+    const fireGradient = this.ctx.createRadialGradient(
+      this.furnace.centerX, this.furnace.centerY, 2,
+      this.furnace.centerX, this.furnace.centerY, this.furnace.radius
+    );
+    fireGradient.addColorStop(0, `rgba(255,240,200,${0.20 + temperatureGlow * 0.35})`);
+    fireGradient.addColorStop(0.6, `rgba(255,150,80,${0.18 + temperatureGlow * 0.3})`);
+    fireGradient.addColorStop(1, 'rgba(0,0,0,0.85)');
+    
+    this.ctx.fillStyle = fireGradient;
+    this.ctx.fillRect(
+      this.furnace.centerX - this.furnace.radius,
+      this.furnace.centerY - this.furnace.radius,
+      this.furnace.radius * 2,
+      this.furnace.radius * 2
+    );
+
+    // 火焰粒子
+    const time = performance.now() / 1000;
+    for (let i = 0; i < 6; i++) {
+      const angle = time * 2 + i;
+      const intensity = 0.2 + 0.25 * Math.sin(angle * 1.7 + i);
+      const radius = this.furnace.radius * Math.max(0.05, intensity);
+      
+      this.ctx.fillStyle = `rgba(255,${160 + i * 8},${90 + i * 10},${0.12 + 0.08 * Math.sin(angle)})`;
+      this.ctx.beginPath();
+      this.ctx.ellipse(
+        this.furnace.centerX + Math.cos(angle) * radius * 0.4,
+        this.furnace.centerY + Math.sin(angle) * radius * 0.25,
+        radius * 0.35,
+        radius * 0.8,
+        angle,
+        0,
+        Math.PI * 2
+      );
+      this.ctx.fill();
+    }
+
+    this.ctx.restore();
+  }
+
+  renderSmoke() {
+    this.smokeTime += 0.016;
+    for (let i = 0; i < 12; i++) {
+      const particleY = this.furnace.centerY - this.furnace.radius * 0.4 - 
+                      (this.smokeTime * 40 + i * 18) % (this.furnace.radius * 1.2);
+      const particleX = this.furnace.centerX + Math.sin((this.smokeTime + i) * 1.3) * 20;
+      
+      this.ctx.fillStyle = 'rgba(200,220,220,0.06)';
+      this.ctx.beginPath();
+      this.ctx.arc(particleX, particleY, 10 + (i % 4) * 2, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+  }
+
+  renderAura() {
+    const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 400);
+    this.ctx.strokeStyle = `rgba(111,216,196,${0.4 + 0.3 * pulse})`;
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    this.ctx.arc(this.furnace.centerX, this.furnace.centerY, this.furnace.radius * 1.15, 0, Math.PI * 2);
+    this.ctx.stroke();
+  }
+
+  renderFlash() {
+    if (this.flashAlpha > 0) {
+      this.ctx.fillStyle = `rgba(244,215,126,${this.flashAlpha})`;
+      this.ctx.beginPath();
+      this.ctx.arc(this.furnace.centerX, this.furnace.centerY, this.furnace.radius * 1.1, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+  }
+
+  renderStepHint(gameState) {
+    this.ctx.fillStyle = '#f4d77e';
+    this.ctx.font = 'bold 18px "Noto Serif SC", serif';
+    this.ctx.shadowColor = 'rgba(244,215,126,.45)';
+    this.ctx.shadowBlur = 8;
+    
+    const requiredMaterial = gameState.getCurrentRequiredMaterial();
+    const hintText = gameState.isRunning && requiredMaterial ? 
+      `下一步：投入「${requiredMaterial.name}」` :
+      gameState.currentStep >= gameState.recipe.length ? '正在凝丹...' : '炼制已停止';
+    
+    this.ctx.fillText(hintText, 20, 30);
+    this.ctx.shadowBlur = 0;
+  }
+
+  updateAnimationState() {
+    if (this.flashAlpha > 0) {
+      this.flashAlpha = Math.max(0, this.flashAlpha - 0.04);
+    }
+    if (this.shakeIntensity > 0) {
+      this.shakeIntensity = Math.max(0, this.shakeIntensity - 1);
+    }
+  }
+}
+
+// [REMOVED] The DragManager class has been removed as it's no longer needed.
+
+// 用户界面管理器
+class UIManager {
+  constructor(gameState, soundManager) {
+    this.gameState = gameState;
+    this.soundManager = soundManager;
+    this.elements = {
+      currentStep: document.getElementById('currentStep'),
+      ingredients: document.getElementById('ingredients'),
+      heatBar: document.getElementById('heatBar'),
+      progressBar: document.getElementById('progressBar'),
+      log: document.getElementById('log'),
+      btnHint: document.getElementById('btnHint'),
+      btnRetry: document.getElementById('btnRetry'),
+      btnExit: document.getElementById('btnExit')
+    };
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    // 按钮音效
+    document.querySelectorAll('button').forEach(button => {
+      button.addEventListener('mouseenter', () => this.soundManager.playHover());
+      button.addEventListener('click', () => this.soundManager.playClick());
+    });
+
+    // 按钮功能
+    this.elements.btnHint.addEventListener('click', () => this.showHint());
+    this.elements.btnRetry.addEventListener('click', () => this.onRetry());
+    this.elements.btnExit.addEventListener('click', () => this.onExit());
+  }
+
+  buildMaterialsList() {
+    this.elements.ingredients.innerHTML = '';
+    const allMaterials = this.gameState.getAllMaterials().sort(() => Math.random() - 0.5);
+    
+    allMaterials.forEach(material => {
+      const element = document.createElement('div');
+      element.className = 'ing';
+      // element.draggable = true; // [OPTIMIZED] Removed draggable attribute
+      element.dataset.id = material.id;
+      element.innerHTML = `
+        <span class="dot" style="background:${material.color}"></span>
+        <b>${material.name}</b>
+        <small style="color:var(--muted)">${material.desc || ''}</small>
+      `;
+      this.elements.ingredients.appendChild(element);
+    });
+    
+    this.updateMaterialHighlight();
+  }
+
+  updateMaterialHighlight() {
+    document.querySelectorAll('.ing').forEach(element => {
+      element.classList.remove('correct-next');
+      const requiredMaterial = this.gameState.getCurrentRequiredMaterial();
+      if (this.gameState.isRunning && requiredMaterial && element.dataset.id === requiredMaterial.id) {
+        element.classList.add('correct-next');
+      }
+    });
+  }
+
+  updateCurrentStep() {
+    const requiredMaterial = this.gameState.getCurrentRequiredMaterial();
+    
+    if (!this.gameState.isRunning) {
+      this.elements.currentStep.textContent = '炼制已停止';
+      this.elements.currentStep.style.background = 'rgba(255,87,87,.1)';
+      this.elements.currentStep.style.borderColor = 'rgba(255,87,87,.3)';
+    } else if (!requiredMaterial) {
+      this.elements.currentStep.textContent = '正在凝丹中...';
+      this.elements.currentStep.style.background = 'rgba(244,215,126,.1)';
+      this.elements.currentStep.style.borderColor = 'rgba(244,215,126,.3)';
+    } else {
+      this.elements.currentStep.textContent = `当前步骤：投入「${requiredMaterial.name}」`;
+      this.elements.currentStep.style.background = 'rgba(45,212,170,.1)';
+      this.elements.currentStep.style.borderColor = 'rgba(45,212,170,.3)';
+    }
+  }
+
+  updateProgressBars() {
+    this.elements.heatBar.style.width = Math.max(0, Math.min(100, Math.floor(this.gameState.heat))) + '%';
+    this.elements.progressBar.style.width = Math.max(0, Math.min(100, Math.floor(this.gameState.progress))) + '%';
+  }
+
+  addLogMessage(message) {
+    const logEntry = document.createElement('div');
+    logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    
+    if (/成功|凝丹|获得|成丹/.test(message)) {
+      logEntry.style.color = '#6fd8c4';
+    } else if (/爆炉|失败|错|无效/.test(message)) {
+      logEntry.style.color = '#ff5757';
+    } else {
+      logEntry.style.color = '#f0ede6';
+    }
+    
+    this.elements.log.appendChild(logEntry);
+    this.elements.log.scrollTop = this.elements.log.scrollHeight;
+  }
+
+  showRetryButton() {
+    this.elements.btnRetry.style.display = '';
+  }
+
+  hideRetryButton() {
+    this.elements.btnRetry.style.display = 'none';
+  }
+
+  showHint() {
+    const recipeNames = this.gameState.recipe.map(material => material.name).join(' → ');
+    const requiredMaterial = this.gameState.getCurrentRequiredMaterial();
+    
+    if (this.gameState.isRunning && requiredMaterial) {
+      this.addLogMessage(`提示：正确顺序为：${recipeNames}。当前需要投入「${requiredMaterial.name}」。`);
+    } else {
+      this.addLogMessage(`提示：正确顺序为：${recipeNames}。点击材料即可投料。`);
+    }
+  }
+
+  onRetry() {
+    if (typeof window.gameManager !== 'undefined') {
+      window.gameManager.resetGame();
+    }
+  }
+
+  onExit() {
+    if (typeof window.gameManager !== 'undefined') {
+      window.gameManager.exitGame();
+    }
+  }
+}
+
+// 主游戏管理器
+class GameManager {
+  constructor() {
+    this.soundManager = new SoundManager();
+    this.gameState = new GameState();
+    this.canvas = document.getElementById('stage');
+    this.context = this.canvas.getContext('2d');
+    this.visualEffects = new VisualEffects(this.canvas, this.context);
+    this.uiManager = new UIManager(this.gameState, this.soundManager);
+    this.animationId = null;
+    this.lastFrameTime = performance.now();
+    
+    this.initialize();
+  }
+
+  initialize() {
+    this.loadPlayerData();
+    this.setupWindowResize();
+    this.setupAudioActivation();
+    this.setupInputHandlers(); // [OPTIMIZED] Added handler for click input
+    this.resetGame();
+    this.startGameLoop();
+  }
+
+  // [OPTIMIZED] New method to handle click inputs
+  setupInputHandlers() {
+    const ingredientsContainer = document.getElementById('ingredients');
+
+    ingredientsContainer.addEventListener('click', (event) => {
+      const target = event.target.closest('.ing');
+      if (!target) return;
+
+      // 确保首次交互时音频已激活（移动端尤为关键）
+      if (this.soundManager.audioContext && this.soundManager.audioContext.state === 'suspended') {
+        this.soundManager.audioContext.resume().catch(() => {});
+      }
+
+      const materialId = target.dataset.id;
+      this.handleMaterialDrop(materialId);
+    });
+  }
+
+  loadPlayerData() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const dataParam = urlParams.get('data');
+    
+    let playerData = {};
+    if (dataParam) {
+      try {
+        const decodedData = decodeURIComponent(escape(atob(dataParam)));
+        playerData = JSON.parse(decodedData);
+      } catch (error) {
+        console.error('解析传入数据失败', error);
+      }
+    }
+    
+    document.getElementById('realm').textContent = playerData.realm || '-';
+    document.getElementById('qi').textContent = Math.floor(playerData.qi || 0);
+    document.getElementById('xp').textContent = Math.floor(playerData.xp || 0);
+  }
+
+  setupWindowResize() {
+    const handleResize = () => {
+      this.visualEffects.updateCanvasSize();
+      this.render();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    this.visualEffects.updateCanvasSize();
+  }
+
+  setupAudioActivation() {
+    const activateAudio = () => {
+      if (this.soundManager.audioContext && this.soundManager.audioContext.state !== 'running') {
+        this.soundManager.audioContext.resume().catch(() => {});
+      }
+      document.removeEventListener('click', activateAudio);
+      document.removeEventListener('keydown', activateAudio);
+      document.removeEventListener('pointerdown', activateAudio);
+      document.removeEventListener('touchstart', activateAudio);
+    };
+
+    document.addEventListener('click', activateAudio);
+    document.addEventListener('keydown', activateAudio);
+    // 增加移动端/桌面统一的指针与触摸激活
+    document.addEventListener('pointerdown', activateAudio, { passive: true });
+    document.addEventListener('touchstart', activateAudio, { passive: true });
+  }
+
+  handleMaterialDrop(materialId) {
+    if (!this.gameState.isRunning) {
+      this.uiManager.addLogMessage('炼制已停止，无法投入材料。');
+      this.soundManager.playError();
+      return;
+    }
+
+    const requiredMaterial = this.gameState.getCurrentRequiredMaterial();
+    if (!requiredMaterial) {
+      this.uiManager.addLogMessage('当前步骤已完成，无需投入更多材料。');
+      this.soundManager.playError();
+      return;
+    }
+
+    const droppedMaterial = this.gameState.getAllMaterials().find(material => material.id === materialId);
+    const droppedName = droppedMaterial ? droppedMaterial.name : '未知材料';
+
+    if (this.gameState.isCorrectMaterial(materialId)) {
+      this.handleCorrectInput(requiredMaterial);
+    } else {
+      this.handleIncorrectInput(requiredMaterial.name, droppedName);
+    }
+  }
+
+  handleCorrectInput(material) {
+    this.soundManager.playSuccess();
+    this.visualEffects.triggerFlash();
+    
+    const isComplete = this.gameState.processCorrectInput();
+    
+    this.uiManager.addLogMessage(`投放成功：${material.name} - ${material.desc}`);
+    this.uiManager.updateCurrentStep();
+    this.uiManager.updateMaterialHighlight();
+    this.uiManager.updateProgressBars();
+    
+    if (isComplete) {
+      this.soundManager.playBrewing();
+      setTimeout(() => this.completeGame(), 700);
+    }
+  }
+
+  handleIncorrectInput(expectedName, actualName) {
+    this.soundManager.playError();
+    this.uiManager.addLogMessage(`投放错误：需要「${expectedName}」，但投入了「${actualName}」`);
+    this.explodeFurnace();
+  }
+
+  explodeFurnace() {
+    this.soundManager.playExplosion();
+    this.gameState.processIncorrectInput();
+    this.visualEffects.triggerShake();
+    this.uiManager.updateCurrentStep();
+    this.uiManager.updateProgressBars();
+    this.uiManager.addLogMessage('爆炉！炉温失控，丹基尽毁。');
+    this.uiManager.showRetryButton();
+  }
+
+  completeGame() {
+    this.gameState.progress = 100;
+    this.uiManager.updateCurrentStep();
+    this.uiManager.updateProgressBars();
+    this.soundManager.playComplete();
+    this.uiManager.addLogMessage('炉鸣清越：凝丹成功！获得大量丹药。');
+    this.endGame(true);
+  }
+
+  endGame(success) {
+    this.gameState.isRunning = false;
+    
+    if (success) {
+      const reward = {
+        qi: 500,
+        xp: 800,
+        relic: '大量丹药',
+        unlockAges: [126]
+      };
+      this.uiManager.addLogMessage('节点完成：丹药备妥，结丹在望！');
+      this.sendResultToParent(reward);
+      setTimeout(() => window.close(), 1200);
+    } else {
+      const reward = { qi: 0, xp: 0, unlockAges: [] };
+      this.sendResultToParent(reward);
+    }
+  }
+
+  resetGame() {
+    this.gameState.reset();
+    this.uiManager.hideRetryButton();
+    this.uiManager.buildMaterialsList();
+    this.uiManager.updateCurrentStep();
+    this.uiManager.updateProgressBars();
+    this.uiManager.addLogMessage(`节点开始：年龄 66 岁，闭关炼丹，积累丹药以待结丹。`);
+    this.uiManager.addLogMessage('请按顺序点击材料：玄玉芝 → 赤火果 → 灵髓草。');
+  }
+
+  exitGame() {
+    this.sendResultToParent({ qi: 0, xp: 0, unlockAges: [] });
+    try{window.close();}catch(e){}; if(window.parent) window.parent.postMessage({type:"NODE_CLOSE"}, "*");
+  }
+
+  sendResultToParent(reward) {
+    if (window.opener || window.parent) {
+      (window.opener || window.parent).postMessage({ type: 'NODE_RESULT', reward }, '*');
+    }
+  }
+
+  startGameLoop() {
+    const gameLoop = (currentTime) => {
+      const deltaTime = Math.min(0.05, (currentTime - this.lastFrameTime) / 1000);
+      this.lastFrameTime = currentTime;
+
+      if (this.gameState.isRunning) {
+        // 自然降温仅在运行中更新
+        this.gameState.heat = Math.max(0, this.gameState.heat - deltaTime * 2);
+        this.uiManager.updateProgressBars();
+      }
+
+      this.render();
+      this.animationId = requestAnimationFrame(gameLoop);
+    };
+
+    this.animationId = requestAnimationFrame(gameLoop);
+  }
+
+  render() {
+    this.visualEffects.render(this.gameState);
+  }
+}
+
+// 全局游戏实例
+window.gameManager = new GameManager();
+</script>
+</body>
+</html>

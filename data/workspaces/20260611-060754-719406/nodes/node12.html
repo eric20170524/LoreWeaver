@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>节点十二：终局聚能 · 星脉合鸣 - 星渊试炼</title>
+<meta name="theme-color" content="#0d0f13" />
+<style>
+  :root{
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --ink:#f0ede6;--gold:#f4d77e;--jade:#6fd8c4;--muted:#a8b4c2;
+    --ok:#2dd4aa;--danger:#ff5757;--warning:#ffb347;
+    --bg1:#0a0d15;--bg2:#141a26;--bg3:#1e2533;
+    --card:#1a2130dd;--card-hover:#212938dd;
+    --shadow:0 12px 40px rgba(0,0,0,.35);--shadow-hover:0 16px 50px rgba(0,0,0,.45);
+    --glow:0 0 20px rgba(111,216,196,.3);--gold-glow:0 0 15px rgba(244,215,126,.25);
+  }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1400px 900px at 65% -5%, rgba(116,180,220,.12), transparent 70%),
+      radial-gradient(800px 600px at 35% 100%, rgba(244,215,126,.08), transparent 60%),
+      linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+    color:var(--ink);font-family:'LXGW WenKai','Kaiti SC','STKaiti','Songti SC','Noto Serif SC',serif;
+  }
+  .app {
+    display: flex; flex-direction: column; min-height: 100vh;
+    max-width: 1024px; margin: 0 auto;
+    padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
+    box-sizing: border-box; gap: .6rem;
+  }
+  header, .main-container, .footer { width: 100%; max-width: 100%; box-sizing: border-box; }
+  header{
+    display:flex;justify-content:space-between;align-items:center;padding:.8rem 1rem;
+    background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02));
+    backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06);
+    border-radius: 0 0 16px 16px; margin-bottom: .4rem;
+  }
+  header h1{font-size:1.1rem;margin:0;text-shadow:var(--gold-glow)}
+  .main-container{
+    flex-grow:1;
+    padding:.8rem 1rem;
+    display:grid;grid-template-columns:1fr 340px; gap:1rem;
+  }
+  @media (max-width: 1024px){
+    .main-container{padding: .4rem .5rem; gap: .6rem;}
+    .main-container{grid-template-columns:1fr}
+    header, .main-container, .footer { width: 100%; max-width: 100%; box-sizing: border-box; }
+  }
+  .panel{
+    background:var(--card);border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;box-shadow:var(--shadow);padding:1rem;
+    transition:all 0.3s ease;backdrop-filter:blur(8px);
+  }
+  .panel:hover{box-shadow:var(--shadow-hover)}
+  .hud{display:flex;gap:.6rem;flex-wrap:wrap}
+  .pill{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+    padding:.4rem .7rem;border-radius:999px;font-size:.85rem;
+    transition:all 0.2s ease;
+  }
+  .pill:hover{background:rgba(255,255,255,.12)}
+  canvas#game{
+    width:100%;height:60vh;border-radius:14px;
+    background:linear-gradient(135deg,#141a21,#0e1217);
+    border:2px dashed rgba(111,216,196,.35);
+    box-shadow:inset 0 0 30px rgba(111,216,196,.15), var(--shadow);
+    touch-action:none;
+  }
+  .btn{
+    appearance:none;border:none;
+    background:linear-gradient(135deg,#2d3a4a,#1f2a37);
+    color:var(--ink);border-radius:12px;padding:.7rem .9rem;font-size:.95rem;
+    border:1px solid rgba(255,255,255,.12);cursor:pointer;
+    transition:all 0.2s ease;font-family:inherit;
+    box-shadow:var(--shadow);
+  }
+  .btn:hover{
+    transform:translateY(-1px);box-shadow:var(--shadow-hover);
+    background:linear-gradient(135deg,#34415a,#243242);
+  }
+  .btn.ok{
+    background:linear-gradient(135deg,#2a4a35,#1d3526);
+    border-color:rgba(111,216,196,.3);
+  }
+  .btn.ok:hover{
+    background:linear-gradient(135deg,#31543d,#213c2a);
+    box-shadow:var(--glow), var(--shadow-hover);
+  }
+  .btn.warn{
+    background:linear-gradient(135deg,#4a2a2a,#3d1f1f);
+    border-color:rgba(255,87,87,.3);
+  }
+  .btn.warn:hover{
+    background:linear-gradient(135deg,#543131,#452424);
+    box-shadow:0 0 20px rgba(255,87,87,.3), var(--shadow-hover);
+  }
+  .footer{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:.6rem 1rem;border-top:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));
+    border-radius: 16px 16px 0 0; margin-top: .4rem;
+  }
+  .bar{
+    height:12px;background:rgba(14,20,26,.6);border-radius:999px;
+    border:1px solid rgba(255,255,255,.1);overflow:hidden;margin:.5rem 0;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,.3);
+  }
+  .bar span{
+    display:block;height:100%;
+    background:linear-gradient(90deg,#6fd8c4,#4a9eff,#74d8c4);
+    width:0%;transition:width 0.3s ease;
+    box-shadow:0 0 10px rgba(111,216,196,.5);
+  }
+  .controls{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem}
+  .log{
+    height:150px;overflow:auto;margin-top:.6rem;padding:.6rem;
+    background:rgba(0,0,0,.3);border-radius:12px;
+    border:1px solid rgba(255,255,255,.1);font-size:.9rem;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,.3);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>节点：126 岁 · 凝结金丹（能量聚合）</h1>
+    <div class="hud">
+      <div class="pill">传入境界：<b id="realm">-</b></div>
+      <div class="pill">灵气：<b id="qi">0</b></div>
+      <div class="pill">修为：<b id="xp">0</b></div>
+      <div class="pill" style="color:var(--jade)">目标：拖动灵气碎片入丹田 · 规避魔气干扰</div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <section class="panel">
+      <canvas id="game"></canvas>
+
+      <div style="margin:.6rem 0;color:var(--gold);font-weight:bold">聚合进度</div>
+      <div class="bar"><span id="progressBar"></span></div>
+
+      <div class="controls">
+        <button class="btn ok" id="btnHint">提示/引导</button>
+        <button class="btn" id="btnRetry" style="display:none">重新尝试</button>
+        <button class="btn warn" id="btnExit">放弃节点返回</button>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+
+    <aside class="panel">
+      <h3 style="color:var(--gold);text-shadow:var(--gold-glow)">节点说明</h3>
+      <p>闭关结丹，需将体内散乱的灵气碎片导引至丹田核心，汇聚成一枚金丹；谨防魔气干扰，一旦魔气侵蚀丹田，结丹将功亏一篑。</p>
+      <ul>
+        <li>按住并拖动灵气碎片（青绿光点）进入丹田核心（中央金光圆域）。</li>
+        <li>避开魔气（紫黑）或等待其掠过后再投入。</li>
+        <li>聚合达标后自动凝丹，晋入结丹期。</li>
+      </ul>
+      <h4 style="color:var(--jade)">示例奖励（成功）</h4>
+      <ul>
+        <li style="color:var(--ok)">灵气 +1200</li>
+        <li style="color:var(--ok)">修为 +8000</li>
+        <li style="color:var(--warning)">境界提升：结丹</li>
+        <li style="color:var(--jade)">解锁 147 岁节点</li>
+      </ul>
+      <div style="margin-top:1rem;padding:.8rem;background:rgba(0,0,0,.2);border-radius:12px;border:1px solid rgba(255,255,255,.1)">
+        <h5 style="color:var(--gold);margin-top:0">操作提示</h5>
+        <p style="font-size:.85rem;color:var(--muted);margin:0">
+          • 可同时拖动多个碎片，松手即释放。<br>
+          • 魔气进入核心的短时窗口内，投入将判定失败。请观察核心边缘的紫黑涟漪提示。<br>
+          • 支持鼠标与触屏（单指拖动）。
+        </p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="footer">
+    <div>百二十六载苦修，今朝金丹初成。</div>
+    <div><small style="color:var(--muted)">完成后自动向主界面发送奖励 · ASMR音效版</small></div>
+  </div>
+</div>
+
+<script>
+/* ========= 音效系统（与前节点一致风格） ========= */
+class NodeSoundManager {
+  constructor() {
+    this.audioContext = null;
+    this.masterGain = null;
+    this.masterVolume = 0.7;
+    this.init();
+  }
+  async init() {
+    try {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.masterGain = this.audioContext.createGain();
+      this.masterGain.connect(this.audioContext.destination);
+      this.masterGain.gain.value = this.masterVolume;
+    } catch (e) {
+      console.warn('音效系统初始化失败:', e);
+    }
+  }
+  tone(f, d, type='sine', v=0.35){
+    if(!this.audioContext) return;
+    const osc = this.audioContext.createOscillator();
+    const g = this.audioContext.createGain();
+    osc.connect(g); g.connect(this.masterGain);
+    osc.frequency.setValueAtTime(f, this.audioContext.currentTime);
+    osc.type = type;
+    g.gain.setValueAtTime(0, this.audioContext.currentTime);
+    g.gain.linearRampToValueAtTime(v, this.audioContext.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + d);
+    osc.start(); osc.stop(this.audioContext.currentTime + d);
+  }
+  click(){ this.tone(420, .06, 'sine', .22); }
+  hover(){ this.tone(300, .04, 'sine', .12); }
+  pick(){ this.tone(700, .08, 'sine', .28); }
+  merge(){ [600,760,920].forEach((f,i)=>setTimeout(()=>this.tone(f,.12,'sine',.4), i*90)); }
+  fail(){ this.tone(160, .4, 'sawtooth', .35); }
+  warn(){ this.tone(240, .18, 'square', .25); }
+  success(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,.22,'sine',.52), i*140)); }
+}
+const S = new NodeSoundManager();
+
+/* ========= 读取主界面传入数据 ========= */
+function b64ToUtf8(b64){
+  try{
+    if(!b64) return '';
+    // URL-safe -> 标准 Base64
+    b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+    // 可能被 URL 编码
+    b64 = decodeURIComponent(b64);
+  }catch(e){}
+  try{
+    // 填充 '='
+    while(b64.length % 4) b64 += '=';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
+  }catch(e){
+    console.error('Base64 解码失败:', e);
+    return '';
+  }
+}
+function getQuery(){
+  const sp=new URLSearchParams(location.search);
+  const data=sp.get('data'); const nodeAge=parseInt(sp.get('nodeAge')||'126',10);
+  let payload={};
+  try{ if(data){ const s=b64ToUtf8(data); if(s) payload=JSON.parse(s); } }catch(e){ console.error('解析传入数据失败', e); }
+  return {payload, nodeAge};
+}
+const {payload, nodeAge} = getQuery();
+document.getElementById('realm').textContent = payload.realm || '-';
+document.getElementById('qi').textContent = Math.floor(payload.qi||0);
+document.getElementById('xp').textContent = Math.floor(payload.xp||0);
+
+/* ========= 画布基础 ========= */
+const cvs = document.getElementById('game'), ctx = cvs.getContext('2d');
+let lastMin = 0;
+
+/* ========= 游戏逻辑 =========
+  - 灵气碎片：可拖动，进入核心即吸附计分
+  - 魔气团：周期性环绕核心，若其占据核心（干扰窗）时投入则判定为污染，损失进度
+  - 目标：吸纳足量碎片形成金丹（progress >= 100）
+*/
+const progressEl = document.getElementById('progressBar');
+let running = true;
+let progress = 0;
+
+const core = {x:0,y:0,r:0, pulse:0};
+function updateCore(){
+  core.x = cvs.width*0.5;
+  core.y = cvs.height*0.55;
+  core.r = Math.min(cvs.width,cvs.height)*0.12;
+}
+updateCore();
+
+const FRAG_COUNT = 14;
+const fragments = [];
+const touches = new Map(); // pointerId -> index for dragging
+
+function rand(a,b){ return a + Math.random()*(b-a); }
+function resetFragments(){
+  fragments.length = 0;
+  for(let i=0;i<FRAG_COUNT;i++){
+    const angle = Math.random()*Math.PI*2;
+    const dist = rand(core.r*1.8, Math.min(cvs.width,cvs.height)*0.4);
+    fragments.push({
+      x: core.x + Math.cos(angle)*dist,
+      y: core.y + Math.sin(angle)*dist,
+      r: rand(10,14),
+      vx: rand(-20,20),
+      vy: rand(-20,20),
+      grabbed: false,
+      merged: false
+    });
+  }
+}
+resetFragments();
+
+const demons = []; // 魔气干扰团
+function resetDemons(){
+  demons.length = 0;
+  const n = 3;
+  for(let i=0;i<n;i++){
+    demons.push({
+      angle: Math.random()*Math.PI*2,
+      radius: Math.min(cvs.width,cvs.height)*0.22,
+      speed: rand(0.3,0.6)*(Math.random()<0.5?-1:1),
+      size: rand(14,22),
+      swirl: Math.random()*1000
+    });
+  }
+}
+resetDemons();
+
+let interfereTimer = 0; // 核心干扰闪烁
+let flashAlpha = 0;
+
+/* ========= 日志 ========= */
+function log(msg){
+  const el = document.getElementById('log');
+  const p = document.createElement('div');
+  p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  p.style.color = /成功|凝丹|吸纳|晋入|形成/.test(msg)?'#6fd8c4' : /魔气|失败|污染/.test(msg)?'#ff5757' : '#f0ede6';
+  el.appendChild(p); el.scrollTop = el.scrollHeight;
+}
+
+/* ========= 进度同步 ========= */
+function syncProgress(){
+  progressEl.style.width = `${Math.min(100, Math.max(0, Math.floor(progress)))}%`;
+}
+
+/* ========= 交互：指针拖拽 ========= */
+function pickPointer(ev){
+  const rect = cvs.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio||1,2);
+  return { x:(ev.clientX-rect.left)*dpr, y:(ev.clientY-rect.top)*dpr, id: ev.pointerId||0 };
+}
+cvs.addEventListener('pointerdown', ev=>{
+  if(!running) return;
+  try{ cvs.setPointerCapture(ev.pointerId); }catch(e){}
+  const p = pickPointer(ev);
+  let best=-1, bd=1e9;
+  for(let i=0;i<fragments.length;i++){
+    const f=fragments[i]; if(f.merged) continue;
+    const dx=p.x-f.x, dy=p.y-f.y, d=Math.hypot(dx,dy);
+    if(d < f.r*1.6 && d<bd){ best=i; bd=d; }
+  }
+  if(best>=0){
+    fragments[best].grabbed = true;
+    touches.set(p.id, best);
+    S.pick();
+  }
+});
+cvs.addEventListener('pointermove', ev=>{
+  if(!running) return;
+  const p = pickPointer(ev);
+  if(!touches.has(p.id)) return;
+  const i = touches.get(p.id);
+  const f = fragments[i];
+  f.x = p.x; f.y = p.y;
+});
+function releasePointer(ev){
+  const id = ev.pointerId||0;
+  try{ cvs.releasePointerCapture(ev.pointerId); }catch(e){}
+  if(touches.has(id)){
+    const i = touches.get(id);
+    if(fragments[i]) fragments[i].grabbed=false;
+    touches.delete(id);
+  }
+}
+cvs.addEventListener('pointerup', releasePointer);
+cvs.addEventListener('pointercancel', releasePointer);
+cvs.addEventListener('pointerleave', releasePointer);
+
+/* ========= 魔气判定 ========= */
+function coreInterfered(){
+  // 若任一魔气团中心进入核心边缘一定范围，则视作干扰窗口
+  for(const d of demons){
+    const x = core.x + Math.cos(d.angle)*d.radius;
+    const y = core.y + Math.sin(d.angle)*d.radius*0.72;
+    const dist = Math.hypot(x-core.x, y-core.y);
+    if(dist < core.r*1.1){
+      return true;
+    }
+  }
+  return false;
+}
+function resize(){
+  const rect = cvs.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  const prevCore = {x: core.x, y: core.y};
+  const prevMin = lastMin || Math.min(cvs.width||0, cvs.height||0) || 1;
+
+  cvs.width = Math.max(360, Math.floor(rect.width * dpr));
+  cvs.height = Math.max(360, Math.floor(rect.height * dpr));
+
+  updateCore();
+
+  // 平移碎片，保持与核心相对位置
+  const dx = core.x - prevCore.x;
+  const dy = core.y - prevCore.y;
+  if(isFinite(dx) && isFinite(dy)){
+    for(const f of fragments){ f.x += dx; f.y += dy; }
+  }
+
+  // 缩放魔气轨道与尺寸，保持相对比例
+  const newMin = Math.min(cvs.width, cvs.height);
+  const scale = prevMin > 0 ? (newMin / prevMin) : 1;
+  if(isFinite(scale) && scale > 0 && scale !== 1){
+    for(const d of demons){
+      d.radius *= scale;
+      d.size *= scale;
+    }
+  }
+  lastMin = newMin;
+
+  // 同步一次绘制与进度条，避免视觉滞后
+  syncProgress();
+  draw();
+}
+window.addEventListener('resize', resize);
+resize();
+/* ========= 更新与绘制 ========= */
+let lastTime = performance.now();
+function update(dt){
+  if(!running) return;
+
+  // 核心脉动
+  core.pulse += dt;
+
+  // 魔气运动
+  for(const d of demons){
+    d.angle += d.speed*dt;
+    d.swirl += dt;
+  }
+
+  const interfered = coreInterfered();
+  if(interfered){
+    interfereTimer = 0.18; // 淡出时间
+  }else{
+    interfereTimer = Math.max(0, interfereTimer - dt);
+  }
+
+  // 碎片：空闲时缓慢漂移并受核心吸力（轻微）
+  for(const f of fragments){
+    if(f.merged) continue;
+    if(!f.grabbed){
+      const dx = core.x - f.x, dy = core.y - f.y;
+      const dist = Math.hypot(dx,dy)+1e-5;
+      const pull = 12/(dist*0.02); // 距离越近吸力越大（但很轻）
+      f.vx += (dx/dist)*pull*dt;
+      f.vy += (dy/dist)*pull*dt;
+      // 阻尼
+      f.vx *= 0.98; f.vy *= 0.98;
+      f.x += f.vx*dt; f.y += f.vy*dt;
+    }else{
+      // 被拖拽时，若进入核心触发吸纳/或被魔气污染
+      const dist = Math.hypot(f.x-core.x, f.y-core.y);
+      if(dist < core.r*0.9){
+        if(coreInterfered()){
+          // 污染：掉进度，弹飞
+          S.warn();
+          flashAlpha = 0.5;
+          progress = Math.max(0, progress - 12);
+          // 将碎片弹出并重置位置
+          const angle = Math.random()*Math.PI*2;
+          const dd = Math.min(cvs.width,cvs.height)*0.42;
+          f.x = core.x + Math.cos(angle)*dd;
+          f.y = core.y + Math.sin(angle)*dd;
+          f.vx = Math.cos(angle)*80; f.vy = Math.sin(angle)*80;
+          f.grabbed=false;
+          log('魔气干扰！灵气受污，进度受损。');
+        }else{
+          // 吸纳成功
+          S.merge();
+          f.merged = true; f.grabbed=false;
+          progress += 100/FRAG_COUNT * 1.1; // 轻微超额，便于满足100%
+          log('吸纳一缕灵气入丹田。');
+          if(progress >= 100){
+            progress = 100;
+            setTimeout(()=>finishCore(), 450);
+          }
+        }
+        syncProgress();
+      }
+    }
+  }
+}
+
+function draw(){
+  const W=cvs.width, H=cvs.height;
+  ctx.clearRect(0,0,W,H);
+
+  // 背景渐变与星点
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, 'hsl(190, 35%, 16%)');
+  grad.addColorStop(1, 'hsl(210, 30%, 10%)');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+
+  for(let i=0;i<46;i++){
+    const x = (i*97 + performance.now()/25)%W;
+    const y = (i*53 + performance.now()/31)%H;
+    ctx.fillStyle = 'rgba(180,255,236,.10)';
+    ctx.fillRect(x,y,2,2);
+  }
+
+  // 灵力漩涡环
+  ctx.save();
+  ctx.translate(core.x, core.y);
+  for(let i=0;i<6;i++){
+    const r = core.r*1.4 + i*10 + Math.sin(performance.now()/600+i)*2;
+    ctx.strokeStyle = `rgba(111,216,196,${0.22 - i*0.03})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+
+  // 魔气绘制
+  for(const d of demons){
+    const x = core.x + Math.cos(d.angle)*d.radius;
+    const y = core.y + Math.sin(d.angle)*d.radius*0.72;
+    const pulse = 0.6 + 0.4*Math.sin(d.swirl*2.2);
+    const rg = ctx.createRadialGradient(x,y,2, x,y, d.size*2);
+    rg.addColorStop(0, `rgba(120,60,140,${0.25*pulse})`);
+    rg.addColorStop(0.6, `rgba(90,40,120,${0.22*pulse})`);
+    rg.addColorStop(1, 'transparent');
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(x,y,d.size*2,0,Math.PI*2); ctx.fill();
+
+    // 魔气核心
+    ctx.fillStyle = 'rgba(170,110,210,0.85)';
+    ctx.beginPath(); ctx.arc(x,y, d.size*0.5, 0, Math.PI*2); ctx.fill();
+  }
+
+  // 核心丹田
+  const corePulse = 0.85 + 0.15*Math.sin(performance.now()/400);
+  const cg = ctx.createRadialGradient(core.x, core.y, core.r*0.2, core.x, core.y, core.r*1.2);
+  cg.addColorStop(0, `rgba(255,240,200,${0.25+0.25*corePulse})`);
+  cg.addColorStop(0.7, `rgba(244,215,126,${0.18+0.18*corePulse})`);
+  cg.addColorStop(1, 'transparent');
+  ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(core.x, core.y, core.r*1.2, 0, Math.PI*2); ctx.fill();
+
+  // 核心边界与干扰指示
+  ctx.strokeStyle = 'rgba(244,215,126,0.9)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(core.x, core.y, core.r, 0, Math.PI*2); ctx.stroke();
+  if(interfereTimer > 0){
+    ctx.strokeStyle = 'rgba(150,70,180,0.7)';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(core.x, core.y, core.r*1.05, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // 碎片
+  for(const f of fragments){
+    if(f.merged) continue;
+    // 外光晕
+    const g = ctx.createRadialGradient(f.x,f.y, 0, f.x,f.y, f.r*2.2);
+    g.addColorStop(0, 'rgba(200,255,236,0.75)');
+    g.addColorStop(0.7, 'rgba(111,216,196,0.35)');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(f.x,f.y, f.r*2.2, 0, Math.PI*2); ctx.fill();
+    // 实心
+    ctx.fillStyle = 'rgba(190,255,236,0.95)';
+    ctx.beginPath(); ctx.arc(f.x,f.y, f.r, 0, Math.PI*2); ctx.fill();
+  }
+
+  // 吸纳闪光
+  if(flashAlpha>0){
+    ctx.fillStyle = `rgba(244,215,126,${flashAlpha})`;
+    ctx.beginPath(); ctx.arc(core.x, core.y, core.r*1.5, 0, Math.PI*2); ctx.fill();
+    flashAlpha = Math.max(0, flashAlpha - 0.03);
+  }
+
+  // 顶部提示
+  ctx.fillStyle='#6fd8c4';
+  ctx.font = 'bold 22px "Noto Serif SC", serif';
+  ctx.shadowColor = 'rgba(111,216,196,.45)';
+  ctx.shadowBlur = 8;
+  ctx.fillText('拖动灵气碎片入核心，避开紫黑魔气', 20, 34);
+  ctx.shadowBlur = 0;
+}
+
+function loop(ts){
+  const dt = Math.min(0.05, (ts - lastTime)/1000);
+  lastTime = ts;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+loop(performance.now());
+function safeClose(){
+  try{ try{window.close();}catch(e){}; if(window.parent) window.parent.postMessage({type:"NODE_CLOSE"}, "*"); }catch(e){}
+  // 非脚本打开页面通常无法关闭，提供回退
+  setTimeout(()=>{
+    try{
+      if(history.length > 1) history.back();
+      else if(document.referrer) location.href = document.referrer;
+      else location.href = '/';
+    }catch(e){}
+  }, 80);
+}
+/* ========= 完成与失败 ========= */
+function finishCore(){
+  if(!running) return;
+  running=false;
+  S.success();
+  log('金光内敛，丹成一丸：晋入结丹！');
+  const reward = { qi: 1200, xp: 8000, unlockAges: [147] };
+  sendResult(reward);
+  setTimeout(()=>safeClose(), 1200);
+}
+
+/* ========= UI 按钮 ========= */
+document.querySelectorAll('button').forEach(btn=>{
+  btn.addEventListener('mouseenter', ()=>S.hover());
+  btn.addEventListener('click', ()=>S.click());
+});
+
+document.getElementById('btnHint').addEventListener('click', ()=>{
+  log('提示：当核心边缘出现紫黑涟漪时，先别投入碎片；待魔气掠过再导引进入。');
+});
+
+document.getElementById('btnRetry').addEventListener('click', ()=>{
+  resetGame();
+  log('重新尝试结丹。');
+});
+
+document.getElementById('btnExit').addEventListener('click', ()=>{
+  sendResult({qi:0,xp:0, unlockAges:[]});
+  safeClose();
+});
+
+/* ========= 失败条件：连续污染或魔气进入核心时投入 ========= */
+let failCounter = 0;
+const failThreshold = 3;
+// 针对污染在 handle 内已扣进度，这里周期性检测若进度低于某阈值且有大量未融合碎片，视作心魔反噬失败
+setInterval(()=>{
+  if(!running) return;
+  const remaining = fragments.filter(f=>!f.merged).length;
+  if(progress > 0 && progress < 12 && remaining > FRAG_COUNT*0.7){
+    failCounter++;
+    if(failCounter >= failThreshold){
+      S.fail();
+      running=false;
+      log('心魔反噬，神识受扰，结丹失败。');
+      document.getElementById('btnRetry').style.display='';
+      // 回传0奖励（可选）
+      sendResult({qi:0,xp:0, unlockAges:[]});
+    }else{
+      S.warn();
+      log('心神不稳，几近走火入魔！稳住心境再试。');
+    }
+  }
+}, 1200);
+
+/* ========= 重置 ========= */
+function resetGame(){
+  running = true;
+  progress = 0; syncProgress();
+  updateCore(); resetFragments(); resetDemons();
+  failCounter = 0; flashAlpha = 0; interfereTimer = 0;
+  document.getElementById('btnRetry').style.display='none';
+}
+
+/* ========= 结果回传 ========= */
+function sendResult(reward){
+  const msg = {type:'NODE_RESULT', reward};
+  try{
+    if((window.opener || window.parent) && !window.opener.closed){
+      (window.opener || window.parent).postMessage(msg, '*');
+      return;
+    }
+  }catch(e){}
+  try{
+    if(window.parent && window.parent !== window){
+      window.parent.postMessage(msg, '*');
+      return;
+    }
+  }catch(e){}
+  try{ sessionStorage.setItem('node12_result', JSON.stringify(msg)); }catch(e){}
+}
+
+/* ========= 音频唤醒 ========= */
+const startAudio = ()=>{
+  if(S.audioContext && S.audioContext.state==='suspended'){
+    S.audioContext.resume();
+  }
+  document.removeEventListener('click', startAudio);
+  document.removeEventListener('keydown', startAudio);
+};
+document.addEventListener('click', startAudio);
+document.addEventListener('keydown', startAudio);
+
+/* ========= 初始日志 ========= */
+log(`节点开始：年龄 ${nodeAge} 岁，闭关入定，尝试凝结金丹。`);
+log('拖拽青绿灵气碎片入核心，注意避开紫黑魔气干扰。');
+syncProgress();
+</script>
+</body>
+</html>

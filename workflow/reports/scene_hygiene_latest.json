@@ -1,7 +1,7 @@
 {
   "gate": "scene_hygiene",
   "status": "passed",
-  "createdAt": "2026-06-09T08:43:55.948Z",
+  "createdAt": "2026-06-11T04:45:22.760Z",
   "checks": [
     {
       "id": "minigame_master/core/lib/gameplay/survivor_horde/SurvivorHordeAdapter.js:no_global_timers",
@@ -42,6 +42,21 @@
       "id": "survivor_horde:guards_double_finish",
       "status": "passed",
       "message": "Finish path has status guard and transition guard"
+    },
+    {
+      "id": "gamerunner:cleans_up_adapter_on_shutdown",
+      "status": "passed",
+      "message": "GameRunner LevelActiveScene cleans up the gameplay adapter and nullifies it on shutdown"
+    },
+    {
+      "id": "gamerunner:no_global_timers",
+      "status": "passed",
+      "message": "GameRunner has no global setInterval/setTimeout calls to prevent memory leaks"
+    },
+    {
+      "id": "gamerunner:retreat_calls_adapter_retreat",
+      "status": "passed",
+      "message": "GameRunner LevelActiveScene retreat button triggers adapter.retreat() when adapter is active"
     },
     {
       "id": "minigame_master/core/lib/gameplay/survivor_horde/modifiers/DefendCoreModifier.js:modifier_uninstall",

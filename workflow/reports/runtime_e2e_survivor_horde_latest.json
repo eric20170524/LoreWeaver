@@ -2,11 +2,11 @@
   "gate": "runtime_e2e",
   "target": "minigame_master/core/demo/survivor_horde",
   "status": "passed",
-  "createdAt": "2026-06-09T08:44:36Z",
+  "createdAt": "2026-06-11T04:48:34Z",
   "method": "Playwright against Vite-served survivor_horde demo",
   "server": {
-    "url": "http://127.0.0.1:50624/",
-    "command": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/node_modules/.bin/vite --config /Users/lm/pyProj/hungry-for-knowledge/minigame_master/core/demo/survivor_horde/vite.config.mjs --host 127.0.0.1 --port 50624 --strictPort"
+    "url": "http://127.0.0.1:53217/",
+    "command": "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/node_modules/.bin/vite --config /Users/lm/pyProj/hungry-for-knowledge/minigame_master/core/demo/survivor_horde/vite.config.mjs --host 127.0.0.1 --port 53217 --strictPort"
   },
   "assertions": {
     "startButtonUnique": true,
@@ -45,20 +45,20 @@
       "nodeId": "survivor_horde_demo",
       "hp": 120,
       "timer": 24,
-      "kills": 2,
+      "kills": 1,
       "score": 0
     },
     "combatProbe": {
       "adapterStatus": "running",
-      "enemies": 5,
+      "enemies": 6,
       "bullets": 2,
-      "collectibles": 2
+      "collectibles": 1
     },
     "runningCanvas": {
       "present": true,
       "width": 720,
       "height": 1280,
-      "dataUrlLength": 47410,
+      "dataUrlLength": 46862,
       "nonBlank": true
     },
     "afterRetreat": {
@@ -68,7 +68,7 @@
       "nodeId": "survivor_horde_demo",
       "hp": 120,
       "timer": 24,
-      "kills": 2,
+      "kills": 1,
       "score": 0,
       "resultReason": "retreated",
       "resultSuccess": false,
@@ -81,7 +81,7 @@
       "nodeId": "survivor_horde_demo",
       "hp": 120,
       "timer": 24,
-      "kills": 2,
+      "kills": 1,
       "score": 0,
       "resultReason": "retreated",
       "resultSuccess": false,
@@ -89,6 +89,6 @@
     }
   },
   "errors": [],
-  "stdout": "\n  VITE v6.4.3  ready in 105 ms\n\n  ➜  Local:   http://127.0.0.1:50624/\n",
+  "stdout": "\n  VITE v6.4.3  ready in 93 ms\n\n  ➜  Local:   http://127.0.0.1:53217/\n",
   "stderr": ""
 }

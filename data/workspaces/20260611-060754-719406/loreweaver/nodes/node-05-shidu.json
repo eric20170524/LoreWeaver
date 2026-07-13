@@ -1,0 +1,58 @@
+{
+  "id": 5,
+  "title": "石都大战",
+  "intro": "三教修士四面围攻石都，玩家需要守住皇宫大阵阵眼，在塔防式割草中维持防线。",
+  "taunts": [
+    "三教教主：大势已去，石国当灭！",
+    "星骁：我守此城，当镇世间一切敌！"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +5000，纯血 +3~5，人皇印记",
+  "goalValue": 240,
+  "resourceMultiplier": 4.4,
+  "difficulty": 5,
+  "durationLimit": 240,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "survivor_horde",
+    "modifiers": [
+      {
+        "id": "defend_core",
+        "knobs": {
+          "coreName": "皇宫大阵",
+          "failureWhenCoreDestroyed": true
+        }
+      }
+    ],
+    "knobs": {
+      "legacySceneClass": "Node5Scene",
+      "realmRequired": 5,
+      "bossId": "qiongqi_cub",
+      "sourceRewards": {
+        "bloodEssence": 5000,
+        "pureBlood": [
+          3,
+          5
+        ]
+      }
+    },
+    "patchLevel": "L3"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery",
+      "pure_blood_trial"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "dual_pupil",
+      "kunpeng_art"
+    ],
+    "rewardUnlocks": [],
+    "notes": "首通意图: reinforce_existing(willow_guard,dual_pupil,kunpeng_art); 石都大战检验已有宝术组合，强化守护、光束和机动构筑，不新增 runtime unlock。"
+  }
+}

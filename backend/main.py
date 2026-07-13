@@ -1,25 +1,32 @@
 import os
 import uuid
 import json
+import io
 import time
+import secrets
 import asyncio
 import base64
 import binascii
+import html
 import math
+import platform
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
+import zipfile
 import zlib
 from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from .database import engine, Base, get_db
 from .models import Workspace, Job
 from .schemas import (
-    WorkspaceCreate, WorkspaceResponse, WorkspaceListResponse,
+    WorkspaceCreate, WorkspaceImport, WorkspaceResponse, WorkspaceListResponse,
     JobResponse, FeedbackRequest, ApproveRequest, JobModel
 )
 from .theme_presets import get_procedural_preset
@@ -39,6 +46,8 @@ app.add_middleware(
 )
 
 LORE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+REPO_ROOT = os.path.abspath(os.path.join(LORE_ROOT, ".."))
+MINIGAME_CORE_ROOT = os.path.join(REPO_ROOT, "minigame_master", "core")
 REPORTS_DIR = os.path.join(LORE_ROOT, "workflow", "reports")
 DATA_DIR = os.path.join(LORE_ROOT, "data")
 WORKSPACES_DIR = os.path.join(DATA_DIR, "workspaces")
@@ -49,6 +58,387 @@ def get_ws_path(ws_id: str) -> str:
     path = os.path.join(WORKSPACES_DIR, ws_id)
     os.makedirs(path, exist_ok=True)
     return path
+
+def resolve_existing_ws_path(ws_id: str) -> str:
+    workspaces_root = os.path.abspath(WORKSPACES_DIR)
+    path = os.path.abspath(os.path.join(workspaces_root, ws_id))
+    if not path.startswith(workspaces_root + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid workspace id")
+    if not os.path.isdir(path):
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return path
+
+def safe_export_name(value: str, fallback: str = "loreweaver-export") -> str:
+    cleaned = "".join(ch if (ch.isascii() and ch.isalnum()) or ch in ("-", "_") else "-" for ch in value.strip())
+    cleaned = "-".join(part for part in cleaned.split("-") if part)
+    return cleaned[:80] or fallback
+
+def utc_now_string() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+def workspace_id_timestamp(created_at: Optional[str] = None) -> str:
+    if created_at:
+        try:
+            parsed = time.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
+            return time.strftime("%Y%m%d-%H%M%S", parsed)
+        except ValueError:
+            pass
+    return time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+
+def generate_workspace_id(created_at: Optional[str] = None) -> str:
+    random_digits = f"{secrets.randbelow(1_000_000):06d}"
+    return f"{workspace_id_timestamp(created_at)}-{random_digits}"
+
+def allocate_workspace_id(db: Session, created_at: str) -> str:
+    for _ in range(20):
+        ws_id = generate_workspace_id(created_at)
+        exists_in_db = db.query(Workspace).filter(Workspace.id == ws_id).first()
+        exists_on_disk = os.path.exists(os.path.join(WORKSPACES_DIR, ws_id))
+        if not exists_in_db and not exists_on_disk:
+            return ws_id
+    raise HTTPException(status_code=500, detail="Failed to allocate unique workspace id")
+
+def read_optional_workspace_meta(source_path: str) -> dict:
+    meta_path = os.path.join(source_path, "meta.json")
+    if not os.path.exists(meta_path):
+        return {}
+    try:
+        with open(meta_path, "r", encoding="utf-8") as meta_file:
+            meta = json.load(meta_file)
+        return meta if isinstance(meta, dict) else {}
+    except Exception:
+        return {}
+
+def infer_imported_workspace_fields(payload: WorkspaceImport, source_path: str, manifest: dict) -> tuple[str, str]:
+    meta = read_optional_workspace_meta(source_path)
+    name = (payload.name or meta.get("name") or manifest.get("title") or os.path.basename(source_path)).strip()
+    theme = (payload.theme or meta.get("theme") or manifest.get("title") or "Imported LoreWeaver project").strip()
+    return name or "Imported LoreWeaver project", theme or "Imported LoreWeaver project"
+
+def workspace_copy_ignore(directory: str, names: list[str]) -> set[str]:
+    skip_names = {"node_modules", "__pycache__", ".git", "dist", ".DS_Store"}
+    ignored = set()
+    for name in names:
+        if name in skip_names or name.endswith((".pyc", ".pyo")):
+            ignored.add(name)
+            continue
+        if os.path.islink(os.path.join(directory, name)):
+            ignored.add(name)
+    return ignored
+
+def run_directory_picker_command(command: list[str], timeout: int = 120) -> str:
+    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    if result.returncode == 0:
+        return result.stdout.strip()
+
+    stderr = result.stderr.strip()
+    if "User canceled" in stderr or "cancelled" in stderr.lower() or "canceled" in stderr.lower():
+        return ""
+    raise RuntimeError(stderr or "Directory picker failed")
+
+def select_local_directory() -> str:
+    title = "Select a LoreWeaver project folder containing manifest.json"
+    system = platform.system()
+
+    if system == "Darwin":
+        script = f'POSIX path of (choose folder with prompt "{title}")'
+        selected_path = run_directory_picker_command(["osascript", "-e", script])
+        return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+    if system == "Windows":
+        powershell = shutil.which("powershell") or shutil.which("pwsh")
+        if powershell:
+            command = (
+                "Add-Type -AssemblyName System.Windows.Forms; "
+                "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog; "
+                f"$dialog.Description = '{title}'; "
+                "$dialog.ShowNewFolderButton = $false; "
+                "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) "
+                "{ [Console]::Write($dialog.SelectedPath) }"
+            )
+            selected_path = run_directory_picker_command([powershell, "-NoProfile", "-Command", command])
+            return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+    if shutil.which("zenity"):
+        selected_path = run_directory_picker_command([
+            "zenity",
+            "--file-selection",
+            "--directory",
+            "--title",
+            title
+        ])
+        return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+    if shutil.which("kdialog"):
+        selected_path = run_directory_picker_command([
+            "kdialog",
+            "--getexistingdirectory",
+            os.path.expanduser("~")
+        ])
+        return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+    tk_script = (
+        "import tkinter as tk\n"
+        "from tkinter import filedialog\n"
+        "root = tk.Tk()\n"
+        "root.withdraw()\n"
+        "root.attributes('-topmost', True)\n"
+        f"path = filedialog.askdirectory(title={title!r})\n"
+        "print(path or '')\n"
+        "root.destroy()\n"
+    )
+    selected_path = run_directory_picker_command([sys.executable, "-c", tk_script])
+    return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
+
+def add_directory_to_zip(zip_file: zipfile.ZipFile, source_dir: str, archive_root: str):
+    if not os.path.isdir(source_dir):
+        return
+    skip_dirs = {"node_modules", "__pycache__", ".git", "dist"}
+    skip_suffixes = {".pyc", ".pyo", ".DS_Store"}
+    for root, dirs, files in os.walk(source_dir):
+        dirs[:] = [item for item in dirs if item not in skip_dirs]
+        for filename in files:
+            if filename in skip_suffixes or any(filename.endswith(suffix) for suffix in skip_suffixes):
+                continue
+            absolute_path = os.path.join(root, filename)
+            rel_path = os.path.relpath(absolute_path, source_dir)
+            archive_name = os.path.join(archive_root, rel_path).replace(os.sep, "/")
+            zip_file.write(absolute_path, archive_name)
+
+def build_export_index_html(manifest: dict) -> str:
+    manifest_json = json.dumps(manifest, ensure_ascii=False, indent=2)
+    script_safe_json = manifest_json.replace("<", "\\u003c").replace("&", "\\u0026")
+    title = html.escape(str(manifest.get("title") or "LoreWeaver Export"))
+    theme_color = html.escape(str(manifest.get("themeColor") or "#10b981"))
+    return f"""<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{title}</title>
+  <style>
+    :root {{ color-scheme: dark; --theme: {theme_color}; }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      background: #020617;
+      color: #e2e8f0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }}
+    main {{
+      width: min(1120px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 36px 0 48px;
+    }}
+    header {{
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: end;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.24);
+      padding-bottom: 22px;
+      margin-bottom: 24px;
+    }}
+    h1 {{ margin: 0; font-size: clamp(28px, 5vw, 52px); letter-spacing: 0; }}
+    p {{ color: #94a3b8; line-height: 1.7; }}
+    button {{
+      border: 1px solid color-mix(in srgb, var(--theme), white 15%);
+      background: var(--theme);
+      color: #020617;
+      min-height: 42px;
+      padding: 0 18px;
+      border-radius: 8px;
+      font-weight: 800;
+      cursor: pointer;
+    }}
+    .hud, .stage, .panel {{
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.72);
+      border-radius: 8px;
+    }}
+    .hud {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }}
+    .metric {{ color: #94a3b8; font-size: 13px; }}
+    .metric strong {{ display: block; color: #f8fafc; font-size: 18px; margin-top: 4px; }}
+    .layout {{
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }}
+    .stage {{ min-height: 620px; padding: 18px; position: relative; overflow: hidden; }}
+    canvas {{ width: 100%; aspect-ratio: 9 / 16; max-height: 74vh; background: #020617; border-radius: 8px; border: 1px solid rgba(148, 163, 184, 0.22); }}
+    .panel {{ padding: 16px; max-height: 620px; overflow: auto; }}
+    .node {{
+      width: 100%;
+      text-align: left;
+      color: #e2e8f0;
+      background: transparent;
+      border-color: rgba(148, 163, 184, 0.2);
+      margin-bottom: 10px;
+    }}
+    .node.active {{ border-color: var(--theme); box-shadow: 0 0 0 1px color-mix(in srgb, var(--theme), transparent 45%); }}
+    .node span {{ display: block; color: #94a3b8; font-size: 12px; font-weight: 500; margin-top: 4px; }}
+    @media (max-width: 860px) {{
+      header {{ align-items: start; flex-direction: column; }}
+      .layout {{ grid-template-columns: 1fr; }}
+      canvas {{ max-height: none; }}
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>{title}</h1>
+        <p>Standalone LoreWeaver workspace export. The active manifest is embedded below and also saved as <code>manifest.json</code>.</p>
+      </div>
+      <button id="start">Start Node</button>
+    </header>
+    <section class="hud">
+      <div class="metric">Currency<strong id="currency">0</strong></div>
+      <div class="metric">Realm<strong id="realm">1</strong></div>
+      <div class="metric">Selected Node<strong id="selected">1</strong></div>
+    </section>
+    <section class="layout">
+      <div class="stage">
+        <canvas id="game" width="720" height="1280"></canvas>
+      </div>
+      <aside class="panel">
+        <h2>Nodes</h2>
+        <div id="nodes"></div>
+        <h2>Manifest</h2>
+        <pre id="manifest"></pre>
+      </aside>
+    </section>
+  </main>
+  <script id="manifest-data" type="application/json">{script_safe_json}</script>
+  <script>
+    const manifest = JSON.parse(document.getElementById("manifest-data").textContent);
+    const nodes = manifest.nodes || [];
+    let selectedIndex = 0;
+    let currency = 0;
+    let realm = 1;
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const nodeList = document.getElementById("nodes");
+    document.getElementById("manifest").textContent = JSON.stringify(manifest, null, 2);
+
+    function paint(progress = 0) {{
+      const node = nodes[selectedIndex] || {{}};
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#020617");
+      gradient.addColorStop(1, "#0f172a");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "{theme_color}";
+      ctx.globalAlpha = 0.16;
+      for (let i = 0; i < 28; i++) {{
+        const x = (i * 97 + progress * 120) % canvas.width;
+        const y = (i * 211 + progress * 420) % canvas.height;
+        ctx.beginPath();
+        ctx.arc(x, y, 18 + (i % 5) * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }}
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "{theme_color}";
+      ctx.lineWidth = 5;
+      ctx.strokeRect(48, 48, canvas.width - 96, canvas.height - 96);
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "700 44px sans-serif";
+      ctx.fillText(node.title || manifest.title || "LoreWeaver", 76, 150);
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "26px sans-serif";
+      wrapText(node.intro || "Manifest loaded. Use this shell as the portable export preview.", 76, 218, canvas.width - 152, 40);
+      ctx.fillStyle = "{theme_color}";
+      ctx.font = "700 30px sans-serif";
+      ctx.fillText("Goal: " + (node.goalValue || "-") + " | Mechanic: " + (node.mechanics || node.gameplay?.cardId || "-"), 76, canvas.height - 150);
+    }}
+
+    function wrapText(text, x, y, maxWidth, lineHeight) {{
+      const words = String(text).split("");
+      let line = "";
+      for (const word of words) {{
+        const test = line + word;
+        if (ctx.measureText(test).width > maxWidth && line) {{
+          ctx.fillText(line, x, y);
+          line = word;
+          y += lineHeight;
+        }} else {{
+          line = test;
+        }}
+      }}
+      ctx.fillText(line, x, y);
+    }}
+
+    function renderNodes() {{
+      nodeList.innerHTML = "";
+      nodes.forEach((node, index) => {{
+        const button = document.createElement("button");
+        button.className = "node" + (index === selectedIndex ? " active" : "");
+        button.innerHTML = `${{node.id || index + 1}}. ${{node.title || "Untitled"}}<span>${{node.mechanics || node.gameplay?.cardId || "gameplay card"}}</span>`;
+        button.onclick = () => {{
+          selectedIndex = index;
+          document.getElementById("selected").textContent = String(node.id || index + 1);
+          renderNodes();
+          paint();
+        }};
+        nodeList.appendChild(button);
+      }});
+    }}
+
+    document.getElementById("start").onclick = () => {{
+      const started = performance.now();
+      function frame(now) {{
+        const t = Math.min((now - started) / 1800, 1);
+        paint(t);
+        if (t < 1) requestAnimationFrame(frame);
+        else {{
+          const node = nodes[selectedIndex] || {{}};
+          currency += Number(node.goalValue || 1);
+          realm = Math.max(realm, Math.min(6, selectedIndex + 1));
+          document.getElementById("currency").textContent = String(currency);
+          document.getElementById("realm").textContent = String(realm);
+        }}
+      }}
+      requestAnimationFrame(frame);
+    }};
+
+    renderNodes();
+    paint();
+  </script>
+</body>
+</html>
+"""
+
+def build_export_readme(workspace_id: str, manifest: dict) -> str:
+    title = manifest.get("title") or "LoreWeaver Export"
+    return f"""# {title}
+
+This ZIP was generated by LoreWeaver for workspace `{workspace_id}`.
+
+Contents:
+
+- `index.html` - full playable H5 entrypoint with the workspace manifest embedded for static hosting.
+- `manifest.json` - the exported workspace game spec.
+- `assets/` - built React/Phaser frontend bundle assets.
+- `nodes/` - workspace node HTML/JS runtime files.
+- `scenes/` - generated workspace scene source files.
+- `js/` - generated workspace data/runtime source files.
+- `systems/` - generated workspace support systems.
+- `loreweaver/` - LoreWeaver metadata, node specs, pipeline records, and provenance.
+- `core/lib/` - reusable LoreWeaver/minigame runtime library source.
+
+Serve the extracted folder with any static server and open `index.html`.
+If the LoreWeaver production build was not available when this ZIP was created, `index.html` falls back to a manifest preview shell instead of the full playable H5 app.
+"""
 
 # Helper to resolve active stage index from progress and state
 def get_stage_index_for_job(job) -> int:
@@ -152,9 +542,7 @@ async def run_async_compilation(job_id: str, final_gdd: dict, db_session_maker):
         await asyncio.sleep(1.5)
 
         # Write merged manifest to physically loaded directory
-        file_path = os.path.join(get_ws_path(job.workspace_id), "manifest.json")
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(final_gdd, f, ensure_ascii=False, indent=2)
+        save_split_manifest(job.workspace_id, final_gdd)
 
         job.status = "completed"
         job.progress = "🎉 [Master_Reflow] 管线完美落地！配置清单、脚手架、代码工厂、ASMR 声相滤波已完全编译部署至工作沙盒中。"
@@ -163,7 +551,7 @@ async def run_async_compilation(job_id: str, final_gdd: dict, db_session_maker):
         # Update workspace timestamps
         workspace = db.query(Workspace).filter(Workspace.id == job.workspace_id).first()
         if workspace:
-            now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.get_current_time() if hasattr(time, 'get_current_time') else time.gmtime())
+            now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             workspace.last_modified_at = now_str
             # Also sync physical meta
             with open(os.path.join(get_ws_path(workspace.id), "meta.json"), "r+", encoding="utf-8") as mf:
@@ -232,10 +620,27 @@ async def run_async_feedback(job_id: str, db_session_maker, message: str, agent_
         db.close()
 
 # 📂 Workspace API Routing
+@app.post("/api/system/select-directory")
+def api_select_directory():
+    try:
+        selected_path = select_local_directory()
+    except subprocess.TimeoutExpired as exc:
+        raise HTTPException(status_code=504, detail="Directory picker timed out") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to open directory picker: {exc}") from exc
+
+    if not selected_path:
+        return {"success": False, "cancelled": True, "data": None}
+
+    if not os.path.isdir(selected_path):
+        raise HTTPException(status_code=404, detail="Selected directory not found")
+
+    return {"success": True, "cancelled": False, "data": {"path": selected_path}}
+
 @app.post("/api/workspaces", response_model=WorkspaceResponse)
 def api_create_workspace(payload: WorkspaceCreate, db: Session = Depends(get_db)):
-    ws_id = str(uuid.uuid4())
-    now_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.get_current_time() if hasattr(time, 'get_current_time') else time.gmtime())
+    now_str = utc_now_string()
+    ws_id = allocate_workspace_id(db, now_str)
     
     workspace = Workspace(
         id=ws_id,
@@ -261,6 +666,58 @@ def api_create_workspace(payload: WorkspaceCreate, db: Session = Depends(get_db)
 
     return {"success": True, "data": workspace}
 
+@app.post("/api/workspaces/import", response_model=WorkspaceResponse)
+def api_import_workspace(payload: WorkspaceImport, db: Session = Depends(get_db)):
+    source_path = os.path.abspath(os.path.expanduser(payload.source_path.strip()))
+    if not os.path.isdir(source_path):
+        raise HTTPException(status_code=404, detail="Source directory not found")
+
+    manifest_path = os.path.join(source_path, "manifest.json")
+    if not os.path.isfile(manifest_path):
+        raise HTTPException(status_code=422, detail="Selected directory must contain manifest.json")
+
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+        if not isinstance(manifest, dict):
+            raise ValueError("manifest.json must contain a JSON object")
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid manifest.json: {exc}") from exc
+
+    now_str = utc_now_string()
+    ws_id = allocate_workspace_id(db, now_str)
+    ws_dir = os.path.join(WORKSPACES_DIR, ws_id)
+    name, theme = infer_imported_workspace_fields(payload, source_path, manifest)
+
+    try:
+        shutil.copytree(source_path, ws_dir, ignore=workspace_copy_ignore)
+        with open(os.path.join(ws_dir, "meta.json"), "w", encoding="utf-8") as meta_file:
+            json.dump({
+                "id": ws_id,
+                "name": name,
+                "theme": theme,
+                "sourcePath": source_path,
+                "createdAt": now_str,
+                "lastModifiedAt": now_str
+            }, meta_file, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        if os.path.exists(ws_dir):
+            shutil.rmtree(ws_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=f"Failed to import workspace: {exc}") from exc
+
+    workspace = Workspace(
+        id=ws_id,
+        name=name,
+        theme=theme,
+        created_at=now_str,
+        last_modified_at=now_str
+    )
+    db.add(workspace)
+    db.commit()
+    db.refresh(workspace)
+
+    return {"success": True, "data": workspace}
+
 @app.get("/api/workspaces", response_model=WorkspaceListResponse)
 def api_list_workspaces(db: Session = Depends(get_db)):
     workspaces = db.query(Workspace).all()
@@ -275,8 +732,81 @@ def api_get_workspace(ws_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Workspace not found")
     return {"success": True, "data": workspace}
 
+def load_assembled_manifest(ws_id: str) -> dict:
+    ws_path = resolve_existing_ws_path(ws_id)
+    manifest_path = os.path.join(ws_path, "manifest.json")
+    if not os.path.exists(manifest_path):
+        raise HTTPException(status_code=404, detail="manifest.json not found")
+        
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to parse manifest: {exc}")
+        
+    nodes_dir = os.path.join(ws_path, "loreweaver", "nodes")
+    if os.path.isdir(nodes_dir):
+        node_files = sorted([f for f in os.listdir(nodes_dir) if f.endswith(".json")])
+        loaded_nodes = []
+        for nf in node_files:
+            try:
+                with open(os.path.join(nodes_dir, nf), "r", encoding="utf-8") as f:
+                    loaded_nodes.append(json.load(f))
+            except:
+                pass
+        if loaded_nodes:
+            loaded_nodes.sort(key=lambda x: x.get("id", 0))
+            manifest["nodes"] = loaded_nodes
+
+    catalogs_dir = os.path.join(ws_path, "loreweaver", "catalogs")
+    if os.path.isdir(catalogs_dir):
+        for cat_file in os.listdir(catalogs_dir):
+            if cat_file.endswith(".json"):
+                key = cat_file[:-5]
+                try:
+                    with open(os.path.join(catalogs_dir, cat_file), "r", encoding="utf-8") as f:
+                        manifest[key] = json.load(f)
+                except:
+                    pass
+                    
+    return manifest
+
+def save_split_manifest(ws_id: str, manifest: dict):
+    ws_path = resolve_existing_ws_path(ws_id)
+    manifest_path = os.path.join(ws_path, "manifest.json")
+    
+    nodes = manifest.pop("nodes", None)
+    if nodes is not None:
+        nodes_dir = os.path.join(ws_path, "loreweaver", "nodes")
+        os.makedirs(nodes_dir, exist_ok=True)
+        for node in nodes:
+            node_id = node.get("id", 0)
+            prefix = f"node-{node_id:02d}"
+            existing_files = [f for f in os.listdir(nodes_dir) if f.startswith(prefix) and f.endswith(".json")]
+            filename = existing_files[0] if existing_files else f"{prefix}.json"
+            with open(os.path.join(nodes_dir, filename), "w", encoding="utf-8") as f:
+                json.dump(node, f, ensure_ascii=False, indent=2)
+
+    catalogs_dir = os.path.join(ws_path, "loreweaver", "catalogs")
+    catalog_keys = ["abilityCatalog", "passiveSkillCatalog", "characterDesignCatalog", "enemyDesignCatalog", "skillEffectCatalog", "audioCueCatalog"]
+    for key in catalog_keys:
+        if key in manifest:
+            data = manifest.pop(key)
+            os.makedirs(catalogs_dir, exist_ok=True)
+            with open(os.path.join(catalogs_dir, f"{key}.json"), "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+                
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+
 @app.get("/api/workspaces/{ws_id}/files/{filename}")
 def api_get_workspace_file(ws_id: str, filename: str):
+    if filename == "manifest.json":
+        try:
+            return {"success": True, "data": load_assembled_manifest(ws_id)}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+            
     file_path = os.path.join(get_ws_path(ws_id), filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
@@ -287,16 +817,89 @@ def api_get_workspace_file(ws_id: str, filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/workspaces/{ws_id}/asset-files/{file_path:path}")
+def api_get_workspace_asset_file(ws_id: str, file_path: str):
+    ws_path = resolve_existing_ws_path(ws_id)
+    absolute_path = os.path.abspath(os.path.join(ws_path, file_path))
+    if not absolute_path.startswith(os.path.abspath(ws_path) + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid workspace asset path")
+    if not os.path.isfile(absolute_path):
+        raise HTTPException(status_code=404, detail="Workspace asset file not found")
+    return FileResponse(absolute_path)
+
 @app.post("/api/workspaces/{ws_id}/files/{filename}")
 def api_save_workspace_file(ws_id: str, filename: str, payload: dict):
-    file_path = os.path.join(get_ws_path(ws_id), filename)
     try:
         content_data = payload.get("data", payload)
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(content_data, f, ensure_ascii=False, indent=2)
+        if filename == "manifest.json":
+            save_split_manifest(ws_id, content_data)
+        else:
+            file_path = os.path.join(get_ws_path(ws_id), filename)
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(content_data, f, ensure_ascii=False, indent=2)
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/workspaces/{ws_id}/export")
+def api_export_workspace(ws_id: str):
+    try:
+        manifest = load_assembled_manifest(ws_id)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid manifest.json: {exc}") from exc
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
+        zip_file.writestr("README.md", build_export_readme(ws_id, manifest))
+
+        dist_index_path = os.path.join(LORE_ROOT, "dist", "index.html")
+        if os.path.exists(dist_index_path):
+            with open(dist_index_path, "r", encoding="utf-8") as f:
+                index_html = f.read()
+
+            embedded_script = f"""<script>
+window.__LOREWEAVER_EMBEDDED_SPEC__ = {json.dumps(manifest, ensure_ascii=False)};
+</script>"""
+
+            if "</head>" in index_html:
+                index_html = index_html.replace("</head>", f"{embedded_script}\n</head>")
+            else:
+                index_html = embedded_script + "\n" + index_html
+            index_html = index_html.replace('src="/assets/', 'src="./assets/')
+            index_html = index_html.replace('href="/assets/', 'href="./assets/')
+            zip_file.writestr("index.html", index_html)
+        else:
+            zip_file.writestr("index.html", build_export_index_html(manifest))
+
+        dist_assets_dir = os.path.join(LORE_ROOT, "dist", "assets")
+        if os.path.exists(dist_assets_dir):
+            add_directory_to_zip(zip_file, dist_assets_dir, "assets")
+
+        ws_assets_dir = os.path.join(ws_path, "assets")
+        if os.path.exists(ws_assets_dir):
+            add_directory_to_zip(zip_file, ws_assets_dir, "assets")
+
+        ws_nodes_dir = os.path.join(ws_path, "nodes")
+        if os.path.exists(ws_nodes_dir):
+            add_directory_to_zip(zip_file, ws_nodes_dir, "nodes")
+
+        for source_name in ("scenes", "js", "systems", "loreweaver", "css", "utils"):
+            source_dir = os.path.join(ws_path, source_name)
+            if os.path.exists(source_dir):
+                add_directory_to_zip(zip_file, source_dir, source_name)
+
+        add_directory_to_zip(zip_file, os.path.join(MINIGAME_CORE_ROOT, "lib"), "core/lib")
+
+    zip_buffer.seek(0)
+    title = safe_export_name(str(manifest.get("title") or ws_id))
+    filename = f"loreweaver-{title}.zip"
+    import urllib.parse
+    quoted_filename = urllib.parse.quote(filename)
+    headers = {
+        "Content-Disposition": f'attachment; filename="{quoted_filename}"; filename*=UTF-8\'\'{quoted_filename}'
+    }
+    return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
 
 # 🎨 Presets API
 @app.get("/api/presets")
@@ -673,9 +1276,31 @@ def run_optional_codex_visual_critic(screenshot_bytes: bytes, payload_summary: d
 
     prompt = (
         "You are a concise visual QA critic for a Phaser game workbench. "
-        "Inspect the attached screenshot for blank rendering, HUD overlap, text overflow, "
-        "unsafe touch margins, and contrast issues. Return compact JSON only with keys "
-        "status, feedback, and prompt_reflow_diff. Context: "
+        "Inspect the attached screenshot for HUD occlusion (components blocking controls), "
+        "button overlap (interactive buttons touching/overlapping), text overflow (labels wrapping incorrectly "
+        "or cut off), and readability / touch safe area concerns (legibility, click target spacing). "
+        "Return compact JSON only with the following structure:\n"
+        "{\n"
+        "  \"status\": \"passed\" | \"failed\",\n"
+        "  \"checks\": {\n"
+        "    \"vlm_hud_occlusion\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
+        "    \"vlm_button_overlap\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
+        "    \"vlm_text_overflow\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
+        "    \"vlm_touch_readability\": \"PASS\" | \"FAIL\" | \"WARNING\"\n"
+        "  },\n"
+        "  \"feedback\": \"Detailed visual critique review remarks.\",\n"
+        "  \"prompt_reflow_diff\": \"Textual suggestions for themeColor, goalValue, or knobs settings.\",\n"
+        "  \"proposed_patches\": [\n"
+        "    {\n"
+        "      \"target\": \"themeColor\" | \"nodes.<nodeId>.goalValue\" | \"nodes.<nodeId>.gameplay.knobs.<knob>\",\n"
+        "      \"operation\": \"replace\",\n"
+        "      \"after\": \"<new_suggested_value>\",\n"
+        "      \"reason\": \"Brief explanation of this suggestion.\",\n"
+        "      \"patchLevel\": \"L1\" | \"L2\" | \"L3\" | \"L4\"\n"
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        "Context: "
         + json.dumps(payload_summary, ensure_ascii=False)
     )
 
@@ -688,8 +1313,6 @@ def run_optional_codex_visual_critic(screenshot_bytes: bytes, payload_summary: d
             [
                 cli,
                 "exec",
-                "--ask-for-approval",
-                "never",
                 "--sandbox",
                 "read-only",
                 "--image",
@@ -753,6 +1376,19 @@ def api_post_audit(payload: dict):
     height = image_analysis.get("height") or canvas_context.get("height") or 0
     aspect = (width / height) if width and height else 0
 
+    codex_status = run_optional_codex_visual_critic(
+        screenshot_bytes,
+        {
+            "theme": payload.get("theme"),
+            "source": source,
+            "canvas": canvas_context,
+            "nodeCount": len(nodes),
+            "imageAnalysis": image_analysis
+        }
+    )
+    codex_result = codex_status.get("result") or {}
+
+    # 1. Deterministic Checks
     checks = [
         make_audit_check(
             "real_screenshot_input",
@@ -786,18 +1422,57 @@ def api_post_audit(payload: dict):
         )
     ]
 
-    codex_status = run_optional_codex_visual_critic(
-        screenshot_bytes,
-        {
-            "theme": payload.get("theme"),
-            "source": source,
-            "canvas": canvas_context,
-            "nodeCount": len(nodes),
-            "imageAnalysis": image_analysis
-        }
-    )
-    codex_result = codex_status.get("result") or {}
+    # 2. VLM Checks (depending on codex status/enabled/results)
+    codex_enabled = codex_status.get("enabled")
+    if not codex_enabled:
+        vlm_status = "WARNING"
+        vlm_remarks = "VLM audit is disabled. Set LOREWEAVER_ENABLE_CODEX_AUDIT=1 to enable." if codex_status.get("status") == "available_disabled" else "Codex CLI is not available."
+        vlm_checks = [
+            make_audit_check("vlm_hud_occlusion", "VLM HUD Occlusion", vlm_status, vlm_remarks),
+            make_audit_check("vlm_button_overlap", "VLM Button Overlap", vlm_status, vlm_remarks),
+            make_audit_check("vlm_text_overflow", "VLM Text Overflow", vlm_status, vlm_remarks),
+            make_audit_check("vlm_touch_readability", "VLM Touch & Readability", vlm_status, vlm_remarks)
+        ]
+    elif codex_status.get("status") == "failed":
+        err_msg = codex_status.get("error") or codex_status.get("stderr") or "Codex CLI execution failed."
+        vlm_checks = [
+            make_audit_check("vlm_hud_occlusion", "VLM HUD Occlusion", "FAIL", f"VLM run failed: {err_msg}"),
+            make_audit_check("vlm_button_overlap", "VLM Button Overlap", "FAIL", f"VLM run failed: {err_msg}"),
+            make_audit_check("vlm_text_overflow", "VLM Text Overflow", "FAIL", f"VLM run failed: {err_msg}"),
+            make_audit_check("vlm_touch_readability", "VLM Touch & Readability", "FAIL", f"VLM run failed: {err_msg}")
+        ]
+    else:
+        codex_checks = codex_result.get("checks") or {}
+        vlm_checks = [
+            make_audit_check(
+                "vlm_hud_occlusion",
+                "VLM HUD Occlusion",
+                codex_checks.get("vlm_hud_occlusion") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
+                "VLM HUD occlusion check completed."
+            ),
+            make_audit_check(
+                "vlm_button_overlap",
+                "VLM Button Overlap",
+                codex_checks.get("vlm_button_overlap") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
+                "VLM Button overlap check completed."
+            ),
+            make_audit_check(
+                "vlm_text_overflow",
+                "VLM Text Overflow",
+                codex_checks.get("vlm_text_overflow") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
+                "VLM Text overflow check completed."
+            ),
+            make_audit_check(
+                "vlm_touch_readability",
+                "VLM Touch & Readability",
+                codex_checks.get("vlm_touch_readability") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
+                "VLM Touch & Readability check completed."
+            )
+        ]
 
+    checks.extend(vlm_checks)
+
+    # 3. Overall VLM feedback / diff text
     if codex_status.get("status") == "completed" and codex_result.get("feedback"):
         vlm_feedback = codex_result["feedback"]
     else:
@@ -812,19 +1487,29 @@ def api_post_audit(payload: dict):
         "and deterministic nonblank/scale/text-wrap checks before any optional vision-agent critique."
     )
 
+    # Determine overall gate status:
+    # VLM failure cannot mask deterministic FAIL; VLM not enabled cannot be marked as complete PASS.
+    if any(item["status"] == "FAIL" for item in checks):
+        overall_status = "failed"
+    elif not codex_enabled:
+        overall_status = "partial_pass"
+    else:
+        overall_status = "passed"
+
     audit = {
         "checks": checks,
         "vlm_feedback": vlm_feedback,
         "prompt_reflow_diff": prompt_reflow_diff,
         "image_analysis": image_analysis,
-        "codex_visual_agent": codex_status
+        "codex_visual_agent": codex_status,
+        "proposed_patches": codex_result.get("proposed_patches") or []
     }
 
     os.makedirs(REPORTS_DIR, exist_ok=True)
     with open(os.path.join(REPORTS_DIR, "visual_audit_latest.json"), "w", encoding="utf-8") as f:
         json.dump({
             "gate": "visual_audit",
-            "status": "failed" if any(item["status"] == "FAIL" for item in checks) else "passed",
+            "status": overall_status,
             "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "method": "codex_antigravity_local_visual_audit",
             "data": audit

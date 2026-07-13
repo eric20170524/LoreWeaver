@@ -1,0 +1,28 @@
+{
+  "patches": [],
+  "revisions": [],
+  "artifactStatus": {
+    "manifest": "fresh",
+    "gameplayCards": "fresh",
+    "legacyProject": "fresh",
+    "abilityCatalog": "fresh",
+    "passiveSkillCatalog": "fresh",
+    "characterDesignCatalog": "fresh",
+    "enemyDesignCatalog": "fresh",
+    "skillEffectCatalog": "fresh",
+    "audioCueCatalog": "fresh",
+    "assetPipelineMetadata": "fresh",
+    "abilityVfxVoicePipeline": "fresh",
+    "artAssetGeneration": "fresh",
+    "artAssetPipeline": "fresh",
+    "audioAssetPipeline": "fresh",
+    "assetPipelineVerification": "fresh",
+    "runtimeSkillFeedback": "fresh",
+    "runtimeAbilityUnlocks": "fresh",
+    "runtimeSkillHud": "fresh",
+    "nodeSkillPreview": "fresh",
+    "runtimeCharacterSprites": "fresh",
+    "runtimeEnemySprites": "fresh",
+    "firstNodeRunSkillLoop": "fresh"
+  }
+}

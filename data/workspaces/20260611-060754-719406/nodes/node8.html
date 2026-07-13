@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>节点八：星潮传送 · 遗地突围 - 星渊试炼</title>
+<meta name="theme-color" content="#0d0f13" />
+<style>
+  :root{
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --ink:#f0ede6;--gold:#f4d77e;--jade:#6fd8c4;--muted:#a8b4c2;
+    --ok:#2dd4aa;--danger:#ff5757;--warning:#ffb347;
+    --bg1:#0a0d15;--bg2:#141a26;--bg3:#1e2533;
+    --card:#1a2130dd;--card-hover:#212938dd;
+    --shadow:0 12px 40px rgba(0,0,0,.35);--shadow-hover:0 16px 50px rgba(0,0,0,.45);
+    --glow:0 0 20px rgba(111,216,196,.3);--gold-glow:0 0 15px rgba(244,215,126,.25);
+  }
+  body{
+    margin:0;
+    background:
+      radial-gradient(1400px 900px at 65% -5%, rgba(116,180,220,.12), transparent 70%),
+      radial-gradient(800px 600px at 35% 100%, rgba(244,215,126,.08), transparent 60%),
+      linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+    color:var(--ink);font-family:'LXGW WenKai','Kaiti SC','STKaiti','Songti SC','Noto Serif SC',serif;
+  }
+  .app {
+    display: flex; flex-direction: column; min-height: 100vh;
+    max-width: 1024px; margin: 0 auto;
+    padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
+    box-sizing: border-box; gap: .6rem;
+  }
+  header, .main-container, .footer { width: 100%; max-width: 100%; box-sizing: border-box; }
+  header{
+    display:flex;justify-content:space-between;align-items:center;padding:.8rem 1rem;
+    background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02));
+    backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06);
+    border-radius: 0 0 16px 16px; margin-bottom: .4rem;
+  }
+  header h1{font-size:1.06rem;margin:0;text-shadow:var(--gold-glow)}
+  .hud{display:flex;gap:.6rem;flex-wrap:wrap}
+  .pill{
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+    padding:.4rem .7rem;border-radius:999px;font-size:.85rem;transition:all .2s ease;
+  }
+  .pill:hover{background:rgba(255,255,255,.12)}
+  .main-container{
+    flex-grow:1;padding:.8rem 1rem;display:grid;grid-template-columns:1fr 340px;gap:1rem;
+  }
+  @media (max-width: 1024px){
+    .main-container{padding: .4rem .5rem; gap: .6rem;} .main-container{grid-template-columns:1fr} header, .main-container, .footer { width: 100%; max-width: 100%; box-sizing: border-box; } }
+  .panel{
+    background:var(--card);border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;box-shadow:var(--shadow);padding:1rem;transition:all .3s ease;backdrop-filter:blur(8px);
+  }
+  .panel:hover{box-shadow:var(--shadow-hover)}
+  canvas#game{
+    width:100%;height:60vh;border-radius:14px;
+    background:linear-gradient(135deg,#0f141b,#0a0e13);
+    border:2px dashed rgba(111,216,196,.35);
+    box-shadow:inset 0 0 30px rgba(111,216,196,.15), var(--shadow);
+    touch-action:none; cursor:crosshair;
+  }
+  .controls{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem}
+  .btn{
+    appearance:none;border:none;cursor:pointer;font-family:inherit;
+    background:linear-gradient(135deg,#2d3a4a,#1f2a37);color:var(--ink);
+    border-radius:12px;padding:.7rem .9rem;font-size:.95rem;border:1px solid rgba(255,255,255,.12);
+    transition:all .2s ease;box-shadow:var(--shadow);
+  }
+  .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-hover);background:linear-gradient(135deg,#34415a,#243242)}
+  .btn.ok{background:linear-gradient(135deg,#2a4a35,#1d3526);border-color:rgba(111,216,196,.3)}
+  .btn.ok:hover{background:linear-gradient(135deg,#31543d,#213c2a);box-shadow:var(--glow),var(--shadow-hover)}
+  .btn.warn{background:linear-gradient(135deg,#4a2a2a,#3d1f1f);border-color:rgba(255,87,87,.3)}
+  .btn.warn:hover{background:linear-gradient(135deg,#543131,#452424);box-shadow:0 0 20px rgba(255,87,87,.3),var(--shadow-hover)}
+  .footer{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:.6rem 1rem;border-top:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0));
+    border-radius: 16px 16px 0 0; margin-top: .4rem;
+  }
+  .phase{margin:.6rem 0;color:var(--gold);font-weight:bold}
+  .hint{font-size:.85rem;color:var(--muted)}
+  .log{
+    height:160px;overflow:auto;margin-top:.6rem;padding:.6rem;
+    background:rgba(0,0,0,.3);border-radius:12px;border:1px solid rgba(255,255,255,.1);font-size:.9rem;
+    box-shadow:inset 0 2px 8px rgba(0,0,0,.3);
+  }
+  .bar{
+    height:12px;background:rgba(14,20,26,.6);border-radius:999px;border:1px solid rgba(255,255,255,.1);
+    overflow:hidden;margin:.5rem 0;box-shadow:inset 0 2px 8px rgba(0,0,0,.3);
+  }
+  .bar span{
+    display:block;height:100%;
+    background:linear-gradient(90deg,#6fd8c4,#4a9eff,#74d8c4);
+    width:0%;transition:width .25s ease;box-shadow:0 0 10px rgba(111,216,196,.5);
+  }
+  .hudline{display:flex;gap:.6rem;align-items:center}
+
+  @media (max-width: 820px) and (orientation: portrait) {
+    .landscape-prompt {
+      display: flex !important; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999;
+      color: white; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 2rem;
+      backdrop-filter: blur(10px);
+    }
+    .landscape-prompt::after { content: "为了获得最佳视野与操作手感，请旋转手机至横屏"; margin-top: 1.5rem; font-size: 1.1rem; color: #f4d77e; line-height: 1.5; }
+    .landscape-prompt svg { width: 80px; height: 80px; fill: #6fd8c4; animation: rotatePhone 2s infinite ease-in-out; }
+  }
+  @keyframes rotatePhone { 0% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } 100% { transform: rotate(90deg); } }
+  .landscape-prompt { display: none; }
+</style>
+</head>
+<body>
+<div class="landscape-prompt">
+  <svg viewBox="0 0 24 24"><path d="M16 1H8C6.9 1 6 1.9 6 3v18c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 19H8V4h8v16z"/></svg>
+</div>
+<div class="app">
+  <header>
+    <h1>节点：魔道入侵 · 修为跌落 · 传送至乱星海（闪避逃亡）</h1>
+    <div class="hud">
+      <div class="pill">传入境界：<b id="realm">-</b></div>
+      <div class="pill">灵气：<b id="qi">0</b></div>
+      <div class="pill">修为：<b id="xp">0</b></div>
+      <div class="pill" style="color:var(--jade)">目标：穿越坍塌秘境，抵达传送阵</div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <section class="panel">
+      <canvas id="game"></canvas>
+
+      <div class="phase">阶段：逃出生天</div>
+      <div class="hudline">
+        <div style="min-width:5em;color:var(--muted)">进度</div>
+        <div class="bar" style="flex:1"><span id="progressBar"></span></div>
+        <div style="width:86px;text-align:right;color:var(--jade)"><span id="progText">0</span>%</div>
+      </div>
+      <div class="hint">操作：键盘 ← → / A D 移动，空格或 ↑ / W 跳跃；移动端拖动/点击屏幕左半移动、右半跳跃。</div>
+
+      <div class="controls">
+        <button class="btn ok" id="btnHint">提示/引导</button>
+        <button class="btn" id="btnRetry" style="display:none">重新挑战</button>
+        <button class="btn warn" id="btnExit">放弃节点返回</button>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+
+    <aside class="panel">
+      <h3 style="color:var(--gold);text-shadow:var(--gold-glow)">节点说明</h3>
+      <p>魔道突袭宗门秘境，空间震荡、岩壁崩塌。韩立修为受创、境界跌落，只能凭身法穿梭乱流，前往尽头的<b>传送阵</b>。</p>
+      <ul>
+        <li>避开坠石（从上方落下）与魔修飞刃（从两侧掠过）</li>
+        <li>落脚平台断裂，需把握起跳时机跨越裂隙</li>
+        <li>抵达传送阵即触发剧情：传送至<b>乱星海</b></li>
+      </ul>
+      <h4 style="color:var(--jade)">示例奖励</h4>
+      <ul>
+        <li style="color:var(--ok)">灵气 +120</li>
+        <li style="color:var(--ok)">修为 +90</li>
+        <li style="color:var(--warning)">修为受创（剧情）</li>
+        <li style="color:var(--jade)">解锁 51 岁节点（苦修二十载）</li>
+      </ul>
+      <div style="margin-top:1.2rem;padding:.8rem;background:rgba(0,0,0,.2);border-radius:12px;border:1px solid rgba(255,255,255,.1)">
+        <h5 style="color:var(--gold);margin-top:0">操作提示</h5>
+        <p class="hint" style="margin:0">
+          • 连续小跳比大跳更稳妥；看清坠石阴影再通过<br>
+          • 敌人飞刃速度快，听到警示声及时停步或起跳<br>
+          • 进度条满即触阵过关
+        </p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="footer">
+    <div>宗门崩裂，劫后余生；星海茫茫，另启新篇。</div>
+    <div><small style="color:var(--muted)">完成后自动向主界面发送奖励 · ASMR音效版</small></div>
+  </div>
+</div>
+
+<script>
+/* ========= 轻量音效 ========= */
+class NodeSoundManager{
+  constructor(){ this.audioContext=null; this.masterGain=null; this.masterVolume=0.7; this.init(); }
+  async init(){ try{
+    this.audioContext=new (window.AudioContext||window.webkitAudioContext)();
+    this.masterGain=this.audioContext.createGain(); this.masterGain.connect(this.audioContext.destination);
+    this.masterGain.gain.value=this.masterVolume;
+  }catch(e){ console.warn('音效系统初始化失败:',e); } }
+  tone(f,d,type='sine',v=.35){
+    if(!this.audioContext) return;
+    const t=this.audioContext.currentTime;
+    const o=this.audioContext.createOscillator(); const g=this.audioContext.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t); o.connect(g); g.connect(this.masterGain);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.02); g.gain.exponentialRampToValueAtTime(0.001,t+d);
+    o.start(t); o.stop(t+d);
+  }
+  click(){ this.tone(420,.06,'sine',.22); }
+  hover(){ this.tone(300,.04,'sine',.12); }
+  jump(){ this.tone(760,.08,'sine',.28); }
+  hit(){ this.tone(180,.25,'triangle',.35); }
+  warn(){ this.tone(260,.18,'sawtooth',.28); }
+  portal(){ [392,523,659,784].forEach((f,i)=>setTimeout(()=>this.tone(f,.18,'sine',.5), i*120)); }
+  success(){ [523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,.22,'sine',.5), i*130)); }
+  fail(){ this.tone(140,.6,'square',.35); }
+}
+const S=new NodeSoundManager();
+
+/* ========= 读取主界面传入数据 ========= */
+function b64DecodeUnicode(str){
+  try{
+    const binary = atob(str);
+    if (window.TextDecoder) {
+      const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+      return new TextDecoder('utf-8').decode(bytes);
+    }
+    // 退化回退方案（兼容老环境）
+    return decodeURIComponent(escape(binary));
+  }catch(e){
+    return '';
+  }
+}
+function getQuery(){
+  const sp=new URLSearchParams(location.search);
+  const data=sp.get('data'); const nodeAge=parseInt(sp.get('nodeAge')||'31',10);
+  let payload={}; try{ if(data) payload=JSON.parse(b64DecodeUnicode(data)); }catch(e){ console.error('解析传入数据失败',e); }
+  return {payload,nodeAge};
+}
+const {payload,nodeAge}=getQuery();
+document.getElementById('realm').textContent = payload.realm || '-';
+document.getElementById('qi').textContent = Math.floor(payload.qi||0);
+document.getElementById('xp').textContent = Math.floor(payload.xp||0);
+
+/* ========= 画布 ========= */
+const cvs=document.getElementById('game'); const ctx=cvs.getContext('2d');
+function resize(){ const r=cvs.getBoundingClientRect(); const dpr=Math.min(window.devicePixelRatio||1,2);
+  cvs.width=Math.max(360,Math.floor(r.width*dpr)); cvs.height=Math.max(320,Math.floor(r.height*dpr)); }
+window.addEventListener('resize', ()=>{ resize(); draw(); });
+resize();
+
+/* ========= 游戏：横版跑酷式闪避 ========= */
+let running=true, last=performance.now();
+
+// 世界参数
+const G = 1800;            // 重力 px/s²
+const MOVE_SPEED = 280;    // 水平速度
+const JUMP_V0 = 720;       // 起跳初速度
+const FRICTION = 0.9;
+
+const levelLen = 1800;     // 关卡逻辑长度（单位：px of progress，不是真实像素）
+let progress=0;            // 0..levelLen
+const progressBar=document.getElementById('progressBar');
+const progText=document.getElementById('progText');
+
+// 玩家
+const player={ x:120, y:0, vx:0, vy:0, w:26, h:38, onGround:false, hp:1 };
+let startY=0;
+
+// 平台（碎裂地面）
+const platforms=[]; // {x,y,w,h}
+const stones=[];    // 坠石 {x,y,r,vy,shadowX,ttl}
+const blades=[];    // 飞刃 {x,y,w,h,vx,ttl,dir} dir=-1左->右 1右->左
+let spawnTimerStone=0, spawnTimerBlade=0;
+
+// 传送阵
+const portal={x:0,y:0,r:48,active:false};
+
+// 输入
+const keys={left:false,right:false,up:false};
+let mobileLeft=false, mobileJump=false;
+
+// 日志
+function log(msg){
+  const el=document.getElementById('log'); const p=document.createElement('div');
+  p.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+  p.style.color = /成功|传送|抵达|奖励/.test(msg)?'#6fd8c4' : /危险|受创|失败|撞击/.test(msg)?'#ff5757' : '#f0ede6';
+  el.appendChild(p); el.scrollTop=el.scrollHeight;
+}
+
+/* ========= 场景生成 ========= */
+function buildLevel(){
+  platforms.length=0; stones.length=0; blades.length=0;
+  const H=cvs.height;
+  // 基础地面为断续平台
+  let curX=0;
+  while(curX < levelLen){
+    const gap = Math.random()<0.3 ? Math.random()*90+60 : Math.random()*40+20; // 缺口
+    const pw = Math.random()*220 + 200; // 平台宽
+    const py = H*0.72 + Math.sin(curX/260)*18 + (Math.random()*20-10);
+    platforms.push({x:curX, y:py, w:pw, h:14});
+    curX += pw + gap;
+  }
+  // 终点传送阵坐标
+  portal.x = levelLen - 100;
+  portal.y = cvs.height*0.72;
+  portal.active=false;
+
+  // 初始玩家落点（y 表示脚底）
+  const p0=platforms[0];
+  player.x=80; player.y=p0.y; player.vx=0; player.vy=0; player.onGround=true;
+}
+
+/* ========= 工具 ========= */
+function rectHit(a,b){ return !(a.x+a.w<b.x || a.x>b.x+b.w || a.y+a.h<b.y || a.y>b.y+b.h); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function getCameraX(){
+  return clamp(player.x - 180, 0, Math.max(0, levelLen - cvs.width*0.8));
+}
+function worldToScreenX(x){
+  const cameraX = getCameraX();
+  return x - cameraX;
+}
+function spawnStone(){
+  // 从上方随机掉落，带阴影
+  const W=cvs.width; const camLeft = clamp(player.x - 180, 0, Math.max(0, levelLen - cvs.width*0.8));
+  const x = camLeft + Math.random()*W;
+  const y = -20;
+  const r = Math.random()*14 + 10;
+  const vy = Math.random()*80 + 150;  // 速度 120--320
+  const shadowX = x + (Math.random()*60-30);
+  stones.push({x,y,r,vy,shadowX,ttl:6});
+}
+function spawnBlade(){
+  // 从左右高速掠过（世界坐标）
+  const dir = Math.random()<0.5 ? -1 : 1; // -1 左->右，1 右->左
+  const camLeft = getCameraX();
+  const W = cvs.width;
+  // y 以玩家身位上下随机，限制在画布可见范围内
+  const y = clamp(player.y - player.h*0.5 + (Math.random()*120 - 60), 40, cvs.height - 40);
+  const w = 36, h = 8;
+  const speed = 200 + Math.random()*110;  // 速度 原来360--220
+  const x = dir<0 ? (camLeft - 60) : (camLeft + W + 60);
+  blades.push({x, y, w, h, vx: dir<0 ? speed : -speed, ttl:3.5, dir});
+  // 出刃时提示音
+  S.warn();
+}
+
+/* ========= 输入绑定 ========= */
+window.addEventListener('keydown', e=>{
+  if(e.code==='ArrowLeft'||e.code==='KeyA'){ keys.left=true; e.preventDefault(); }
+  if(e.code==='ArrowRight'||e.code==='KeyD'){ keys.right=true; e.preventDefault(); }
+  if(e.code==='ArrowUp'||e.code==='KeyW'||e.code==='Space'){ keys.up=true; e.preventDefault(); }
+});
+window.addEventListener('keyup', e=>{
+  if(e.code==='ArrowLeft'||e.code==='KeyA'){ keys.left=false; e.preventDefault(); }
+  if(e.code==='ArrowRight'||e.code==='KeyD'){ keys.right=false; e.preventDefault(); }
+  if(e.code==='ArrowUp'||e.code==='KeyW'||e.code==='Space'){ keys.up=false; e.preventDefault(); }
+});
+// 移动端：左半屏控制左右（相对滑动），右半屏点击跳
+let touchStart=null;
+cvs.addEventListener('pointerdown', (ev)=>{
+  const rect=cvs.getBoundingClientRect();
+  const x=ev.clientX-rect.left;
+  if(x < rect.width*0.5){
+    mobileLeft=true; touchStart={x, id:ev.pointerId};
+  }else{
+    mobileJump=true; keys.up=true; S.jump();
+  }
+});
+cvs.addEventListener('pointermove', (ev)=>{
+  if(!touchStart || ev.pointerId!==touchStart.id) return;
+  const rect=cvs.getBoundingClientRect(); const x=ev.clientX-rect.left;
+  const dx=x - touchStart.x;
+  keys.left = dx < -10;
+  keys.right = dx > 10;
+});
+cvs.addEventListener('pointerup', (ev)=>{
+  const rect=cvs.getBoundingClientRect();
+  const x=ev.clientX-rect.left;
+  if(touchStart && ev.pointerId===touchStart.id){
+    keys.left=false; keys.right=false; touchStart=null; mobileLeft=false;
+  }
+  if(x >= rect.width*0.5){ keys.up=false; mobileJump=false; }
+});
+cvs.addEventListener('pointerleave', ()=>{
+  keys.left=false; keys.right=false; keys.up=false; touchStart=null; mobileLeft=false; mobileJump=false;
+});
+
+document.querySelectorAll('button').forEach(b=>{
+  b.addEventListener('mouseenter', ()=>S.hover()); b.addEventListener('click', ()=>S.click());
+});
+document.getElementById('btnHint').addEventListener('click', ()=>{
+  log('提示：留意地面缺口与上方阴影；听到刃啸声立刻跳或停步。');
+});
+document.getElementById('btnRetry').addEventListener('click', ()=>{ startGame(); });
+document.getElementById('btnExit').addEventListener('click', ()=>{ sendResult({qi:0,xp:0,unlockAges:[]}); try{window.close();}catch(e){}; if(window.parent) window.parent.postMessage({type:"NODE_CLOSE"}, "*"); });
+
+/* ========= 更新 ========= */
+function update(dt){
+  if(!running) return;
+
+  // 水平移动
+  let mv = 0;
+  if(keys.left) mv -= 1;
+  if(keys.right) mv += 1;
+  player.vx = mv * MOVE_SPEED;
+
+  // 跳跃
+  if(keys.up && player.onGround){
+    player.vy = -JUMP_V0;
+    player.onGround=false; S.jump();
+  }
+
+  // 重力
+  player.vy += G*dt;
+
+  // 位移（先 X 后 Y）
+  player.x += player.vx*dt;
+  player.x = clamp(player.x, 0, levelLen-20);
+
+  player.y += player.vy*dt;
+
+  // 与平台碰撞
+  player.onGround=false;
+  const pAABB={x:player.x- player.w/2, y:player.y- player.h, w:player.w, h:player.h};
+  for(const pf of platforms){
+    // 只检测视野前后附近的平台以降耗
+    if(pf.x+pf.w < player.x-400 || pf.x > player.x+600) continue;
+    const pfBox={x:pf.x, y:pf.y, w:pf.w, h:pf.h};
+    if(rectHit(pAABB, pfBox)){
+      // 简化：从上方落到平台
+      if(player.vy>=0 && (player.y - player.h) < pf.y){
+        player.y = pf.y;
+        player.onGround=true; player.vy=0;
+      }
+    }
+  }
+
+  // 边界地面
+  if(player.y > cvs.height){ // 坠落出界
+    hitFail('坠入裂隙');
+    return;
+  }
+
+  // 进度推进：按玩家x比例
+  progress = clamp(player.x / levelLen * 100, 0, 100);
+  progressBar.style.width = `${progress.toFixed(1)}%`;
+  progText.textContent = `${progress.toFixed(0)}`;
+
+  // 生成危机
+  spawnTimerStone -= dt;
+  spawnTimerBlade -= dt;
+  if(spawnTimerStone<=0){ spawnStone(); spawnTimerStone = Math.random()*0.9 + 0.5; }
+  if(spawnTimerBlade<=0){ spawnBlade(); spawnTimerBlade = Math.random()*1.6 + 0.8; }
+
+  // 更新坠石
+  for(let i=stones.length-1;i>=0;i--){
+    const s=stones[i];
+    s.vy += (G*0.8)*dt;
+    s.y += s.vy*dt;
+    s.ttl -= dt;
+    if(s.ttl<=0 || s.y > cvs.height+80){ stones.splice(i,1); continue; }
+    // 碰撞
+    const sBox={x:s.x-s.r, y:s.y-s.r, w:s.r*2, h:s.r*2};
+    if(rectHit(pAABB, sBox)){
+      hitFail('被坠石砸中');
+      return;
+    }
+  }
+
+  // 更新飞刃
+  for(let i=blades.length-1;i>=0;i--){
+    const b=blades[i];
+    b.x += b.vx*dt;
+    b.ttl -= dt;
+    if(b.ttl<=0 || b.x<-200 || b.x>levelLen+200){ blades.splice(i,1); continue; }
+    const bBox={x:b.x-b.w/2, y:b.y-b.h/2, w:b.w, h:b.h};
+    if(rectHit(pAABB, bBox)){
+      hitFail('被飞刃击中');
+      return;
+    }
+  }
+
+  // 抵达传送阵
+  const portalDist = Math.abs(player.x - portal.x);
+  if(portalDist < 40){
+    portal.active=true;
+  }
+  if(portal.active && portalDist < 16 && Math.abs(player.y - portal.y)<20){
+    // 传送完成
+    S.portal(); setTimeout(()=>gameOver(true), 200);
+  }
+}
+function hitFail(reason){
+  S.hit(); log('受创：' + reason);
+  gameOver(false, reason);
+}
+
+/* ========= 绘制 ========= */
+function draw(){
+  const W=cvs.width,H=cvs.height;
+  ctx.clearRect(0,0,W,H);
+
+  // 镜头
+  const cameraX = clamp(player.x - 180, 0, Math.max(0, levelLen - W*0.8));
+
+  // 背景层：坍塌与裂缝
+  const bg=ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#0f1b22'); bg.addColorStop(1,'#0a1116');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // 背景粒子
+  for(let i=0;i<36;i++){
+    const x=(i*97 + performance.now()/28)%W;
+    const y=(i*37 + performance.now()/31)%H;
+    ctx.fillStyle='rgba(180,255,236,.08)'; ctx.fillRect(x,y,2,2);
+  }
+
+  // 标题
+  ctx.fillStyle='#6fd8c4'; ctx.font='bold 22px "Noto Serif SC", serif';
+  ctx.shadowColor='rgba(111,216,196,.45)'; ctx.shadowBlur=8;
+  ctx.fillText('避开坠石与飞刃 · 触碰传送阵', 20, 34);
+  ctx.shadowBlur=0;
+
+  // 平台
+  ctx.strokeStyle='rgba(255,255,255,0.25)';
+  ctx.fillStyle='#1b2330';
+  platforms.forEach(p=>{
+    const sx=p.x - cameraX, sy=p.y;
+    if(sx+p.w< -50 || sx> W+50) return;
+    ctx.fillRect(sx, sy, p.w, p.h);
+    // 裂纹
+    ctx.strokeStyle='rgba(111,216,196,0.12)';
+    ctx.beginPath();
+    ctx.moveTo(sx+8, sy+2);
+    ctx.lineTo(sx+p.w-8, sy+10);
+    ctx.stroke();
+  });
+
+  // 传送阵
+  const px = portal.x - cameraX, py = portal.y;
+  // 地面阵纹
+  const ringR = portal.r, t=performance.now()/600;
+  ctx.save();
+  const rg=ctx.createRadialGradient(px, py, 4, px, py, ringR*1.6);
+  rg.addColorStop(0,'rgba(111,216,196,0.35)');
+  rg.addColorStop(0.6,'rgba(244,215,126,0.18)');
+  rg.addColorStop(1,'transparent');
+  ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(px,py, ringR*1.6, 0, Math.PI*2); ctx.fill();
+
+  ctx.strokeStyle='rgba(111,216,196,0.85)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(px,py, ringR, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(px,py, ringR*0.65, 0, Math.PI*2); ctx.stroke();
+
+  // 旋转符文
+  ctx.translate(px,py);
+  ctx.rotate(t);
+  ctx.strokeStyle='rgba(244,215,126,0.8)';
+  ctx.beginPath();
+  for(let i=0;i<6;i++){
+    const a=i*Math.PI/3;
+    ctx.moveTo(Math.cos(a)*ringR*0.2, Math.sin(a)*ringR*0.2);
+    ctx.lineTo(Math.cos(a)*ringR*0.9, Math.sin(a)*ringR*0.9);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // 坠石阴影与实体
+  stones.forEach(s=>{
+    const sx=s.x - cameraX;
+    // 阴影
+    ctx.fillStyle='rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(sx + (s.shadowX - s.x), cvs.height*0.75, s.r*0.8, s.r*0.4, 0,0,Math.PI*2); ctx.fill();
+    // 石头
+    ctx.fillStyle='#2c394a'; ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(sx, s.y, s.r, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  });
+
+  // 飞刃
+  blades.forEach(b=>{
+    const bx=b.x - cameraX;
+    ctx.save(); ctx.translate(bx, b.y);
+    ctx.rotate(b.dir<0? 0 : Math.PI);
+    ctx.fillStyle='#cfd7e0'; ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(-b.w/2, 0);
+    ctx.lineTo(0, -b.h/2);
+    ctx.lineTo(b.w/2, 0);
+    ctx.lineTo(0, b.h/2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  });
+
+  // 玩家
+  const pxPlayer = player.x - cameraX;
+  ctx.save(); ctx.translate(pxPlayer, player.y - player.h);
+  // 身形
+  ctx.fillStyle='#e9e3d8'; ctx.fillRect(-player.w/2, 0, player.w, player.h);
+  // 披风/衣纹
+  ctx.fillStyle='#3a556a';
+  ctx.fillRect(-player.w/2, 6, player.w, 10);
+  // 头
+  ctx.fillStyle='#f0d6c2'; ctx.beginPath(); ctx.arc(0, -8, 8, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 顶部危机提示（听感，绘少许波纹）
+  // if(Math.random()<0.02){ S.warn(); }
+}
+
+/* ========= 循环 ========= */
+function loop(ts){
+  if(!running) return;
+  const dt=Math.min(0.05, (ts-last)/1000); last=ts;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
+
+/* ========= 结算 ========= */
+function gameOver(win, reason=''){
+  running=false;
+  if(win){
+    S.success();
+    log('节点完成：传送阵被触发，韩立被卷入乱星海。修为受创，需徐徐恢复。');
+    const reward={
+      qi:120, xp:90,
+      // 可模拟“修为受创”的剧情效果由主界面呈现，此处不扣属性，仅叙述
+      unlockAges:[51]
+    };
+    sendResult(reward);
+    setTimeout(()=>window.close(), 1200);
+  }else{
+    S.fail();
+    log('挑战失败：' + (reason || '未能逃出秘境。'));
+    document.getElementById('btnRetry').style.display='';
+    const reward={qi:0,xp:0,unlockAges:[]};
+    sendResult(reward);
+  }
+}
+
+/* ========= 结果回传 ========= */
+function sendResult(reward){
+  if(window.opener || window.parent){
+    (window.opener || window.parent).postMessage({type:'NODE_RESULT', reward}, '*');
+  }
+}
+
+/* ========= 游戏启动 ========= */
+function startGame(){
+  document.getElementById('btnRetry').style.display='none';
+  buildLevel();
+
+  progress = 0;
+  progressBar.style.width = '0%';
+  progText.textContent = '0';
+
+  // Set game state for a new run
+  running=true;
+  last=performance.now();
+
+  log('重新发起挑战！');
+  requestAnimationFrame(loop);
+}
+
+function init(){
+  draw();
+  startGame();
+  log(`节点开始：年龄 ${nodeAge} 岁，魔道突袭，宗门秘境崩塌。`);
+  log('操作：AD/←→移动，W/↑/空格跳跃；手机左半拖动移动，右半点跳。');
+
+  // 唤醒音频
+  const wake=()=>{ if(S.audioContext && S.audioContext.state==='suspended'){ S.audioContext.resume(); } document.removeEventListener('click',wake); document.removeEventListener('keydown',wake); };
+  document.addEventListener('click',wake); document.addEventListener('keydown',wake);
+}
+init();
+</script>
+</body>
+</html>

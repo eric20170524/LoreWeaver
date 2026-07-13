@@ -1,0 +1,300 @@
+[
+  {
+    "id": "perk_suan_dmg_1",
+    "name": "骨文初解",
+    "treeTier": "tier1",
+    "cost": 1,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "baoshuDamage",
+        "op": "multiply",
+        "value": 1.15
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "suan_ni_roar",
+      "thunder_god_finger",
+      "suan_ni_thunder_pulse",
+      "primordial_fist",
+      "green_scaled_eagle",
+      "void_slash"
+    ],
+    "description": "宝术伤害提高 15%，作为狻猊骨文的第一层伤害成长。",
+    "uiCopy": "宝术威力 +15%",
+    "vfxConcept": "被动点亮时在角色脚下闪过一圈浅金骨文。",
+    "sfxCue": "短促骨片共鸣，频率从低到中。"
+  },
+  {
+    "id": "perk_speed_1",
+    "name": "蛮荒疾行",
+    "treeTier": "tier1",
+    "cost": 1,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "baseSpeed",
+        "op": "multiply",
+        "value": 1.1
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "kunpeng_dodge"
+    ],
+    "description": "移动速度提高 10%，让早期走位和拾取更顺。",
+    "uiCopy": "移动速度 +10%",
+    "vfxConcept": "角色移动时增加一层淡金尘尾。",
+    "sfxCue": "轻微风切，低音量循环。"
+  },
+  {
+    "id": "perk_range_1",
+    "name": "洞天牵引",
+    "treeTier": "tier1",
+    "cost": 1,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "basePickupRange",
+        "op": "multiply",
+        "value": 1.2
+      }
+    ],
+    "affectedRuntimeSkillIds": [],
+    "description": "拾取范围提高 20%，帮助玩家在高压战场中回收资源。",
+    "uiCopy": "拾取范围 +20%",
+    "vfxConcept": "拾取半径边缘显示极淡圆环，平时隐藏。",
+    "sfxCue": "资源吸附时增加轻微粒子扫动音。"
+  },
+  {
+    "id": "perk_hp_1",
+    "name": "搬血厚体",
+    "treeTier": "tier1",
+    "cost": 1,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "baseHp",
+        "op": "multiply",
+        "value": 1.25
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "willow_blessing",
+      "bone_shield"
+    ],
+    "description": "生命上限提高 25%，让长时生存节点容错更高。",
+    "uiCopy": "生命上限 +25%",
+    "vfxConcept": "点亮时出现血气雾环，随后收束到角色体内。",
+    "sfxCue": "低频心跳两次。"
+  },
+  {
+    "id": "perk_crit_1",
+    "name": "少年至尊眼",
+    "treeTier": "tier1",
+    "cost": 1,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "baseCritRate",
+        "op": "add",
+        "value": 0.05
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "dual_pupil",
+      "heaven_hand"
+    ],
+    "description": "暴击率提高 5%，为中后期爆发流铺垫。",
+    "uiCopy": "暴击率 +5%",
+    "vfxConcept": "暴击时伤害数字短暂泛白金边。",
+    "sfxCue": "暴击时叠加清脆破空声。"
+  },
+  {
+    "id": "perk_suan_dmg_2",
+    "name": "骨文通明",
+    "treeTier": "tier2",
+    "cost": 2,
+    "requires": "perk_suan_dmg_1",
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "baoshuDamage",
+        "op": "multiply",
+        "value": 1.25
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "suan_ni_roar",
+      "thunder_god_finger",
+      "suan_ni_thunder_pulse",
+      "void_slash",
+      "heaven_hand"
+    ],
+    "description": "宝术伤害再提高 25%，承接早期输出树。",
+    "uiCopy": "宝术威力 +25%",
+    "vfxConcept": "技能释放时骨文线条更亮，范围技能边缘加雷纹。",
+    "sfxCue": "技能释放起手增加一声短促共鸣。"
+  },
+  {
+    "id": "perk_extra_projectile",
+    "name": "拳印分光",
+    "treeTier": "tier2",
+    "cost": 2,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "projectileCount",
+        "op": "add",
+        "value": 1
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "primordial_fist"
+    ],
+    "description": "投射类宝术额外发射 1 枚拳印，提升基础输出覆盖。",
+    "uiCopy": "宝术 +1 投射物",
+    "vfxConcept": "原始真解拳印分裂出左右两道浅金副拳罡。",
+    "sfxCue": "连续两次轻拳风，第二次音量更低。"
+  },
+  {
+    "id": "perk_lifesteal",
+    "name": "战血回涌",
+    "treeTier": "tier2",
+    "cost": 2,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "killHealMaxHpPct",
+        "op": "add",
+        "value": 0.02
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "willow_blessing",
+      "true_phoenix_fire"
+    ],
+    "description": "击杀敌人回复 2% 最大生命值，给高密度割草提供续航。",
+    "uiCopy": "击杀回复 2% 生命",
+    "vfxConcept": "击杀时有一粒红金光点飞回角色。",
+    "sfxCue": "极短吸气声，避免频繁击杀时刺耳。"
+  },
+  {
+    "id": "perk_cdr",
+    "name": "骨文流转",
+    "treeTier": "tier2",
+    "cost": 2,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "skillCooldown",
+        "op": "multiply",
+        "value": 0.85
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "suan_ni_roar",
+      "thunder_god_finger",
+      "kunpeng_dodge",
+      "divine_vine",
+      "void_slash"
+    ],
+    "description": "宝术冷却缩短 15%，让中期构筑更有节奏感。",
+    "uiCopy": "宝术冷却 -15%",
+    "vfxConcept": "技能就绪时图标或角色脚下闪过一圈细光。",
+    "sfxCue": "冷却完成时轻微上扬提示音。"
+  },
+  {
+    "id": "perk_supreme_bone",
+    "name": "星骨再生",
+    "treeTier": "tier3",
+    "cost": 3,
+    "requires": "perk_suan_dmg_2",
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "legendaryDamage",
+        "op": "multiply",
+        "value": 1.5
+      },
+      {
+        "target": "initialSkill",
+        "op": "append",
+        "value": "supreme_bone_awaken"
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "supreme_bone_awaken",
+      "heaven_hand",
+      "ten_cave_resonance"
+    ],
+    "description": "传说宝术伤害提高，并让星骨觉醒进入开局候选构筑。",
+    "uiCopy": "星骨觉醒",
+    "vfxConcept": "角色胸口出现白金骨文光核，变身时扩散到全身。",
+    "sfxCue": "低频心跳后接一记厚重钟鸣。"
+  },
+  {
+    "id": "perk_thunder_god",
+    "name": "裂雷之怒",
+    "treeTier": "tier3",
+    "cost": 3,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "chainLightningCount",
+        "op": "add",
+        "value": 1
+      },
+      {
+        "target": "thunderDamage",
+        "op": "multiply",
+        "value": 1.2
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "thunder_god_finger",
+      "suan_ni_thunder_pulse"
+    ],
+    "description": "雷系宝术伤害提高 20%，连锁闪电多弹跳 1 次。",
+    "uiCopy": "雷系强化",
+    "vfxConcept": "裂雷指命中后产生更亮的白蓝分叉电弧。",
+    "sfxCue": "连锁时追加短促电火花声。"
+  },
+  {
+    "id": "perk_kunpeng",
+    "name": "潮翼极速",
+    "treeTier": "tier3",
+    "cost": 3,
+    "requires": null,
+    "runtimeStatus": "implemented",
+    "effects": [
+      {
+        "target": "baseSpeed",
+        "op": "multiply",
+        "value": 1.15
+      },
+      {
+        "target": "dodgeCooldown",
+        "op": "multiply",
+        "value": 0.75
+      }
+    ],
+    "affectedRuntimeSkillIds": [
+      "kunpeng_dodge",
+      "void_slash",
+      "kunpeng_tide_pull"
+    ],
+    "description": "移动速度提高，并显著缩短潮翼身法冷却。",
+    "uiCopy": "潮翼身法强化",
+    "vfxConcept": "冲刺时留下蓝黑羽影，虚空斩边缘出现海潮线。",
+    "sfxCue": "冲刺起手使用更强的空气抽吸声。"
+  }
+]

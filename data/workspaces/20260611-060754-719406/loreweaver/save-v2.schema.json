@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "loreweaver.save-v2",
+  "title": "LoreWeaver Save V2",
+  "type": "object",
+  "required": [
+    "version",
+    "saveVersion2",
+    "statistics",
+    "resources",
+    "progression",
+    "perks",
+    "abilities",
+    "storyFlags",
+    "unlockedNodes",
+    "nodeResults"
+  ],
+  "properties": {
+    "version": { "const": 2 },
+    "statistics": { "type": "object" },
+    "resources": { "type": "object" },
+    "progression": { "type": "object" },
+    "perks": { "type": "object" },
+    "abilities": { "$ref": "#/$defs/abilities" },
+    "storyFlags": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "unlockedNodes": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "uniqueItems": true },
+    "nodeResults": { "type": "object" },
+    "saveVersion2": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "attempts",
+        "firstClear",
+        "bestResult",
+        "stars",
+        "buildSnapshot",
+        "flags",
+        "challengeResults",
+        "settings",
+        "appliedResultIds",
+        "appliedAttemptIds",
+        "migration"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 2 },
+        "attempts": { "$ref": "#/$defs/attemptMap" },
+        "firstClear": { "$ref": "#/$defs/resultMap" },
+        "bestResult": { "$ref": "#/$defs/resultMap" },
+        "stars": { "$ref": "#/$defs/starMap" },
+        "buildSnapshot": { "$ref": "#/$defs/buildMap" },
+        "flags": { "type": "object", "additionalProperties": { "type": "boolean" } },
+        "challengeResults": { "$ref": "#/$defs/resultMap" },
+        "settings": {
+          "type": "object",
+          "required": ["musicEnabled", "sfxEnabled", "vibrationEnabled"],
+          "properties": {
+            "musicEnabled": { "type": "boolean" },
+            "sfxEnabled": { "type": "boolean" },
+            "vibrationEnabled": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        },
+        "appliedResultIds": { "type": "object", "additionalProperties": { "$ref": "#/$defs/application" } },
+        "appliedAttemptIds": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 } },
+        "migration": {
+          "type": "object",
+          "required": ["sourceVersion", "backupKey", "migratedAt"],
+          "properties": {
+            "sourceVersion": { "type": "integer", "minimum": 0 },
+            "backupKey": { "type": ["string", "null"] },
+            "migratedAt": { "type": "string" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "attemptMap": {
+      "type": "object",
+      "patternProperties": { "^[1-9][0-9]*$": { "type": "integer", "minimum": 0 } },
+      "additionalProperties": false
+    },
+    "starMap": {
+      "type": "object",
+      "patternProperties": { "^[1-9][0-9]*$": { "type": "integer", "minimum": 0, "maximum": 3 } },
+      "additionalProperties": false
+    },
+    "resultMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/result" }
+    },
+    "buildMap": {
+      "type": "object",
+      "patternProperties": { "^[1-9][0-9]*$": { "$ref": "#/$defs/buildSnapshot" } },
+      "additionalProperties": false
+    },
+    "buildSnapshot": {
+      "type": "object",
+      "required": ["activeSkills", "playerPerks", "playerAbilities", "playerStats"],
+      "properties": {
+        "activeSkills": { "type": "array", "items": { "type": "object", "required": ["id", "level"], "properties": { "id": { "type": "string", "minLength": 1 }, "level": { "type": "number" } }, "additionalProperties": false } },
+        "playerPerks": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "playerAbilities": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "playerStats": { "type": "object", "additionalProperties": { "type": "number" } }
+      },
+      "additionalProperties": true
+    },
+    "result": {
+      "type": "object",
+      "required": ["contractVersion", "resultId", "attemptId", "nodeId", "reason", "success", "duration", "kills", "rewards"],
+      "properties": {
+        "contractVersion": { "const": 2 },
+        "resultId": { "type": "string", "minLength": 1 },
+        "attemptId": { "type": "string", "minLength": 1 },
+        "nodeId": { "type": "integer", "minimum": 1 },
+        "reason": { "enum": ["completed", "failed", "retreated", "challenge_completed"] },
+        "success": { "type": "boolean" },
+        "duration": { "type": "number", "minimum": 0 },
+        "kills": { "type": "integer", "minimum": 0 },
+        "rewards": {
+          "type": "object",
+          "properties": {
+            "bloodEssence": { "type": "number", "minimum": 0 },
+            "suanBoneScript": { "type": "number", "minimum": 0 },
+            "pureBlood": { "type": "number", "minimum": 0 },
+            "exp": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "stars": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "buildSnapshot": { "anyOf": [{ "$ref": "#/$defs/buildSnapshot" }, { "type": "null" }] },
+        "unlockNextNode": { "type": ["integer", "null"], "minimum": 1 },
+        "unlockNodes": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "uniqueItems": true },
+        "abilityUnlocks": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "flags": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      },
+      "additionalProperties": true
+    },
+    "abilities": {
+      "type": "object",
+      "required": ["unlocked"],
+      "properties": {
+        "unlocked": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      },
+      "additionalProperties": true
+    },
+    "application": {
+      "type": "object",
+      "required": ["resultId", "attemptId", "payloadIdentity", "nodeId", "reason", "success", "rewardPolicy", "rewardsApplied", "firstClear", "replayed"],
+      "properties": {
+        "resultId": { "type": "string" },
+        "attemptId": { "type": "string" },
+        "payloadIdentity": { "type": "string", "minLength": 1 },
+        "nodeId": { "type": "integer", "minimum": 1 },
+        "reason": { "enum": ["completed", "failed", "retreated", "challenge_completed"] },
+        "success": { "type": "boolean" },
+        "rewardPolicy": { "enum": ["first_clear", "repeat_clear", "failure", "retreat", "challenge"] },
+        "rewardsApplied": { "type": "boolean" },
+        "firstClear": { "type": "boolean" },
+        "replayed": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

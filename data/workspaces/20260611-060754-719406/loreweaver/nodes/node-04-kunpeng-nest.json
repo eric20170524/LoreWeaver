@@ -1,0 +1,61 @@
+{
+  "id": 4,
+  "title": "天潮巢",
+  "intro": "海面平台高速移动，深海漩涡持续压迫走位。玩家需要凭借机动与减速控制夺取潮翼符文。",
+  "taunts": [
+    "守巢尊者：小辈，交出潮翼秘印！",
+    "星骁：想要我的法，拿命来换！"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +2000，纯血 +2~4，潮翼符文碎片",
+  "goalValue": 180,
+  "resourceMultiplier": 3,
+  "difficulty": 4,
+  "durationLimit": 180,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "survivor_horde",
+    "modifiers": [
+      {
+        "id": "hazard_telegraph",
+        "knobs": {
+          "hazardType": "whirlpool",
+          "slowPercent": 70
+        }
+      }
+    ],
+    "knobs": {
+      "legacySceneClass": "Node4Scene",
+      "realmRequired": 4,
+      "bossId": "ancient_beast_king",
+      "sourceRewards": {
+        "bloodEssence": 2000,
+        "pureBlood": [
+          2,
+          4
+        ]
+      }
+    },
+    "patchLevel": "L3"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery",
+      "pure_blood_trial"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "green_eagle_art",
+      "dual_pupil",
+      "kunpeng_art"
+    ],
+    "rewardUnlocks": [
+      "kunpeng_art"
+    ],
+    "notes": "天潮巢把机动和无敌帧正式转入主干，后续海战、守城和终局节点都能读取。"
+  }
+}

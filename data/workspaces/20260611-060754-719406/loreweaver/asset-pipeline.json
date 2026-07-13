@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1.0",
+  "abilityVfxVoice": {
+    "abilitySpecPath": "loreweaver/ability-catalog.json",
+    "voiceManifestPath": "assets/audio/voice/manifest.js",
+    "calloutFallback": "visual_text",
+    "playerAbilityCoverage": [
+      "starter_projectile"
+    ],
+    "enemyAbilityEffects": [
+      "enemy-melee",
+      "enemy-ranged",
+      "enemy-boss-windup"
+    ],
+    "runtimeHooks": [
+      "startSpecial",
+      "startEnemyAttack",
+      "updateEnemyAttack"
+    ],
+    "verification": [
+      "voice manifest loads or visual callout fallback exists",
+      "enemy ability effects covered"
+    ]
+  },
+  "artAssets": {
+    "manifestPath": "assets/imagegen/manifest.json",
+    "scriptManifestPath": "assets/imagegen/manifest.js",
+    "provenancePath": "assets/imagegen/provenance.json",
+    "sourceImagePaths": [
+      "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+      "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png"
+    ],
+    "generationRequired": true,
+    "generationStatus": "generated_with_builtin_imagegen",
+    "groups": [
+      "heroes",
+      "enemies",
+      "items",
+      "props",
+      "setpieces",
+      "decorations"
+    ],
+    "spriteClips": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt",
+      "death"
+    ],
+    "runtimeBinding": "atlas first, simple canvas fallback last",
+    "verification": [
+      "manifest loaded count",
+      "important art keys visible in gameplay",
+      "frame motion checked",
+      "exportArtAtlasLoaded",
+      "exportSurvivorHordeUsesAtlasPlayerTexture",
+      "exportSurvivorHordeUsesAtlasEnemyTexture"
+    ]
+  },
+  "audioAssets": {
+    "manifestPath": "assets/audio/manifest.js",
+    "creditsPath": "assets/audio/CREDITS.md",
+    "channels": [
+      "bgm",
+      "sfx",
+      "voice",
+      "ambience"
+    ],
+    "coverageMatrix": [
+      "menu",
+      "node",
+      "boss",
+      "victory",
+      "defeat",
+      "ability",
+      "pickup",
+      "hazard"
+    ],
+    "runtimeBinding": "semantic keys resolved through audio engine channels",
+    "verification": [
+      "autoplay unlock",
+      "mute respected",
+      "current BGM key reported",
+      "voice/SFX cached counts reported"
+    ]
+  }
+}

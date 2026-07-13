@@ -42,6 +42,7 @@
 - Node1-Node12 都有可见机制、失败条件、奖励落点、IP 演出锚点和可测断言。
 - 核心 IP 能力都有可见特效、数值效果、解锁来源和战斗定位。
 - 文档、代码、测试、master prompt 沉淀全部闭环。
+- Runtime Feature Pack checker 已通过，证明能力、被动、角色敌人、VFX/SFX、首关技能循环与 workbench 状态一致。
 
 ## 4. 实施路线
 
@@ -60,6 +61,7 @@
 **Task A3：记录 master 沉淀候选**
 
 - 列出本项目中可复用到下一个项目的 prompt/template 经验。
+- 若本项目新增了角色、敌人、主动技能、被动树、VFX、SFX、局内技能循环或模拟器预览能力，必须同步到 `10_RUNTIME_FEATURE_PACK.md`、Runtime Feature Pack schema、相关 prompts/scripts。
 - AC：若有通用经验，后续 Phase 必须同步到 `minigame_master/workflow/prompts/` 或 `minigame_master/workflow/templates/`。
 
 ### Phase B：Node 基类与结算硬化
@@ -135,6 +137,12 @@ AC：
   - `minigame_master/workflow/prompts/step 2_GDD_Prompt.md`
   - `minigame_master/workflow/prompts/step 3_Atmosphere_Programming.md`
   - `minigame_master/workflow/templates/`
+- 对 LoreWeaver 工作区，还必须检查是否应上提到：
+  - `LoreWeaver/docs/contracts/runtime_feature_pack_contract.md`
+  - `LoreWeaver/docs/contracts/runtime_feature_pack.schema.json`
+  - `LoreWeaver/workflow/templates/10_RUNTIME_FEATURE_PACK.md`
+  - `LoreWeaver/workflow/prompts/step 2.3_Runtime_Feature_Pack_Prompt.md`
+  - `LoreWeaver/workflow/scripts/check_runtime_feature_pack.mjs`
 - AC：通用经验已同步；若无可同步项，最终回复明确说明没有跨项目沉淀。
 
 ## 5. 执行顺序建议

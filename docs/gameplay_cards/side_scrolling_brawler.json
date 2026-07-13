@@ -1,0 +1,145 @@
+{
+  "schemaVersion": "1.0",
+  "id": "side_scrolling_brawler",
+  "title": "Side Scrolling Brawler",
+  "category": "action_brawler",
+  "status": "candidate",
+  "runtime": {
+    "engineTargets": ["html_canvas", "pixi_overlay", "phaser_planned"],
+    "adapter": "SideScrollingBrawlerAdapter",
+    "container": "node_iframe_microgame"
+  },
+  "inputs": ["keyboard_move", "gamepad_move", "touch_virtual_controls", "local_coop"],
+  "objectives": ["advance_stage", "clear_locked_wave", "boss_defeat", "all_clear"],
+  "failure": ["player_hp_zero", "life_stock_empty", "timer_timeout_pressure", "continue_declined"],
+  "knobs": {
+    "stageLengthPx": {
+      "type": "integer",
+      "default": 12000,
+      "min": 800,
+      "max": 60000,
+      "patchLevel": "L1",
+      "description": "Scrollable stage length in pixels."
+    },
+    "playersMax": {
+      "type": "integer",
+      "default": 4,
+      "min": 1,
+      "max": 4,
+      "patchLevel": "L1",
+      "description": "Maximum simultaneous local players."
+    },
+    "waveList": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L1",
+      "description": "Ordered wave definitions containing trigger positions, lock positions, enemies, hazards, and bosses."
+    },
+    "laneDepth": {
+      "type": "object",
+      "default": { "floorTop": 250, "floorBottom": 460, "ySpeedScale": 0.78 },
+      "patchLevel": "L1",
+      "description": "Belt-scroll lane bounds and vertical movement scale."
+    },
+    "lockScreen": {
+      "type": "object",
+      "default": { "enabled": true, "cameraPaddingPx": 72 },
+      "patchLevel": "L2",
+      "description": "How scrolling is constrained during active waves."
+    },
+    "arcadeTimer": {
+      "type": "object",
+      "default": null,
+      "patchLevel": "L2",
+      "description": "Optional wave timer pressure configuration."
+    },
+    "lifeStock": {
+      "type": "object",
+      "default": { "enabled": true, "startingLives": 2, "reviveInvulnSec": 2.4 },
+      "patchLevel": "L1",
+      "description": "Arcade life stock and revive behavior."
+    },
+    "continueCredits": {
+      "type": "object",
+      "default": { "enabled": true, "maxCredits": 9 },
+      "patchLevel": "L2",
+      "description": "Optional coin/credit continue behavior."
+    },
+    "assetManifest": {
+      "type": "object",
+      "default": null,
+      "patchLevel": "L1",
+      "description": "Character, enemy, prop, item, setpiece, and effect art manifests."
+    },
+    "modifiers": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L2",
+      "description": "Modifier ids attached to the brawler run."
+    },
+    "rewardTable": {
+      "type": "object",
+      "default": {},
+      "patchLevel": "L1",
+      "description": "Score, item, flag, and progression rewards returned in NodeResult."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": ["L0", "L1", "L2"],
+    "requiresReview": ["L3", "L4"]
+  },
+  "requiredCoreSystems": [
+    "NodePayload",
+    "NodeResult",
+    "GameplayAdapter",
+    "GameplayModifier",
+    "WaveManager",
+    "LockScreenController",
+    "CameraController",
+    "ActorController",
+    "DepthLaneCollision",
+    "HitboxResolver",
+    "DropTable",
+    "ArcadeTimer",
+    "ArcadeSession",
+    "LocalCoopInput",
+    "AssetManifest",
+    "WebAudioSynth",
+    "TestHooks"
+  ],
+  "resultContract": {
+    "successReason": "all_clear",
+    "failureReason": "life_stock_empty",
+    "rewards": ["score", "items", "flags", "unlocks"],
+    "telemetry": ["wavesCleared", "totalWaves", "kills", "maxCombo", "damageTaken", "continuesUsed", "elapsedSec", "routeEventsCleared"]
+  },
+  "testFixture": {
+    "type": "manual_or_e2e",
+    "path": null,
+    "assertions": [
+      "payload can launch a static HTML brawler through node_iframe_microgame",
+      "players can move on a belt-scroll lane",
+      "crossing triggerX starts a locked wave",
+      "clearing enemies unlocks scrolling and advances the wave index",
+      "boss intro, hazards, drops, timer, and continue state are visible in TestHooks",
+      "NodeResult reports victory, failure, telemetry, and rewards without mutating Store directly"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/three_kingdoms_brawl/README.md",
+    "minigame/three_kingdoms_brawl/js/game-data.js",
+    "minigame/three_kingdoms_brawl/js/game.js",
+    "minigame/three_kingdoms_brawl/js/input-controller.js",
+    "minigame/three_kingdoms_brawl/js/verify-scenarios.js"
+  ],
+  "fit": {
+    "goodFor": ["arcade combat chapters", "co-op action nodes", "wave routes", "boss setpieces", "testable action sandboxes"],
+    "poorFor": ["single-screen puzzles", "dialogue-only nodes", "physics platformers that require tile collision"]
+  },
+  "knownRisks": [
+    "native support would be an L3 adapter task because the source case uses Canvas plus a Pixi/WebGL effect layer instead of the current Phaser adapter stack",
+    "locked scrolling, camera limits, and multi-player clamps must stay deterministic under low frame rate",
+    "local co-op input, life stock, and continue state create more edge cases than single-player microgames",
+    "public export must remove project-specific names, places, factions, and art provenance while keeping only mechanics"
+  ]
+}

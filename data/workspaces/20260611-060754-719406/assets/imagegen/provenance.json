@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0",
+  "createdAt": "2026-06-28",
+  "tool": "built-in image_gen",
+  "mode": "generate",
+  "purpose": "Canonical generated bitmap art source for LW-008 before runtime art-pipeline wiring.",
+  "sourceImages": [
+    {
+      "id": "generated_sprite_atlas_20260628",
+      "path": "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+      "originalCodexPath": "/Users/lm/.codex/generated_images/019f0e5b-2cd4-7dc1-8b03-528495318fe0/ig_07b0c070d353c394016a412303d0308191ab06f533a7dcf6b5.png",
+      "sha256": "9388d604571f0fad7e4bc0465d0660e4df68c3cfd425e64fc5b7e3cdd525bf93",
+      "dimensions": {
+        "width": 1774,
+        "height": 887
+      }
+    },
+    {
+      "id": "generated_sprite_atlas_20260628_transparent",
+      "path": "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
+      "sha256": "705f4a2ff5ea3f009e865fef91531781991fcffb2e665c1e99ef69bcd24c8af5",
+      "dimensions": {
+        "width": 1774,
+        "height": 887
+      },
+      "postProcess": "Local chroma-key removal from flat #ff00ff background with light magenta despill."
+    }
+  ],
+  "finalAtlas": {
+    "path": "assets/imagegen/atlas.png",
+    "sha256": "53fa1d34adb112f98c5108e0ba98b645539c8f58bcb9911449b510e2d4a56752",
+    "dimensions": {
+      "width": 256,
+      "height": 192
+    },
+    "frameSize": {
+      "width": 64,
+      "height": 64
+    },
+    "layout": {
+      "columns": 4,
+      "rows": 3
+    }
+  },
+  "frameOrder": [
+    "shihao_young_runtime",
+    "enemy_wild_rhino",
+    "enemy_green_scaled_eagle",
+    "enemy_rock_golem",
+    "enemy_qiongqi_cub",
+    "skill_fist_projectile",
+    "pickup_blood_essence",
+    "vfx_effect_frame",
+    "chest_gold",
+    "boss_projectile"
+  ],
+  "localFrameAdditions": [
+    {
+      "id": "chest_gold",
+      "createdAt": "2026-07-07",
+      "tool": "local Pillow drawing",
+      "source": "project-bound original procedural bitmap",
+      "externalAssets": "none",
+      "purpose": "Node2 chest atlas-backed frame replacing runtime procedural fallback.",
+      "frame": { "x": 0, "y": 128, "w": 64, "h": 64 }
+    },
+    {
+      "id": "boss_projectile",
+      "createdAt": "2026-07-07",
+      "tool": "local Pillow drawing",
+      "source": "project-bound original procedural bitmap",
+      "externalAssets": "none",
+      "purpose": "Node3 boss projectile atlas-backed frame replacing runtime procedural fallback.",
+      "frame": { "x": 64, "y": 128, "w": 64, "h": 64 }
+    }
+  ],
+  "prompt": "Create one original 4 columns x 2 rows sprite atlas contact sheet for a fantasy cultivation arena game. Each cell contains exactly one centered sprite with generous padding, clean silhouette, no overlap, and no text. Cells, left to right, top row then bottom row: 1 young heroic boy martial cultivator with blue-gold aura; 2 wild horned rhino beast enemy; 3 green scaled eagle enemy with wings spread; 4 stone golem enemy; 5 small qiongqi cub boss beast with horns and fangs; 6 glowing golden fist projectile; 7 red blood essence pickup crystal; 8 turquoise-gold magic VFX burst/setpiece rune. Style: high-detail crisp pixel art, readable at 64x64. Background: perfectly flat solid #ff00ff chroma-key. Constraints: no copyrighted logos, no text, no watermark, no UI frame, no labels.",
+  "localPostProcessing": [
+    "Copied generated source into the workspace.",
+    "Removed flat #ff00ff chroma-key background into an RGBA source sheet.",
+    "Sliced the generated source as a 4x2 contact sheet.",
+    "Trimmed transparent padding per cell, downsampled each sprite into a 64x64 runtime frame, and composed assets/imagegen/atlas.png.",
+    "Appended locally drawn chest_gold and boss_projectile frames into row 3 without external source material."
+  ]
+}

@@ -1,12 +1,925 @@
 {
   "gate": "content_safety_scan",
-  "status": "passed",
-  "createdAt": "2026-06-09T08:43:55.975Z",
-  "exportSurfaces": [
-    "minigame_master/core/lib",
-    "minigame_master/core/demo",
-    "LoreWeaver/src",
-    "LoreWeaver/docs/gameplay_cards"
+  "status": "passed_with_notes",
+  "createdAt": "2026-07-07T04:27:49.622Z",
+  "targetWorkspace": "LoreWeaver/data/workspaces/20260611-060754-719406",
+  "trackedMirror": "minigame/perfectworld_dahuang",
+  "scanSurfaces": [
+    {
+      "root": "minigame_master/core/lib",
+      "role": "shared_export_runtime",
+      "blocksPublicShare": true
+    },
+    {
+      "root": "LoreWeaver/data/workspaces/20260611-060754-719406",
+      "role": "target_workspace_public_export",
+      "blocksPublicShare": true
+    },
+    {
+      "root": "minigame/perfectworld_dahuang",
+      "role": "tracked_source_mirror_public_export",
+      "blocksPublicShare": true
+    },
+    {
+      "root": "LoreWeaver/dist",
+      "role": "generated_loreweaver_app_dist",
+      "blocksPublicShare": false,
+      "note": "Generated app bundle is monitored but not blocking for this target workspace slice."
+    }
   ],
-  "findings": []
+  "summary": {
+    "note": 89
+  },
+  "findings": [
+    {
+      "file": "minigame_master/core/lib/gameplay/survivor_horde/SurvivorHordeAdapter.js",
+      "surfaceRole": "shared_export_runtime",
+      "term": "重瞳",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 217,
+      "snippet": "if (/shi_yi|重瞳|投影|虚影/.test(read)) return 'rival_projection';"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 4,
+      "snippet": "本文件只保留《完美世界·大荒崛起》的历史任务、验收记录和技术备注。新的开发优先查看 `09_DEVELOPMENT_AND_POLISH_PLAN.md`，再回到本文件确认不要重复已完成工作。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "仙逆",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 76,
+      "snippet": "- **技术备注:** 已经将 `03_CANVAS_UI_RULES.md` 更新至大荒和仙逆项目中。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 88,
+      "snippet": "- **技术备注:** 在 `node1.js` 的 `damageEnemy` 死亡结算中，添加了击杀数量判定。当达到 10 或 50 击杀时，使用 `UIHelper.showFloatText` 在 UI 场景上方投射石昊的原著台词。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "安澜",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 169,
+      "snippet": "- [x] **Node12 终极血战安澜 Boss**：安澜大 Boss 登场（5000 HP），根据血量百分比释放 3 阶段弹幕轨道，击败安澜提前胜出。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 161,
+      "snippet": "- [x] **Node4 鲲鹏巢海面漩涡**：周期生成漩涡危险区，触碰使玩家速度降低 70%，Boss 莫殇登场。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/01_PRD.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "# 01_PRD.md: 《完美世界·大荒崛起》同人 H5 游戏一页纸概念文档"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/01_PRD.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 4,
+      "snippet": "*   **一句话描述**：玩家扮演石昊，在主干界面通过挂机与资源管理不断开启洞天、觉醒宝术被动，随后进入独立的微关卡（Node）中验证战力，在兽潮中体验极致割草爽感，最终称霸大荒。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/01_PRD.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "石毅",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 36,
+      "snippet": "*   **Node 玩法表现**：极限生存与 Boss Rush。敌人多为人族天才和精英虚影，攻击力高。最后 30 秒会出现“石毅虚影”Boss。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/01_PRD.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "安澜",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 81,
+      "snippet": "*   **Node 玩法表现**：对抗安澜、俞陀等不朽之王的投影。机制复杂的弹幕躲避与阶段性爆发，割草转变为高难度 Boss 战。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/01_PRD.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 19,
+      "snippet": "*   **洞天境**：开辟洞天，容纳万法，累积大量气血和狻猊骨文开启后续洞天 -> 解锁 Node 2“百断山脉”，体验更强烈的兽潮与夺宝。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/01_PRD.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 20,
+      "snippet": "*   **化灵境**：重塑真我，需要纯血突破，属性大幅提升 -> 解锁 Node 3“虚神界”，面临天才战兽与虚影 Boss 的挑战。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/01_PRD.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 40,
+      "snippet": "### Node 4：鲲鹏巢 (对应铭纹境)"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/01_PRD.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "他化自在",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 83,
+      "snippet": "*   **通关奖励**：获得【仙王道果】，完成游戏终极目标，解锁“他化自在”称号。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/02_ARCHITECTURE.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "# 02_ARCHITECTURE.md: 《完美世界·大荒崛起》轻量级系统架构设计"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/02_ARCHITECTURE.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 26,
+      "snippet": "│   ├── node2.js               // Node 2: 百断山脉"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/02_ARCHITECTURE.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 27,
+      "snippet": "│   ├── node3.js               // Node 3: 虚神界"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "# 09_DEVELOPMENT_AND_POLISH_PLAN.md: 《完美世界·大荒崛起》开发与完善实施计划"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "安澜",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 167,
+      "snippet": "| Node12 终极血战 | 安澜 Boss、三阶段弹幕、击败提前胜利 | Boss 血量来自配置、阶段技能数据化、少刷小怪避免遮挡 |"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 147,
+      "snippet": "| Node2 百断山脉 | 宝箱夺宝、Boss 登场 | 宝箱进度条、开箱打断反馈、宝箱奖励进入 `rewards` 可测 |"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 148,
+      "snippet": "| Node3 虚神界 | 高压刷怪、Boss 登场 | 封王压力条或挑战层数，失败原因可见 |"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 35,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "至尊骨",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 35,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "重瞳",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 35,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "柳神",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 35,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "他化自在",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 35,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "# STEP2_GDD_OUTPUT.md: 《完美世界·大荒崛起》早期 GDD 输出归档"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 210,
+      "snippet": "description: \"石昊初出石村，大荒蛮兽闻风而动！\""
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "石毅",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 259,
+      "snippet": "\"shi_yi_projection\": { name: \"石毅·投影\", hp: 350, atk: 50, speed: 75, size: 24, exp: 80,"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "火灵儿",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 257,
+      "snippet": "\"huo_linger_projection\": { name: \"火灵儿·投影\", hp: 250, atk: 40, speed: 85, size: 22, exp: 60,"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 22,
+      "snippet": "│   ├── node2.js               // Node 2: 百断山脉·夺宝群战 (割草+夺宝 Scene)"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 23,
+      "snippet": "│   └── node3.js               // Node 3: 虚神界·封王之战 (极限生存+Boss Rush Scene)"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 91,
+      "snippet": "{ \"id\": \"perk_kunpeng\", \"bought\": false, \"name\": \"鲲鹏极速\", \"cost\": 3 }"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "至尊骨",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 89,
+      "snippet": "{ \"id\": \"perk_supreme_bone\", \"bought\": false, \"name\": \"至尊骨\", \"cost\": 3, \"requires\": \"perk_suan_dmg_2\" },"
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "重瞳",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 187,
+      "snippet": "{ id: \"dual_pupil\", name: \"重瞳·轮回\", icon: \"👁️\", rarity: \"legendary\","
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/docs/archive/STEP2_GDD_OUTPUT.md",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "柳神",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 154,
+      "snippet": "{ id: \"willow_blessing\", name: \"柳神赐福·回春\", icon: \"🌿\", rarity: \"common\","
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/scripts/split-loreweaver-manifest.mjs",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 19,
+      "snippet": "\"百断山脉\": \"baiduan\","
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/scripts/split-loreweaver-manifest.mjs",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 20,
+      "snippet": "\"虚神界\": \"xushenjie\","
+    },
+    {
+      "file": "LoreWeaver/data/workspaces/20260611-060754-719406/utils/VFX.js",
+      "surfaceRole": "target_workspace_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 8,
+      "snippet": "* 石昊战斗特有：蛮兽受击/溅血粒子反馈"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "石毅",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "安澜",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "火灵儿",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "至尊骨",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "重瞳",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "柳神",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/assets/index-9HbaFJzr.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "他化自在",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "var de=Object.defineProperty;var he=(r,e,t)=>e in r?de(r,e,{enumerable:!0,configurable:!0,writable:!0,value:t}):r[e]=t;var T=(r,e,t)=>he(r,typeof e!=\"symbol\"?e+\"\":e,t);(function..."
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/index.html",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 6,
+      "snippet": "<title>完美世界·大荒崛起</title>"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/index.html",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 23,
+      "snippet": "<p>玩家扮演天生至尊石昊（小不点），喝最兽的奶，挨最毒的打，战大荒、闹石国、登天梯、平异域，开辟十大洞天，觉醒至尊宝术，傲视古今，独断万古！</p>"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/index.html",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "安澜",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 119,
+      "snippet": "<p>安澜当灭，俞陀当斩！独断万古</p>"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/index.html",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 73,
+      "snippet": "<span class=\"realm-status\">Node 2: 百断山脉</span>"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/index.html",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 77,
+      "snippet": "<span class=\"realm-status\">Node 3: 虚神界</span>"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/index.html",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 81,
+      "snippet": "<span class=\"realm-status\">Node 4: 鲲鹏巢</span>"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/dist/index.html",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "至尊骨",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 41,
+      "snippet": "<div class=\"control-key\">☠️ 至尊骨</div>"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 4,
+      "snippet": "本文件只保留《完美世界·大荒崛起》的历史任务、验收记录和技术备注。新的开发优先查看 `09_DEVELOPMENT_AND_POLISH_PLAN.md`，再回到本文件确认不要重复已完成工作。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "仙逆",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 76,
+      "snippet": "- **技术备注:** 已经将 `03_CANVAS_UI_RULES.md` 更新至大荒和仙逆项目中。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 88,
+      "snippet": "- **技术备注:** 在 `node1.js` 的 `damageEnemy` 死亡结算中，添加了击杀数量判定。当达到 10 或 50 击杀时，使用 `UIHelper.showFloatText` 在 UI 场景上方投射石昊的原著台词。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "安澜",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 169,
+      "snippet": "- [x] **Node12 终极血战安澜 Boss**：安澜大 Boss 登场（5000 HP），根据血量百分比释放 3 阶段弹幕轨道，击败安澜提前胜出。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/00_TASK_HISTORY.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 161,
+      "snippet": "- [x] **Node4 鲲鹏巢海面漩涡**：周期生成漩涡危险区，触碰使玩家速度降低 70%，Boss 莫殇登场。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/01_PRD.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "# 01_PRD.md: 《完美世界·大荒崛起》同人 H5 游戏一页纸概念文档"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/01_PRD.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 4,
+      "snippet": "*   **一句话描述**：玩家扮演石昊，在主干界面通过挂机与资源管理不断开启洞天、觉醒宝术被动，随后进入独立的微关卡（Node）中验证战力，在兽潮中体验极致割草爽感，最终称霸大荒。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/01_PRD.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "石毅",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 36,
+      "snippet": "*   **Node 玩法表现**：极限生存与 Boss Rush。敌人多为人族天才和精英虚影，攻击力高。最后 30 秒会出现“石毅虚影”Boss。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/01_PRD.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "安澜",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 81,
+      "snippet": "*   **Node 玩法表现**：对抗安澜、俞陀等不朽之王的投影。机制复杂的弹幕躲避与阶段性爆发，割草转变为高难度 Boss 战。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/01_PRD.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 19,
+      "snippet": "*   **洞天境**：开辟洞天，容纳万法，累积大量气血和狻猊骨文开启后续洞天 -> 解锁 Node 2“百断山脉”，体验更强烈的兽潮与夺宝。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/01_PRD.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 20,
+      "snippet": "*   **化灵境**：重塑真我，需要纯血突破，属性大幅提升 -> 解锁 Node 3“虚神界”，面临天才战兽与虚影 Boss 的挑战。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/01_PRD.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 40,
+      "snippet": "### Node 4：鲲鹏巢 (对应铭纹境)"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/01_PRD.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "他化自在",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 83,
+      "snippet": "*   **通关奖励**：获得【仙王道果】，完成游戏终极目标，解锁“他化自在”称号。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/02_ARCHITECTURE.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "# 02_ARCHITECTURE.md: 《完美世界·大荒崛起》轻量级系统架构设计"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/02_ARCHITECTURE.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 26,
+      "snippet": "│   ├── node2.js               // Node 2: 百断山脉"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/02_ARCHITECTURE.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 27,
+      "snippet": "│   ├── node3.js               // Node 3: 虚神界"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "完美世界",
+      "risk": "external_work_title",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 1,
+      "snippet": "# 09_DEVELOPMENT_AND_POLISH_PLAN.md: 《完美世界·大荒崛起》开发与完善实施计划"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "安澜",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 169,
+      "snippet": "| Node12 终极血战 | 安澜 Boss、三阶段弹幕、击败提前胜利 | Boss 血量来自配置、阶段技能数据化、少刷小怪避免遮挡 |"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 149,
+      "snippet": "| Node2 百断山脉 | 宝箱夺宝、Boss 登场 | 宝箱进度条、开箱打断反馈、宝箱奖励进入 `rewards` 可测 |"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 150,
+      "snippet": "| Node3 虚神界 | 高压刷怪、Boss 登场 | 封王压力条或挑战层数，失败原因可见 |"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "鲲鹏",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 37,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "至尊骨",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 37,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "重瞳",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 37,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "柳神",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 37,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/docs/09_DEVELOPMENT_AND_POLISH_PLAN.md",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "他化自在",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 37,
+      "snippet": "- 局内技能与 IP 能力仍偏“技能池配置 + 少量通用技能”，尚未把至尊骨、重瞳、鲲鹏法、柳神赐福、雷帝宝术、他化自在等《完美世界》辨识度能力做成可感知的局内成长路线。"
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/scripts/split-loreweaver-manifest.mjs",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "百断山",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 19,
+      "snippet": "\"百断山脉\": \"baiduan\","
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/scripts/split-loreweaver-manifest.mjs",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "虚神界",
+      "risk": "specific_lore_location",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 20,
+      "snippet": "\"虚神界\": \"xushenjie\","
+    },
+    {
+      "file": "minigame/perfectworld_dahuang/utils/VFX.js",
+      "surfaceRole": "tracked_source_mirror_public_export",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 8,
+      "snippet": "* 石昊战斗特有：蛮兽受击/溅血粒子反馈"
+    },
+    {
+      "file": "LoreWeaver/dist/assets/index-T5MnJVPo.js",
+      "surfaceRole": "generated_loreweaver_app_dist",
+      "term": "石昊",
+      "risk": "concrete_character_name",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 7001,
+      "snippet": "*/Ht(63595);var yi=Ht(8054);const Fx=Ht(61061),Bx=Ht(60421),Ix=Ht(10312),Gx=Ht(83388),zx=Ht(26638),Ux=Ht(42857),Vx=Ht(83419),Hx=Ht(25410),Yx=Ht(44965),Xx=Ht(27460),Wx=Ht(84902),..."
+    },
+    {
+      "file": "LoreWeaver/dist/assets/index-T5MnJVPo.js",
+      "surfaceRole": "generated_loreweaver_app_dist",
+      "term": "重瞳",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 7001,
+      "snippet": "*/Ht(63595);var yi=Ht(8054);const Fx=Ht(61061),Bx=Ht(60421),Ix=Ht(10312),Gx=Ht(83388),zx=Ht(26638),Ux=Ht(42857),Vx=Ht(83419),Hx=Ht(25410),Yx=Ht(44965),Xx=Ht(27460),Wx=Ht(84902),..."
+    },
+    {
+      "file": "LoreWeaver/dist/assets/index-T5MnJVPo.js",
+      "surfaceRole": "generated_loreweaver_app_dist",
+      "term": "柳神",
+      "risk": "specific_lore_motif",
+      "severity": "note",
+      "publicVisible": false,
+      "line": 7002,
+      "snippet": "CULTIVATE`,{fontFamily:\"Inter, sans-serif\",fontSize:\"11px\",fontStyle:\"bold\",color:\"#ffffff\",align:\"center\"}).setOrigin(.5).setInteractive({useHandCursor:!0});C.on(\"pointerover\",..."
+    }
+  ]
 }

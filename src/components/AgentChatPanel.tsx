@@ -339,7 +339,8 @@ export function AgentChatPanel({
             }}
             disabled={isSending}
             placeholder={`${copy.placeholderPrefix} ${activeAgentInfo.name} ${copy.placeholderSuffix}`}
-            className={`w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-2xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 max-h-[120px] resize-none disabled:opacity-50 font-sans ${compact ? "min-h-[54px]" : "min-h-[70px]"}`}
+            rows={compact ? 4 : 5}
+            className={`w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 pt-3 pb-12 pr-24 text-2xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 max-h-[220px] resize-y disabled:opacity-50 font-sans leading-relaxed ${compact ? "min-h-[92px]" : "min-h-[116px]"}`}
           />
           <button 
             onClick={handleSend}

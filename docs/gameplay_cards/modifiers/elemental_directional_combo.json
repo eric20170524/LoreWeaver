@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "id": "elemental_directional_combo",
+  "title": "Elemental Directional Combo",
+  "category": "ability_modifier",
+  "status": "candidate",
+  "modifierFor": ["side_scrolling_brawler"],
+  "knobs": {
+    "directions": {
+      "type": "array",
+      "default": ["forward", "back", "up", "down"],
+      "patchLevel": "L1"
+    },
+    "strengths": {
+      "type": "array",
+      "default": ["light", "heavy"],
+      "patchLevel": "L1"
+    },
+    "elementTags": {
+      "type": "array",
+      "default": ["wood", "fire", "metal", "earth", "water"],
+      "patchLevel": "L1"
+    },
+    "axisThreshold": { "type": "number", "default": 0.48, "min": 0.1, "max": 1, "patchLevel": "L1" },
+    "lightLockSec": { "type": "number", "default": 0.24, "min": 0, "max": 2, "patchLevel": "L1" },
+    "heavyLockSec": { "type": "number", "default": 0.36, "min": 0, "max": 2, "patchLevel": "L1" },
+    "rangedHeroOverrides": { "type": "boolean", "default": true, "patchLevel": "L2" }
+  },
+  "requiredCoreSystems": ["GameplayModifier", "InputMapper", "AbilityCatalog", "HitboxResolver", "ProjectileSystem", "VFX", "WebAudioSynth", "ActorState"],
+  "sourceProvenance": [
+    "minigame/three_kingdoms_brawl/js/game-data.js",
+    "minigame/three_kingdoms_brawl/js/game.js",
+    "minigame/three_kingdoms_brawl/js/verify-scenarios.js"
+  ],
+  "knownRisks": [
+    "direction detection must respect actor facing so back/forward remain intuitive",
+    "input buffering and attack locks can make combos feel unresponsive if patched blindly",
+    "element names and skill callouts need to be catalog-driven for public export"
+  ]
+}

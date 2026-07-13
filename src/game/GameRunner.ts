@@ -1,14 +1,251 @@
 import Phaser from "phaser";
-import { GameSpec, PlayerState, NodeSpec } from "../types";
+import { GameSpec, PlayerState, NodeSpec, GameplayModifierSpec, NodeResult } from "../types";
 import { synth } from "../utils/AudioSynth";
+import { RewardApplier } from "../utils/RewardApplier";
+import {
+  SurvivorHordeAdapter,
+  createSurvivorHordeModifier,
+  TapReactionAdapter,
+  CollectDodgeAdapter
+} from "../../../minigame_master/core/lib/gameplay/index.js";
+import {
+  createNodePayload,
+  TestHooks
+} from "../../../minigame_master/core/lib/contracts/index.js";
+
+const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
+  hazard_telegraph: {
+    intervalMs: 3600,
+    warningDelayMs: 900,
+    radius: 54,
+    damage: 18,
+    target: "random"
+  },
+  defend_core: {
+    hp: 80,
+    radius: 34,
+    color: 0x38bdf8,
+    enemyDamage: 8,
+    aggro: false
+  }
+};
+
+type RunSkillState = {
+  id: string;
+  label: string;
+  level: number;
+};
+
+type FirstNodeGrowthEvent = {
+  type: "collection" | "skill_level" | "skill_unlock";
+  milestone?: string;
+  amount?: number;
+  score?: number;
+  skillId?: string;
+  level?: number;
+  before?: Record<string, number | null>;
+  after?: Record<string, number | null>;
+  atMs: number;
+};
+
+type FirstNodeGrowthState = {
+  enabled: boolean;
+  collectionSource: string;
+  growthTrigger: string;
+  runtimeMutation: string;
+  playerFeedback: string;
+  combatImpact: string;
+  triggerThreshold: number;
+  collectedEssence: number;
+  lastObservedScore: number;
+  activeSkills: RunSkillState[];
+  mutationStats: {
+    weaponDamage: number;
+    playerHp: number | null;
+  };
+  combatStats: {
+    bulletDamageBefore: number;
+    bulletDamageAfter: number;
+    healedHp: number;
+    unlockedAoE: boolean;
+  };
+  lastFeedback: string;
+  events: FirstNodeGrowthEvent[];
+};
+
+type ImageGenFrameSpec = {
+  frame?: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  };
+};
+
+const IMAGEGEN_ATLAS_TEXTURE_KEY = "lw_imagegen_combat_atlas";
+const IMAGEGEN_MANIFEST_CACHE_KEY = "lw_imagegen_manifest";
+const IMAGEGEN_TEXTURE_BINDINGS: Array<{ frameKey: string; textureKey: string; group: string }> = [
+  { frameKey: "shihao_young_runtime", textureKey: "lw_runtime_player_shihao", group: "heroes" },
+  { frameKey: "enemy_wild_rhino", textureKey: "lw_enemy_wild_rhino", group: "enemies" },
+  { frameKey: "enemy_green_scaled_eagle", textureKey: "lw_enemy_green_scaled_eagle", group: "enemies" },
+  { frameKey: "enemy_rock_golem", textureKey: "lw_enemy_rock_golem", group: "enemies" },
+  { frameKey: "enemy_qiongqi_cub", textureKey: "lw_enemy_qiongqi_cub", group: "enemies" },
+  { frameKey: "skill_fist_projectile", textureKey: "lw_skill_fist_projectile", group: "projectiles" },
+  { frameKey: "pickup_blood_essence", textureKey: "lw_pickup_blood_essence", group: "items" },
+  { frameKey: "vfx_effect_frame", textureKey: "lw_vfx_effect_frame", group: "vfx" }
+];
+
+type ImageGenAssetPaths = {
+  manifestPath: string;
+  atlasPath: string;
+  provenancePath: string;
+  sourceImagePath: string;
+  transparentSourceImagePath: string;
+  mode: "static_export" | "workspace_live";
+};
+
+type PhaserGameOptions = {
+  workspaceId?: string | null;
+};
+
+function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths | null {
+  if (typeof window !== "undefined" && Boolean((window as any).__LOREWEAVER_EMBEDDED_SPEC__)) {
+    return {
+      manifestPath: "assets/imagegen/manifest.json",
+      atlasPath: "assets/imagegen/atlas.png",
+      provenancePath: "assets/imagegen/provenance.json",
+      sourceImagePath: "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+      transparentSourceImagePath: "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
+      mode: "static_export"
+    };
+  }
+
+  if (!workspaceId) return null;
+  const workspacePrefix = `/api/workspaces/${encodeURIComponent(workspaceId)}/asset-files`;
+  return {
+    manifestPath: `${workspacePrefix}/assets/imagegen/manifest.json`,
+    atlasPath: `${workspacePrefix}/assets/imagegen/atlas.png`,
+    provenancePath: `${workspacePrefix}/assets/imagegen/provenance.json`,
+    sourceImagePath: `${workspacePrefix}/assets/imagegen/source/generated-sprite-atlas-20260628.png`,
+    transparentSourceImagePath: `${workspacePrefix}/assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png`,
+    mode: "workspace_live"
+  };
+}
+
+function publishImageGenArtStatus(patch: Record<string, any>) {
+  if (typeof window === "undefined") return;
+
+  const previous = (window as any).__LOREWEAVER_ART_PIPELINE__ || {};
+  (window as any).__LOREWEAVER_ART_PIPELINE__ = {
+    ...previous,
+    ...patch,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function preloadImageGenAtlas(scene: Phaser.Scene, paths: ImageGenAssetPaths | null) {
+  if (!paths) {
+    publishImageGenArtStatus({
+      status: "skipped_no_workspace_assets",
+      manifestPath: null,
+      atlasPath: null,
+      expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
+      loadedCount: 0,
+      loadedKeys: [],
+      missingKeys: IMAGEGEN_TEXTURE_BINDINGS.map((binding) => binding.textureKey)
+    });
+    return;
+  }
+
+  publishImageGenArtStatus({
+    status: "loading",
+    mode: paths.mode,
+    manifestPath: paths.manifestPath,
+    atlasPath: paths.atlasPath,
+    provenancePath: paths.provenancePath,
+    sourceImage: paths.sourceImagePath,
+    transparentSourceImage: paths.transparentSourceImagePath,
+    expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
+    loadedCount: 0,
+    loadedKeys: [],
+    missingKeys: []
+  });
+
+  scene.load.json(IMAGEGEN_MANIFEST_CACHE_KEY, paths.manifestPath);
+  scene.load.image(IMAGEGEN_ATLAS_TEXTURE_KEY, paths.atlasPath);
+  scene.load.on("loaderror", (file: any) => {
+    publishImageGenArtStatus({
+      status: "error",
+      manifestError: `failed to load ${file?.src || file?.key || "unknown imagegen asset"}`
+    });
+  });
+}
+
+function copyAtlasFrameToTexture(scene: Phaser.Scene, manifest: any, binding: { frameKey: string; textureKey: string; group: string }) {
+  const frameSpec = manifest?.frames?.[binding.frameKey] as ImageGenFrameSpec | undefined;
+  const frame = frameSpec?.frame;
+  if (!frame || !scene.textures.exists(IMAGEGEN_ATLAS_TEXTURE_KEY)) return false;
+
+  const atlasTexture = scene.textures.get(IMAGEGEN_ATLAS_TEXTURE_KEY);
+  const sourceImage = atlasTexture.getSourceImage() as CanvasImageSource;
+  if (!sourceImage) return false;
+
+  if (scene.textures.exists(binding.textureKey)) {
+    scene.textures.remove(binding.textureKey);
+  }
+
+  const canvasTexture = scene.textures.createCanvas(binding.textureKey, frame.w, frame.h);
+  const ctx = canvasTexture.getContext();
+  ctx.clearRect(0, 0, frame.w, frame.h);
+  ctx.drawImage(sourceImage, frame.x, frame.y, frame.w, frame.h, 0, 0, frame.w, frame.h);
+  canvasTexture.refresh();
+  return true;
+}
+
+function installImageGenAtlasTextures(scene: Phaser.Scene, paths: ImageGenAssetPaths | null) {
+  if (!paths) return;
+
+  const manifest = scene.cache.json.get(IMAGEGEN_MANIFEST_CACHE_KEY);
+  const loadedKeys: string[] = [];
+  const missingKeys: string[] = [];
+  const groups: Record<string, string[]> = {};
+
+  for (const binding of IMAGEGEN_TEXTURE_BINDINGS) {
+    if (copyAtlasFrameToTexture(scene, manifest, binding)) {
+      loadedKeys.push(binding.textureKey);
+      groups[binding.group] = [...(groups[binding.group] || []), binding.textureKey];
+    } else {
+      missingKeys.push(binding.textureKey);
+    }
+  }
+
+  publishImageGenArtStatus({
+    status: loadedKeys.length > 0 ? "loaded" : "error",
+    mode: paths.mode,
+    generatedAtlasStatus: manifest?.generatedAtlasStatus || "unknown",
+    generationStatus: manifest?.generationStatus || "unknown",
+    provenancePath: manifest?.provenancePath || null,
+    sourceImage: manifest?.sourceImage || null,
+    transparentSourceImage: manifest?.transparentSourceImage || null,
+    expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
+    loadedCount: loadedKeys.length,
+    loadedKeys,
+    missingKeys,
+    groups,
+    frameKeys: Object.keys(manifest?.frames || {})
+  });
+}
+
 
 export function initializePhaserGame(
   parentEl: HTMLElement,
   spec: GameSpec,
   playerState: PlayerState,
   onSaveState: (state: PlayerState) => void,
-  onLog: (text: string) => void
+  onLog: (text: string) => void,
+  options: PhaserGameOptions = {}
 ): Phaser.Game {
+  const imageGenAssetPaths = getImageGenAssetPaths(options.workspaceId);
   
   // Custom scenes configuration
   class BootScene extends Phaser.Scene {
@@ -16,8 +253,13 @@ export function initializePhaserGame(
       super({ key: "BootScene" });
     }
 
+    preload() {
+      preloadImageGenAtlas(this, imageGenAssetPaths);
+    }
+
     create() {
       const { width, height } = this.scale;
+      installImageGenAtlasTextures(this, imageGenAssetPaths);
       
       // Draw background
       const bg = this.add.graphics();
@@ -57,7 +299,7 @@ export function initializePhaserGame(
 
       const subtitleText = this.add.text(width / 2, height / 2 + 190, "正在初始化修真世界沙盒 INITALIZING...", {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#94a3b8"
       }).setOrigin(0.5);
 
@@ -151,7 +393,7 @@ export function initializePhaserGame(
       const realmTextStr = spec.economy.realms[this.state.currentRealmIndex] || "炼气期 Initial";
       this.add.text(32, 28, realmTextStr.toUpperCase(), {
         fontFamily: "Inter, sans-serif",
-        fontSize: "15px",
+        fontSize: "22px",
         style: "bold",
         color: spec.themeColor,
         letterSpacing: "2"
@@ -161,14 +403,14 @@ export function initializePhaserGame(
       const passiveRate = (this.state.activeMultiplier * 1.5).toFixed(1);
       this.multiplierText = this.add.text(32, 48, `挂机修炼效率: +${passiveRate}/秒`, {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "11px",
+        fontSize: "16px",
         color: "#64748b"
       });
 
       // Primary Currency Score displaying
       this.add.text(32, 70, `${spec.economy.currencyName.split("/")[0]}:`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#94a3b8"
       });
 
@@ -182,7 +424,7 @@ export function initializePhaserGame(
       // Sound Mute Switch
       const soundText = this.add.text(width - 92, 32, synth.getMuteState() ? "🔇 静音" : "🔊 音效", {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "11px",
+        fontSize: "16px",
         color: synth.getMuteState() ? "#ef4444" : spec.themeColor
       }).setInteractive({ useHandCursor: true });
 
@@ -200,7 +442,7 @@ export function initializePhaserGame(
       
       const brkBtn = this.add.text(width - 145, 68, canBrk ? "⚡ 突破境界" : `🔒 需修为: ${nextBound}`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "12px",
+        fontSize: "18px",
         fontStyle: "bold",
         backgroundColor: canBrk ? spec.themeColor : "#1e293b",
         color: canBrk ? "#020617" : "#64748b",
@@ -249,7 +491,7 @@ export function initializePhaserGame(
 
       const circleLabel = this.add.text(cx, cy, "修炼\nCULTIVATE", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "11px",
+        fontSize: "16px",
         fontStyle: "bold",
         color: "#ffffff",
         align: "center"
@@ -294,7 +536,7 @@ export function initializePhaserGame(
         const py = cy - 40;
         const flTxt = this.add.text(px, py, `+${gain}`, {
           fontFamily: "JetBrains Mono, monospace",
-          fontSize: "18px",
+          fontSize: "27px",
           fontStyle: "bold",
           color: "#ffffff"
         }).setOrigin(0.5);
@@ -350,7 +592,7 @@ export function initializePhaserGame(
         const titleColor = isUnlocked ? "#ffffff" : "#4b5563";
         const titleText = this.add.text(42, dy + 18, `${lockPrefix}节点 ${node.id}: ${node.title}`, {
           fontFamily: "Inter, sans-serif",
-          fontSize: "14px",
+          fontSize: "21px",
           fontStyle: "bold",
           color: titleColor
         });
@@ -360,7 +602,7 @@ export function initializePhaserGame(
         const introTextStr = isUnlocked ? node.intro : "未觉醒。请先参透前面境界及关卡桎梏。";
         const descText = this.add.text(42, dy + 42, introTextStr, {
           fontFamily: "Inter, sans-serif",
-          fontSize: "11px",
+          fontSize: "16px",
           color: isUnlocked ? "#94a3b8" : "#4b5563",
           wordWrap: { width: width - 84, useAdvancedWrap: true }
         });
@@ -376,7 +618,7 @@ export function initializePhaserGame(
           const rawMech = mechLabels[node.mechanics] || node.mechanics.toUpperCase();
           const tag = this.add.text(42, dy + 82, `玩法: ${rawMech}`, {
             fontFamily: "JetBrains Mono, monospace",
-            fontSize: "10px",
+            fontSize: "15px",
             color: spec.themeColor,
             backgroundColor: "rgba(0,0,0,0.45)",
             padding: { x: 5, y: 3 }
@@ -384,7 +626,7 @@ export function initializePhaserGame(
           
           const rwd = this.add.text(230, dy + 82, `造化: ${node.rewards}`, {
             fontFamily: "Inter, sans-serif",
-            fontSize: "10px",
+            fontSize: "15px",
             color: "#f59e0b"
           });
 
@@ -458,6 +700,13 @@ export function initializePhaserGame(
     private scoreHUD!: Phaser.GameObjects.Text;
     private livesCount: number = 3;
     private livesHUD!: Phaser.GameObjects.Text;
+    
+    private adapter: any = null;
+    private testHooks: any = null;
+    private runGrowthState: FirstNodeGrowthState | null = null;
+    private growthHUD: Phaser.GameObjects.Text | null = null;
+    private activeIframe: HTMLIFrameElement | null = null;
+    private iframeListener: ((ev: MessageEvent) => void) | null = null;
 
     // Tap Reaction lists
     private spawnTimer!: Phaser.Time.TimerEvent;
@@ -485,6 +734,123 @@ export function initializePhaserGame(
       this.timeLeft = data.node.durationLimit || 30;
       this.scoreCount = 0;
       this.livesCount = 3;
+      this.adapter = null;
+      this.testHooks = null;
+      this.runGrowthState = null;
+      this.growthHUD = null;
+
+      if (this.node.gameplay) {
+        this.testHooks = new TestHooks("__LOREWEAVER_TEST_HOOKS__");
+        const cardId = this.node.gameplay.cardId;
+
+        const pState = this.game.registry.get("playerState") || {};
+        const unlockedAbilities = Array.isArray(pState.unlockedAbilities) ? pState.unlockedAbilities : [];
+        const planning = this.node.planning || {
+          mainlineHooks: [],
+          rewardUnlocks: [],
+          runSkillPool: []
+        };
+        const abilityCatalog = spec.abilityCatalog || [];
+        const runtimeVisuals = {
+          characterDesignCatalog: spec.characterDesignCatalog || [],
+          enemyDesignCatalog: spec.enemyDesignCatalog || []
+        };
+        const baseKnobs: any = {
+          duration: this.node.durationLimit || 30,
+          goalValue: this.node.goalValue,
+          difficulty: this.node.difficulty,
+          resourceMultiplier: this.node.resourceMultiplier
+        };
+
+        const mergedKnobs = this.node.gameplay.knobs
+          ? { ...baseKnobs, ...this.node.gameplay.knobs }
+          : baseKnobs;
+
+        const payload = createNodePayload({
+          id: this.node.id,
+          nodeId: `node_${this.node.id}`,
+          nodeConfig: {
+            duration: this.node.durationLimit,
+            rewards: {
+              score: this.node.goalValue
+            },
+            planning,
+            abilityCatalog,
+            runtimeVisuals,
+            gameplay: {
+              cardId: cardId,
+              runtimeVisuals,
+              knobs: mergedKnobs,
+              runSkillPool: planning.runSkillPool
+            }
+          },
+          playerStats: {
+            hp: pState.hp || 100
+          },
+          playerPerks: [
+            ...planning.mainlineHooks,
+            ...unlockedAbilities
+          ],
+          inventory: {
+            abilities: abilityCatalog,
+            unlockedAbilities,
+            runSkillPool: planning.runSkillPool
+          }
+        });
+
+        if (cardId === "survivor_horde") {
+          const modifiersList = (this.node.gameplay?.modifiers || []).flatMap((modSpec: GameplayModifierSpec) => {
+            try {
+              const defaultKnobs = SURVIVOR_MODIFIER_DEFAULT_KNOBS[modSpec.id] || {};
+              return [createSurvivorHordeModifier({
+                id: modSpec.id,
+                knobs: {
+                  ...defaultKnobs,
+                  ...(modSpec.knobs || {})
+                }
+              })];
+            } catch (error) {
+              onLog(`⚠️ 跳过暂不支持的 survivor_horde modifier: ${modSpec.id}`);
+              return [];
+            }
+          });
+
+          this.adapter = new SurvivorHordeAdapter({
+            testHooks: this.testHooks,
+            modifiers: modifiersList,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            }
+          });
+        } else if (cardId === "rhythm_timing") {
+          this.adapter = new TapReactionAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            },
+            spawnParticles: (x: number, y: number, color: number) => {
+              this.spawnParticleExplosion(x, y, color);
+            }
+          });
+        } else if (cardId === "drag_collect_grid") {
+          this.adapter = new CollectDodgeAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            },
+            spawnParticles: (x: number, y: number, color: number) => {
+              this.spawnParticleExplosion(x, y, color);
+            }
+          });
+        }
+
+        if (this.adapter) {
+          this.adapter.init(payload);
+          this.setupFirstNodeGrowthLoop(cardId);
+        }
+      }
     }
 
     create() {
@@ -506,7 +872,7 @@ export function initializePhaserGame(
       // Retreat Back Button (Returns safely to MainScene - strictly enforces Scene Hygiene)
       const rBtn = this.add.text(32, 32, "◀ 撤退 / RETREAT", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "11px",
+        fontSize: "16px",
         fontStyle: "bold",
         color: "#ffffff",
         backgroundColor: "rgba(239, 68, 68, 0.65)",
@@ -516,20 +882,53 @@ export function initializePhaserGame(
       rBtn.on("pointerdown", () => {
         synth.playClick();
         onLog(`◀ 已主动撤出境界考验 [节点 ${this.node.id}]。正在返回修真卷轴主态。`);
-        this.safeRetreat();
+        if (this.adapter) {
+          this.adapter.retreat();
+        } else {
+          this.safeRetreat();
+        }
       });
 
-      // Spawn overall active level timers
-      this.timerBar = this.add.graphics();
-      this.gameTimer = this.time.addEvent({
-        delay: 50,
-        callback: this.tickLevelTimer,
-        callbackScope: this,
-        loop: true
-      });
+      // Play ambient drone BGM
+      synth.startBgm();
 
-      // Distribute and trigger minigame core routines
-      this.launchMechanicMinigame(width, height, col);
+      // Show level introductory overlay, and launch game only when skipped/completed
+      this.showLevelIntro(() => {
+        if (this.node.gameplay?.adapter === "iframe") {
+          this.launchIframeContainer(width, height);
+        } else if (this.adapter) {
+          this.adapter.create(this);
+          (window as any).__LW_SURVIVOR_DEMO__ = this.adapter;
+        } else {
+          // Spawn overall active level timers
+          this.timerBar = this.add.graphics();
+          this.gameTimer = this.time.addEvent({
+            delay: 50,
+            callback: this.tickLevelTimer,
+            callbackScope: this,
+            loop: true
+          });
+
+          // Distribute and trigger minigame core routines
+          this.launchMechanicMinigame(width, height, col);
+        }
+      });
+    }
+
+    update(time: number, delta: number) {
+      if (this.adapter) {
+        this.adapter.update(time, delta);
+        const testState = this.adapter.getTestState();
+        if (testState) {
+          this.observeFirstNodeGrowth(testState);
+          this.scoreHUD.setText(`目标进度：${testState.score} / ${this.node.goalValue}`);
+          this.livesHUD.setText(`生命精力：${Math.ceil(testState.hp)}`);
+          
+          if (this.adapter.status === "running" && testState.score >= this.node.goalValue) {
+            this.adapter.finish(true, "objective_met");
+          }
+        }
+      }
     }
 
     private drawLevelHeader(width: number, height: number, themeHex: number) {
@@ -539,7 +938,7 @@ export function initializePhaserGame(
       
       const phraseText = this.add.text(width / 2, 100, chosenTaunt, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "12px",
+        fontSize: "18px",
         fontStyle: "italic",
         color: "#f59e0b",
         wordWrap: { width: width - 80, useAdvancedWrap: true },
@@ -548,7 +947,7 @@ export function initializePhaserGame(
 
       this.add.text(width / 2, 140, `${this.node.title.toUpperCase()}`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "16px",
+        fontSize: "24px",
         style: "bold",
         color: spec.themeColor,
         letterSpacing: "1"
@@ -557,14 +956,225 @@ export function initializePhaserGame(
       // Lives and Target score indicators
       this.scoreHUD = this.add.text(32, height - 42, `目标进度：0 / ${this.node.goalValue}`, {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#ffffff"
       });
 
       this.livesHUD = this.add.text(width - 150, height - 42, `生命精力：${this.livesCount}`, {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#10b981"
+      });
+
+      if (this.runGrowthState?.enabled) {
+        this.growthHUD = this.add.text(32, height - 72, "", {
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "18px",
+          color: "#fbbf24"
+        });
+        this.refreshGrowthHUD();
+      }
+    }
+
+    private setupFirstNodeGrowthLoop(cardId: string) {
+      if (this.node.id !== 1 || cardId !== "survivor_horde" || !this.adapter) return;
+
+      const baseDamage = Number(this.adapter.config?.weapon?.bulletDamage || 2);
+      this.runGrowthState = {
+        enabled: true,
+        collectionSource: "beast_essence_score_from_survivor_horde_collectibles",
+        growthTrigger: "Collect 2 early beast-essence score motes",
+        runtimeMutation: "activeSkills[].level and adapter.config.weapon.bulletDamage",
+        playerFeedback: "Growth HUD, floating skill text, particle burst, and loot cue",
+        combatImpact: "Lv.2 primordial_fist raises bullet damage for subsequent shots",
+        triggerThreshold: 2,
+        collectedEssence: 0,
+        lastObservedScore: 0,
+        activeSkills: [
+          {
+            id: "primordial_fist",
+            label: this.getRuntimeSkillLabel("primordial_fist"),
+            level: 1
+          }
+        ],
+        mutationStats: {
+          weaponDamage: baseDamage,
+          playerHp: this.readAdapterHp()
+        },
+        combatStats: {
+          bulletDamageBefore: baseDamage,
+          bulletDamageAfter: baseDamage,
+          healedHp: 0,
+          unlockedAoE: false
+        },
+        lastFeedback: "awaiting_collection",
+        events: []
+      };
+
+      this.publishGrowthState();
+    }
+
+    private observeFirstNodeGrowth(testState: any) {
+      const growth = this.runGrowthState;
+      if (!growth?.enabled || !this.adapter || this.adapter.status !== "running") return;
+
+      const score = Math.max(0, Math.floor(Number(testState?.score || 0)));
+      if (score > growth.lastObservedScore) {
+        const amount = score - growth.lastObservedScore;
+        growth.lastObservedScore = score;
+        growth.collectedEssence += amount;
+        growth.events.push({
+          type: "collection",
+          amount,
+          score,
+          atMs: Math.round(this.time.now || 0)
+        });
+      }
+
+      if (growth.collectedEssence >= 2) {
+        this.applyFirstNodeGrowthMilestone("primordial_fist_lv2");
+      }
+
+      if (growth.collectedEssence >= 4) {
+        this.applyFirstNodeGrowthMilestone("suan_ni_roar_unlock");
+      }
+
+      this.refreshGrowthHUD();
+      this.publishGrowthState();
+    }
+
+    private applyFirstNodeGrowthMilestone(milestone: string) {
+      const growth = this.runGrowthState;
+      if (!growth || growth.events.some((event) => event.milestone === milestone)) return;
+
+      const before = this.readGrowthMutationStats();
+
+      if (milestone === "primordial_fist_lv2") {
+        const skill = growth.activeSkills.find((item) => item.id === "primordial_fist");
+        if (skill) {
+          skill.level = Math.max(skill.level, 2);
+        }
+
+        const currentDamage = Number(this.adapter?.config?.weapon?.bulletDamage || 2);
+        this.adapter.config.weapon.bulletDamage = Math.max(currentDamage + 2, Math.ceil(currentDamage * 1.6));
+        growth.lastFeedback = `${this.getRuntimeSkillLabel("primordial_fist")} Lv.2`;
+        this.showGrowthFeedback("基础拳 Lv.2，拳罡更重", 0xf59e0b);
+        growth.events.push({
+          type: "skill_level",
+          milestone,
+          skillId: "primordial_fist",
+          level: 2,
+          before,
+          after: this.readGrowthMutationStats(),
+          atMs: Math.round(this.time.now || 0)
+        });
+      } else if (milestone === "suan_ni_roar_unlock") {
+        growth.activeSkills.push({
+          id: "suan_ni_roar",
+          label: this.getRuntimeSkillLabel("suan_ni_roar"),
+          level: 1
+        });
+
+        const currentDamage = Number(this.adapter?.config?.weapon?.bulletDamage || 2);
+        this.adapter.config.weapon.bulletDamage = currentDamage + 3;
+        growth.combatStats.unlockedAoE = true;
+        growth.lastFeedback = `${this.getRuntimeSkillLabel("suan_ni_roar")} unlocked`;
+        this.showGrowthFeedback("临阵参悟：狻猊怒啸", 0xfacc15);
+        growth.events.push({
+          type: "skill_unlock",
+          milestone,
+          skillId: "suan_ni_roar",
+          level: 1,
+          before,
+          after: this.readGrowthMutationStats(),
+          atMs: Math.round(this.time.now || 0)
+        });
+      }
+
+      const after = this.readGrowthMutationStats();
+      growth.mutationStats.weaponDamage = after.weaponDamage || 0;
+      growth.mutationStats.playerHp = after.playerHp;
+      growth.combatStats.bulletDamageAfter = after.weaponDamage || growth.combatStats.bulletDamageAfter;
+      this.refreshGrowthHUD();
+    }
+
+    private getRuntimeSkillLabel(skillId: string) {
+      const directLabels: Record<string, string> = {
+        primordial_fist: "原始真解·基础拳",
+        suan_ni_roar: "狻猊宝术·怒啸",
+        willow_blessing: "柳神赐福·回春"
+      };
+      if (directLabels[skillId]) return directLabels[skillId];
+
+      const ability = spec.abilityCatalog?.find((item) => item.runtimeSkillIds?.includes(skillId));
+      return ability?.name || skillId;
+    }
+
+    private readAdapterHp() {
+      const hp = this.adapter?.state?.hp;
+      return typeof hp === "number" ? hp : null;
+    }
+
+    private readGrowthMutationStats() {
+      return {
+        weaponDamage: Number(this.adapter?.config?.weapon?.bulletDamage || 0),
+        playerHp: this.readAdapterHp()
+      };
+    }
+
+    private refreshGrowthHUD() {
+      if (!this.growthHUD || !this.runGrowthState) return;
+
+      const growth = this.runGrowthState;
+      const skills = growth.activeSkills
+        .map((skill) => `${skill.label} Lv.${skill.level}`)
+        .join(" / ");
+      this.growthHUD.setText(`血气参悟：${growth.collectedEssence}/${growth.triggerThreshold} · ${skills}`);
+    }
+
+    private showGrowthFeedback(text: string, color: number) {
+      synth.playLoot();
+      const { width, height } = this.scale;
+      const fx = this.add.text(width / 2, height - 118, text, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "22px",
+        fontStyle: "bold",
+        color: "#fff7d6",
+        backgroundColor: "rgba(15, 23, 42, 0.72)",
+        padding: { x: 10, y: 6 }
+      }).setOrigin(0.5).setDepth(20);
+
+      this.spawnParticleExplosion(width / 2, height / 2, color);
+      this.cameras.main.flash(160, 245, 158, 11);
+      this.tweens.add({
+        targets: fx,
+        y: height - 150,
+        alpha: 0,
+        duration: 1200,
+        onComplete: () => fx.destroy()
+      });
+    }
+
+    private publishGrowthState() {
+      if (!this.testHooks || !this.runGrowthState) return;
+
+      const growth = this.runGrowthState;
+      this.testHooks.update({
+        growth: {
+          enabled: growth.enabled,
+          collectionSource: growth.collectionSource,
+          growthTrigger: growth.growthTrigger,
+          runtimeMutation: growth.runtimeMutation,
+          playerFeedback: growth.playerFeedback,
+          combatImpact: growth.combatImpact,
+          triggerThreshold: growth.triggerThreshold,
+          collectedEssence: growth.collectedEssence,
+          activeSkills: growth.activeSkills.map((skill) => ({ ...skill })),
+          mutationStats: { ...growth.mutationStats },
+          combatStats: { ...growth.combatStats },
+          lastFeedback: growth.lastFeedback,
+          events: growth.events.slice(-8)
+        }
       });
     }
 
@@ -645,7 +1255,7 @@ export function initializePhaserGame(
         this.scoreHUD.setText(`已吸收: ${this.scoreCount} / ${this.node.goalValue}`);
         
         // Spawn micro numbers floating animation
-        const fx = this.add.text(rx, ry, "+1 灵能", { fontFamily: "JetBrains Mono", fontSize: "12px", color: spec.themeColor });
+        const fx = this.add.text(rx, ry, "+1 灵能", { fontFamily: "JetBrains Mono", fontSize: "18px", color: spec.themeColor });
         this.tweens.add({
           targets: fx,
           y: ry - 40,
@@ -812,7 +1422,7 @@ export function initializePhaserGame(
         
         const label = this.add.text(pos.x, pos.y, pos.label, {
           fontFamily: "Inter",
-          fontSize: "12px",
+          fontSize: "18px",
           fontStyle: "bold",
           color: "#ffffff"
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -947,33 +1557,384 @@ export function initializePhaserGame(
       }
     }
 
-    /* GENERAL EXIT STRATEGIES AND SCENE RESTORATION CONTROLLER */
+    private handleAdapterEnd(result: any) {
+      if (result.success) {
+        // Stop combat BGM, play fanfare
+        synth.stopBossTheme();
+        synth.stopBgm();
+        synth.playVictoryFanfare();
+        onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！`);
+
+        const pState = { ...this.game.registry.get("playerState") } as PlayerState;
+        const r = result.reward || {};
+        const rwdKey = spec.economy.resources[0] || "灵石";
+        const secondaryResources = r.secondaryResources || { [rwdKey]: 1 };
+        const unlockedAbilities = r.unlockedAbilities || this.node.planning?.rewardUnlocks || [];
+        const storyFlags = r.storyFlags || [];
+
+        const nodeResult: NodeResult = {
+          success: true,
+          rewards: {
+            multiplierGain: r.multiplierGain ?? (this.node.resourceMultiplier / 12.0),
+            secondaryResources,
+            unlockedAbilities,
+            unlockedPassives: r.unlockedPassives || [],
+            storyFlags,
+            unlockNextNode: r.unlockNextNode !== false
+          }
+        };
+
+        const nextState = RewardApplier.apply(pState, this.node, nodeResult);
+
+        const newlyUnlocked = (nodeResult.rewards?.unlockedAbilities || []).filter(id => !pState.unlockedAbilities?.includes(id));
+        const unlockedAbilityLabels = newlyUnlocked.map((abilityId) => {
+          const ability = spec.abilityCatalog?.find((item) => item.id === abilityId);
+          return ability?.name || abilityId;
+        });
+
+        this.game.registry.set("playerState", nextState);
+        this.game.registry.get("onSaveState")(nextState);
+
+        if (unlockedAbilityLabels.length > 0) {
+          onLog(`✨ 新能力已写入长期企划成长：${unlockedAbilityLabels.join(" / ")}`);
+        }
+
+        const multiplierGain = nodeResult.rewards?.multiplierGain ?? (this.node.resourceMultiplier / 12.0);
+        this.cameras.main.flash(300, 16, 185, 129);
+        this.showVictoryOverlay(multiplierGain, rwdKey);
+      } else {
+        synth.stopBossTheme();
+        synth.stopBgm();
+        if (result.reason === "retreated") {
+          this.safeRetreat();
+        } else {
+          synth.playDamage();
+          onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${result.reason || "未知"}]。`);
+          this.cameras.main.shake(250, 0.015);
+          this.showDefeatOverlay(result.reason || "天劫强力，元神溃散");
+        }
+      }
+    }
+
+    private showLevelIntro(onComplete: () => void) {
+      const { width, height } = this.scale;
+      const introContainer = this.add.container(0, 0);
+
+      const overlay = this.add.graphics();
+      overlay.fillStyle(0x020617, 0.85);
+      overlay.fillRect(0, 0, width, height);
+      introContainer.add(overlay);
+
+      const col = Phaser.Display.Color.HexStringToColor(spec.themeColor).color;
+      const panel = this.add.graphics();
+      panel.fillStyle(0x0f172a, 0.95);
+      panel.fillRoundedRect(50, height / 2 - 260, width - 100, 420, 10);
+      panel.lineStyle(2, col, 0.85);
+      panel.strokeRoundedRect(50, height / 2 - 260, width - 100, 420, 10);
+      introContainer.add(panel);
+
+      const title = this.add.text(width / 2, height / 2 - 210, `第 ${this.node.id} 劫：${this.node.title}`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "30px",
+        fontStyle: "bold",
+        color: spec.themeColor
+      }).setOrigin(0.5);
+
+      const descText = this.add.text(width / 2, height / 2 - 140, this.node.intro, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        color: "#94a3b8",
+        wordWrap: { width: width - 160, useAdvancedWrap: true },
+        align: "center"
+      }).setOrigin(0.5);
+
+      let mechDesc = "";
+      if (this.node.gameplay?.cardId === "survivor_horde") {
+        mechDesc = "⚔️ 割草生存：躲避敌人，利用法宝自动击杀怪物，并在最后击败降临的邪道首领。";
+      } else if (this.node.gameplay?.cardId === "rhythm_timing") {
+        mechDesc = "🔮 快速聚灵：点击屏幕上不断收缩的灵能法阵。漏掉会导致生命值受损，后期需击破劫雷法阵。";
+      } else if (this.node.gameplay?.cardId === "drag_collect_grid") {
+        mechDesc = "🍃 虚空飞渡：左右滑动躲避漫天红雷，收集绿灵珠。最后收集飞剑攻击劈落的天雷巨兽。";
+      } else {
+        mechDesc = "🔮 天道感应：体验由工作台配置的经典玩法考验。";
+      }
+
+      const mech = this.add.text(width / 2, height / 2 - 30, mechDesc, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "18px",
+        color: "#10b981",
+        wordWrap: { width: width - 160, useAdvancedWrap: true },
+        align: "center"
+      }).setOrigin(0.5);
+
+      const prompt = this.add.text(width / 2, height / 2 + 100, "—— 点击屏幕 开启考验 ——", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        fontStyle: "bold",
+        color: "#64748b"
+      }).setOrigin(0.5);
+
+      this.tweens.add({
+        targets: prompt,
+        alpha: { from: 1, to: 0.3 },
+        duration: 800,
+        yoyo: true,
+        repeat: -1
+      });
+
+      introContainer.add([title, descText, mech, prompt]);
+
+      const skipZone = this.add.zone(width / 2, height / 2, width, height).setInteractive();
+      skipZone.on("pointerdown", () => {
+        synth.playClick();
+        this.tweens.add({
+          targets: introContainer,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => {
+            introContainer.destroy();
+            skipZone.destroy();
+            onComplete();
+          }
+        });
+      });
+
+      this.time.delayedCall(2500, () => {
+        if (introContainer.active) {
+          this.tweens.add({
+            targets: introContainer,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => {
+              introContainer.destroy();
+              skipZone.destroy();
+              onComplete();
+            }
+          });
+        }
+      });
+    }
+
+    private spawnParticleExplosion(x: number, y: number, color: number) {
+      const count = 12;
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Phaser.Math.Between(60, 160);
+        const px = x + Math.cos(angle) * 8;
+        const py = y + Math.sin(angle) * 8;
+        const dot = this.add.arc(px, py, Phaser.Math.Between(2, 4), 0, 360, false, color, 0.95);
+        
+        this.tweens.add({
+          targets: dot,
+          x: px + Math.cos(angle) * speed * 0.4,
+          y: py + Math.sin(angle) * speed * 0.4,
+          alpha: 0,
+          scale: 0.1,
+          duration: Phaser.Math.Between(400, 700),
+          onComplete: () => dot.destroy()
+        });
+      }
+    }
+
+    private showVictoryOverlay(multiplierGain: number, resourceKey: string) {
+      const { width, height } = this.scale;
+      const container = this.add.container(0, 0);
+
+      const overlay = this.add.graphics();
+      overlay.fillStyle(0x020617, 0.7);
+      overlay.fillRect(0, 0, width, height);
+      container.add(overlay);
+
+      const panel = this.add.graphics();
+      panel.fillStyle(0x0f172a, 0.95);
+      panel.fillRoundedRect(60, height / 2 - 240, width - 120, 480, 12);
+      panel.lineStyle(2.5, 0xd97706, 1);
+      panel.strokeRoundedRect(60, height / 2 - 240, width - 120, 480, 12);
+      container.add(panel);
+
+      // Gold dust particles continuously
+      this.time.addEvent({
+        delay: 150,
+        callback: () => {
+          this.spawnParticleExplosion(
+            Phaser.Math.Between(80, width - 80),
+            Phaser.Math.Between(height / 2 - 200, height / 2 + 100),
+            0xd97706
+          );
+        },
+        repeat: 12
+      });
+
+      const title = this.add.text(width / 2, height / 2 - 190, "🍀 功德圆满 / SUCCESS", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "33px",
+        fontStyle: "bold",
+        color: "#f59e0b"
+      }).setOrigin(0.5);
+
+      const sub = this.add.text(width / 2, height / 2 - 130, `顺利参透第 ${this.node.id} 关：${this.node.title}`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        color: "#94a3b8"
+      }).setOrigin(0.5);
+
+      const rwdTitle = this.add.text(width / 2, height / 2 - 70, "获得天道造化奖励", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "21px",
+        fontStyle: "bold",
+        color: "#ffffff"
+      }).setOrigin(0.5);
+
+      const rwd1 = this.add.text(width / 2, height / 2 - 20, `✨ 修为挂机效率: +${(multiplierGain * 1.5).toFixed(2)}/秒`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        color: "#10b981"
+      }).setOrigin(0.5);
+
+      const rwd2 = this.add.text(width / 2, height / 2 + 20, `💎 额外获取造化: ${this.node.rewards}`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        color: "#f59e0b"
+      }).setOrigin(0.5);
+
+      const rwd3 = this.add.text(width / 2, height / 2 + 60, `💼 奇珍机缘: ${resourceKey} +1`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        color: "#38bdf8"
+      }).setOrigin(0.5);
+
+      const btn = this.add.text(width / 2, height / 2 + 150, "领取天道机缘并返回", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "21px",
+        fontStyle: "bold",
+        color: "#0f172a",
+        backgroundColor: "#f59e0b",
+        padding: { x: 20, y: 10 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      btn.on("pointerover", () => btn.setScale(1.05));
+      btn.on("pointerout", () => btn.setScale(1));
+      btn.on("pointerdown", () => {
+        synth.playClick();
+        container.destroy();
+        this.safeRetreat();
+      });
+
+      container.add([title, sub, rwdTitle, rwd1, rwd2, rwd3, btn]);
+    }
+
+    private showDefeatOverlay(reason: string) {
+      const { width, height } = this.scale;
+      const container = this.add.container(0, 0);
+
+      const overlay = this.add.graphics();
+      overlay.fillStyle(0x020617, 0.7);
+      overlay.fillRect(0, 0, width, height);
+      container.add(overlay);
+
+      const panel = this.add.graphics();
+      panel.fillStyle(0x0f172a, 0.95);
+      panel.fillRoundedRect(60, height / 2 - 180, width - 120, 360, 12);
+      panel.lineStyle(2.5, 0xef4444, 1);
+      panel.strokeRoundedRect(60, height / 2 - 180, width - 120, 360, 12);
+      container.add(panel);
+
+      const title = this.add.text(width / 2, height / 2 - 130, "💀 身死道消 / DEFEATED", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "33px",
+        fontStyle: "bold",
+        color: "#ef4444"
+      }).setOrigin(0.5);
+
+      let reasonZh = reason;
+      if (reason === "hp_zero") reasonZh = "生命元神耗尽归零";
+      else if (reason === "timer_expired") reasonZh = "劫数倒计时大限已到";
+
+      const sub = this.add.text(width / 2, height / 2 - 70, `败因: [ ${reasonZh} ]`, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        color: "#94a3b8",
+        wordWrap: { width: width - 180, useAdvancedWrap: true },
+        align: "center"
+      }).setOrigin(0.5);
+
+      const desc = this.add.text(width / 2, height / 2 - 10, "天雷凶险，仙途坎坷。请重整旗鼓再试，\n或先行退回主界面积攒修为。", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "18px",
+        color: "#64748b",
+        align: "center"
+      }).setOrigin(0.5);
+
+      // Try Again Button
+      const btnRetry = this.add.text(width / 2 - 75, height / 2 + 80, "重整旗鼓", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        backgroundColor: "#10b981",
+        padding: { x: 16, y: 10 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      btnRetry.on("pointerover", () => btnRetry.setScale(1.05));
+      btnRetry.on("pointerout", () => btnRetry.setScale(1));
+      btnRetry.on("pointerdown", () => {
+        synth.playClick();
+        container.destroy();
+        this.shutdown();
+        this.scene.restart({ node: this.node });
+      });
+
+      // Retreat Button
+      const btnBack = this.add.text(width / 2 + 75, height / 2 + 80, "退回主干", {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "20px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        backgroundColor: "#334155",
+        padding: { x: 16, y: 10 }
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      btnBack.on("pointerover", () => btnBack.setScale(1.05));
+      btnBack.on("pointerout", () => btnBack.setScale(1));
+      btnBack.on("pointerdown", () => {
+        synth.playClick();
+        container.destroy();
+        this.safeRetreat();
+      });
+
+      container.add([title, sub, desc, btnRetry, btnBack]);
+    }
+
     private handleLevelWin() {
-      synth.playNodeSuccess();
+      synth.playVictoryFanfare();
       onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！悟得通关造化: [${this.node.rewards}]。`);
 
       const pState = { ...this.game.registry.get("playerState") } as PlayerState;
-      
-      // Update registration variables
-      if (!pState.completedNodeIds.includes(this.node.id)) {
-        pState.completedNodeIds.push(this.node.id);
-      }
-
-      // Unlock subsequent node sequentially
-      const nextId = this.node.id + 1;
-      if (nextId <= 12 && !pState.unlockedNodeIds.includes(nextId)) {
-        pState.unlockedNodeIds.push(nextId);
-      }
-
-      // Add multiplier grow
-      pState.activeMultiplier += this.node.resourceMultiplier / 12.0;
-      
-      // Seed material resources randomly based on clearing
       const rwdKey = spec.economy.resources[0] || "灵石";
-      pState.secondaryResources[rwdKey] = (pState.secondaryResources[rwdKey] || 0) + 1;
+      
+      const nodeResult: NodeResult = {
+        success: true,
+        rewards: {
+          multiplierGain: this.node.resourceMultiplier / 12.0,
+          secondaryResources: { [rwdKey]: 1 },
+          unlockedAbilities: this.node.planning?.rewardUnlocks || []
+        }
+      };
 
-      this.game.registry.set("playerState", pState);
-      this.game.registry.get("onSaveState")(pState);
+      const nextState = RewardApplier.apply(pState, this.node, nodeResult);
+
+      const newlyUnlocked = (nodeResult.rewards?.unlockedAbilities || []).filter(id => !pState.unlockedAbilities?.includes(id));
+      const unlockedAbilityLabels = newlyUnlocked.map((abilityId) => {
+        const ability = spec.abilityCatalog?.find((item) => item.id === abilityId);
+        return ability?.name || abilityId;
+      });
+
+      this.game.registry.set("playerState", nextState);
+      this.game.registry.get("onSaveState")(nextState);
+
+      if (unlockedAbilityLabels.length > 0) {
+        onLog(`✨ 新能力已写入长期企划成长：${unlockedAbilityLabels.join(" / ")}`);
+      }
 
       // Flash feedback
       this.cameras.main.flash(300, 16, 185, 129);
@@ -987,6 +1948,22 @@ export function initializePhaserGame(
 
       this.time.delayedCall(1400, () => {
         this.safeRetreat();
+      });
+    }
+
+    private applyPlanningRewards(pState: PlayerState) {
+      const rewardUnlocks = this.node.planning?.rewardUnlocks || [];
+      if (!Array.isArray(pState.unlockedAbilities)) {
+        pState.unlockedAbilities = [];
+      }
+
+      const newlyUnlocked = rewardUnlocks.filter((abilityId) => !pState.unlockedAbilities.includes(abilityId));
+      if (newlyUnlocked.length === 0) return [];
+
+      pState.unlockedAbilities = [...pState.unlockedAbilities, ...newlyUnlocked];
+      return newlyUnlocked.map((abilityId) => {
+        const ability = spec.abilityCatalog?.find((item) => item.id === abilityId);
+        return ability?.name || abilityId;
       });
     }
 
@@ -1008,6 +1985,138 @@ export function initializePhaserGame(
       });
     }
 
+    private launchIframeContainer(width: number, height: number) {
+      const parentEl = this.game.canvas.parentElement;
+      if (!parentEl) {
+        onLog(`❌ 无法找到容器 DOM 挂载 iframe。`);
+        this.handleLevelLoss("IFRAME MOUNT FAILURE");
+        return;
+      }
+
+      onLog(`📂 正在加载独立 H5 玩法容器 [节点 ${this.node.id}: ${this.node.title}]...`);
+
+      const iframe = document.createElement("iframe");
+      iframe.src = `./nodes/node${this.node.id}.html`;
+      iframe.style.position = "absolute";
+      iframe.style.top = "0px";
+      iframe.style.left = "0px";
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.border = "none";
+      iframe.style.zIndex = "100";
+      iframe.style.background = "#020617";
+
+      parentEl.appendChild(iframe);
+      this.activeIframe = iframe;
+
+      this.iframeListener = (ev: MessageEvent) => {
+        if (!ev.data) return;
+        if (ev.data.type === "NODE_RESULT") {
+          const reward = ev.data.reward || {};
+          onLog(`📥 H5 玩法容器回传奖励数据: ${JSON.stringify(reward)}`);
+
+          const success = reward.success !== false;
+          this.handleIframeResult(success, reward);
+        } else if (ev.data.type === "NODE_CLOSE" || ev.data.type === "NODE_EXIT") {
+          onLog(`🚪 H5 玩法容器请求退出。`);
+          this.handleIframeResult(false, { reason: "retreated" });
+        }
+      };
+
+      window.addEventListener("message", this.iframeListener);
+    }
+
+    private handleIframeResult(success: boolean, reward: any) {
+      if (this.activeIframe) {
+        if (this.activeIframe.parentElement) {
+          this.activeIframe.parentElement.removeChild(this.activeIframe);
+        }
+        this.activeIframe = null;
+      }
+      if (this.iframeListener) {
+        window.removeEventListener("message", this.iframeListener);
+        this.iframeListener = null;
+      }
+
+      if (success) {
+        synth.stopBossTheme();
+        synth.stopBgm();
+        synth.playVictoryFanfare();
+        onLog(`💎 功德圆满！独立 H5 玩法容器 [节点 ${this.node.id}: ${this.node.title}] 通关成功！`);
+
+        const pState = { ...this.game.registry.get("playerState") } as PlayerState;
+        const rwdKey = spec.economy.resources[0] || "灵石";
+
+        const mappedSecondary: { [key: string]: number } = {};
+        if (typeof reward.qi === "number") {
+          mappedSecondary[rwdKey] = reward.qi;
+        } else if (reward.secondaryResources) {
+          Object.assign(mappedSecondary, reward.secondaryResources);
+        } else {
+          mappedSecondary[rwdKey] = 1;
+        }
+
+        const mappedAbilities: string[] = [];
+        if (reward.skill) {
+          mappedAbilities.push(reward.skill);
+        }
+        if (reward.unlockedAbilities) {
+          mappedAbilities.push(...reward.unlockedAbilities);
+        }
+        if (mappedAbilities.length === 0 && this.node.planning?.rewardUnlocks) {
+          mappedAbilities.push(...this.node.planning.rewardUnlocks);
+        }
+
+        const mappedFlags: string[] = [];
+        if (reward.storyFlags) {
+          mappedFlags.push(...reward.storyFlags);
+        } else if (reward.relic) {
+          mappedFlags.push(reward.relic);
+        }
+
+        const nodeResult: NodeResult = {
+          success: true,
+          rewards: {
+            multiplierGain: reward.multiplierGain ?? (reward.xp ? reward.xp / 300.0 : this.node.resourceMultiplier / 12.0),
+            secondaryResources: mappedSecondary,
+            unlockedAbilities: mappedAbilities,
+            storyFlags: mappedFlags,
+            unlockNextNode: reward.unlockNextNode !== false
+          }
+        };
+
+        const nextState = RewardApplier.apply(pState, this.node, nodeResult);
+
+        const newlyUnlocked = (nodeResult.rewards?.unlockedAbilities || []).filter(id => !pState.unlockedAbilities?.includes(id));
+        const unlockedAbilityLabels = newlyUnlocked.map((abilityId) => {
+          const ability = spec.abilityCatalog?.find((item) => item.id === abilityId);
+          return ability?.name || abilityId;
+        });
+
+        this.game.registry.set("playerState", nextState);
+        this.game.registry.get("onSaveState")(nextState);
+
+        if (unlockedAbilityLabels.length > 0) {
+          onLog(`✨ 新能力已写入长期企划成长：${unlockedAbilityLabels.join(" / ")}`);
+        }
+
+        const multiplierGain = nodeResult.rewards?.multiplierGain ?? (this.node.resourceMultiplier / 12.0);
+        this.cameras.main.flash(300, 16, 185, 129);
+        this.showVictoryOverlay(multiplierGain, rwdKey);
+      } else {
+        synth.stopBossTheme();
+        synth.stopBgm();
+        if (reward.reason === "retreated") {
+          this.safeRetreat();
+        } else {
+          synth.playDamage();
+          onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${reward.reason || "挑战失败"}]。`);
+          this.cameras.main.shake(250, 0.015);
+          this.showDefeatOverlay(reward.reason || "天劫强力，元神溃散");
+        }
+      }
+    }
+
     private safeRetreat() {
       // Cleans everything before shutdown (Ensures 0% leakage risk)
       this.shutdown();
@@ -1025,6 +2134,32 @@ export function initializePhaserGame(
       this.activeCollects = [];
       this.activeHazards = [];
       this.runeKeyrings = [];
+
+      // Clean up active iframe if any
+      if (this.activeIframe) {
+        if (this.activeIframe.parentElement) {
+          this.activeIframe.parentElement.removeChild(this.activeIframe);
+        }
+        this.activeIframe = null;
+      }
+      if (this.iframeListener) {
+        window.removeEventListener("message", this.iframeListener);
+        this.iframeListener = null;
+      }
+
+      // Stop Synthesizer Drones BGM and Boss Theme
+      synth.stopBgm();
+      synth.stopBossTheme();
+
+      // Clean up adapter
+      if (this.adapter) {
+        this.adapter.destroy();
+        this.adapter = null;
+      }
+      if (this.testHooks) {
+        this.testHooks = null;
+      }
+      delete (window as any).__LW_SURVIVOR_DEMO__;
     }
   }
 
@@ -1054,6 +2189,9 @@ export function initializePhaserGame(
   // Set communication hooks to Phaser global variables
   game.registry.set("playerState", playerState);
   game.registry.set("onSaveState", onSaveState);
+  game.registry.set("gameSpec", spec);
+
+  (window as any).__LOREWEAVER_GAME__ = game;
 
   return game;
 }

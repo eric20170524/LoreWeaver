@@ -1,0 +1,28 @@
+const imagegenManifest = {
+  "generatedAtlasStatus": "present",
+  "generationStatus": "generated_with_builtin_imagegen",
+  "atlasImage": "assets/imagegen/atlas.png",
+  "provenancePath": "assets/imagegen/provenance.json",
+  "sourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628.png",
+  "transparentSourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
+  "atlasSize": { "w": 256, "h": 192 },
+  "frameSize": { "w": 64, "h": 64 },
+  "frames": {
+    "shihao_young_runtime": { "frame": { "x": 0, "y": 0, "w": 64, "h": 64 } },
+    "enemy_wild_rhino": { "frame": { "x": 64, "y": 0, "w": 64, "h": 64 } },
+    "enemy_green_scaled_eagle": { "frame": { "x": 128, "y": 0, "w": 64, "h": 64 } },
+    "enemy_rock_golem": { "frame": { "x": 192, "y": 0, "w": 64, "h": 64 } },
+    "enemy_qiongqi_cub": { "frame": { "x": 0, "y": 64, "w": 64, "h": 64 } },
+    "skill_fist_projectile": { "frame": { "x": 64, "y": 64, "w": 64, "h": 64 } },
+    "pickup_blood_essence": { "frame": { "x": 128, "y": 64, "w": 64, "h": 64 } },
+    "vfx_effect_frame": { "frame": { "x": 192, "y": 64, "w": 64, "h": 64 } },
+    "chest_gold": { "frame": { "x": 0, "y": 128, "w": 64, "h": 64 } },
+    "boss_projectile": { "frame": { "x": 64, "y": 128, "w": 64, "h": 64 } }
+  }
+};
+
+if (typeof window !== "undefined") {
+  window.__LOREWEAVER_IMAGEGEN_MANIFEST__ = imagegenManifest;
+}
+
+export default imagegenManifest;

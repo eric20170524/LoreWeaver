@@ -62,10 +62,9 @@ Current catalog examples:
 - `rhythm_timing` - timing and rhythm challenge card.
 - `drag_collect_grid` - collection/grid interaction card.
 - `sequence_synthesis` - memory or ordered synthesis card.
-- `hazard_telegraph` - implemented modifier for delayed danger zones.
-- `defend_core` - implemented modifier for defending a central objective.
-- `escort_npc`, `boss_phases`, `poison_fog`, `laser_warning` - design-stage
-  modifiers for future runtime work.
+- `hazard_telegraph`, `defend_core`, `escort_npc`, `boss_phases`,
+  `poison_fog`, `laser_warning` - implemented `survivor_horde` modifiers
+  created through the core modifier factory.
 
 ## Local Development
 
@@ -134,7 +133,17 @@ The backend exposes workspace and pipeline endpoints through `/api`:
 - `POST /api/jobs/{id}/approve` - approve a generated spec for compilation.
 - `POST /api/jobs/{id}/chat` - refine a pending job through an agent role.
 - `POST /api/workspaces/{id}/refine` - refine an existing workspace manifest.
+- `GET /api/workspaces/{id}/export` - download a ZIP with `manifest.json`,
+  a standalone `index.html` preview shell, and the reusable `core/lib` and
+  `core/demo` runtime sources.
 - `POST /api/audit` - submit screenshot/audit payloads.
+
+## Local Model Support
+
+Ollama/local-model routing is intentionally deferred for now. If
+`OLLAMA_API_BASE` is present in the environment, the backend logs that the value
+is ignored and continues to use Gemini when `GEMINI_API_KEY` is set, or the
+procedural fallback when it is not.
 
 ## Data and Generated Artifacts
 
@@ -160,12 +169,13 @@ workflow/reports/
 Start with:
 
 - `docs/README.md` - active document index.
-- `docs/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md` - current product and
+- `docs/architecture/current_system_architecture_and_core_features.md` - current system architecture and core feature design.
+- `docs/roadmap/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md` - current product and
   gameplay-core direction.
-- `docs/gameplay_card_schema.md` - Gameplay Card schema and review gate.
-- `docs/core_contracts.md` - runtime contracts for payloads, results, adapters,
+- `docs/gameplay/gameplay_card_schema.md` - Gameplay Card schema and review gate.
+- `docs/architecture/core_contracts.md` - runtime contracts for payloads, results, adapters,
   modifiers, lifecycle, and test hooks.
-- `docs/patch_revision_workflow.md` - patch and revision workflow.
+- `docs/workflow/patch_revision_workflow.md` - patch and revision workflow.
 
 ## License / 授权
 
