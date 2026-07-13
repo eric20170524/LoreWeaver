@@ -1,0 +1,54 @@
+{
+  "id": 8,
+  "title": "仙古遗地",
+  "intro": "多层随机房间与传送门推进，资源门和危险门改变下一层风险收益。深入越久，敌潮越强。",
+  "taunts": [
+    "仙古原住民：外来者，死！",
+    "星骁：这里的造化，我全都要！"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +50000，纯血 +10~15，仙道法则",
+  "goalValue": 300,
+  "resourceMultiplier": 12.5,
+  "difficulty": 8,
+  "durationLimit": 300,
+  "gameplay": {
+    "adapter": "iframe",
+    "cardId": "node_iframe_microgame",
+    "modifiers": [],
+    "knobs": {
+      "legacySceneClass": "Node8Scene",
+      "realmRequired": 8,
+      "bossId": "ancient_beast_king",
+      "sourceRewards": {
+        "bloodEssence": 50000,
+        "pureBlood": [
+          10,
+          15
+        ]
+      }
+    },
+    "patchLevel": "L2"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery",
+      "pure_blood_trial"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "dual_pupil",
+      "kunpeng_art",
+      "true_phoenix_art",
+      "supreme_bone"
+    ],
+    "rewardUnlocks": [
+      "supreme_bone"
+    ],
+    "notes": "仙古遗地开放星骨终局分支，后续节点允许变身与清屏宝术进入局内池。"
+  }
+}

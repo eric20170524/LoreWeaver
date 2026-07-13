@@ -1,0 +1,22 @@
+{
+  "currencyName": "气血精华/Blood Essence",
+  "resources": [
+    "狻猊骨文/Suan Ni Bone Script",
+    "纯血/Pure Blood",
+    "仙道法则/Immortal Law"
+  ],
+  "realms": [
+    "搬血境",
+    "洞天境",
+    "化灵境",
+    "铭纹境",
+    "列阵境",
+    "尊者境",
+    "神火境",
+    "真一境",
+    "天神境",
+    "虚道/斩我境",
+    "遁一/至尊境",
+    "真仙/仙王境"
+  ]
+}

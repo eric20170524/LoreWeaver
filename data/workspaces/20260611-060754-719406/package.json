@@ -1,0 +1,33 @@
+{
+  "name": "perfectworld-dahuang",
+  "version": "1.0.0",
+  "description": "星渊试炼·荒域觉醒 - Phaser 3 H5 Minigame",
+  "scripts": {
+    "manifest:split": "node scripts/split-loreweaver-manifest.mjs",
+    "manifest:build": "node scripts/build-loreweaver-manifest.mjs",
+    "manifest:check": "node scripts/build-loreweaver-manifest.mjs --check",
+    "loreweaver:check": "node scripts/check-loreweaver-runtime.mjs",
+    "ability:check": "node --experimental-default-type=module scripts/check-ability-progression.mjs",
+    "runtime:modularization:check": "node --experimental-default-type=module scripts/check-runtime-modularization.mjs",
+    "runtime:modularization:browser": "../../../../venv/bin/python scripts/run-runtime-modularization-browser.py",
+    "progression:check": "node --experimental-default-type=module scripts/check-progression-contract.mjs",
+    "balance:report": "node --experimental-default-type=module scripts/report-balance-simulation.mjs",
+    "balance:gate": "node --experimental-default-type=module scripts/report-balance-simulation.mjs --gate",
+    "balance:self-check": "node --experimental-default-type=module scripts/check-balance-simulation.mjs",
+    "maturity:report": "node --experimental-default-type=module scripts/report-maturity.mjs",
+    "maturity:gate": "node --experimental-default-type=module scripts/report-maturity.mjs --gate",
+    "maturity:self-check": "node --experimental-default-type=module scripts/check-maturity-evidence.mjs",
+    "save:self-check": "node --experimental-default-type=module scripts/check-save-migration.mjs",
+    "save:report": "node --experimental-default-type=module scripts/report-save-migration.mjs",
+    "smoke:node1-12": "../../../../venv/bin/python scripts/run-node-release-smoke.py",
+    "visual:baseline": "../../../../venv/bin/python scripts/run-visual-performance-baseline.py",
+    "visual:self-check": "../../../../venv/bin/python scripts/run-visual-performance-baseline.py --self-check",
+    "visual:blocked-structure-check": "../../../../venv/bin/python scripts/run-visual-performance-baseline.py --check-blocked-structure",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

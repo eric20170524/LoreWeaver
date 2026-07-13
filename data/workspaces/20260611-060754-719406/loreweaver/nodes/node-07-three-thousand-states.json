@@ -1,0 +1,59 @@
+{
+  "id": 7,
+  "title": "三千道州天才战",
+  "intro": "竞技场连波 Boss Rush，没有普通小怪缓冲。每一波神火境天才都带来独特压迫。",
+  "taunts": [
+    "初代天骄：星骁，你的路到头了！",
+    "星骁：就凭你们，也敢阻我？"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +25000，纯血 +5~10，仙道神火",
+  "goalValue": 300,
+  "resourceMultiplier": 8.8,
+  "difficulty": 7,
+  "durationLimit": 300,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "survivor_horde",
+    "modifiers": [
+      {
+        "id": "boss_phases",
+        "knobs": {
+          "mode": "elite_waves",
+          "disableTrashMobs": true
+        }
+      }
+    ],
+    "knobs": {
+      "legacySceneClass": "Node7Scene",
+      "realmRequired": 7,
+      "bossId": "shi_yi_phantom",
+      "sourceRewards": {
+        "bloodEssence": 25000,
+        "pureBlood": [
+          5,
+          10
+        ]
+      }
+    },
+    "patchLevel": "L3"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery",
+      "pure_blood_trial"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "dual_pupil",
+      "kunpeng_art",
+      "true_phoenix_art"
+    ],
+    "rewardUnlocks": [],
+    "notes": "首通意图: reinforce_existing(dual_pupil,kunpeng_art,true_phoenix_art); 三千星州天才战强调已悟宝术组合强度，奖励侧以纯血和境界推进为主。"
+  }
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "blood_tempering",
+    "title": "搬血修炼",
+    "resource": "气血精华",
+    "action": "挂机与 Node 击杀积累气血精华",
+    "unlocks": [
+      "cave_opening",
+      "realm_breakthrough",
+      "node_entry"
+    ],
+    "nodePayloadEffect": "提高基础生命、攻击与通关后成长倍率。"
+  },
+  {
+    "id": "cave_opening",
+    "title": "开启洞天",
+    "resource": "气血精华",
+    "action": "消耗气血开启洞天槽位",
+    "unlocks": [
+      "stronger_base_stats",
+      "realm_breakthrough"
+    ],
+    "nodePayloadEffect": "洞天加成进入 playerStats，提升 HP、攻击、速度、拾取与暴击属性。"
+  },
+  {
+    "id": "bone_script_mastery",
+    "title": "参悟骨文",
+    "resource": "狻猊骨文",
+    "action": "消耗骨文点亮被动树与宝术分支",
+    "unlocks": [
+      "ability_catalog",
+      "run_skill_pool"
+    ],
+    "nodePayloadEffect": "把主干被动与已悟宝术注入 playerPerks、playerAbilities 与 runSkillPool。"
+  },
+  {
+    "id": "pure_blood_trial",
+    "title": "纯血洗礼",
+    "resource": "纯血",
+    "action": "高阶节点与宝箱获得纯血，用于突破和终极宝术",
+    "unlocks": [
+      "advanced_realms",
+      "ultimate_abilities"
+    ],
+    "nodePayloadEffect": "控制中后期宝术候选与 Boss 应对能力。"
+  }
+]

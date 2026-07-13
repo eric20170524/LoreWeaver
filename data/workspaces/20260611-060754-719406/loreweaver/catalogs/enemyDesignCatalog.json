@@ -1,0 +1,158 @@
+[
+  {
+    "id": "wild_rhino",
+    "name": "蛮犀兽",
+    "runtimeEnemyId": "wild_rhino",
+    "silhouette": "低伏厚背、双角前顶的近战兽形。",
+    "palette": [
+      "#8b5e34",
+      "#facc15",
+      "#fef3c7"
+    ],
+    "combatRead": "移动慢、血量低，作为第一关最基础的肉身磨炼目标。"
+  },
+  {
+    "id": "green_scaled_eagle",
+    "name": "青鳞鹰",
+    "runtimeEnemyId": "green_scaled_eagle",
+    "silhouette": "双翼展开、身体较小，绿色鳞羽形成快速敌人的轮廓。",
+    "palette": [
+      "#166534",
+      "#22c55e",
+      "#bbf7d0"
+    ],
+    "combatRead": "速度快、体型轻，和青鳞鹰宝术形成早期视觉呼应。"
+  },
+  {
+    "id": "rock_golem",
+    "name": "石傀儡",
+    "runtimeEnemyId": "rock_golem",
+    "silhouette": "方块岩躯、沉重双臂、胸口黄光裂纹。",
+    "palette": [
+      "#57534e",
+      "#a8a29e",
+      "#fcd34d"
+    ],
+    "combatRead": "慢速高血敌，视觉上承担第一关的抗压目标。"
+  },
+  {
+    "id": "bandit_cultivator",
+    "name": "流寇修士",
+    "runtimeEnemyId": "bandit_cultivator",
+    "silhouette": "瘦高人形、斜持短刃，红褐衣袍。",
+    "palette": [
+      "#7f1d1d",
+      "#f87171",
+      "#fef2f2"
+    ],
+    "combatRead": "中期人形敌，用刀光区分于兽潮。"
+  },
+  {
+    "id": "burrow_wyrm",
+    "name": "地底穿山龙",
+    "runtimeEnemyId": "burrow_wyrm",
+    "silhouette": "弯曲蛇身、岩土色鳞片、前端亮眼。",
+    "palette": [
+      "#78350f",
+      "#f97316",
+      "#ffedd5"
+    ],
+    "combatRead": "用于地形和毒雾节点，读作会钻行的压力单位。"
+  },
+  {
+    "id": "sky_predator",
+    "name": "天阶凶禽",
+    "runtimeEnemyId": "sky_predator",
+    "silhouette": "冷蓝双翼和尖喙，体型比青鳞鹰更锐利。",
+    "palette": [
+      "#1e3a8a",
+      "#60a5fa",
+      "#dbeafe"
+    ],
+    "combatRead": "高速空中敌，负责中后期追击压力。"
+  },
+  {
+    "id": "human_genius",
+    "name": "人族天才",
+    "runtimeEnemyId": "human_genius",
+    "silhouette": "紫色人形剪影，周身有短促法环。",
+    "palette": [
+      "#312e81",
+      "#a78bfa",
+      "#ede9fe"
+    ],
+    "combatRead": "镜魄试炼场和竞技场人形对手，强调同境争锋。"
+  },
+  {
+    "id": "genius_beast",
+    "name": "天才战兽",
+    "runtimeEnemyId": "genius_beast",
+    "silhouette": "橙红兽形、角与背脊更锋利。",
+    "palette": [
+      "#7c2d12",
+      "#fb923c",
+      "#ffedd5"
+    ],
+    "combatRead": "高级兽形单位，介于普通兽潮和 Boss 之间。"
+  },
+  {
+    "id": "huo_linger_projection",
+    "name": "焰翎投影",
+    "runtimeEnemyId": "huo_linger_projection",
+    "silhouette": "火红人形投影，外圈带火羽三角形。",
+    "palette": [
+      "#991b1b",
+      "#f97316",
+      "#fde68a"
+    ],
+    "combatRead": "火系精英记忆体，用来铺垫真凰宝术视觉语言。"
+  },
+  {
+    "id": "shi_yi_projection",
+    "name": "玄曜投影",
+    "runtimeEnemyId": "shi_yi_projection",
+    "silhouette": "冷紫少年投影，双眼白光最先被读到。",
+    "palette": [
+      "#312e81",
+      "#c084fc",
+      "#ffffff"
+    ],
+    "combatRead": "宿敌压力源，和紫曜瞳术绑定。"
+  },
+  {
+    "id": "qiongqi_cub",
+    "name": "穷奇幼崽",
+    "runtimeEnemyId": "qiongqi_cub",
+    "silhouette": "暗红 Boss 兽形，多角和金色轮廓强调危险。",
+    "palette": [
+      "#450a0a",
+      "#ef4444",
+      "#facc15"
+    ],
+    "combatRead": "早期 Boss，用更大的兽形占屏和高亮角区分普通敌。"
+  },
+  {
+    "id": "ancient_beast_king",
+    "name": "千崖兽王",
+    "runtimeEnemyId": "ancient_beast_king",
+    "silhouette": "棕金巨兽，外圈金色威压线。",
+    "palette": [
+      "#422006",
+      "#f59e0b",
+      "#fef3c7"
+    ],
+    "combatRead": "遗迹兽王，承担中期 Boss 读图压力。"
+  },
+  {
+    "id": "shi_yi_phantom",
+    "name": "玄曜虚影",
+    "runtimeEnemyId": "shi_yi_phantom",
+    "silhouette": "终局紫白投影，轮廓更大且眼光更亮。",
+    "palette": [
+      "#1e1b4b",
+      "#8b5cf6",
+      "#ffffff"
+    ],
+    "combatRead": "紫曜瞳终局形态，用光束和投影感提示 Boss 机制。"
+  }
+]

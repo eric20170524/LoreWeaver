@@ -1,0 +1,11 @@
+{
+  "gameplayCards": [
+    "survivor_horde",
+    "hazard_telegraph",
+    "defend_core",
+    "escort_npc",
+    "boss_phases",
+    "poison_fog",
+    "laser_warning"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "id": 1,
+  "title": "荒域历练",
+  "intro": "星骁初出星槎村，荒域之中万兽蛰伏。以蛮兽精血洗礼肉身，完成搬血境起点试炼。",
+  "taunts": [
+    "穷奇幼崽：蝼蚁，也敢觊觎我的真血！",
+    "星骁：好大一只凶兽，吃掉一定大补！"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +200，概率获得雷吼骨文",
+  "goalValue": 120,
+  "resourceMultiplier": 1.2,
+  "difficulty": 1,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "survivor_horde",
+    "modifiers": [
+      {
+        "id": "hazard_telegraph",
+        "knobs": {
+          "bossId": "qiongqi_cub",
+          "sourceSceneClass": "Node1Scene"
+        }
+      }
+    ],
+    "knobs": {
+      "legacySceneClass": "Node1Scene",
+      "realmRequired": 1,
+      "enemyPool": [
+        "wild_rhino",
+        "green_scaled_eagle",
+        "rock_golem"
+      ],
+      "bossId": "qiongqi_cub",
+      "sourceRewards": {
+        "bloodEssence": 200,
+        "suanBoneScript": [
+          0,
+          1
+        ]
+      }
+    },
+    "patchLevel": "L3"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard"
+    ],
+    "rewardUnlocks": [
+      "suan_ni_baoshu"
+    ],
+    "notes": "首关负责把局内技能获得沉淀为主干宝术：通关后开启雷吼骨术，后续节点可把怒啸和裂雷指纳入候选池。",
+    "firstNodeGrowthLoop": {
+      "collectionSource": "beast_essence_exp_from_enemy_defeat",
+      "growthTrigger": "12 点蛮兽血气经验触发首个宝术成长",
+      "runtimeMutation": "activeSkills[primordial_fist].level 由 1 提升到 2；后续阈值追加 suan_ni_roar / willow_blessing",
+      "playerFeedback": "技能 HUD、浮字、VFX、SFX 与镜头闪光同步反馈",
+      "combatImpact": "Lv.2 基础拳提高 projectile 伤害，雷吼怒啸提供早期 AoE 清怪，青枝守护回春提供失败压力前的续航",
+      "testAssertion": "firstNodeGrowthSkillMutation / firstNodeGrowthCombatImpact"
+    }
+  }
+}

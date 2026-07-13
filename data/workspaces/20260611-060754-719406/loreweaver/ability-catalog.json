@@ -1,0 +1,480 @@
+[
+  {
+    "id": "primordial_true_record",
+    "name": "原始真解",
+    "category": "baoshu",
+    "lineage": "星槎村骨文基础法",
+    "unlockSource": "initial",
+    "unlockCondition": "开局自带基础拳意，搬血境即可使用",
+    "runtimeSkillIds": [
+      "primordial_fist"
+    ],
+    "affectedNodeIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "tags": [
+      "starter",
+      "output",
+      "bone_script"
+    ],
+    "designRole": "保证任何节点都有稳定的基础输出，并作为玩家理解宝术升级的第一条样板。",
+    "characterHooks": [
+      "星骁以肉身拳意催动骨文，动作朴素但每次升级都更像荒域少年的雏形。",
+      "首屏角色设计优先表现赤脚、兽皮、骨文光纹，避免过早神化。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#f8e7b0",
+        "#f59e0b",
+        "#fff7d6"
+      ],
+      "shapeLanguage": "短促拳罡、碎骨文粒子、命中时的环形尘浪",
+      "runtimeNotes": "projectile 类型使用小型金色矩形弹体；后续资产可替换为拳印贴图和骨文拖尾。"
+    },
+    "sfxCues": [
+      "短促低频拳风",
+      "命中时叠加石片脆响",
+      "升级时增加一层轻微骨文嗡鸣"
+    ],
+    "balanceBudget": {
+      "phase": "tutorial_to_endgame",
+      "powerCurve": "low_base_high_frequency",
+      "counterplay": "需要持续走位贴近敌群获取经验"
+    },
+    "description": "局内初始技能，保证任何节点都有稳定的基础输出。"
+  },
+  {
+    "id": "suan_ni_baoshu",
+    "name": "雷吼骨术",
+    "category": "baoshu",
+    "lineage": "荒域凶兽骨文",
+    "unlockSource": "node_reward",
+    "unlockCondition": "荒域历练首通或雷吼骨文参悟",
+    "runtimeSkillIds": [
+      "suan_ni_roar",
+      "thunder_god_finger",
+      "suan_ni_thunder_pulse"
+    ],
+    "affectedNodeIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "tags": [
+      "output",
+      "aoe",
+      "thunder",
+      "beast_bone"
+    ],
+    "designRole": "从范围怒啸成长到连锁雷光，是早中期清怪和资源滚雪球的主轴。",
+    "characterHooks": [
+      "角色动作从野性怒啸逐步变成指尖雷纹，体现星槎村少年向战斗天才过渡。",
+      "雷吼骨文可作为被动树主资源的视觉母题。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#facc15",
+        "#fde68a",
+        "#60a5fa"
+      ],
+      "shapeLanguage": "兽首声波、锯齿雷弧、地面骨文裂纹",
+      "runtimeNotes": "aoe_burst 与 chain_lightning 已有运行时类型；suan_ni_thunder_pulse 复用 aoe_burst 做更高阶雷圈。"
+    },
+    "sfxCues": [
+      "狮吼式宽频噪声下扫",
+      "裂雷指使用短促高频电弧",
+      "大范围脉冲触发相机轻震"
+    ],
+    "balanceBudget": {
+      "phase": "early_mid",
+      "powerCurve": "area_scaling",
+      "counterplay": "冷却较明显，面对高速精英需要搭配控制或身法"
+    },
+    "description": "从范围怒啸成长到裂雷指，是早中期清怪和连锁爆发主轴。"
+  },
+  {
+    "id": "willow_guard",
+    "name": "青枝赐护",
+    "category": "baoshu",
+    "lineage": "星槎村祭灵守护法",
+    "unlockSource": "mainline",
+    "unlockCondition": "参悟骨文后开放防御、回复与缠绕分支",
+    "runtimeSkillIds": [
+      "willow_blessing",
+      "bone_shield",
+      "divine_vine",
+      "willow_seed_field",
+      "heaven_willow_domain"
+    ],
+    "affectedNodeIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "tags": [
+      "recovery",
+      "defense",
+      "control",
+      "support"
+    ],
+    "designRole": "把回复、护盾和缠绕纳入候选池，承接长时生存、毒雾、护送和守城节点。",
+    "characterHooks": [
+      "青枝技能表现不应喧宾夺主，强调静默庇护、绿金枝条、战场边缘的安全感。",
+      "可用于塑造星槎村羁绊和玩家的安全港记忆。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#86efac",
+        "#22c55e",
+        "#ecfccb"
+      ],
+      "shapeLanguage": "柳叶粒子、半透明护盾、藤蔓束缚圈",
+      "runtimeNotes": "passive_heal、passive_shield、aoe_root、aura 四类运行时均可覆盖青枝守护分支。"
+    },
+    "sfxCues": [
+      "轻微风铃与树叶摩擦",
+      "护盾刷新使用柔和木质敲击",
+      "藤蔓缠绕使用短促草叶扫动"
+    ],
+    "balanceBudget": {
+      "phase": "all",
+      "powerCurve": "survival_consistency",
+      "counterplay": "输出低于纯攻击宝术，依赖玩家保持节奏"
+    },
+    "description": "把回复、护盾和缠绕纳入候选池，承接长时生存节点。"
+  },
+  {
+    "id": "green_eagle_art",
+    "name": "青鳞鹰宝术",
+    "category": "baoshu",
+    "lineage": "星槎村早期凶禽机缘",
+    "unlockSource": "node_reward",
+    "unlockCondition": "千崖秘径机缘或早期凶禽试炼",
+    "runtimeSkillIds": [
+      "green_scaled_eagle"
+    ],
+    "affectedNodeIds": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "tags": [
+      "summon",
+      "targeted",
+      "burst",
+      "beast_bone"
+    ],
+    "designRole": "提供定点爆发，补足早期对精英怪、宝箱守卫和小型 Boss 的处理能力。",
+    "characterHooks": [
+      "青鳞鹰不做常驻宠物，而是作为俯冲幻影，避免 UI 与角色系统过早膨胀。",
+      "可在后续角色设计里连接星槎村伙伴与凶禽幼崽。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#34d399",
+        "#0f766e",
+        "#d9f99d"
+      ],
+      "shapeLanguage": "鹰影俯冲、绿色羽片、落点冲击环",
+      "runtimeNotes": "targeted_aoe 类型已覆盖，后续可替换为俯冲精灵动画。"
+    },
+    "sfxCues": [
+      "短促鹰啸",
+      "俯冲风切",
+      "落点钝击"
+    ],
+    "balanceBudget": {
+      "phase": "early_mid",
+      "powerCurve": "single_target_burst",
+      "counterplay": "AOE 半径小，面对大群敌人效率低"
+    },
+    "description": "提供定点爆发，补足早期对精英怪的处理能力。"
+  },
+  {
+    "id": "kunpeng_art",
+    "name": "潮翼法",
+    "category": "baoshu",
+    "lineage": "太古十凶极速与阴阳海法",
+    "unlockSource": "node_reward",
+    "unlockCondition": "天潮巢通关后获得",
+    "runtimeSkillIds": [
+      "kunpeng_dodge",
+      "void_slash",
+      "kunpeng_tide_pull"
+    ],
+    "affectedNodeIds": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "tags": [
+      "mobility",
+      "dodge",
+      "slash",
+      "control"
+    ],
+    "designRole": "把位移、无敌帧、扇形斩击与潮汐控制引入中后期海战、守城和 Boss 机制。",
+    "characterHooks": [
+      "动作设计以水黑羽翼、瞬身残影和海潮拖尾表现极速。",
+      "角色成长上标记第一次真正接触十凶级宝术。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#38bdf8",
+        "#0f172a",
+        "#e0f2fe"
+      ],
+      "shapeLanguage": "羽翼残影、海潮圆环、黑蓝虚空斩痕",
+      "runtimeNotes": "active_dodge、slash_cone、aoe_root 三类运行时可组合出潮翼法的机动与控制。"
+    },
+    "sfxCues": [
+      "低频浪涌",
+      "瞬身时的气流抽吸",
+      "虚空斩使用利落金属切面"
+    ],
+    "balanceBudget": {
+      "phase": "mid_end",
+      "powerCurve": "mobility_plus_burst",
+      "counterplay": "操作收益高，自动释放时需要通过冷却保持克制"
+    },
+    "description": "把位移、无敌帧与扇形斩击引入中后期海战和守城节点。"
+  },
+  {
+    "id": "true_phoenix_art",
+    "name": "真凰宝术",
+    "category": "baoshu",
+    "lineage": "纯血洗礼后的涅槃火法",
+    "unlockSource": "mainline",
+    "unlockCondition": "纯血洗礼或药都风云后的高阶参悟",
+    "runtimeSkillIds": [
+      "true_phoenix_fire"
+    ],
+    "affectedNodeIds": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "tags": [
+      "aura",
+      "fire",
+      "sustain",
+      "pure_blood"
+    ],
+    "designRole": "持续灼烧光环，服务毒雾求生、竞技场和高密度战场。",
+    "characterHooks": [
+      "以火光包裹角色轮廓，强化从少年到王侯的气场变化。",
+      "与药都、纯血、涅槃主题形成资源闭环。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#fb923c",
+        "#ef4444",
+        "#fde68a"
+      ],
+      "shapeLanguage": "环形火羽、贴身火焰、周期性热浪",
+      "runtimeNotes": "aura 类型已实现，建议后续增加热浪扭曲和火羽贴图。"
+    },
+    "sfxCues": [
+      "持续细火噼啪",
+      "光环脉冲时短暂升频",
+      "击杀触发微弱涅槃鸣音"
+    ],
+    "balanceBudget": {
+      "phase": "mid_end",
+      "powerCurve": "close_range_sustain",
+      "counterplay": "需要贴近敌群，受到走位和护盾能力制约"
+    },
+    "description": "持续灼烧光环，服务毒雾求生、竞技场和高密度战场。"
+  },
+  {
+    "id": "dual_pupil",
+    "name": "紫曜瞳",
+    "category": "baoshu",
+    "lineage": "镜魄试炼场宿敌投影与天赋瞳术",
+    "unlockSource": "node_reward",
+    "unlockCondition": "镜魄试炼场击败玄曜投影后可参悟",
+    "runtimeSkillIds": [
+      "dual_pupil"
+    ],
+    "affectedNodeIds": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "tags": [
+      "laser",
+      "boss",
+      "control",
+      "rival"
+    ],
+    "designRole": "高阶光束技能，强化 Boss 战、直线压制和危险预警阅读。",
+    "characterHooks": [
+      "技能不是完全复刻玄曜，而是玩家战胜宿敌后短暂借法，避免主角身份混淆。",
+      "战斗表现应有一瞬冷色凝视，与星骁的炽烈输出形成对照。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#c084fc",
+        "#f0abfc",
+        "#ffffff"
+      ],
+      "shapeLanguage": "双瞳光束、紫白裂隙、直线灼痕",
+      "runtimeNotes": "laser_beam 类型已实现，后续可追加预警线和持续扫射动画。"
+    },
+    "sfxCues": [
+      "高频聚焦嗡鸣",
+      "光束维持期间加入细小电流",
+      "结束时短促空间裂响"
+    ],
+    "balanceBudget": {
+      "phase": "mid_end",
+      "powerCurve": "line_damage",
+      "counterplay": "方向性强，面对四面包围需搭配 AOE"
+    },
+    "description": "高阶光束技能，强化 Boss 战与直线压制。"
+  },
+  {
+    "id": "supreme_bone",
+    "name": "星骨",
+    "category": "baoshu",
+    "lineage": "主角核心宿命骨",
+    "unlockSource": "mainline",
+    "unlockCondition": "参悟星骨分支或星古遗地后开放",
+    "runtimeSkillIds": [
+      "supreme_bone_awaken",
+      "heaven_hand",
+      "ten_cave_resonance"
+    ],
+    "affectedNodeIds": [
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "tags": [
+      "ultimate",
+      "burst",
+      "transform",
+      "destiny"
+    ],
+    "designRole": "后期终局宝术，提供变身爆发、清屏和高压阶段逆转。",
+    "characterHooks": [
+      "星骨不只是伤害按钮，而是剧情上从被夺到再生的复权象征。",
+      "角色特效可以从胸口骨文向全身扩散，形成终局辨识度。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#fef3c7",
+        "#fde047",
+        "#ffffff"
+      ],
+      "shapeLanguage": "胸口骨文爆光、上苍手印、洞天同振环",
+      "runtimeNotes": "transform 与 screen_clear 已实现；ten_cave_resonance 作为终局清屏技能复用 screen_clear。"
+    },
+    "sfxCues": [
+      "心跳式低频脉冲",
+      "清屏时加入厚重钟鸣",
+      "变身持续期间铺一层神性嗡鸣"
+    ],
+    "balanceBudget": {
+      "phase": "endgame",
+      "powerCurve": "long_cooldown_catharsis",
+      "counterplay": "CD 长，失误时仍可能被精英潮压垮"
+    },
+    "description": "后期终局宝术，提供变身爆发与清屏能力。"
+  },
+  {
+    "id": "he_hua_zizai",
+    "name": "万象化影",
+    "category": "baoshu",
+    "lineage": "终极血战的未来身投影",
+    "unlockSource": "finale",
+    "unlockCondition": "终极血战节点进入最后阶段后临时开放",
+    "runtimeSkillIds": [
+      "he_hua_projection"
+    ],
+    "affectedNodeIds": [
+      12
+    ],
+    "tags": [
+      "finale",
+      "projection",
+      "transform",
+      "boss_answer"
+    ],
+    "designRole": "作为终局 MVP 的压轴验证技能，证明管线能把剧情名场面转成运行时技能和视听规格。",
+    "characterHooks": [
+      "屏幕边缘出现多个未来身残影，动作不需要高成本动画，优先用剪影和粒子达成气势。",
+      "只在终局或测试模式出现，避免破坏主线成长节奏。"
+    ],
+    "vfxConcept": {
+      "palette": [
+        "#ffffff",
+        "#a78bfa",
+        "#1f2937"
+      ],
+      "shapeLanguage": "多重残影、轮回光环、终局白闪",
+      "runtimeNotes": "he_hua_projection 复用 transform 类型，后续可追加残影召唤体。"
+    },
+    "sfxCues": [
+      "多层人声式合成垫音",
+      "进入状态时短暂停顿加低频冲击",
+      "持续期间用极轻的轮回钟声"
+    ],
+    "balanceBudget": {
+      "phase": "finale",
+      "powerCurve": "scripted_power_spike",
+      "counterplay": "仅终局阶段开放，作为 Boss 机制答案而非常规刷图技能"
+    },
+    "description": "终极名场面技能，用未来身投影承担最后节点的爆发、减压与情绪兑现。"
+  }
+]

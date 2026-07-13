@@ -1,0 +1,306 @@
+[
+  {
+    "id": "bone_script_fist",
+    "runtimeSkillId": "primordial_fist",
+    "shape": "short_projectile_trail",
+    "palette": [
+      "#f8e7b0",
+      "#f59e0b",
+      "#ffffff"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Small gold fist pulse at caster plus projectile sparkle trail.",
+    "upgradeNote": "Replace rectangle projectile with painted fist imprint texture."
+  },
+  {
+    "id": "golden_roar_ring",
+    "runtimeSkillId": "suan_ni_roar",
+    "shape": "expanding_ring",
+    "palette": [
+      "#facc15",
+      "#fef3c7",
+      "#f59e0b"
+    ],
+    "screenShake": {
+      "durationMs": 80,
+      "intensity": 0.004
+    },
+    "implementation": "Expanding gold circle with jagged bone-script spokes.",
+    "upgradeNote": "Add stylized beast-head silhouette on the ring edge."
+  },
+  {
+    "id": "willow_leaf_heal",
+    "runtimeSkillId": "willow_blessing",
+    "shape": "leaf_swirl",
+    "palette": [
+      "#86efac",
+      "#22c55e",
+      "#ecfccb"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Soft green particles spiral into the player.",
+    "upgradeNote": "Use leaf sprites and additive glow for higher tiers."
+  },
+  {
+    "id": "green_eagle_dive",
+    "runtimeSkillId": "green_scaled_eagle",
+    "shape": "targeted_impact",
+    "palette": [
+      "#34d399",
+      "#0f766e",
+      "#d9f99d"
+    ],
+    "screenShake": {
+      "durationMs": 70,
+      "intensity": 0.003
+    },
+    "implementation": "V-shaped dive marker and green impact ring at target.",
+    "upgradeNote": "Swap marker for animated eagle shadow."
+  },
+  {
+    "id": "pale_bone_barrier",
+    "runtimeSkillId": "bone_shield",
+    "shape": "protective_shell",
+    "palette": [
+      "#dbeafe",
+      "#67e8f9",
+      "#ffffff"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Thin cyan-white shield ring that wraps the player.",
+    "upgradeNote": "Add bone plates rotating around the player."
+  },
+  {
+    "id": "willow_leaf_field",
+    "runtimeSkillId": "willow_seed_field",
+    "shape": "small_aura",
+    "palette": [
+      "#bbf7d0",
+      "#22c55e",
+      "#f0fdf4"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Low-opacity green aura with leaf dots orbiting the caster.",
+    "upgradeNote": "Use parallax leaves that drift with camera follow."
+  },
+  {
+    "id": "white_blue_chain",
+    "runtimeSkillId": "thunder_god_finger",
+    "shape": "chain_line",
+    "palette": [
+      "#ffffff",
+      "#60a5fa",
+      "#fef08a"
+    ],
+    "screenShake": {
+      "durationMs": 60,
+      "intensity": 0.003
+    },
+    "implementation": "Bright line segments between chained enemies.",
+    "upgradeNote": "Add forked lightning branches on each bounce."
+  },
+  {
+    "id": "thunder_bone_ring",
+    "runtimeSkillId": "suan_ni_thunder_pulse",
+    "shape": "expanding_ring",
+    "palette": [
+      "#fde047",
+      "#93c5fd",
+      "#ffffff"
+    ],
+    "screenShake": {
+      "durationMs": 120,
+      "intensity": 0.006
+    },
+    "implementation": "Gold-blue thunder ring with brief white flash.",
+    "upgradeNote": "Add radial lightning glyphs at high levels."
+  },
+  {
+    "id": "black_blue_wing_dash",
+    "runtimeSkillId": "kunpeng_dodge",
+    "shape": "dash_trail",
+    "palette": [
+      "#0f172a",
+      "#38bdf8",
+      "#e0f2fe"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Black-blue streak line between dash start and end.",
+    "upgradeNote": "Add two wing arcs behind the player."
+  },
+  {
+    "id": "green_vine_root",
+    "runtimeSkillId": "divine_vine",
+    "shape": "root_circle",
+    "palette": [
+      "#16a34a",
+      "#86efac",
+      "#052e16"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Green circle with vertical vine strokes around rooted enemies.",
+    "upgradeNote": "Add bind lines from ground to enemy feet."
+  },
+  {
+    "id": "phoenix_fire_aura",
+    "runtimeSkillId": "true_phoenix_fire",
+    "shape": "fire_aura",
+    "palette": [
+      "#fb923c",
+      "#ef4444",
+      "#fde68a"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Orange-red pulse with small ember particles.",
+    "upgradeNote": "Add heat-haze ring if renderer budget allows."
+  },
+  {
+    "id": "void_blue_arc",
+    "runtimeSkillId": "void_slash",
+    "shape": "cone_arc",
+    "palette": [
+      "#38bdf8",
+      "#0f172a",
+      "#e0f2fe"
+    ],
+    "screenShake": {
+      "durationMs": 100,
+      "intensity": 0.005
+    },
+    "implementation": "Blue-black cone wedge with bright leading edge.",
+    "upgradeNote": "Replace wedge with brush-stroke slash mesh."
+  },
+  {
+    "id": "black_tide_root",
+    "runtimeSkillId": "kunpeng_tide_pull",
+    "shape": "whirlpool_root",
+    "palette": [
+      "#0f172a",
+      "#0284c7",
+      "#bae6fd"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Dark whirlpool ring with rotating blue strokes.",
+    "upgradeNote": "Animate spiral rotation over root duration."
+  },
+  {
+    "id": "giant_heaven_palm",
+    "runtimeSkillId": "heaven_hand",
+    "shape": "screen_palm_flash",
+    "palette": [
+      "#ffffff",
+      "#fde047",
+      "#fef3c7"
+    ],
+    "screenShake": {
+      "durationMs": 200,
+      "intensity": 0.012
+    },
+    "implementation": "Full-screen white-gold flash and large palm outline.",
+    "upgradeNote": "Paint a dedicated palm glyph sprite."
+  },
+  {
+    "id": "purple_white_beam",
+    "runtimeSkillId": "dual_pupil",
+    "shape": "laser_beam",
+    "palette": [
+      "#c084fc",
+      "#f0abfc",
+      "#ffffff"
+    ],
+    "screenShake": {
+      "durationMs": 80,
+      "intensity": 0.004
+    },
+    "implementation": "Purple-white beam with warning glint at player.",
+    "upgradeNote": "Add prefire aim line and beam bloom."
+  },
+  {
+    "id": "supreme_bone_core",
+    "runtimeSkillId": "supreme_bone_awaken",
+    "shape": "transform_core",
+    "palette": [
+      "#ffffff",
+      "#fde047",
+      "#fef3c7"
+    ],
+    "screenShake": {
+      "durationMs": 180,
+      "intensity": 0.008
+    },
+    "implementation": "White-gold chest pulse and expanding circle.",
+    "upgradeNote": "Add persistent chest core sprite during transform."
+  },
+  {
+    "id": "ten_cave_rings",
+    "runtimeSkillId": "ten_cave_resonance",
+    "shape": "multi_ring_clear",
+    "palette": [
+      "#fef3c7",
+      "#f59e0b",
+      "#ffffff"
+    ],
+    "screenShake": {
+      "durationMs": 160,
+      "intensity": 0.01
+    },
+    "implementation": "Three concentric gold rings standing in for ten-cave resonance.",
+    "upgradeNote": "Render ten orbiting cave discs around the player."
+  },
+  {
+    "id": "willow_domain",
+    "runtimeSkillId": "heaven_willow_domain",
+    "shape": "large_support_aura",
+    "palette": [
+      "#bbf7d0",
+      "#22c55e",
+      "#f0fdf4"
+    ],
+    "screenShake": {
+      "durationMs": 0,
+      "intensity": 0
+    },
+    "implementation": "Large green domain pulse with falling leaves.",
+    "upgradeNote": "Add branch silhouettes along the top screen edge."
+  },
+  {
+    "id": "future_projection_afterimage",
+    "runtimeSkillId": "he_hua_projection",
+    "shape": "afterimage_transform",
+    "palette": [
+      "#ffffff",
+      "#a78bfa",
+      "#1f2937"
+    ],
+    "screenShake": {
+      "durationMs": 220,
+      "intensity": 0.012
+    },
+    "implementation": "Three pale afterimage rectangles orbit the player during transform entry.",
+    "upgradeNote": "Replace placeholders with future-self silhouettes."
+  }
+]
