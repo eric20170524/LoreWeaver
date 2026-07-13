@@ -1,7 +1,7 @@
 // utils/AudioManager.js
 // 声音管理器 - 继承自 @core/audio/WebAudioSynth.js
 
-import WebAudioSynth from '../../../../../minigame_master/core/lib/audio/WebAudioSynth.js';
+import WebAudioSynth from '@core/audio/WebAudioSynth.js';
 
 const runtimeAudioStatus = {
     mode: 'webaudio_synth',

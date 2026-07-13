@@ -7,7 +7,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@core': path.resolve(__dirname, '../../minigame_master/core/lib')
+      '@core': path.resolve(__dirname, '../../../minigame_master/core/lib')
     }
   },
   server: {

@@ -61,4 +61,4 @@ Replace disconnected exponential stats, Boss overrides, rewards, and costs with 
 
 ## Next Action
 
-Antigravity has claimed LW-018 and will write the power-budget schema and source-of-truth mapping before changing values, then implement fixture-first. Submit `needs_review` with before/after violation categories, changed values, runtime parity evidence, first browser/smoke outcomes, and residual tuning risks. Do not start LW-019.
+LW-018 has been completed and verified. Codex or another agent can now claim and start work on LW-019.
