@@ -26,12 +26,12 @@
 
 ## Current Coordination
 
-- currentTask: `LW-016`
-- currentRole: Antigravity
+- currentTask: `LW-018`
+- currentRole: Antigravity implementer
 - currentOwner: Antigravity
 - currentReviewer: Codex
 - currentStatus: in_progress
-- implementationModel: `gpt-5.6-sol` fallback after `gpt-5.6-terra` hit the current usage limit; fallback must be recorded in the LW-016 review request
+- implementationModel: `gpt-5.6-terra/Anscombe` for LW-018; the `gpt-5.6-sol` fallback record applies only to LW-016
 - handoff: `LoreWeaver/docs_collab/handoff.md`
 
 ## Corrected Baseline
@@ -39,10 +39,11 @@
 - gameMaturityEstimate: 43/100
 - loreweaverProductionEstimate: 42/100
 - basis: `LoreWeaver/docs_collab/design.md`
-- machineGameMaturityScore: 29/100
+- machineGameMaturityScore: 23/100
 - machineScoreReport: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/maturity_score_latest.json`
-- machineScoreStatus: failed as intended; fresh LW-015 browser evidence and release smoke are present, while nine hard caps remain
-- balanceSimulationStatus: verified in LW-014 Review 3; failed as intended with 98 violations, auditable sequential routes, independently recomputed resource conservation, and no false maturity clearance
+- machineScoreStatus: failed as intended at 23/100 after LW-017 source freshness invalidated prior evidence; self-check passes and nine hard caps remain. The single fresh LW-017 smoke attempt was blocked by loopback bind permission before launch.
+- balanceSimulationStatus: LW-016 invalidated and regenerated the report; self-check passes and the report remains failed as intended with 64 real violations. Startup offline elapsed is now observable, realm-ineligible nodes are visibly actionable, and obsolete offline/UI divergence violations were removed rather than preserved as false evidence.
+- saveMigrationStatus: verified in Codex Review 5. Final evidence passes 53/53 with zero derived data-loss cases; fresh sandbox-external release smoke passes 12/12 and maturity validates save/smoke evidence.
 - visualPerformanceBaselineStatus: verified in LW-015 Review 2; measured 20 endpoint snapshots, authenticated 40 PNGs, reconciled all-active display totals, passed strong self-check, and honestly recomputed 54 quality failures
 - visualPerformanceReport: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/visual_performance_baseline_latest.json`
 - machineActiveHardCaps: `auto_combat`, `late_game_balance`, `thin_levels`, `fallback_art`, `no_bgm`, `no_natural_progression`, `mobile_readability`, `release_integrity`, `originality_release`
@@ -62,7 +63,7 @@
 - Tracked source mirror: `minigame/perfectworld_dahuang`
 - Target workspace files are partly ignored; review must inspect named files and reports directly, not rely only on `git diff`.
 - Baseline gates: `manifest:check`, `loreweaver:check`, `ability:check`, `progression:check`, `smoke:node1-12`, `build`.
-- Latest release smoke: `reports/node1_12_release_smoke_latest.json`, 12/12 with zero console/page/HTTP/request errors.
+- Latest release smoke: `reports/node1_12_release_smoke_latest.json` retains the historical 12/12 result. LW-017 ran one post-build attempt; loopback bind was denied before launch and it was not rerun, so no historical smoke result is claimed fresh for this source state.
 - Collaboration plan: `LoreWeaver/docs_collab/design.md`
 - Ordered task graph: `LoreWeaver/docs_collab/tasks.md#req-20260711-001-910-mature-game-program`
 
@@ -78,8 +79,8 @@ Only one implementation task may be `claimed` or `in_progress`. Codex may contin
 
 ## Current Remaining Risks
 
-- Node1 remains a 2047-line mixed-responsibility base scene; extraction must be incremental to keep Node1-12 smoke alive.
-- Save v2 is L4. It must use a versioned backup and reversible migration; destructive reset requires human approval.
+- Node1 is reduced from 2047 to 1093 lines. Input lifecycle, HUD, enemy factory, full skill execution, combat damage/receive-hit, and result metrics now have independent ownership; branch parity covers chain range, cone arc, laser axis, shield boundaries, and transform teardown while level-specific overrides remain scene-facing by design.
+- Save v2 is L4 and awaits Codex review. Migration and manual reset are backup-first; no raw prior payload is deleted, and backup failure/collision leaves the primary bytes unchanged.
 - Production image/audio generation may require network/provider access. Missing paid credentials or license acceptance will be raised to the human; the Agent must not fabricate provenance.
 - Human playtest is mandatory at `LW-029` and final acceptance, but it does not block the engineering tasks before those checkpoints.
-- The current sandbox may deny loopback browser reruns. When that occurs, the implementation role records fresh browser evidence and Codex uses direct code/report inspection plus independently runnable gates, documenting the limitation.
+- The current sandbox denied loopback bind for both final runners. The targeted report records mirror Vite discovery and all browser-error categories, but its scenarios did not start; Codex must treat this as blocked evidence, not success.

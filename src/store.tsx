@@ -112,11 +112,11 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const emuWidths = {
-    compact: 360,
-    standard: 440,
-    large: 520
+    compact: 440,
+    standard: 560,
+    large: 720
   };
-  const currentEmuWidth = emuWidths[emulatorSize] || 440;
+  const currentEmuWidth = emuWidths[emulatorSize] || 560;
 
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceMeta | null>(() => {
     if (typeof window !== "undefined" && (window as any).__LOREWEAVER_EMBEDDED_SPEC__) {

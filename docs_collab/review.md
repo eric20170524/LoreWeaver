@@ -773,3 +773,188 @@
 - The final endpoint evidence contains 20 captures, 1,200 positive rAF samples, zero contextual browser/network errors, and 54 honest threshold observations: 16 HUD coverage, 16 sub-44px touch targets, 15 mobile canvas-underfill captures, and seven Boss/text-overlap captures. Quality remains failed and `mobile_readability` remains active.
 - Node1-12 smoke is green 12/12 after build, but an earlier remediation run produced 11/12 because Node12 auto-combat completed the Boss within the 1.8-second active sample. The rerun does not erase this timing sensitivity; it remains evidence of late-game balance collapse and a future smoke-stability risk.
 - The strict maturity visual/performance reports remain missing by design at this truth-baseline stage. Maturity is 29/100 with nine hard caps. Later production visual/performance tasks must convert the richer baseline into strict contract reports; no current quality clearance is inferred.
+
+---
+
+## LW-016 Review 1
+
+- task: LW-016
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: changes_requested
+- filesReviewed:
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/js/save-contract.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/js/store.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/loreweaver/save-v2.schema.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/report-save-migration.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/check-save-migration.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/tests/fixtures/save-migration-v1.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/tests/fixtures/result-contract.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/save_migration_latest.json`
+  - `LoreWeaver/docs_collab/review_request.md`
+- commandsChecked:
+  - `npm run save:report`
+  - `npm run save:self-check`
+  - independent negative-reward application counterexample
+  - independent cross-node attempt-alias and conflicting result-id counterexamples
+  - independent nonnumeric legacy `nodeResults` key migration counterexample
+
+### Findings
+
+- P1 `js/save-contract.js:214` and `js/save-contract.js:240` Result normalization copies arbitrary reward numbers and settlement accepts negative finite values. A failed result with `{ bloodEssence: -50, exp: -9 }` leaves both balances negative while returning `rewardsApplied: true`. This makes the public result contract a progression-debit primitive and contradicts the schema/economy invariant. Validate reward keys and finite nonnegative amounts at normalization, choose and document reject-versus-clamp semantics, enforce the same rule in the schema, and add negative, `NaN`, infinity, and unknown-reward counterexamples.
+- P1 `js/save-contract.js:255` A reused `attemptId` or `resultId` is treated as a replay without proving that node, attempt, reason, rewards, unlocks, and payload identity match the original settlement. Reusing one attempt across Node1 and Node2 returned the old Node1 application together with the new Node2 normalized result; a conflicting reused result id behaved the same way. This is internally inconsistent and can silently discard a legitimate settlement or conceal a collision. Store a stable payload identity with the ledger and reject conflicting aliases explicitly; retain replay only for the same semantic payload. Cover same-payload replay, allowed same-node alias behavior if intentionally supported, cross-node reuse, and materially different payload reuse.
+- P1 `js/save-contract.js:90` Legacy inference converts every `nodeResults` key to a number and calls strict result normalization. A valid opaque future entry such as `nodeResults.future = { success: true }` throws `Node result requires a positive integer nodeId`, aborting the whole migration even though the raw field was preserved by the lossless merge. Unknown or malformed entries must remain recoverable and must not prevent the rest of the save from migrating; skip inference for invalid keys and record an exact diagnostic/legacy value. Add numeric, nonnumeric, malformed-object, and mixed valid/unknown map fixtures.
+- P1 `scripts/report-save-migration.mjs:47` and `scripts/report-save-migration.mjs:60` The zero-data-loss claim is asserted rather than measured. A preserved incompatible value passes when its diagnostic is merely truthy, `dataLoss` is always hard-coded false, and `save:self-check` only inspects schema shape instead of validating migrated states against `save-v2.schema.json`. Consequently 22/22 can remain green while diagnostics contain the wrong legacy value or a migration result violates the declared schema. Compare exact source values with either their compatible destination or exact diagnostic representation, derive each row and summary `dataLoss` from those comparisons, execute the declared schema against every applicable migrated state, and add mutations that corrupt a diagnostic value and introduce schema-invalid attempts/stars/results.
+- P1 `js/save-contract.js:157` A save is classified as already-v2 solely from `version` and `schemaVersion`, so any incomplete or schema-invalid V2 is normalized and overwritten without a raw backup. The reviewed counterexample used `attempts: "broken"`: migration changed the bytes and moved the scalar into diagnostics while returning `needsBackup: false`. The shipped `already_v2` fixture is itself incomplete but encodes no-backup as the expected policy. Treat no-backup as legal only for a fully schema-valid canonical V2 whose migration is byte/semantic no-op; every repaired or normalized V2 must use backup-before-primary. Add valid canonical no-op, incomplete V2, wrong-type V2, and schema-invalid V2 persistence fixtures.
+
+### Notes
+
+- Backup-before-primary ordering, collision/write-failure protection, clear-state monotonicity, first-clear uniqueness, and best-result/build-snapshot association passed the reviewed baseline and should be retained.
+- The current 22/22 report and self-check are useful scaffolding but are not accepted as L4 zero-data-loss evidence until the five findings above are resolved. LW-016 remains open; LW-017 must not start.
+
+---
+
+## LW-016 Review 2
+
+- task: LW-016
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: changes_requested
+- commandsChecked:
+  - independent `npm run save:report`
+  - independent `npm run save:self-check`
+  - Review 1 invalid reward, identity collision, GameOver replay, mixed legacy result, and repaired-V2 backup counterexamples
+  - independent malformed build snapshot and unlock-array counterexamples
+
+### Findings
+
+- P1 `js/save-contract.js:295` Result normalization now validates rewards but still copies `buildSnapshot` without validating its declared shape and accepts arbitrary values in `unlockNodes`, `abilityUnlocks`, and `flags`. Reviewer submitted a successful first clear with `buildSnapshot: {}`; it was committed into `firstClear`, `bestResult`, and `buildSnapshot`, after which the declared Save V2 schema failed six required-field checks. Separate results accepted `unlockNodes: ["2", -1, null, {}]`, `abilityUnlocks: [null, {}, 42]`, and `flags: [null, {}, 42]`, permanently adding those values or coerced flag keys to progression state. Validate the complete persistent result surface before mutation: require a structurally valid build snapshot or null, positive integer node unlock ids, nonempty known ability ids, and nonempty string flags. Reject invalid input atomically, canonicalize valid arrays deterministically, describe these fields in `$defs.result` and the relevant top-level state schemas, and add no-mutation plus post-application schema counterexamples for each class.
+
+### Notes
+
+- All five Review 1 findings are resolved by the submitted implementation and independent retest: invalid rewards are atomic rejections; identity conflicts throw before mutation; mixed legacy maps migrate; evidence recomputes exact preservation and executes schema; repaired V2 saves back up before primary while canonical V2 is a true no-write.
+- The single post-build smoke remains honestly failed at 11/12 because Node12 completes before its active sample. That known balance/timing defect is not caused by Save V2 and need not block this contract task once the remaining P1 is fixed, but release smoke evidence must remain invalid and maturity must not reclaim its points.
+
+---
+
+## LW-016 Review 3
+
+- task: LW-016
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: changes_requested
+- commandsChecked:
+  - independent `npm run save:report`, `npm run save:self-check`
+  - independent Store-boundary malformed build/node/ability/flag rejection and valid canonicalization
+  - independent schema-invalid byte-identical V2 canonical/no-backup counterexample
+  - progression, balance, maturity, manifest, runtime, ability, docs, and diff gates
+
+### Findings
+
+- P1 `js/save-contract.js:149` Runtime no-backup classification still uses a hand-written `validResultShape` that does not enforce the newly declared unlock/flag constraints and only partially validates build snapshots. Reviewer added otherwise complete persisted `firstClear`/`bestResult` rows containing `unlockNodes: ["2"]`, `abilityUnlocks: [null]`, and `flags: [42]`. `save-v2.schema.json` rejected all six fields, but `isCanonicalSaveV2` returned true and, when supplied the normal default-state ordering, `migrateRawSave` returned `canonicalNoop: true`, `needsBackup: false`, and byte equality. Thus new submissions are protected while an existing malformed V2 can still bypass backup and repair. Make canonical/no-backup validation equivalent to every schema constraint applied to persisted results, builds, top-level arrays, and application ledgers; require `payloadIdentity` wherever runtime replay requires it. Add byte-identical invalid-V2 fixtures that prove schema failure forces backup-before-primary and yields either a schema-valid repaired state or an exact diagnostic without silently blessing the input.
+
+### Notes
+
+- Review 2's submission path is resolved: malformed result surfaces and unknown abilities are rejected before mutation at the Store boundary, valid arrays are canonicalized, and post-application schema validation passes.
+- The single Review 2 post-build smoke passed 12/12 with zero runtime/network errors and was not rerun. Maturity remains honestly failed at 29/100 with nine hard caps.
+
+---
+
+## LW-016 Review 4
+
+- task: LW-016
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: changes_requested
+- commandsChecked:
+  - code and fixture review of schema-driven canonical repair
+  - direct `migrateRawSave(null)`, partial raw V1, and `migrateSaveObject({ version: 1 })` calls without options
+
+### Findings
+
+- P1 `js/save-contract.js:147` The exported migration functions declare `defaultState` optional, but the new repair pass assumes caller-owned root structures exist. `migrateRawSave(null)`, `migrateRawSave(JSON.stringify({ version: 1, resources: { bloodEssence: 1 } }))`, and `migrateSaveObject({ version: 1 })` all throw `Cannot read properties of undefined (reading 'unlocked')` at `state.abilities.unlocked`. Even a local guard would still leave required schema roots absent. Make the migration contract own a schema-valid minimum root state (`statistics`, resources/progression/perks/abilities, `storyFlags`, `unlockedNodes`, and `nodeResults`) and merge caller game defaults over it before legacy input. Add no-options empty, partial, malformed JSON, scalar, and direct-object fixtures; each must return a safe schema-valid V2, preserve raw/diagnostics where applicable, and retain caller defaults when explicitly supplied.
+
+### Notes
+
+- Review 3 is resolved: canonical/no-backup validation executes the actual schema, invalid existing V2 values are backed up and preserved exactly in diagnostics, and repaired output is schema-valid.
+- The single Review 3 post-build smoke passed 12/12 with zero errors. No additional browser rerun is requested until this API fix changes the build input.
+
+---
+
+## LW-016 Review 5
+
+- task: LW-016
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: pass
+- commandsChecked:
+  - independent `npm run save:report` and `npm run save:self-check` at 53/53
+  - direct no-options empty/partial/malformed/scalar/null/object API calls with schema validation
+  - direct minimum -> caller defaults -> legacy precedence assertion
+  - independent Store result-surface atomic rejection and valid canonicalization
+  - schema-driven invalid-V2 backup/diagnostic repair inspection
+  - progression, balance, maturity, manifest, runtime, ability, docs, and diff gates
+  - one sandbox-external final `npm run smoke:node1-12`
+
+### Findings
+
+- None open for LW-016.
+
+### Notes
+
+- Reviews 1-4 are resolved. The final report contains 53 strict scenarios with zero derived data-loss cases, including raw backup ordering, corrupt recovery, invalid existing V2 repair, reward/result collision rejection, complete persistent result validation, and standalone exported API behavior.
+- The final sandbox-external smoke passed 12/12 with zero console/page/HTTP/request errors. Fresh maturity evidence validates both save migration and release smoke.
+- Maturity remains honestly failed at 29/100 with nine active hard caps. LW-016 improves the foundation only; it does not claim combat, balance, content, art, audio, mobile readability, release integrity, or originality maturity.
+
+---
+
+## LW-017 Review 1
+
+- task: LW-017
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: changes_requested
+- commandsChecked:
+  - independent `npm run runtime:modularization:check`
+  - code review of Node1 delegates and all five runtime modules
+  - sandbox-external `npm run runtime:modularization:browser`
+  - sandbox-external final-source `npm run smoke:node1-12`
+  - `npm run check:docs-collab`, `git diff --check`
+
+### Findings
+
+- P1 `scripts/run-runtime-modularization-browser.py:223` The required targeted browser gate cannot launch in the actual repository layout because it hard-codes `ROOT/node_modules/.bin/vite`, which does not exist. The sandbox-external reviewer run failed with `Errno 2` before any Node1-3 scenario, while the release-smoke runner already has working ancestor/mirror Vite discovery. Reuse that discovery strategy or another repository-supported server command, fail with a precise searched-path diagnostic, and rerun the three scenarios after the final build.
+- P1 `nodes/node1.js:654` and `nodes/node1.js:1039` The implementation does not meet its own extraction surface. `SkillRuntime` owns lookup/math/nearest-target planning, but the approximately 330-line skill-type dispatcher, Phaser effects, timers, damage calls, heal/shield mutation, dodge state, roots, auras, and projectile behavior remain in `Node1Scene.castSkill`. `damageEnemy`, `onPlayerHit`, and `getEnemyAtk` likewise keep enemy damage, counter rules, kill/drop/lifesteal, shield/HP resolution, death, I-frames, and attack fallback in Node1; there is no combat runtime module at all. Move actual skill execution and damage/player-combat resolution behind explicit scene-injected modules while retaining thin public wrappers for Node3/6/7/8/10/12 override order. Modules that create timers/tweens/listeners need teardown ownership and debug state. Update parity checks to cover branch effects and subclass `super.damageEnemy` semantics, not only formulas and one factory override.
+- P2 `scripts/check-runtime-modularization.mjs:210` The field compatibility check proves only that every discovered subclass field name appears in a manually curated list. Unlike methods, it never proves Node1 or an injected runtime actually initializes/provides the field, so deleting `this.rewards`, `this.uiScene`, or another listed scene-owned field would leave this source contract green. Split Phaser-inherited services from Node1-owned fields and assert each Node1-owned field has a constructor/init/create assignment or an explicit runtime-backed provider; add a mutation/counterexample demonstrating the check fails when a required provider disappears.
+
+### Notes
+
+- The input controller, HUD extraction, result projection, enemy factory, line-count reduction, and no-global-state checks are directionally sound. Full reviewer release smoke passed 12/12 with zero console/page/HTTP/request errors on the submitted source.
+- The targeted browser report remains failed because its runner is broken, not because a Node1-3 assertion ran. LW-017 stays open and LW-018 must not start.
+
+---
+
+## LW-017 Review 2
+
+- task: LW-017
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: pass
+- commandsChecked:
+  - independent `npm run runtime:modularization:check`
+  - branch-level chain/cone/laser/shield/transform and provider-mutation fixtures
+  - code comparison against the tracked pre-extraction Node1 skill/combat behavior
+  - sandbox-external `npm run runtime:modularization:browser`
+  - sandbox-external `npm run smoke:node1-12`
+  - progression, balance, maturity, manifest, runtime, ability, docs, and diff gates
+
+### Findings
+
+- None open for LW-017.
+
+### Notes
+
+- Review 1 is resolved. `node1.js` fell from 2047 to 1093 lines while retaining thin subclass-compatible wrappers. Input, HUD, skill execution, combat resolution, enemy construction, and result metrics now have explicit runtime ownership, teardown/debug surfaces, and no mutable global singleton.
+- Deterministic evidence covers Node2-12 `super.*` and owned-field providers plus chain range, cone arc, laser axis, shield equality/partial absorption, transform completion/teardown, and async ownership.
+- Targeted browser E2E passed all three scenarios. It recorded one expected AudioContext autoplay warning; page, HTTP, and request errors were zero. Final release smoke passed 12/12 with all four error counts zero.
+- Maturity remains honestly failed at 28/100 with nine active hard caps. Structural modularization removes development risk but does not itself clear combat, balance, content, art, audio, readability, release, or originality caps.

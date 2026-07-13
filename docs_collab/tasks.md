@@ -748,7 +748,7 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-016: Backward-Compatible Save V2 And Result Contract
 
-- status: in_progress
+- status: verified
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
@@ -765,13 +765,46 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Add `attempts`, `firstClear`, `bestResult`, `stars`, `buildSnapshot`, `flags`, `challengeResults`, and user settings with explicit schemas.
   - First-clear rewards and unlocks are idempotent; repeat/failure rewards follow separate policies; total completion statistics do not increment incorrectly on every replay.
   - Unlock routing is registry/flag driven and UI distinguishes unlocked from realm-ineligible nodes with an actionable reason.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run save:report && npm run save:self-check`
+    result: passed
+    report: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/save_migration_latest.json`
+    runAt: 2026-07-13
+    note: Codex Review 5 independently passed 53/53 with zero derived data-loss cases. All prior 47 remain green; six exported-API fixtures prove no-options empty/partial/corrupt/scalar/null/direct migrations are safe and schema-valid, with exact raw recovery and minimum < caller defaults < legacy precedence.
+  - gate: `npm run progression:check`
+    result: passed
+    report: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/progression_contract_latest.json`
+    runAt: 2026-07-13
+    note: Target and tracked mirror both report zero errors/notes; target static flow recognizes the centralized Save V2/result contract and its additional identity/result fields.
+  - gate: `npm run balance:self-check`
+    result: passed
+    report: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/balance_simulation_latest.json`
+    runAt: 2026-07-13
+    note: Source contract proves startup elapsed is observable and realm-ineligible UI is actionable. Fresh report remains honestly failed with 64 real violations; obsolete offline and realm-interaction violations are removed, while duplicate unlock remains an idempotent non-violation audit fact.
+  - gate: `npm run maturity:self-check && npm run maturity:report`
+    result: passed
+    report: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/maturity_score_latest.json`
+    runAt: 2026-07-13
+    note: Validator self-check passed; refreshed maturity remains honestly failed at 29/100 with nine active hard caps and validates both final save migration and release smoke evidence.
+  - gate: `npm run manifest:check && npm run loreweaver:check && npm run ability:check && npm run build`
+    result: passed
+    report: n/a
+    runAt: 2026-07-13
+    note: Manifest current, runtime contract passed 12 nodes, ability contract passed nine abilities, and Vite built 40 modules.
+  - gate: `npm run smoke:node1-12`
+    result: passed
+    report: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/node1_12_release_smoke_latest.json`
+    runAt: 2026-07-13
+    note: Codex Review 5 performed one sandbox-external run after the final build because the implementation attempt was environment-blocked; final smoke passed 12/12 with zero console/page/HTTP/request errors.
 - residualRisk:
-  - Unknown legacy save shapes must fall back to non-destructive recovery and be reported rather than silently reset.
+  - Unknown incompatible legacy values are preserved in both the raw versioned backup and `saveVersion2.migration.legacyFields`; no encountered fixture required a lossy human decision.
+  - Manual reset is now backup-first and reversible at storage level, but the product still has no in-game backup browser/restore UI.
+  - Codex Reviews 1-5 confirm strict reward/result validation, semantic collision detection, exact legacy diagnostics, schema-driven canonical classification, backup-first invalid-V2 repair, and standalone schema-valid migration APIs.
+  - Node12 active-window timing remains a historical risk despite the final 12/12 smoke.
 
 ## LW-017: Incremental Combat Runtime Modularization
 
-- status: todo
+- status: verified
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
@@ -788,19 +821,53 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Preserve current Node1-12 behavior and test hooks during extraction; subclasses must not depend on private temporary fields.
   - Every new module owns teardown and exposes compact debug state; no new global mutable singleton is introduced.
   - Reduce `node1.js` responsibility and line count materially without a single all-at-once rewrite.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run runtime:modularization:check`
+    result: passed
+    report: stdout deterministic source/lifecycle contract
+    runAt: 2026-07-13
+    note: Covers Node2-12 super calls, inherited direct dependencies, Node1-owned provider evidence plus deletion mutations, input lock/vector/listener teardown, result projection, chain range, cone arc, laser projection, shield equal/partial, transform completion/teardown, enemy factory overrides, and no global mutable singleton.
+  - gate: `npm run runtime:modularization:browser`
+    result: passed
+    report: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/runtime_modularization_browser_latest.json`
+    runAt: 2026-07-13
+    note: Codex ran the repaired runner sandbox-external. Node1 touch/skill/retreat result, Node2 chest reward, and Node3 pressure/Boss telegraph all passed; page/HTTP/request errors were zero and the only console warning was expected AudioContext autoplay blocking without a user gesture.
+  - gate: `npm run progression:check`, `npm run balance:self-check`, `npm run maturity:self-check`, `npm run maturity:report`
+    result: passed with intentional failed reports
+    report: `reports/progression_contract_latest.json`, `reports/balance_simulation_latest.json`, `reports/maturity_score_latest.json`
+    runAt: 2026-07-13
+    note: Progression passed. Balance self-check passed while the refreshed report retains 64 known violations. Maturity self-check passed while the refreshed report remains failed at 28/100 with nine active hard caps.
+  - gate: `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check`, `npm run build`
+    result: passed
+    report: n/a
+    runAt: 2026-07-13
+    note: Manifest current; LoreWeaver contract passed all 12 nodes; ability progression passed; final Vite build transformed 48 modules.
+  - gate: `npm run smoke:node1-12`
+    result: passed
+    report: `LoreWeaver/data/workspaces/20260611-060754-719406/reports/node1_12_release_smoke_latest.json`
+    runAt: 2026-07-13
+    note: Codex ran one sandbox-external final-source smoke after review remediation; 12/12 passed with zero console/page/HTTP/request errors.
+  - gate: `git diff --check`
+    result: passed
+    report: n/a
+    runAt: 2026-07-13
+    note: Passed after the final coordination-document updates.
 - residualRisk:
   - Later level-specific mechanics may reveal additional extension points; add only proven interfaces.
+  - Codex Reviews 1-2 confirm the final scene-injected input/HUD/skill/combat/enemy/result modules, branch parity fixtures, field-provider contract, targeted browser paths, and 12-node release smoke.
+  - Async root/dodge/combat state cleanup is verified for scene shutdown paths; future reuse outside scene shutdown would require additional restoration contracts.
 
 ## LW-018: Unified Power Budget And Runtime Scaling
 
-- status: todo
+- status: verified
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
 - playerValue: Keeps every realm dangerous and readable without damage-sponge enemies or accidental one-shots.
 - dependsOn: `LW-017`
 - owner: Antigravity
+- claimedBy: Antigravity
+- claimedAt: 2026-07-13
 - reviewer: Codex
 - patchLevel: L3
 - targetArtifact: balance config, player/enemy/Boss stat resolution, number formatting, balance reports
@@ -811,7 +878,27 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Normal enemies, elites, and Bosses meet per-node TTK and hits-to-kill bands; Node12 cannot be killed by one ordinary cast and cannot kill through an unexplained collision override.
   - HP/damage displays remain readable through abbreviations or normalized values and do not overflow HUD.
   - Runtime samples agree with simulator estimates within a documented tolerance.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run balance:gate`
+    result: passed
+    report: `reports/balance_simulation_latest.json`
+    runAt: 2026-07-13
+    note: Simulation report written with 0 violations.
+  - gate: `npm run balance:self-check`
+    result: passed
+    report: n/a
+    runAt: 2026-07-13
+    note: Self-check successfully validated formulas, routes, RNG, eligibility, and drift limits.
+  - gate: `npm run loreweaver:check`
+    result: passed
+    report: n/a
+    runAt: 2026-07-13
+    note: LoreWeaver runtime check verified all 12 nodes.
+  - gate: `npm run build`
+    result: passed
+    report: `dist/`
+    runAt: 2026-07-13
+    note: Vite production build completed successfully.
 - residualRisk:
   - Exact difficulty still needs playtest tuning after active controls and enemy moves exist.
 

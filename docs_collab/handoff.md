@@ -5,52 +5,60 @@
 - agent: Antigravity
 - requirementId: REQ-20260711-001
 - iteration: 1
-- task: `LW-016: Backward-Compatible Save V2 And Result Contract`
+- task: `LW-018: Unified Power Budget And Runtime Scaling`
 - status: in_progress
-- patchLevel: L4
+- patchLevel: L3
 - owner: Antigravity
 - reviewer: Codex
-- preferredImplementationModel: `gpt-5.6-terra`
-- activeImplementationModel: `gpt-5.6-sol` fallback because Terra hit the current usage limit
-- dependsOn: `LW-014` verified
-- sourceReview: `LoreWeaver/docs_collab/review.md#lw-015-review-2`
-- humanAuthorization: The human repeatedly instructed the established task graph to continue autonomously; this authorizes the planned reversible v1-to-v2 migration, not destructive reset or data deletion.
+- implementationModel: `gpt-5.6-terra/Anscombe`
+- dependsOn: `LW-017` verified in `review.md#lw-017-review-2`
 
 ## Objective
 
-Introduce a backward-compatible save v2 and one trustworthy result-application contract. Preserve every valid v1 progression value while making attempts, first clears, best records, stars, build snapshots, flags, challenges, settings, rewards, unlocks, and completion statistics explicit and idempotent.
+Replace disconnected exponential stats, Boss overrides, rewards, and costs with one auditable power-budget contract shared by runtime and the deterministic simulator. Clear all current balance-gate violations without flattening every node into identical combat.
 
-## Required Model
+## Current Failure Inventory
 
-- Define and document the v2 schema before mutating runtime integration. Unknown valid legacy fields must survive migration under a lossless legacy/diagnostic path rather than being discarded.
-- Before migration, preserve a versioned backup of the raw prior save. Migration must be idempotent, observable, and safe to retry after interruption.
-- Fixture coverage must include default v1, realistic progressed v1, maximal resources/perks/abilities/unlocks/results, partially missing fields, unknown extra fields, malformed JSON, wrong scalar/object types, already-v2, and repeated migration.
-- Corrupt-save recovery must not silently overwrite the only original bytes. Preserve the corrupt payload or a recovery diagnostic and initialize a safe v2 state separately.
-- Add explicit schemas/defaults for `attempts`, `firstClear`, `bestResult`, `stars`, `buildSnapshot`, `flags`, `challengeResults`, and user `settings`.
-- Centralize result application. First-clear rewards and unlocks are idempotent; repeat-clear, failure, retreat, and challenge rewards have separate policies. Attempts may increment per completed attempt, while total clears/completion statistics increment only for the correct unique event.
-- NodeBridge, Node1 end-game payload, GameOver display/return, and Store persistence must agree on result reason, success, reward, first-clear, retry, and best-result semantics.
-- Never add a destructive reset or delete a user's existing save as a migration convenience. If a legacy field cannot be interpreted losslessly, stop and raise one concrete human decision.
+- Fresh balance report: 64 violations across two profiles and 24 node rows.
+- 22 `mandatory_repeats_exceed_limit` violations; maximum mandatory repeats is 441.
+- 20 ordinary `boss_ttk_below_minimum`, two `final_boss_ttk_below_minimum`, and two `missing_runtime_boss` violations.
+- 16 `survivability_outside_contact_band` violations and two `instant_failure_path` violations.
+- Progression divergence is already zero; do not regress Save V2, realm eligibility, or offline timestamp behavior.
+
+## Required Design
+
+- Define one versioned power-budget data contract for Node1-12 with explicit player profile assumptions, normal/elite/Boss HP and damage bands, expected skill DPS, reward vectors, upgrade/cave/realm costs, target clear time, target hits-to-kill, and allowed mandatory repeats.
+- Runtime stat resolution and `report-balance-simulation.mjs` must import/derive from the same source. Do not copy final numbers into a second simulator-only table.
+- Preserve enemy archetype identity through bounded per-enemy modifiers around the node budget. Bosses require explicit runtime identities for every node; Node1 and Node2 cannot remain missing.
+- Remove Node12's unexplained instant-failure/collision override and raw 5000 HP special case. Finale-specific phases may remain, but damage and HP must derive from the budget with documented phase modifiers.
+- Normalize or abbreviate HP/damage/reward displays so large values do not overflow; do not scale font by viewport width.
+- Economy changes must model full resource vectors and cumulative costs. Passing by deleting costs, granting absurd first-clear rewards, or assuming parallel farming is forbidden.
 
 ## Required Evidence
 
-- Add deterministic migration/result-idempotency tests and `reports/save_migration_latest.json` compatible with the strict maturity evidence validator.
-- Prove v1-to-v2 value preservation, backup presence, already-v2 no-op/idempotency, corrupt-save recovery, first-clear double-submit protection, repeat/failure separation, and result replay/idempotency.
-- Report summary values must be recomputed from fixture/scenario details. Failed fixtures cannot be hidden by a top-level passed status.
+- Add source-contract and runtime parity fixtures proving each node's resolved player/enemy/Boss stats and expected DPS match simulator inputs within documented tolerance.
+- Add representative runtime samples for early, middle, late, and final nodes, including ordinary enemy hits-to-kill, Boss TTK, player contact survivability, projectile/instant-failure paths, and reward/cost progression.
+- `npm run balance:gate` must pass with zero violations. Report details must retain auditable zero-wallet routes and bottleneck explanations.
+- Add numeric-display tests for the largest Node12 values and mobile HUD containers.
+- Preserve the 53-case Save V2 gate, LW-017 runtime modularization check, targeted Node1-3 browser behavior, and Node1-12 release smoke.
 
 ## Required Gates
 
-- Save migration fixtures/report and result idempotency tests.
-- `npm run progression:check`, `npm run balance:self-check`, `npm run maturity:self-check`, `npm run maturity:report`.
-- `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check`, `npm run build`.
-- Build before fresh `npm run smoke:node1-12`; record any Node12 timing race rather than rerunning silently.
+- `npm run balance:self-check`, `npm run balance:report`, `npm run balance:gate`.
+- New power-budget/runtime parity and number-format checks.
+- `npm run runtime:modularization:check`, `npm run save:self-check`, `npm run progression:check`, `npm run ability:check`.
+- `npm run maturity:self-check`, `npm run maturity:report`; no unsupported hard-cap removal.
+- `npm run manifest:check`, `npm run loreweaver:check`, `npm run build`.
+- Build before one targeted browser run and one fresh `npm run smoke:node1-12`; preserve first outcomes.
 - `npm run check:docs-collab`, `git diff --check`.
 
-## Risks
+## Guardrails
 
-- Store initialization currently owns the offline timestamp defect. Save migration must not accidentally claim to repair offline income unless it explicitly preserves the prior timestamp before initialization and invalidates balance/progression evidence accordingly.
-- Result calls may currently be duplicated between Node scene, NodeBridge, and GameOver paths. Tests must exercise repeated identical payloads and distinct attempts.
-- The target workspace is partly ignored. Inspect named files and reports directly; preserve unrelated user/Codex changes.
+- This is balance/runtime scaling, not active controls, new enemy moves, content, art, or audio; those remain LW-019 onward.
+- Do not weaken balance thresholds or mutate the validator to fit current numbers. Threshold changes require reviewer justification tied to player-facing targets.
+- Do not erase historical failed reports or rerun a gameplay failure silently.
+- Target workspace is partly ignored; inspect named files and preserve unrelated changes.
 
 ## Next Action
 
-Antigravity implements fixture-first save v2 migration and the result contract, runs every required gate, records any ambiguous legacy field instead of deleting it, and returns LW-016 to `needs_review`. LW-017 remains unclaimed.
+Antigravity has claimed LW-018 and will write the power-budget schema and source-of-truth mapping before changing values, then implement fixture-first. Submit `needs_review` with before/after violation categories, changed values, runtime parity evidence, first browser/smoke outcomes, and residual tuning risks. Do not start LW-019.

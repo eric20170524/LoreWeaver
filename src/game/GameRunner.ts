@@ -299,7 +299,7 @@ export function initializePhaserGame(
 
       const subtitleText = this.add.text(width / 2, height / 2 + 190, "正在初始化修真世界沙盒 INITALIZING...", {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#94a3b8"
       }).setOrigin(0.5);
 
@@ -393,7 +393,7 @@ export function initializePhaserGame(
       const realmTextStr = spec.economy.realms[this.state.currentRealmIndex] || "炼气期 Initial";
       this.add.text(32, 28, realmTextStr.toUpperCase(), {
         fontFamily: "Inter, sans-serif",
-        fontSize: "15px",
+        fontSize: "22px",
         style: "bold",
         color: spec.themeColor,
         letterSpacing: "2"
@@ -403,14 +403,14 @@ export function initializePhaserGame(
       const passiveRate = (this.state.activeMultiplier * 1.5).toFixed(1);
       this.multiplierText = this.add.text(32, 48, `挂机修炼效率: +${passiveRate}/秒`, {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "11px",
+        fontSize: "16px",
         color: "#64748b"
       });
 
       // Primary Currency Score displaying
       this.add.text(32, 70, `${spec.economy.currencyName.split("/")[0]}:`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#94a3b8"
       });
 
@@ -424,7 +424,7 @@ export function initializePhaserGame(
       // Sound Mute Switch
       const soundText = this.add.text(width - 92, 32, synth.getMuteState() ? "🔇 静音" : "🔊 音效", {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "11px",
+        fontSize: "16px",
         color: synth.getMuteState() ? "#ef4444" : spec.themeColor
       }).setInteractive({ useHandCursor: true });
 
@@ -442,7 +442,7 @@ export function initializePhaserGame(
       
       const brkBtn = this.add.text(width - 145, 68, canBrk ? "⚡ 突破境界" : `🔒 需修为: ${nextBound}`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "12px",
+        fontSize: "18px",
         fontStyle: "bold",
         backgroundColor: canBrk ? spec.themeColor : "#1e293b",
         color: canBrk ? "#020617" : "#64748b",
@@ -491,7 +491,7 @@ export function initializePhaserGame(
 
       const circleLabel = this.add.text(cx, cy, "修炼\nCULTIVATE", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "11px",
+        fontSize: "16px",
         fontStyle: "bold",
         color: "#ffffff",
         align: "center"
@@ -536,7 +536,7 @@ export function initializePhaserGame(
         const py = cy - 40;
         const flTxt = this.add.text(px, py, `+${gain}`, {
           fontFamily: "JetBrains Mono, monospace",
-          fontSize: "18px",
+          fontSize: "27px",
           fontStyle: "bold",
           color: "#ffffff"
         }).setOrigin(0.5);
@@ -592,7 +592,7 @@ export function initializePhaserGame(
         const titleColor = isUnlocked ? "#ffffff" : "#4b5563";
         const titleText = this.add.text(42, dy + 18, `${lockPrefix}节点 ${node.id}: ${node.title}`, {
           fontFamily: "Inter, sans-serif",
-          fontSize: "14px",
+          fontSize: "21px",
           fontStyle: "bold",
           color: titleColor
         });
@@ -602,7 +602,7 @@ export function initializePhaserGame(
         const introTextStr = isUnlocked ? node.intro : "未觉醒。请先参透前面境界及关卡桎梏。";
         const descText = this.add.text(42, dy + 42, introTextStr, {
           fontFamily: "Inter, sans-serif",
-          fontSize: "11px",
+          fontSize: "16px",
           color: isUnlocked ? "#94a3b8" : "#4b5563",
           wordWrap: { width: width - 84, useAdvancedWrap: true }
         });
@@ -618,7 +618,7 @@ export function initializePhaserGame(
           const rawMech = mechLabels[node.mechanics] || node.mechanics.toUpperCase();
           const tag = this.add.text(42, dy + 82, `玩法: ${rawMech}`, {
             fontFamily: "JetBrains Mono, monospace",
-            fontSize: "10px",
+            fontSize: "15px",
             color: spec.themeColor,
             backgroundColor: "rgba(0,0,0,0.45)",
             padding: { x: 5, y: 3 }
@@ -626,7 +626,7 @@ export function initializePhaserGame(
           
           const rwd = this.add.text(230, dy + 82, `造化: ${node.rewards}`, {
             fontFamily: "Inter, sans-serif",
-            fontSize: "10px",
+            fontSize: "15px",
             color: "#f59e0b"
           });
 
@@ -872,7 +872,7 @@ export function initializePhaserGame(
       // Retreat Back Button (Returns safely to MainScene - strictly enforces Scene Hygiene)
       const rBtn = this.add.text(32, 32, "◀ 撤退 / RETREAT", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "11px",
+        fontSize: "16px",
         fontStyle: "bold",
         color: "#ffffff",
         backgroundColor: "rgba(239, 68, 68, 0.65)",
@@ -938,7 +938,7 @@ export function initializePhaserGame(
       
       const phraseText = this.add.text(width / 2, 100, chosenTaunt, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "12px",
+        fontSize: "18px",
         fontStyle: "italic",
         color: "#f59e0b",
         wordWrap: { width: width - 80, useAdvancedWrap: true },
@@ -947,7 +947,7 @@ export function initializePhaserGame(
 
       this.add.text(width / 2, 140, `${this.node.title.toUpperCase()}`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "16px",
+        fontSize: "24px",
         style: "bold",
         color: spec.themeColor,
         letterSpacing: "1"
@@ -956,20 +956,20 @@ export function initializePhaserGame(
       // Lives and Target score indicators
       this.scoreHUD = this.add.text(32, height - 42, `目标进度：0 / ${this.node.goalValue}`, {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#ffffff"
       });
 
       this.livesHUD = this.add.text(width - 150, height - 42, `生命精力：${this.livesCount}`, {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#10b981"
       });
 
       if (this.runGrowthState?.enabled) {
         this.growthHUD = this.add.text(32, height - 72, "", {
           fontFamily: "JetBrains Mono, monospace",
-          fontSize: "12px",
+          fontSize: "18px",
           color: "#fbbf24"
         });
         this.refreshGrowthHUD();
@@ -1137,7 +1137,7 @@ export function initializePhaserGame(
       const { width, height } = this.scale;
       const fx = this.add.text(width / 2, height - 118, text, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "15px",
+        fontSize: "22px",
         fontStyle: "bold",
         color: "#fff7d6",
         backgroundColor: "rgba(15, 23, 42, 0.72)",
@@ -1255,7 +1255,7 @@ export function initializePhaserGame(
         this.scoreHUD.setText(`已吸收: ${this.scoreCount} / ${this.node.goalValue}`);
         
         // Spawn micro numbers floating animation
-        const fx = this.add.text(rx, ry, "+1 灵能", { fontFamily: "JetBrains Mono", fontSize: "12px", color: spec.themeColor });
+        const fx = this.add.text(rx, ry, "+1 灵能", { fontFamily: "JetBrains Mono", fontSize: "18px", color: spec.themeColor });
         this.tweens.add({
           targets: fx,
           y: ry - 40,
@@ -1422,7 +1422,7 @@ export function initializePhaserGame(
         
         const label = this.add.text(pos.x, pos.y, pos.label, {
           fontFamily: "Inter",
-          fontSize: "12px",
+          fontSize: "18px",
           fontStyle: "bold",
           color: "#ffffff"
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -1635,14 +1635,14 @@ export function initializePhaserGame(
 
       const title = this.add.text(width / 2, height / 2 - 210, `第 ${this.node.id} 劫：${this.node.title}`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "20px",
+        fontSize: "30px",
         fontStyle: "bold",
         color: spec.themeColor
       }).setOrigin(0.5);
 
       const descText = this.add.text(width / 2, height / 2 - 140, this.node.intro, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#94a3b8",
         wordWrap: { width: width - 160, useAdvancedWrap: true },
         align: "center"
@@ -1661,7 +1661,7 @@ export function initializePhaserGame(
 
       const mech = this.add.text(width / 2, height / 2 - 30, mechDesc, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "12px",
+        fontSize: "18px",
         color: "#10b981",
         wordWrap: { width: width - 160, useAdvancedWrap: true },
         align: "center"
@@ -1669,7 +1669,7 @@ export function initializePhaserGame(
 
       const prompt = this.add.text(width / 2, height / 2 + 100, "—— 点击屏幕 开启考验 ——", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         fontStyle: "bold",
         color: "#64748b"
       }).setOrigin(0.5);
@@ -1767,45 +1767,45 @@ export function initializePhaserGame(
 
       const title = this.add.text(width / 2, height / 2 - 190, "🍀 功德圆满 / SUCCESS", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "22px",
+        fontSize: "33px",
         fontStyle: "bold",
         color: "#f59e0b"
       }).setOrigin(0.5);
 
       const sub = this.add.text(width / 2, height / 2 - 130, `顺利参透第 ${this.node.id} 关：${this.node.title}`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#94a3b8"
       }).setOrigin(0.5);
 
       const rwdTitle = this.add.text(width / 2, height / 2 - 70, "获得天道造化奖励", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "14px",
+        fontSize: "21px",
         fontStyle: "bold",
         color: "#ffffff"
       }).setOrigin(0.5);
 
       const rwd1 = this.add.text(width / 2, height / 2 - 20, `✨ 修为挂机效率: +${(multiplierGain * 1.5).toFixed(2)}/秒`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#10b981"
       }).setOrigin(0.5);
 
       const rwd2 = this.add.text(width / 2, height / 2 + 20, `💎 额外获取造化: ${this.node.rewards}`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#f59e0b"
       }).setOrigin(0.5);
 
       const rwd3 = this.add.text(width / 2, height / 2 + 60, `💼 奇珍机缘: ${resourceKey} +1`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#38bdf8"
       }).setOrigin(0.5);
 
       const btn = this.add.text(width / 2, height / 2 + 150, "领取天道机缘并返回", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "14px",
+        fontSize: "21px",
         fontStyle: "bold",
         color: "#0f172a",
         backgroundColor: "#f59e0b",
@@ -1841,7 +1841,7 @@ export function initializePhaserGame(
 
       const title = this.add.text(width / 2, height / 2 - 130, "💀 身死道消 / DEFEATED", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "22px",
+        fontSize: "33px",
         fontStyle: "bold",
         color: "#ef4444"
       }).setOrigin(0.5);
@@ -1852,7 +1852,7 @@ export function initializePhaserGame(
 
       const sub = this.add.text(width / 2, height / 2 - 70, `败因: [ ${reasonZh} ]`, {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         color: "#94a3b8",
         wordWrap: { width: width - 180, useAdvancedWrap: true },
         align: "center"
@@ -1860,7 +1860,7 @@ export function initializePhaserGame(
 
       const desc = this.add.text(width / 2, height / 2 - 10, "天雷凶险，仙途坎坷。请重整旗鼓再试，\n或先行退回主界面积攒修为。", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "12px",
+        fontSize: "18px",
         color: "#64748b",
         align: "center"
       }).setOrigin(0.5);
@@ -1868,7 +1868,7 @@ export function initializePhaserGame(
       // Try Again Button
       const btnRetry = this.add.text(width / 2 - 75, height / 2 + 80, "重整旗鼓", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         fontStyle: "bold",
         color: "#ffffff",
         backgroundColor: "#10b981",
@@ -1887,7 +1887,7 @@ export function initializePhaserGame(
       // Retreat Button
       const btnBack = this.add.text(width / 2 + 75, height / 2 + 80, "退回主干", {
         fontFamily: "Inter, sans-serif",
-        fontSize: "13px",
+        fontSize: "20px",
         fontStyle: "bold",
         color: "#ffffff",
         backgroundColor: "#334155",

@@ -166,3 +166,285 @@
   - Manifest/runtime/ability/progression and maturity self-check passed. Maturity report remains failed at 29/100 with nine hard caps.
 - reviewerDisposition:
   - Passed in `LoreWeaver/docs_collab/review.md#lw-015-review-2`; LW-015 is verified and LW-016 is active.
+
+---
+
+## LW-016 Review Request
+
+- task: LW-016
+- requirementId: REQ-20260711-001
+- iteration: 1
+- status: closed
+- implementationAgent: Antigravity fallback implementer
+- preferredImplementationModel: `gpt-5.6-terra`
+- implementationModel: `gpt-5.6-sol`
+- fallbackRecord:
+  - Terra hit the current usage limit before LW-016 implementation, so the authorized Sol fallback implemented and self-tested this L4 change.
+  - The fallback does not waive Codex review or permit destructive reset/data loss.
+- implementationSummary:
+  - Added strict `loreweaver/save-v2.schema.json`, Save V2 defaults, pure migration/result contract, versioned raw backups, corrupt recovery diagnostics, unknown-field preservation, and backup-first persistence/manual reset.
+  - Added resultId plus attemptId replay protection; first/repeat/failure/retreat/challenge policies; monotonic compatible clear state; unique-clear statistics; and best-result/build-snapshot consistency.
+  - Settles results on GameOver entry and safely replays on return. Node1 and Node3 use the centralized NodeBridge payload; MainScene shows unlocked-but-realm-ineligible nodes with an actionable realm requirement and never launches them.
+  - Preserves `lastSaveTime` across core Store initialization. Updated the balance source contract, audit, self-check, and report so startup elapsed is observable and the removed offline/UI defects no longer appear as fresh violations.
+  - Review 1 remediation strictly rejects unknown/negative/nonfinite rewards; stores semantic payload identities; rejects conflicting result/attempt reuse; excludes `settlement` transport metadata from identity; and preserves GameOver-to-Main replay.
+  - Mixed legacy result maps skip only invalid inference entries and preserve exact diagnostics. V2 no-backup is limited to schema-valid, byte-identical canonical no-op; incomplete/wrong-type V2 is backed up before repair.
+  - Review 2 validates and canonicalizes the entire persistent result surface before mutation. Build snapshots require typed active skills/perks/abilities/stats; node unlocks are positive integers; flags are nonempty strings; Store and NodeBridge reject ability unlock ids outside ABILITY_CATALOG.
+  - Review 3 replaces the hand-written canonical predicate with direct execution of `save-v2.schema.json`. Invalid persisted result/build/application entries are repaired or exactly diagnosed after backup; application payloadIdentity is schema-required and reconstructed only from matching persisted results.
+  - Review 4 adds migration-owned schema-valid minimum roots and merges in the explicit order minimum, caller defaults, legacy input. Exported APIs no longer depend on Store's `DEFAULT_STATE`; corrupt/raw diagnostics remain exact.
+- changedArtifacts:
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/loreweaver/save-v2.schema.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/tests/fixtures/save-migration-v1.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/tests/fixtures/save-migration-corrupt.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/tests/fixtures/result-contract.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/tests/fixtures/save-v2-invalid.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/tests/fixtures/save-exported-api.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/js/save-contract.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/js/store.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/systems/NodeBridge.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/nodes/node1.js`, `nodes/node3.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scenes/GameOverScene.js`, `scenes/MainScene.js`, `scenes/MenuScene.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/report-save-migration.mjs`, `scripts/check-save-migration.mjs`, `scripts/maturity-evidence.mjs`, `scripts/check-progression-contract.mjs`, `scripts/report-balance-simulation.mjs`, `scripts/check-balance-simulation.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/js/json-schema-lite.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/package.json`
+  - Fresh save, balance, progression, and maturity reports plus build output; the historical smoke report is retained without a fresh-success claim.
+- strictSaveEvidence:
+  - `reports/save_migration_latest.json` passed 53/53 with zero errors and zero value-derived data-loss cases: all prior 47 fixtures plus six exported-API scenarios.
+  - Every applicable fixture embeds its migrated state and executes `save-v2.schema.json`. Migration rows recursively compare each source leaf against its destination or exact diagnostic; fixture and summary data-loss values are recomputed from those rows.
+  - Reward counterexamples cover negative, `NaN`, infinity, and unknown keys. Identity coverage includes exact replay, same-node resultId alias, cross-node attempt collision, material payload collision, reused resultId collision, and GameOver's settlement-bearing second submission.
+  - V2 coverage includes byte-identical canonical no-op with no write, incomplete V2 backup-before-primary, wrong-type V2 backup-before-primary, and fake-storage collision/write-failure protection.
+  - `save:self-check` corrupts exact diagnostic values and injects schema-invalid attempts, stars, and results; the maturity save validator rejects every mutation.
+  - Review 2 self-check also mutates result build/unlock/ability/flag fields and top-level unlockedNodes/storyFlags/abilities. Invalid submissions leave state byte-identical and schema-valid; a valid full-surface first clear produces schema-valid persistent state with canonical arrays.
+  - Review 3 fixtures cover persisted invalid unlock arrays, invalid build playerStats/empty members, and missing payloadIdentity ledger. Source schema fails, runtime canonical is false, exact backup precedes primary, diagnostics match source values, and repaired output passes the same schema.
+  - Review 4 fixtures directly call no-options empty, partial V1, malformed JSON, scalar/null, and `migrateSaveObject({ version: 1 })`. Every output is schema-valid; raw/recovery values are exact; a direct precedence case proves minimum < caller defaults < legacy input.
+- verification:
+  - `npm run save:report && npm run save:self-check` -> passed 53/53, retaining all prior 47 and adding exported-API direct calls plus strict mutation rejection.
+  - `npm run progression:check` -> passed with target/mirror zero findings.
+  - `npm run balance:self-check` -> passed; fresh report intentionally failed with 64 current violations, zero progression-divergence violations, observable startup elapsed, and duplicate unlock recorded only as an idempotent audit fact.
+  - `npm run maturity:self-check && npm run maturity:report` -> self-check passed; final fresh maturity remains intentionally failed at 24/100 with nine hard caps, valid save evidence, and stale smoke evidence.
+  - `npm run manifest:check`, `loreweaver:check`, `ability:check`, `build` -> passed; 40 build modules.
+  - The single Review 4 post-build `npm run smoke:node1-12` failed before launch because the sandbox denied binding `127.0.0.1:0`; it was not rerun. The prior Review 3 12/12 report is retained only as historical evidence.
+- reviewFocus:
+  - Verify migration cannot write primary before an exact raw backup and incompatible legacy values remain recoverable in backup plus `migration.legacyFields`.
+  - Verify resultId/attemptId replay, challenge uniqueness, first-clear unlock/reward, clear-state monotonicity, and best/build association under the sequence fixtures.
+  - Verify payload identity covers normalized business fields, excludes only `resultId`/`settlement`, allows same-semantic aliases, and throws explicit collisions before mutation.
+  - Verify canonical V2 no-op is schema-valid and byte-identical; incomplete/wrong-type V2 persistence writes exact backup before repaired primary.
+  - Verify malformed build snapshots, node unlocks, ability members/unknown ids, and flags reject before mutation; verify valid canonical surface updates top-level state and remains Save V2 schema-valid.
+  - Verify `isCanonicalSaveV2` calls the shared validator against the actual JSON schema; invalid byte-identical V2 cannot skip backup. Verify repaired result/build/ledger diagnostics are exact and output is schema-valid.
+  - Verify startup timestamp behavior and regenerated balance facts agree; do not accept stale 98-violation/offline-defect evidence.
+  - Verify realm-ineligible buttons explain the required realm and never call launch.
+- residualRisk:
+  - Manual reset creates a recoverable storage backup but has no in-game backup restore browser.
+  - Existing maturity/balance hard caps remain outside LW-016; this request makes no maturity-clearance claim.
+  - Node12 active-window timing remains a historical risk; Review 4 has no fresh browser result because the single allowed smoke attempt was blocked by loopback permissions.
+- nextReviewer: Codex
+- reviewerDisposition:
+  - Passed in `LoreWeaver/docs_collab/review.md#lw-016-review-5`; LW-016 is verified and LW-017 is ready for implementation handoff.
+
+---
+
+## LW-017 Review Request
+
+- status: superseded_in_progress
+- task: LW-017
+- requirementId: REQ-20260711-001
+- iteration: 1
+- implementationAgent: Antigravity
+- implementationModel: `gpt-5.6-terra/Anscombe`
+- reviewer: Codex
+- requestedAt: 2026-07-13
+- sourceReview: n/a
+- changedFiles:
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/nodes/node1.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/runtime/TouchInputController.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/runtime/run-metrics.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/runtime/node-scene-compatibility.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/check-runtime-modularization.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/run-runtime-modularization-browser.py`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/package.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/runtime_modularization_browser_latest.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/balance_simulation_latest.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/maturity_score_latest.json`
+  - `LoreWeaver/docs_collab/tasks.md`, `state.md`, `handoff.md`, `review_request.md`
+- lineCount:
+  - `nodes/node1.js`: 2047 before, 1794 after (-253 lines).
+  - `runtime/TouchInputController.js`: 368 lines; `runtime/run-metrics.js`: 35 lines.
+- moduleResponsibilities:
+  - `TouchInputController`: scene-injected touch and keyboard movement, input locks, debug state, pointer/lifecycle registration and teardown, joystick graphics ownership.
+  - `run-metrics`: cloned run/result projection inputs only; no Store/NodeBridge settlement/persistence dependency.
+  - `node-scene-compatibility`: frozen auditable Node1/Phaser surface required by Node2-12.
+  - `check-runtime-modularization`: deterministic contract, vector/lock/teardown, result projection, and no-global-singleton assertions.
+  - `run-runtime-modularization-browser`: one-shot Node1 touch/skill/result, Node2 chest, Node3 pressure/Boss runner; failed before server launch in this sandbox.
+- compatibilityInventory:
+  - Node2-12 super calls, overridden methods, inherited direct method calls, and required direct fields are parsed from source and asserted on every run. The full per-node inventory is in `npm run runtime:modularization:check` output and `handoff.md`.
+  - Retained scene-facing fields include player, groups, rewards/loot, stats/HP/shield/invulnerability, timing/config, UI, game/pause flags, dimensions, and Phaser scene services. Existing Node1 input method names remain delegates.
+- SaveV2ResultSemantics:
+  - `NodeBridge`, Store, save schema, and GameOver settlement were not modified.
+  - Node1 calls `NodeBridge.createNodeResult` with the same success/reason/reward/failure payload values; the new projection only clones those values and exposes result-display metrics.
+- verification:
+  - `npm run runtime:modularization:check` -> passed: Node2-12 source contract, input lock/vector/listener teardown, result projection parity, no global mutable singleton.
+  - `npm run runtime:modularization:browser` -> blocked on its single attempt before launch: `[Errno 1] Operation not permitted` binding `127.0.0.1:0`. Report retained; no rerun.
+  - `npm run progression:check` -> passed, target/mirror zero findings.
+  - `npm run balance:self-check` -> passed; regenerated balance report intentionally failed with 64 current violations.
+  - `npm run maturity:self-check` -> passed; `npm run maturity:report` intentionally failed at 23/100 with nine active hard caps.
+  - `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check` -> passed.
+  - `npm run build` -> passed, Vite transformed 42 modules.
+  - `npm run smoke:node1-12` -> blocked on its one required post-build attempt before launch: `[Errno 1] Operation not permitted` binding `127.0.0.1:0`. Historical report is not fresh evidence; no rerun.
+  - `npm run check:docs-collab` -> passed before this final request append; final recheck follows this request.
+  - `git diff --check` -> passed before final coordination edits; final recheck follows this request.
+- reviewFocus:
+  - Verify every input delegate preserves the Node1 public method and field surface while the controller owns no global mutable state.
+  - Verify teardown removes pointer and lifecycle listeners on both shutdown/destroy paths and leaves test-state input locking observable.
+  - Verify `projectNodeResultInput` does not alter the NodeBridge result input or settlement path and clones snapshot data.
+  - Verify the source-contract check correctly protects all Node2-12 super calls and required fields before further skill/enemy extraction.
+- residualRisk:
+  - Browser and full release smoke are environment-blocked, so direct Node1-3 and Node1-12 behavior still need execution in an approved loopback-capable environment.
+  - Skill, enemy/combat, and HUD remain in Node1 intentionally; extracting them now would risk a scene/module cycle before the first slice review.
+  - This request is superseded: scope review found the first input/result slice insufficient for the LW-017 done criteria. Antigravity resumed skill, enemy, and HUD extraction on 2026-07-13; it is not ready for review or verification. LW-018 has not been started.
+
+---
+
+## LW-017 Final Review Request
+
+- status: changes_requested
+- task: LW-017
+- requirementId: REQ-20260711-001
+- iteration: 1
+- implementationAgent: Antigravity
+- implementationModel: `gpt-5.6-terra/Anscombe`
+- reviewer: Codex
+- requestedAt: 2026-07-13
+- changedFiles:
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/nodes/node1.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/runtime/TouchInputController.js`, `runtime/NodeCombatHud.js`, `runtime/SkillRuntime.js`, `runtime/EnemyRuntime.js`, `runtime/run-metrics.js`, `runtime/node-scene-compatibility.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/check-runtime-modularization.mjs`, `scripts/run-runtime-modularization-browser.py`, `package.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/runtime_modularization_browser_latest.json`, regenerated balance/maturity reports
+  - `LoreWeaver/docs_collab/tasks.md`, `state.md`, `handoff.md`, `review_request.md`
+- lineCount:
+  - `nodes/node1.js`: 2047 before, 1548 after (-499).
+  - Module ownership: input 368 lines; HUD 128; skill math/target plan 60; enemy factory 48; result metrics 35.
+- moduleResponsibilities:
+  - `TouchInputController`: injected-scene pointer/keyboard input, locks, vectors, debug state, listener and graphics teardown.
+  - `NodeCombatHud`: Node1 UI/retreat modal, HUD rendering, tween/modal teardown; Node1 re-exports its `Node1UI` class.
+  - `SkillRuntime`: skill lookup, scaling, cooldown, perk/critical damage, nearest-target execution plan; Node1 keeps public delegates and visual/effect dispatch.
+  - `EnemyRuntime`: injected-scene enemy stat/visual/data factory; Node1 keeps `createRuntimeEnemy` and random-type hooks for subclasses.
+  - `run-metrics`: cloned result input/metrics only, without NodeBridge settlement or persistence ownership.
+- compatibilityInventory:
+  - `runtime:modularization:check` parses and asserts every Node2-12 `super.*`, inherited method and direct required field. It guards the known extension surface: player/groups, rewards/loot, stats/HP/shield/invulnerability, timing/config, UI, pause/game-over flags, dimensions, and Phaser services.
+  - Node2 chest and Node3 pressure/Boss overrides remain untouched. No Node1 subclass-facing field or method was renamed or hidden.
+- SaveV2ResultSemantics:
+  - Store, Save V2 schema, NodeBridge, and GameOver settlement were not changed.
+  - Node1 supplies the same `success`, `reason`, `rewards`, and `failureReason` values to `NodeBridge.createNodeResult`; projection only clones them and emits a display/debug snapshot.
+- verification:
+  - `npm run runtime:modularization:check` -> passed on final source: source contract; input lock/vector/teardown; skill math/plan; enemy factory overrides; result parity; no global mutable singleton.
+  - `npm run progression:check` -> passed with target/mirror zero findings.
+  - `npm run balance:self-check` -> passed; regenerated report remains intentionally failed with 64 known violations.
+  - `npm run maturity:self-check` -> passed; `npm run maturity:report` remains intentionally failed at 23/100 with nine active hard caps.
+  - `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check` -> passed.
+  - `npm run build` -> passed on final source; 45 modules transformed.
+  - `npm run runtime:modularization:browser` -> one attempted run, blocked before launch by `PermissionError: [Errno 1] Operation not permitted` binding `127.0.0.1:0`. Its Node1 touch/skill/result, Node2 chest, and Node3 pressure/Boss scenarios were not rerun.
+  - `npm run smoke:node1-12` -> one post-build attempted run, blocked before launch by the same bind permission. It was not rerun after the final build because the required first outcome must remain preserved; historical 12/12 smoke is not fresh evidence.
+  - `npm run check:docs-collab` and `git diff --check` -> passed after this final request update.
+- reviewFocus:
+  - Confirm the imported HUD is the scene actually launched and its teardown does not alter retreat/result semantics.
+  - Confirm skill critical/cooldown/target plan and enemy factory preserve prior data and extension hooks.
+  - Confirm Node2-12 override ordering and direct-field compatibility remain protected by the source contract.
+  - Treat blocked browser/smoke evidence as a review risk, not a pass.
+- residualRisk:
+  - Browser and full smoke must be rerun only in an approved loopback-capable environment; no fresh runtime evidence exists for final source.
+  - Damage resolution and level-specific combat overrides remain scene-facing deliberately to avoid a premature cycle; later extraction should proceed from the frozen compatibility surface.
+  - LW-017 is not verified. LW-018 remains unclaimed.
+
+---
+
+## LW-017 Review 1 Remediation Request
+
+- status: needs_review
+- task: LW-017
+- implementationAgent: Antigravity
+- implementationModel: `gpt-5.6-terra/Anscombe`
+- reviewer: Codex
+- changedFiles:
+  - `nodes/node1.js`, `runtime/CombatRuntime.js`, `runtime/SkillExecutionRuntime.js`, `runtime/SkillRuntime.js`, `runtime/node-scene-compatibility.js`
+  - `scripts/check-runtime-modularization.mjs`, `scripts/run-runtime-modularization-browser.py`
+  - LW-017 entries in `tasks.md`, `state.md`, `handoff.md`, and this review request.
+- implementation:
+  - Browser runner now discovers Vite from the target workspace or the tracked source mirror, matching the release-smoke strategy.
+  - `castSkill` is now a thin delegate to scene-injected `SkillExecutionRuntime`; it owns cooldown-ready skill branch execution and tracks delayed callbacks, timed events, tweens, teardown, and debug state.
+  - `damageEnemy`, `onPlayerHit`, and `getEnemyAtk` are thin delegates to scene-injected `CombatRuntime`. Node3/6/7/8/10/12 retain their existing override and `super.damageEnemy` call order.
+  - Compatibility evidence now classifies Phaser inherited services separately from Node1-owned fields, verifies an actual Node1 provider assignment for every owned direct dependency, and contains a provider-deletion mutation counterexample.
+- verification:
+  - `npm run runtime:modularization:check` -> passed after Review 1 remediation.
+  - `npm run build` -> passed; 47 modules transformed.
+  - `npm run runtime:modularization:browser` -> one post-build attempt; blocked before launch with `[Errno 1] Operation not permitted` binding loopback. The runner report preserves the failure.
+  - `npm run smoke:node1-12` -> one post-build attempt; blocked before launch with the same loopback permission error. Reviewer Review 1's 12/12 smoke remains the pre-remediation baseline only.
+  - `git diff --check` and `npm run check:docs-collab` are pending final coordination validation.
+- reviewFocus:
+  - Confirm `SkillExecutionRuntime` preserves each existing type branch and that tracked async work is cleaned during scene shutdown.
+  - Confirm the CombatRuntime delegation preserves all subclass `super.damageEnemy` behavior.
+  - Confirm Vite mirror fallback resolves the reviewer sandbox-external runner path.
+  - Treat fresh browser/smoke as blocked evidence, not a pass.
+- residualRisk:
+  - The current sandbox rejects loopback bind before either runner starts. A loopback-capable reviewer environment must execute Node1 touch/skill/result, Node2 chest, Node3 pressure/Boss, and Node1-12 smoke.
+  - LW-017 remains needs_review, not verified. LW-018 remains unclaimed.
+  - Codex Review 1 requested changes; see `LoreWeaver/docs_collab/review.md#lw-017-review-1`.
+
+---
+
+## LW-017 Review 1 Parity Completion Request
+
+- status: closed
+- task: LW-017
+- requirementId: REQ-20260711-001
+- iteration: 1
+- implementationAgent: Antigravity
+- implementationModel: `gpt-5.6-terra/Anscombe`
+- reviewer: Codex
+- requestedAt: 2026-07-13
+- sourceReview: `LoreWeaver/docs_collab/review.md#lw-017-review-1`
+- changedFiles:
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/nodes/node1.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/runtime/TouchInputController.js`, `runtime/NodeCombatHud.js`, `runtime/SkillRuntime.js`, `runtime/SkillExecutionRuntime.js`, `runtime/CombatRuntime.js`, `runtime/combat-resolution.js`, `runtime/EnemyRuntime.js`, `runtime/run-metrics.js`, `runtime/node-scene-compatibility.js`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/check-runtime-modularization.mjs`, `scripts/run-runtime-modularization-browser.py`, `package.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/runtime_modularization_browser_latest.json`, regenerated progression/balance/maturity reports
+  - `LoreWeaver/docs_collab/tasks.md`, `state.md`, `handoff.md`, `review_request.md`
+- lineCount:
+  - `nodes/node1.js`: 2047 before, 1093 after (-954).
+  - `TouchInputController`: 368; `NodeCombatHud`: 128; `SkillRuntime`: 90; `SkillExecutionRuntime`: 419; `CombatRuntime`: 123; `combat-resolution`: 5; `EnemyRuntime`: 48; `run-metrics`: 35 lines.
+- moduleResponsibilities:
+  - `TouchInputController`: scene-injected pointer/keyboard input, locks, vectors, listener/graphics teardown, and debug state.
+  - `NodeCombatHud`: Node1 UI, retreat overlay, rendering, tween/modal teardown; Node1 re-exports the class.
+  - `SkillRuntime`: pure lookup/scaling/plan and chain/cone/laser geometric predicates.
+  - `SkillExecutionRuntime`: scene-injected execution for every Node1 skill branch, including old visuals, delayed/events/tweens, transform following aura, restoration, teardown, and debug state. Node1 exposes the unchanged `castSkill` wrapper.
+  - `EnemyRuntime`: scene-injected enemy construction. `Node1Scene.createRuntimeEnemy` remains the subclass-facing wrapper.
+  - `CombatRuntime` plus `combat-resolution`: scene-injected enemy damage, attack lookup, player hit/shield boundary semantics, callback/tween teardown, and debug state. Node1 retains `damageEnemy`, `onPlayerHit`, and `getEnemyAtk` wrappers for Node3/6/7/8/10/12 overrides and `super.*` order.
+  - `run-metrics`: cloned result projection only; it does not call NodeBridge/Store/settlement or persistence.
+- parityFixes:
+  - Chain lightning uses the original `chainRange` nearest-in-range rule.
+  - Slash cone uses `arcAngle`/`halfArc`; laser uses forward projection and `beamWidth`, rejecting axis-external and behind-origin targets.
+  - Screen clear retains flash and camera shake; root retains circle/stroke and restoration; dodge retains trail and `闪避` feedback; aura retains pulse tween.
+  - Transform retains player scale-in, following aura/tick, scale-back, speed/state restore, and cleanup on both duration completion and scene teardown.
+  - Shield equal-to-damage remains `吸收`; partial shield remains `盾碎` with residual HP damage.
+- compatibilityEvidence:
+  - The deterministic source contract parses Node2-12 `super.*`, inherited method calls, and direct fields. It classifies Phaser services separately from Node1-owned fields, requires an actual Node1 assignment for every required owned field, and removes every provider assignment in a mutation counterexample that must fail evidence.
+  - Save V2 schema, Store, NodeBridge, and GameOver settlement were not changed. Node1 continues to pass the same success/reason/rewards/failure inputs into `NodeBridge.createNodeResult`; metrics only clone result-display data.
+- verification:
+  - First `npm run runtime:modularization:check` attempt -> failed because the new cone fixture placed its supposed outside target exactly on the inclusive 45-degree `halfArc` boundary. The fixture was corrected to a truly outside-arc coordinate; the final command below passed. This did not start a browser or smoke runner.
+  - `npm run runtime:modularization:check` -> passed. Deterministic fixtures cover input lock/teardown, result projection, Node2-12 contract/provider mutations, chain range, cone front/outside arc/rear, laser in/out/behind axis, shield equal/partial, transform end/teardown, enemy factory, and no mutable singleton.
+  - `npm run build` -> passed; Vite transformed 48 modules.
+  - `npm run runtime:modularization:browser` -> one post-build attempt; runner discovered `/Users/lm/pyProj/hungry-for-knowledge/minigame/perfectworld_dahuang/node_modules/.bin/vite` and persisted server/error/report structure, then loopback bind failed with `Errno 1`. No targeted scenario executed.
+  - `npm run smoke:node1-12` -> one post-build attempt; blocked before launch by the same `127.0.0.1:0` bind denial. No fresh smoke report exists; the historical 12/12 report remains pre-remediation baseline only.
+  - `npm run progression:check` -> passed, zero target/mirror findings (`reports/progression_contract_latest.json`).
+  - `npm run balance:self-check` -> passed; regenerated report intentionally remains failed with 64 known violations.
+  - `npm run maturity:self-check` -> passed; `npm run maturity:report` intentionally remains failed at 23/100 with nine active hard caps.
+  - `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check` -> passed.
+  - `npm run smoke:release` -> repository has no such script; this lookup did not start a runner. The requested `npm run smoke:node1-12` above is the sole actual post-build full-smoke attempt.
+  - `npm run check:docs-collab` -> passed after this request append (16/55 verified tasks with evidence); `git diff --check` -> passed after the final coordination-document updates.
+- reviewFocus:
+  - Compare each `SkillExecutionRuntime` branch to the tracked Node1 source and verify runtime-owned visuals/timers/tweens cannot outlive shutdown.
+  - Verify the CombatRuntime wrappers preserve Node3/6/7/8/10/12 override and `super.damageEnemy` behavior.
+  - Inspect browser report Vite discovery and treat blocked Node1-3/Node1-12 execution as a remaining risk, not as successful browser coverage.
+- residualRisk:
+  - This sandbox prevents loopback bind before either runner starts. A loopback-capable review environment must run the three targeted scenarios and one Node1-12 full smoke.
+  - LW-017 is `needs_review`, not verified. LW-018 remains unclaimed.
+- reviewerDisposition:
+  - Passed in `LoreWeaver/docs_collab/review.md#lw-017-review-2`; Codex ran the final targeted browser and 12-node smoke sandbox-external.
