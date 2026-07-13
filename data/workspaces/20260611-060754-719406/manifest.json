@@ -131,12 +131,7 @@
         "powerCurve": "low_base_high_frequency",
         "counterplay": "需要持续走位贴近敌群获取经验"
       },
-      "description": "局内初始技能，保证任何节点都有稳定的基础输出。",
-      "gameplayTags": [
-        "starter",
-        "output",
-        "bone_script"
-      ]
+      "description": "局内初始技能，保证任何节点都有稳定的基础输出。"
     },
     {
       "id": "suan_ni_baoshu",
@@ -192,13 +187,7 @@
         "powerCurve": "area_scaling",
         "counterplay": "冷却较明显，面对高速精英需要搭配控制或身法"
       },
-      "description": "从范围怒啸成长到裂雷指，是早中期清怪和连锁爆发主轴。",
-      "gameplayTags": [
-        "output",
-        "aoe",
-        "thunder",
-        "beast_bone"
-      ]
+      "description": "从范围怒啸成长到裂雷指，是早中期清怪和连锁爆发主轴。"
     },
     {
       "id": "willow_guard",
@@ -258,13 +247,7 @@
         "powerCurve": "survival_consistency",
         "counterplay": "输出低于纯攻击宝术，依赖玩家保持节奏"
       },
-      "description": "把回复、护盾和缠绕纳入候选池，承接长时生存节点。",
-      "gameplayTags": [
-        "recovery",
-        "defense",
-        "control",
-        "support"
-      ]
+      "description": "把回复、护盾和缠绕纳入候选池，承接长时生存节点。"
     },
     {
       "id": "green_eagle_art",
@@ -315,13 +298,7 @@
         "powerCurve": "single_target_burst",
         "counterplay": "AOE 半径小，面对大群敌人效率低"
       },
-      "description": "提供定点爆发，补足早期对精英怪的处理能力。",
-      "gameplayTags": [
-        "summon",
-        "targeted",
-        "burst",
-        "beast_bone"
-      ]
+      "description": "提供定点爆发，补足早期对精英怪的处理能力。"
     },
     {
       "id": "kunpeng_art",
@@ -376,13 +353,7 @@
         "powerCurve": "mobility_plus_burst",
         "counterplay": "操作收益高，自动释放时需要通过冷却保持克制"
       },
-      "description": "把位移、无敌帧与扇形斩击引入中后期海战和守城节点。",
-      "gameplayTags": [
-        "mobility",
-        "dodge",
-        "slash",
-        "control"
-      ]
+      "description": "把位移、无敌帧与扇形斩击引入中后期海战和守城节点。"
     },
     {
       "id": "true_phoenix_art",
@@ -433,13 +404,7 @@
         "powerCurve": "close_range_sustain",
         "counterplay": "需要贴近敌群，受到走位和护盾能力制约"
       },
-      "description": "持续灼烧光环，服务毒雾求生、竞技场和高密度战场。",
-      "gameplayTags": [
-        "aura",
-        "fire",
-        "sustain",
-        "pure_blood"
-      ]
+      "description": "持续灼烧光环，服务毒雾求生、竞技场和高密度战场。"
     },
     {
       "id": "dual_pupil",
@@ -493,13 +458,7 @@
         "powerCurve": "line_damage",
         "counterplay": "方向性强，面对四面包围需搭配 AOE"
       },
-      "description": "高阶光束技能，强化 Boss 战与直线压制。",
-      "gameplayTags": [
-        "laser",
-        "boss",
-        "control",
-        "rival"
-      ]
+      "description": "高阶光束技能，强化 Boss 战与直线压制。"
     },
     {
       "id": "supreme_bone",
@@ -550,13 +509,7 @@
         "powerCurve": "long_cooldown_catharsis",
         "counterplay": "CD 长，失误时仍可能被精英潮压垮"
       },
-      "description": "后期终局宝术，提供变身爆发与清屏能力。",
-      "gameplayTags": [
-        "ultimate",
-        "burst",
-        "transform",
-        "destiny"
-      ]
+      "description": "后期终局宝术，提供变身爆发与清屏能力。"
     },
     {
       "id": "he_hua_zizai",
@@ -601,13 +554,7 @@
         "powerCurve": "scripted_power_spike",
         "counterplay": "仅终局阶段开放，作为 Boss 机制答案而非常规刷图技能"
       },
-      "description": "终极名场面技能，用未来身投影承担最后节点的爆发、减压与情绪兑现。",
-      "gameplayTags": [
-        "finale",
-        "projection",
-        "transform",
-        "boss_answer"
-      ]
+      "description": "终极名场面技能，用未来身投影承担最后节点的爆发、减压与情绪兑现。"
     }
   ],
   "passiveSkillCatalog": [
@@ -1904,12 +1851,7 @@
     "escort_npc",
     "boss_phases",
     "poison_fog",
-    "laser_warning",
-    "node_iframe_microgame",
-    "turn_based_skill_battle",
-    "rhythm_timing",
-    "drag_collect_grid",
-    "sequence_synthesis"
+    "laser_warning"
   ],
   "nodes": [
     {
@@ -1922,7 +1864,7 @@
       ],
       "mechanics": "survivor_horde",
       "rewards": "气血精华 +200，概率获得雷吼骨文",
-      "goalValue": 60,
+      "goalValue": 120,
       "resourceMultiplier": 1.2,
       "difficulty": 1,
       "durationLimit": 120,
@@ -1963,15 +1905,23 @@
           "cave_opening",
           "bone_script_mastery"
         ],
-        "rewardUnlocks": [
-          "suan_ni_baoshu"
-        ],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
           "willow_guard"
         ],
-        "notes": "首关负责把局内技能获得沉淀为主干宝术：通关后开启雷吼骨术，后续节点可把怒啸和裂雷指纳入候选池。"
+        "rewardUnlocks": [
+          "suan_ni_baoshu"
+        ],
+        "notes": "首关负责把局内技能获得沉淀为主干宝术：通关后开启雷吼骨术，后续节点可把怒啸和裂雷指纳入候选池。",
+        "firstNodeGrowthLoop": {
+          "collectionSource": "beast_essence_exp_from_enemy_defeat",
+          "growthTrigger": "12 点蛮兽血气经验触发首个宝术成长",
+          "runtimeMutation": "activeSkills[primordial_fist].level 由 1 提升到 2；后续阈值追加 suan_ni_roar / willow_blessing",
+          "playerFeedback": "技能 HUD、浮字、VFX、SFX 与镜头闪光同步反馈",
+          "combatImpact": "Lv.2 基础拳提高 projectile 伤害，雷吼怒啸提供早期 AoE 清怪，青枝守护回春提供失败压力前的续航",
+          "testAssertion": "firstNodeGrowthSkillMutation / firstNodeGrowthCombatImpact"
+        }
       }
     },
     {
@@ -1984,7 +1934,7 @@
       ],
       "mechanics": "survivor_horde",
       "rewards": "气血精华 +500，较高概率获得纯血",
-      "goalValue": 90,
+      "goalValue": 150,
       "resourceMultiplier": 1.6,
       "difficulty": 2,
       "durationLimit": 150,
@@ -2018,13 +1968,13 @@
           "cave_opening",
           "bone_script_mastery"
         ],
-        "rewardUnlocks": [
-          "green_eagle_art"
-        ],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
           "willow_guard",
+          "green_eagle_art"
+        ],
+        "rewardUnlocks": [
           "green_eagle_art"
         ],
         "notes": "千崖秘径承接宝箱夺宝，通关后补青鳞鹰宝术，强化定点爆发。"
@@ -2040,7 +1990,7 @@
       ],
       "mechanics": "survivor_horde",
       "rewards": "气血精华 +1000，纯血 +2，解锁荒域少年标记",
-      "goalValue": 120,
+      "goalValue": 180,
       "resourceMultiplier": 2.2,
       "difficulty": 3,
       "durationLimit": 180,
@@ -2075,14 +2025,14 @@
           "cave_opening",
           "bone_script_mastery"
         ],
-        "rewardUnlocks": [
-          "dual_pupil"
-        ],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
           "willow_guard",
           "green_eagle_art",
+          "dual_pupil"
+        ],
+        "rewardUnlocks": [
           "dual_pupil"
         ],
         "notes": "镜魄试炼场用玄曜投影引出紫曜瞳能力，作为高阶 Boss 与直线压制技能来源。"
@@ -2098,7 +2048,7 @@
       ],
       "mechanics": "survivor_horde",
       "rewards": "气血精华 +2000，纯血 +2~4，潮翼符文碎片",
-      "goalValue": 150,
+      "goalValue": 180,
       "resourceMultiplier": 3,
       "difficulty": 4,
       "durationLimit": 180,
@@ -2135,15 +2085,15 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [
-          "kunpeng_art"
-        ],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
           "willow_guard",
           "green_eagle_art",
           "dual_pupil",
+          "kunpeng_art"
+        ],
+        "rewardUnlocks": [
           "kunpeng_art"
         ],
         "notes": "天潮巢把机动和无敌帧正式转入主干，后续海战、守城和终局节点都能读取。"
@@ -2159,7 +2109,7 @@
       ],
       "mechanics": "survivor_horde",
       "rewards": "气血精华 +5000，纯血 +3~5，人皇印记",
-      "goalValue": 210,
+      "goalValue": 240,
       "resourceMultiplier": 4.4,
       "difficulty": 5,
       "durationLimit": 240,
@@ -2196,7 +2146,6 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
@@ -2204,6 +2153,7 @@
           "dual_pupil",
           "kunpeng_art"
         ],
+        "rewardUnlocks": [],
         "notes": "首通意图: reinforce_existing(willow_guard,dual_pupil,kunpeng_art); 石都大战检验已有宝术组合，强化守护、光束和机动构筑，不新增 runtime unlock。"
       }
     },
@@ -2254,15 +2204,15 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [
-          "true_phoenix_art"
-        ],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
           "willow_guard",
           "dual_pupil",
           "kunpeng_art",
+          "true_phoenix_art"
+        ],
+        "rewardUnlocks": [
           "true_phoenix_art"
         ],
         "notes": "药都风云通过纯血洗礼开放真凰宝术，用持续光环回应毒雾和密集怪潮。"
@@ -2315,7 +2265,6 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
@@ -2324,6 +2273,7 @@
           "kunpeng_art",
           "true_phoenix_art"
         ],
+        "rewardUnlocks": [],
         "notes": "首通意图: reinforce_existing(dual_pupil,kunpeng_art,true_phoenix_art); 三千星州天才战强调已悟宝术组合强度，奖励侧以纯血和境界推进为主。"
       }
     },
@@ -2366,9 +2316,6 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [
-          "supreme_bone"
-        ],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
@@ -2376,6 +2323,9 @@
           "dual_pupil",
           "kunpeng_art",
           "true_phoenix_art",
+          "supreme_bone"
+        ],
+        "rewardUnlocks": [
           "supreme_bone"
         ],
         "notes": "仙古遗地开放星骨终局分支，后续节点允许变身与清屏宝术进入局内池。"
@@ -2428,7 +2378,6 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
@@ -2438,6 +2387,7 @@
           "true_phoenix_art",
           "supreme_bone"
         ],
+        "rewardUnlocks": [],
         "notes": "首通意图: reinforce_existing(willow_guard,supreme_bone); 星脉书院把已悟宝术转为护送压力下的防守工具，主干继续消耗纯血突破。"
       }
     },
@@ -2488,7 +2438,6 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
@@ -2498,6 +2447,7 @@
           "true_phoenix_art",
           "supreme_bone"
         ],
+        "rewardUnlocks": [],
         "notes": "首通意图: reinforce_existing(kunpeng_art,true_phoenix_art,supreme_bone); 边境星关需要高阶宝术应对同屏大军，planning 明确允许清屏、光环和机动方案。"
       }
     },
@@ -2540,7 +2490,6 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
@@ -2550,6 +2499,7 @@
           "true_phoenix_art",
           "supreme_bone"
         ],
+        "rewardUnlocks": [],
         "notes": "首通意图: reinforce_existing(dual_pupil,true_phoenix_art,supreme_bone); 裂隙边境大战为终局前综合压测，读取全部已解锁宝术与主干被动。"
       }
     },
@@ -2593,9 +2543,6 @@
           "bone_script_mastery",
           "pure_blood_trial"
         ],
-        "rewardUnlocks": [
-          "he_hua_zizai"
-        ],
         "runSkillPool": [
           "primordial_true_record",
           "suan_ni_baoshu",
@@ -2604,6 +2551,9 @@
           "kunpeng_art",
           "true_phoenix_art",
           "supreme_bone",
+          "he_hua_zizai"
+        ],
+        "rewardUnlocks": [
           "he_hua_zizai"
         ],
         "notes": "首通意图: unlock_finale(he_hua_zizai); 终极血战胜利后把终局临时技能记入能力目录，作为通关兑现。"
@@ -2616,14 +2566,13 @@
     "artifactStatus": {
       "manifest": "fresh",
       "gameplayCards": "fresh",
-      "demo": "fresh",
+      "legacyProject": "fresh",
       "abilityCatalog": "fresh",
       "passiveSkillCatalog": "fresh",
       "characterDesignCatalog": "fresh",
       "enemyDesignCatalog": "fresh",
       "skillEffectCatalog": "fresh",
       "audioCueCatalog": "fresh",
-      "legacyProject": "fresh",
       "assetPipelineMetadata": "fresh",
       "abilityVfxVoicePipeline": "fresh",
       "artAssetGeneration": "fresh",

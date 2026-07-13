@@ -1,12 +1,168 @@
 ## Review Request
 
 - status: closed
-- lastTask: LW-011
-- lastReviewer: Codex
-- lastVerdict: pass
-- reviewedAt: 2026-07-07
-- review: `LoreWeaver/docs_collab/review.md#lw-011`
-- notes:
-  - LW-011 is verified in `tasks.md`.
-  - Current active task is LW-012 and is waiting for Antigravity implementation.
-  - Antigravity should replace this file with a fresh `status: needs_review` request after completing LW-012 implementation and self-test.
+- task: LW-013
+- requirementId: REQ-20260711-001
+- implementationAgent: Antigravity
+- implementationModel: `gpt-5.6-sol` temporary fallback
+- reviewer: Codex
+- requestedAt: 2026-07-11
+- sourceReview: `LoreWeaver/docs_collab/review.md#lw-013-review-3`
+- changedFiles:
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/package.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/loreweaver/maturity-rubric.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/maturity-evidence.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/check-maturity-evidence.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/report-maturity.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/maturity_score_latest.json`
+  - `LoreWeaver/docs_collab/tasks.md`
+  - `LoreWeaver/docs_collab/state.md`
+  - `LoreWeaver/docs_collab/handoff.md`
+  - `LoreWeaver/docs_collab/review_request.md`
+- reviewFindingsAddressed:
+  - Mechanics coverage now requires each quality tag to cover passing Node1-12 detail and emits/recomputes per-tag node counts and ratios.
+  - Human P0/P1 uses explicit resolution status/evidence; acceptance never resolves a severe finding.
+  - Fallback-art distinguishes dormant resilience code from current production dependence/runtime fallback use and remains clearable under the approved architecture.
+  - `package.json` is included in full production freshness inputs.
+- focusedSelfChecks:
+  - Rejects all mechanics quality tags only on Node1 plus generic Node2-12 scenarios.
+  - Rejects accepted-but-unresolved P1; accepts resolved P1 history only with concrete evidence.
+  - Keeps baseline ten-frame/no-action-matrix art active, allows dormant resilience call sites, and blocks observed runtime fallback use.
+- currentReport:
+  - score: 24/100
+  - activeObservedCaps: `auto_combat`, `late_game_balance`, `thin_levels`, `fallback_art`, `no_bgm`, `no_natural_progression`, `release_integrity`, `originality_release`
+  - unverifiedBlockingCaps: `mobile_readability`
+  - blockingMissingEvidence: `human_playtest`, `clean_save_campaign`, `mobile_visual_performance`, `standalone_export_smoke`
+  - validEvidence: progression contract
+  - staleEvidence: release smoke after `package.json` freshness
+- commandsRun:
+  - `npm run maturity:self-check` -> passed all Review 3 fixtures.
+  - `npm run maturity:report` -> exit 0; report maturity remains failed as intended.
+  - `npm run maturity:gate` -> expected exit 1 because score <90 and blockers remain.
+  - `npm run smoke:node1-12` -> attempted; loopback denied in sandbox and escalated retry rejected by current usage limit.
+  - `npm run manifest:check` -> passed.
+  - `npm run loreweaver:check` -> passed for 12 nodes.
+  - `npm run ability:check` -> passed for nine abilities.
+  - `npm run progression:check` -> passed with zero findings.
+  - `npm run build` -> passed, 37 modules; existing CJS deprecation warning only.
+  - `npm run check:docs-collab` from `LoreWeaver` -> passed.
+  - `git diff --check` -> passed.
+- reviewerNotes:
+  - Target workspace files are partly ignored; inspect named files and report directly.
+  - No gameplay, balance, art, audio, content, or hard-cap clearing was performed. LW-014 remains `todo`.
+  - Codex Review 4 passed LW-013; see `LoreWeaver/docs_collab/review.md#lw-013-review-4`.
+
+---
+
+## LW-014 Review Request
+
+- task: LW-014
+- requirementId: REQ-20260711-001
+- iteration: 1
+- status: closed
+- sourceReview: `LoreWeaver/docs_collab/review.md#lw-014-review-2`
+- implementationSummary:
+  - Added a read-only deterministic balance/economy collector with an explicit configuration, strict `loreweaver.balance-simulation.v1` details, and a focused self-check.
+  - The collector models Store-effective stats, only-current-realm bonuses, cumulative caves, perk ordering, level-1 runtime skill damage/cooldown/expected crit, triangle crimson HP, contact/projectile/instant-fail paths, Node12's 5000 HP override, reward/cost vectors, repeat bottlenecks, and erased startup offline income.
+  - Review 1 now uses cross-node accessible farms with an explicit zero-wallet/carryover assumption; keeps current-node local sustain separate; distinguishes premature interactive buttons from launch-blocked realm eligibility; flags duplicate unlock paths; enforces missing Node1 Boss and every sub-20 runtime Boss; and asserts Boss/spawn config against source.
+  - Review 2 replaces per-resource `max` with a bounded duration-normalized sequential route. Each clear credits its full three-resource vector; expected/P05 route details include per-node clears, total clears/time/yield, remaining deficits, bottleneck explanation, and operation bounds. The model calls this a deterministic heuristic, not a global shortest-route proof.
+  - No gameplay values, thresholds, runtime behavior, node data, Store, visuals, or audio were changed.
+- changedArtifacts:
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/package.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/loreweaver/balance-simulation-config.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/report-balance-simulation.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/check-balance-simulation.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/maturity-evidence.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/check-maturity-evidence.mjs`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/balance_simulation_latest.json`
+  - LW-014 coordination sections in `tasks.md`, `state.md`, `handoff.md`, and this request.
+- verification:
+  - `npm run balance:self-check` -> passed, including cross-node farming, sequential distinct/shared-source routes, operation/time bounds, launch-blocked UI divergence, missing/all-Boss TTK, and config/source-drift checks.
+  - `npm run balance:report` -> passed (exit 0; report status failed with 98 violations).
+  - `npm run balance:gate` -> expected exit 1.
+  - `npm run maturity:self-check`, `npm run maturity:report`, `npm run progression:check` -> passed; maturity remains honestly failed at 24/100.
+  - `npm run manifest:check`, `npm run loreweaver:check`, `npm run ability:check`, `npm run build` -> passed.
+  - `npm run check:docs-collab`, strict balance-detail assertion, and `git diff --check` -> passed.
+- skippedGates:
+  - Browser/release smoke was not run. It is not a required LW-014 gate and no browser claim is made.
+- reviewFocus:
+  - Confirm the failed report remains schema-complete and does not accidentally become valid maturity evidence.
+  - Confirm Fresh Node4 uses the auditable 20 Node1 + 65 Node4 expected route (85 clears/14,100 seconds), and that every clear contributes all its resources.
+  - Confirm `premature_interactive_unlock`, `launch_blocked_state_divergence`, and `duplicate_unlock_path` replace the prior playable-bypass claim.
+  - Confirm source-contract drift checks and all runtime-Boss TTK violations match current sources.
+  - Confirm route candidate evaluations stay within the fixed bound and that the report makes no unsupported global-optimality claim.
+- reviewerDisposition:
+  - Passed in `LoreWeaver/docs_collab/review.md#lw-014-review-3`; LW-014 is verified and LW-015 is active.
+
+---
+
+## LW-015 Review Request
+
+- task: LW-015
+- requirementId: REQ-20260711-001
+- iteration: 1
+- status: closed
+- sourceReview: `LoreWeaver/docs_collab/review.md#lw-015-review-1`
+- implementationAgent: Antigravity fallback implementer
+- implementationModel: `gpt-5.6-sol` temporary fallback
+- fallbackRecord:
+  - Two requested `gpt-5.6-terra` execution channels idled without making file changes.
+  - Sol was used to implement and self-test LW-015; this fallback does not waive Codex review.
+- implementationSummary:
+  - Implemented the target-workspace Playwright visual/object/performance runner and `visual:baseline` / `visual:self-check` package entry points.
+  - Captured Node1 quiet/wave, real Node3 Boss, real Node12 Boss, and return residue at `390x844`, `430x932`, `720x1280`, and `1280x720`.
+  - Saved 20 canvas element PNGs and 20 viewport PNGs. Python decodes each saved canvas PNG for alpha/nontransparent counts, quantized color distribution, luminance histogram/variance, dominant share, and blank/pure-color decisions.
+  - Recorded actor/Boss bounds and screen shares, HUD union/coverage, text overflow/overlap, touch bounds, object pressure, lifecycle residue, CSS canvas/viewport layout usage, and contextual console/page/HTTP/request errors.
+  - Sampled 60 rAF intervals per detail plus Phaser deltas. Summary is recomputed from detail; deterministic mutations cover missing screenshots, blank/pure color, missing viewport/scene/layout, insufficient frames, UI-camera coordinate corruption, and summary drift.
+- changedArtifacts:
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/scripts/run-visual-performance-baseline.py`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/package.json` visual package entry points
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/visual_performance_baseline_latest.json`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/visual_performance_captures/*_canvas.png`
+  - `LoreWeaver/data/workspaces/20260611-060754-719406/reports/visual_performance_captures/*_viewport.png`
+  - Fresh `reports/node1_12_release_smoke_latest.json`, `reports/maturity_score_latest.json`, and build output
+  - LW-015 sections in `tasks.md`, `state.md`, `handoff.md`, and this request
+- finalEvidence:
+  - Baseline `status=measured`; evidence self-check passed with 20/20 nonblank captures, all four viewports/contexts, 40 referenced screenshots, and all mutation checks detected.
+  - 1,200 raw/1,200 finite positive rAF samples: p50 `16.7ms`, p95 `18.6ms`, max `18.8ms`, derived `59.88 FPS` in headless desktop Chromium.
+  - Maximum observed pressure: 12 enemies, 5 projectiles, 39 Node/UI display objects, and 43 all-active display objects. Four return samples report no gameplay-object/timer/tween/input-listener residue.
+  - Contextual error totals are zero for console, page, HTTP, and request failures.
+  - Quality is not passed: `qualityAssessment.status=failed_thresholds` with 54 endpoint-snapshot observations for HUD coverage, sub-44px touch targets, mobile canvas underfill, and real text overlap pairs.
+  - Layout evidence exposes a core mobile failure: 390x844 canvas rect `322x572.438 @ (0,135)`, area share `0.559986`; report minimum share is `0.253135`, with 15 mobile captures below the documented `0.90` threshold.
+  - The earlier UI out-of-bounds observations were discarded after fixing bounds to use each object's owning scene camera. Final text out-of-bounds count is zero; the 720x1280 Node1UI time/retreat coordinate sentinels pass.
+- instrumentation:
+  - Node3 uses the real `spawnBoss()` and `triggerBossTelegraph()` paths, then raises runtime HP and positions the spawned Boss for stable same-state screenshot/bounds measurement.
+  - Node12 uses the real `spawnAnlan()` result, then raises runtime HP/maxHP, positions the Boss, and defers attacks during measurement.
+  - Every affected capture records these QA-session-only actions. No gameplay source, balance value, renderer, or `preserveDrawingBuffer` setting was changed.
+- verification:
+  - `npm run visual:baseline` -> exit 0, measured evidence; quality thresholds remain failed.
+  - `npm run visual:self-check` -> passed all report and mutation checks.
+  - `npm run smoke:node1-12` -> passed 12/12 with zero console/page/HTTP/request errors.
+  - `npm run build`, `manifest:check`, `loreweaver:check`, `ability:check`, and `progression:check` -> passed.
+  - `npm run maturity:self-check` -> passed; `npm run maturity:report` ran and remains honestly failed at 29/100 with nine active hard caps.
+  - `npm run check:docs-collab` and `git diff --check` -> passed before final coordination edits and rerun below.
+- reviewFocus:
+  - Recompute summary/layout projections from capture details and confirm quality failure is independent from evidence self-check success.
+  - Inspect representative canvas/viewport PNG pairs and pixel distributions, especially 390x844 mobile underfill.
+  - Confirm object bounds use owning-scene cameras and UI sentinel mutation catches the former false-negative coordinate path.
+  - Confirm Boss instrumentation is explicit, session-local, and does not conceal natural balance risk.
+  - Confirm `mobile_readability` remains active and no maturity clearance is inferred from headless desktop frame timing.
+- requestedChanges:
+  - Snapshot all visual/object/lifecycle facts after frame sampling at one endpoint; expose and reconcile Node/UI versus all-active-scene display totals.
+  - Re-decode and identity-check PNGs during self-check, recompute quality assessment exactly, and add content-mismatch/quality-erasure fixtures.
+  - Make gating self-check fail for blocked zero-capture evidence; retain a separate non-gating structural mode only if useful.
+- review1Remediation:
+  - Moved the rAF sample before all active-scene, node/UI, layout, bounds, HUD, text, touch, group, and lifecycle reads. Every runtime field now comes from one endpoint snapshot.
+  - Replaced `objects.displayObjects` with `nodeUiDisplayObjects` and `allActiveDisplayObjects`; summary maximum uses all-active pressure. Self-check requires exact agreement with the lifecycle active-scene display sum and detects a mismatch fixture.
+  - Canvas and viewport files now carry path, SHA-256, bytes, width, and height. Screenshot bytes and latest report use same-directory atomic replacement.
+  - Default self-check reads every referenced file, checks identity, re-decodes every canvas PNG, compares the complete pixel analysis, and recomputes `qualityAssessment` exactly.
+  - Added screenshot-content replacement, erased quality status/observations, all-active total drift, blocked default gate, and explicit blocked-structure mode counterexamples. All are detected.
+  - Default `visual:self-check` fails blocked/zero-capture evidence. `visual:blocked-structure-check` is explicit and non-gating.
+- remediationEvidence:
+  - Final baseline: 20 captures/40 PNGs, 1,200 positive rAF samples, zero contextual browser/network errors, max 39 Node/UI and 43 all-active display objects, zero lifecycle-total mismatches.
+  - Quality remains `failed_thresholds`; the endpoint snapshot naturally recomputed 54 observations: 16 HUD, 16 sub-44px touch targets, 15 mobile canvas underfill, and 7 text overlaps. No old count is hard-coded.
+  - `npm run visual:baseline`, independent `visual:self-check`, and `npm run build` passed.
+  - First post-build smoke was 11/12 because Node12 auto-combat completed the Boss inside the 1.8-second active window; entry/return and all error checks passed. A second fresh run passed 12/12 with zero errors. The timing race remains an honest late-game-balance risk.
+  - Manifest/runtime/ability/progression and maturity self-check passed. Maturity report remains failed at 29/100 with nine hard caps.
+- reviewerDisposition:
+  - Passed in `LoreWeaver/docs_collab/review.md#lw-015-review-2`; LW-015 is verified and LW-016 is active.
