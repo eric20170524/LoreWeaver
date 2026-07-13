@@ -12,9 +12,15 @@ if (!fs.existsSync(CONFIG_PATH)) {
 }
 
 try {
-  JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+  if (config.schemaVersion !== 'loreweaver.balance-simulation-config.v1') {
+      throw new Error('Invalid schema version');
+  }
+  if (!config.thresholds || typeof config.thresholds.minimumBossTtkSeconds !== 'number') {
+      throw new Error('Invalid thresholds config');
+  }
 } catch (e) {
-  console.error('Invalid JSON in balance config.');
+  console.error('Invalid JSON or schema in balance config: ' + e.message);
   process.exit(1);
 }
 
