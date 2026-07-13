@@ -859,7 +859,7 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-018: Unified Power Budget And Runtime Scaling
 
-- status: verified
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation

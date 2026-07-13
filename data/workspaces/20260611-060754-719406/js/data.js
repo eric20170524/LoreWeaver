@@ -414,9 +414,6 @@ for (let n = 1; n <= numNodes; n++) {
     node.rewards = { bloodEssence: fixedBE[n] };
     if (fixedSBS[n] > 0) node.rewards.suanBoneScript = fixedSBS[n];
     if (fixedPB[n] > 0) node.rewards.pureBlood = fixedPB[n];
-    
-    // Map enemyPool to node-specific IDs
-    node.enemyPool = node.enemyPool.map(id => `${id}_node${n}`);
 }
 
 export const NODE_ABILITY_PLANS = {
@@ -626,7 +623,8 @@ for (let n = 1; n <= numNodes; n++) {
 
     // Define normal enemies for this node
     const baseNormalEnemyPool = ["wild_rhino", "green_scaled_eagle", "rock_golem", "bandit_cultivator", "burrow_wyrm", "sky_predator", "human_genius", "genius_beast", "huo_linger_projection", "shi_yi_projection"];
-    baseNormalEnemyPool.forEach(enemyType => {
+    const nodeNormalEnemies = new Set([...baseNormalEnemyPool, ...node.enemyPool]);
+    nodeNormalEnemies.forEach(enemyType => {
         const baseEnemy = BASE_ENEMY_REGISTRY[enemyType];
         const normalHp = Math.round(targetBossHp * 0.1);
         const normalAtk = Math.round(targetBossAtk * 0.1);
@@ -643,16 +641,21 @@ for (let n = 1; n <= numNodes; n++) {
             textureKey: `enemy_${enemyType}`
         };
     });
+
+    // Map enemyPool to node-specific IDs
+    node.enemyPool = node.enemyPool.map(id => `${id}_node${n}`);
 }
 
 // Preserve original base enemy entries for backward-compatibility
 Object.entries(BASE_ENEMY_REGISTRY).forEach(([key, val]) => {
-    ENEMY_REGISTRY[key] = {
-        ...val,
-        hp: ENEMY_REGISTRY[`${key}_node1`]?.hp || val.hp,
-        atk: ENEMY_REGISTRY[`${key}_node1`]?.atk || val.atk,
-        lootList: ENEMY_REGISTRY[`${key}_node1`]?.lootList || val.lootList
-    };
+    if (!ENEMY_REGISTRY[key] || ENEMY_REGISTRY[`${key}_node1`]) {
+        ENEMY_REGISTRY[key] = {
+            ...val,
+            hp: ENEMY_REGISTRY[`${key}_node1`]?.hp || val.hp,
+            atk: ENEMY_REGISTRY[`${key}_node1`]?.atk || val.atk,
+            lootList: ENEMY_REGISTRY[`${key}_node1`]?.lootList || val.lootList
+        };
+    }
 });
 
 export const ABILITY_CATALOG = [
