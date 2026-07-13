@@ -47,7 +47,10 @@ app.add_middleware(
 
 LORE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 REPO_ROOT = os.path.abspath(os.path.join(LORE_ROOT, ".."))
-MINIGAME_CORE_ROOT = os.path.join(REPO_ROOT, "minigame_master", "core")
+# Try copied path inside LoreWeaver first, fall back to monorepo parent folder
+MINIGAME_CORE_ROOT = os.path.join(LORE_ROOT, "minigame_master", "core")
+if not os.path.exists(MINIGAME_CORE_ROOT):
+    MINIGAME_CORE_ROOT = os.path.join(REPO_ROOT, "minigame_master", "core")
 REPORTS_DIR = os.path.join(LORE_ROOT, "workflow", "reports")
 DATA_DIR = os.path.join(LORE_ROOT, "data")
 WORKSPACES_DIR = os.path.join(DATA_DIR, "workspaces")

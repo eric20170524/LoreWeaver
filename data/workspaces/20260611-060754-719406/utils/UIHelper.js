@@ -1,8 +1,8 @@
 // utils/UIHelper.js
 // UI 助手 - 转换为 ES Modules 并引入 @core/ui/ 组件
 
-import ButtonBuilder from '../../../../../minigame_master/core/lib/ui/ButtonBuilder.js';
-import ModalManager from '../../../../../minigame_master/core/lib/ui/ModalManager.js';
+import ButtonBuilder from '../../../../minigame_master/core/lib/ui/ButtonBuilder.js';
+import ModalManager from '../../../../minigame_master/core/lib/ui/ModalManager.js';
 import AudioManager from './AudioManager.js';
 
 export class UIHelper {
