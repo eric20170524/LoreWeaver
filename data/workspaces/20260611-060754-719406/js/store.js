@@ -1,7 +1,7 @@
 // js/store.js
 // 状态管理 (Store) - 包装并复用 @core/core/Store.js
 
-import Store from '../../../../../minigame_master/core/lib/core/Store.js';
+import Store from '../../../../minigame_master/core/lib/core/Store.js';
 import { REALM_REGISTRY, CAVE_COST_REGISTRY, SKILL_POOL_REGISTRY, PASSIVE_SKILL_REGISTRY, ABILITY_CATALOG } from './data.js';
 import {
     applyResultToState,

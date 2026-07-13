@@ -1,7 +1,7 @@
 // utils/VFX.js
 // 特效控制器 - 继承自 @core/juice/VFX.js
 
-import CoreVFX from '../../../../../minigame_master/core/lib/juice/VFX.js';
+import CoreVFX from '../../../../minigame_master/core/lib/juice/VFX.js';
 
 export class VFX extends CoreVFX {
     /**

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LoreWeaver Survivor Horde Demo</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #101216;
+            font-family: Arial, sans-serif;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #lw-demo-controls {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+
+        #lw-demo-controls button {
+            width: 112px;
+            height: 42px;
+            border: 1px solid #5eead4;
+            background: #1f2937;
+            color: #e5f9f6;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        #lw-demo-controls button[hidden] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <div id="lw-demo-controls">
+        <button id="lw-start" data-testid="start-run">Start</button>
+        <button id="lw-retreat" data-testid="retreat-run" hidden>Retreat</button>
+        <button id="lw-back" data-testid="back-menu" hidden>Back</button>
+    </div>
+    <pre id="lw-test-state" data-testid="test-state" hidden>{}</pre>
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
