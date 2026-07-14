@@ -985,3 +985,15 @@
   - code analysis of PlayerActionController.js and TouchInputController.js
 - findings:
   - Implementation is fully present and works cohesively without further coding intervention. UI overlays correctly block auto-firing logic on required components.
+
+## LW-020
+
+- task: LW-020
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: pass
+- commandsChecked:
+  - npm run build
+  - code logic analysis of EnemyRuntime.js
+- findings:
+  - Properly extracted behavior out of `scene` physics loop directly into `updateEnemyState` modular runtime function. Included melee, ranged, and charge behaviors with windups and VFX logic.

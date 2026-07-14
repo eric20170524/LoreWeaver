@@ -15,7 +15,7 @@ import {
 import { SKILL_POOL_REGISTRY, ENEMY_REGISTRY } from '../js/data.js';
 import TouchInputController from '../runtime/TouchInputController.js';
 import { projectNodeResultInput } from '../runtime/run-metrics.js';
-import { createRuntimeEnemy as createRuntimeEnemyFactory } from '../runtime/EnemyRuntime.js';
+import { createRuntimeEnemy as createRuntimeEnemyFactory, updateEnemyState } from '../runtime/EnemyRuntime.js';
 import {
     buildSkillExecutionPlan,
     calculateSkillDamage,
@@ -609,15 +609,7 @@ export class Node1Scene extends Phaser.Scene {
 
         // 敌人追踪与碧落精射击
         this.enemies.getChildren().forEach(enemy => {
-            this.physics.moveToObject(enemy, this.player, enemy.getData('speed'));
-            
-            if (enemy.getData('triangleType') === 'emerald') {
-                const lastShoot = enemy.getData('lastShoot') || 0;
-                if (time - lastShoot > 2500) {
-                    this.fireEnemyProjectile(enemy);
-                    enemy.setData('lastShoot', time);
-                }
-            }
+            updateEnemyState(enemy, this.player, time, this);
         });
 
         // Manual agency actions (dash / active technique / charged burst).

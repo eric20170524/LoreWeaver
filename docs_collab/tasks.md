@@ -937,13 +937,15 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-020: Readable Enemy Archetype State Machines
 
-- status: todo
+- status: verified
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
 - playerValue: Creates learnable threats and counterplay instead of uniformly homing colored sprites.
 - dependsOn: `LW-019`
 - owner: Antigravity
+- claimedBy: Antigravity
+- claimedAt: 2026-07-14
 - reviewer: Codex
 - patchLevel: L3
 - targetArtifact: enemy controller/config, telegraph/VFX hooks, representative Node1 enemies
