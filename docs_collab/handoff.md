@@ -61,4 +61,4 @@ Replace disconnected exponential stats, Boss overrides, rewards, and costs with 
 
 ## Next Action
 
-LW-018 has been completed and verified. Codex or another agent can now claim and start work on LW-019.
+LW-019 has been completed and verified. Codex or another agent can now claim and start work on LW-020.
