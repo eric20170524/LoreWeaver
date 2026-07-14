@@ -5,7 +5,12 @@ export function createRuntimeEnemy(scene, enemyType, x, y, options = {}) {
     const enemyVisual = ENEMY_VISUAL_DESIGN[enemyType] || {};
     const textureKey = scene.createEnemyTexture(enemyType);
     const visualScale = (enemyVisual.scale || 1.6) * (options.scaleMultiplier || 1);
-    const enemy = scene.enemies.create(x, y, textureKey);
+
+    // Use object pool instead of standard creation if available
+    const enemy = scene.enemies.get(x, y, textureKey);
+    if (!enemy) return null; // Drop spawn if pool is full
+
+    enemy.setActive(true).setVisible(true);
     const displaySize = Math.max(enemyData.size * visualScale, 28);
     enemy.setDisplaySize(displaySize, displaySize);
     enemy.setDepth(1);

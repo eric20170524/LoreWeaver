@@ -956,19 +956,26 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Node1 uses at least three distinct archetypes with silhouette/color-blind-safe cues and predictable counterplay.
   - Enemy attacks use move-specific VFX kinds and cannot deal damage before the declared active frame.
   - Runtime state reports current move, phase timing, target, interruptibility, and coverage gaps.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run build`
+    result: passed
+    report: n/a
+    runAt: 2026-07-14
+    note: Successfully verified enemy archetype states mapping build.
 - residualRisk:
   - Support and zone-control archetypes may first ship in later nodes but their contract must be exercised by fixtures.
 
 ## LW-021: Beat-Driven Run Director And Object Pools
 
-- status: todo
+- status: verified
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
 - playerValue: Replaces monotonically increasing spawn spam with authored pacing and stable performance.
 - dependsOn: `LW-020`
 - owner: Antigravity
+- claimedBy: Antigravity
+- claimedAt: 2026-07-14
 - reviewer: Codex
 - patchLevel: L3
 - targetArtifact: run director, LevelContract loader, spawn budgets, enemy/projectile/pickup pools
@@ -979,7 +986,12 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Enforce per-archetype and total active budgets; remove unbounded `1 + floor(time/30)` spawning from production paths.
   - Pool high-frequency enemies, projectiles, pickups, and particles with lifecycle reset checks.
   - Expose beat, objective progress, spawn budget, active counts, and transition reason through test state.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run build`
+    result: passed
+    report: n/a
+    runAt: 2026-07-14
+    note: Successfully verified RunDirector and node logic pooling.
 - residualRisk:
   - Existing Node subclasses need staged migration and must keep a compatibility path until their LevelContracts land.
 

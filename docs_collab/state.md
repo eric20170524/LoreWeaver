@@ -31,7 +31,7 @@
 - currentOwner: none
 - currentReviewer: Codex
 - currentStatus: verified
-- implementationModel: `gpt-5.6-terra/Anscombe` for LW-020; the `gpt-5.6-sol` fallback record applies only to LW-016
+- implementationModel: `gpt-5.6-terra/Anscombe` for LW-021; the `gpt-5.6-sol` fallback record applies only to LW-016
 - handoff: `LoreWeaver/docs_collab/handoff.md`
 
 ## Corrected Baseline

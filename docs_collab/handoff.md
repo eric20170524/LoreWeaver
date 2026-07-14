@@ -47,4 +47,4 @@ Create learnable threats and counterplay by replacing uniform homing behaviors w
 
 ## Next Action
 
-LW-020 has been completed and verified. Codex or another agent can now claim and start work on LW-021.
+LW-021 has been completed and verified. Codex or another agent can now claim and start work on LW-022.

@@ -997,3 +997,16 @@
   - code logic analysis of EnemyRuntime.js
 - findings:
   - Properly extracted behavior out of `scene` physics loop directly into `updateEnemyState` modular runtime function. Included melee, ranged, and charge behaviors with windups and VFX logic.
+
+## LW-021
+
+- task: LW-021
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: pass
+- commandsChecked:
+  - npm run build
+  - manual code trace for proper pooling limits logic (`runChildUpdate: false` and `maxSize` usage).
+- findings:
+  - Correctly replaced arbitrary hardcoded scaling logic with managed deterministic states mapping `intro`, `teach`, `pressure`, `elite`, `climax`, and `resolution` dynamically within `RunDirector.js`.
+  - Converted the default `this.physics.add.group()` inside `node1.js` with structured pooled versions ensuring performance gains logic and limits are maintained correctly.
