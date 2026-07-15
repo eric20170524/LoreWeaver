@@ -26,7 +26,7 @@
 
 ## Current Coordination
 
-- currentTask: `LW-024`
+- currentTask: `LW-025`
 - currentRole: Antigravity implementer
 - currentOwner: Antigravity
 - currentReviewer: Codex

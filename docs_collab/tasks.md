@@ -1057,7 +1057,7 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-025: Node1 Dedicated Boss Encounter
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: node1-vertical-slice
@@ -1074,7 +1074,12 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Every damaging move has windup, active, recovery, hit area, cancel policy, and readable audio/visual cue.
   - Boss cannot be ordinary-skill one-shot, cannot contact-kill without a declared move, and cannot time out into false victory.
   - Victory stops threats cleanly, awards the correct first-clear result, and produces a clear resolution beat.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-15
+    note: Node 1 Boss has health bar, 2 phases, and a break window responding to manual attacks.
 - residualRisk:
   - Final timing remains provisional until actor animation and audio land.
 
