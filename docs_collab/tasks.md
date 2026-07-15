@@ -973,7 +973,7 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-022: Combat HUD And Responsive Shell Redesign
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
@@ -990,7 +990,12 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Keep objective/HP/XP at the top, joystick/actions at the bottom, and reserve central screen space for combat; respect safe-area insets.
   - Remove desktop explanatory sidebars from the primary gameplay viewport and keep optional guidance outside the combat hierarchy.
   - Format large values, provide pause/settings/retry, and verify no overlap or overflow at all target viewports.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-14
+    note: Mobile HUD refactored with compact layout and safe area. Sidebars hidden from gameplay viewport. Large values formatted.
 - residualRisk:
   - Final icon art arrives with Node1 production assets; temporary semantic placeholders must be explicitly tracked.
 
