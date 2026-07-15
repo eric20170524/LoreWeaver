@@ -12,6 +12,10 @@ export class GameOverScene extends Phaser.Scene {
     create(data) {
         data = NodeBridge.settleResult(data);
         this.result = data;
+        const bestResult = window.store.get(`saveVersion2.bestResult.${data.nodeId}`);
+        const isBest = !bestResult || (data.score > (bestResult.score || 0));
+        const bestScoreStr = bestResult ? Math.max(bestResult.score || 0, data.score || 0) : data.score || 0;
+
         const width = 720;
         const height = 1280;
 
@@ -28,6 +32,15 @@ export class GameOverScene extends Phaser.Scene {
         this.add.text(width / 2, y, `存活时间: ${data.duration}秒`, { fontSize: '24px', fill: '#fff' }).setOrigin(0.5);
         y += 40;
         this.add.text(width / 2, y, `击杀数: ${data.kills}`, { fontSize: '24px', fill: '#fff' }).setOrigin(0.5);
+        y += 40;
+
+        const scoreColor = isBest ? '#ffd700' : '#ffffff';
+        this.add.text(width / 2, y, `得分: ${data.score || 0} / 历史最高: ${bestScoreStr}`, { fontSize: '24px', fill: scoreColor, fontStyle: isBest ? 'bold' : 'normal' }).setOrigin(0.5);
+        if (isBest && bestScoreStr > 0) {
+            this.add.text(width / 2, y - 40, '新纪录！', { fontSize: '20px', fill: '#ff4444', fontStyle: 'bold' }).setOrigin(0.5);
+        }
+
+
         y += 40;
 
         if (!data.success && data.failureReason) {
