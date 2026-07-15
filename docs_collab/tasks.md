@@ -1029,7 +1029,7 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-024: Node1 Authored Level Beats
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: node1-vertical-slice
@@ -1046,7 +1046,12 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Teach movement, dash, active technique, enemy cues, pickup/level choice, and break behavior through play and concise callouts.
   - Every beat has an observable completion/failure condition and transition reason.
   - Run time, active counts, XP cadence, and expected build power stay inside balance/performance budgets.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-15
+    note: Node 1 timeline added.
 - residualRisk:
   - Tutorial pacing needs human calibration after all production feedback is present.
 

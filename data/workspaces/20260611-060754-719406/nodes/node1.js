@@ -688,30 +688,61 @@ export class Node1Scene extends Phaser.Scene {
     onSecondTick() {
         if (this.isGameOver || this.isPaused) return;
         this.surviveTime++;
-        this.uiScene.updateTime(this.surviveTime, this.nodeConfig.duration);
+        // Force timeline duration for Node 1 to 90s
+        const duration = this.nodeConfig.id === 1 ? 90 : this.nodeConfig.duration;
+        this.uiScene.updateTime(this.surviveTime, duration);
 
-        // 生成敌人 (随时间增加生成频率)
-        const spawnCount = 1 + Math.floor(this.surviveTime / 30);
-        for (let i = 0; i < spawnCount; i++) {
-            this.spawnEnemy({
-                radius: this.nodeConfig.id === 1 && this.surviveTime <= 10 ? 360 : undefined
-            });
-        }
+        if (this.nodeConfig.id === 1) {
+            if (this.surviveTime === 2) {
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '拖动摇杆移动', "#80ffea", 3000);
+                this.spawnEnemy({ enemyType: 'wild_rhino', radius: 400 });
+            } else if (this.surviveTime === 10) {
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '拾取气血精华升级', "#80ffea", 3000);
+                for (let i = 0; i < 3; i++) this.spawnEnemy({ enemyType: 'wild_rhino', radius: 400 });
+            } else if (this.surviveTime === 20) {
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '点击图标闪避攻击', "#80ffea", 3000);
+                for (let i = 0; i < 4; i++) this.spawnEnemy({ enemyType: 'green_scaled_eagle', radius: 450 });
+            } else if (this.surviveTime === 35) {
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '主动施放术法！', "#ffd700", 3000);
+                for (let i = 0; i < 6; i++) this.spawnEnemy({ enemyType: 'rock_golem', radius: 450 });
+            } else if (this.surviveTime === 50) {
+                this.spawnEliteSilverWingedEagle();
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '精英凶禽来袭！', "#ff4444", 3000);
+                for (let i = 0; i < 4; i++) this.spawnEnemy({ enemyType: 'wild_rhino', radius: 450 });
+            } else if (this.surviveTime === 75 && !this.bossSpawned) {
+                this.spawnBoss();
+                this.bossSpawned = true;
+            } else if (this.surviveTime > 35 && this.surviveTime < 75 && this.surviveTime % 5 === 0) {
+                for (let i = 0; i < 2; i++) this.spawnEnemy({ radius: 450 });
+            }
 
-        // 60秒时生成精英怪银羽神雕
-        if (this.nodeConfig.id === 1 && this.surviveTime === 60) {
-            this.spawnEliteSilverWingedEagle();
-        }
+            if (this.surviveTime >= duration) {
+                this.endGame(true);
+            }
+        } else {
+            // 生成敌人 (随时间增加生成频率)
+            const spawnCount = 1 + Math.floor(this.surviveTime / 30);
+            for (let i = 0; i < spawnCount; i++) {
+                this.spawnEnemy({
+                    radius: this.nodeConfig.id === 1 && this.surviveTime <= 10 ? 360 : undefined
+                });
+            }
 
-        // 90% 时间生成 Boss
-        if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.9) && !this.bossSpawned) {
-            this.spawnBoss();
-            this.bossSpawned = true;
-        }
+            // 60秒时生成精英怪银羽神雕
+            if (this.nodeConfig.id === 1 && this.surviveTime === 60) {
+                this.spawnEliteSilverWingedEagle();
+            }
 
-        // 胜利判定
-        if (this.surviveTime >= this.nodeConfig.duration) {
-            this.endGame(true);
+            // 90% 时间生成 Boss
+            if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.9) && !this.bossSpawned) {
+                this.spawnBoss();
+                this.bossSpawned = true;
+            }
+
+            // 胜利判定
+            if (this.surviveTime >= this.nodeConfig.duration) {
+                this.endGame(true);
+            }
         }
     }
 
