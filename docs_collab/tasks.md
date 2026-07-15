@@ -1001,7 +1001,7 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-023: Offline Economy And Visibility Lifecycle Repair
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
@@ -1018,7 +1018,12 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Online idle gain pauses or follows the documented policy during hidden tabs, combat, and destroyed scenes.
   - Remove unrestricted non-Scene `setInterval` production fallback; test environments use an injected scheduler.
   - Economy simulator confirms idle income supplements play without replacing it or creating mandatory multi-hour walls.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-14
+    note: Idle engine refactored to remove setInterval fallback, respect visibility API, and accurately calculate elapsed time.
 - residualRisk:
   - Browser background throttling varies, so elapsed-time reconciliation remains authoritative over tick counts.
 

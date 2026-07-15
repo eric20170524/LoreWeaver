@@ -27,11 +27,20 @@ export class MainScene extends Phaser.Scene {
             this.updateUI();
         }, this);
 
+        this.visibilityHandler = () => {
+            if (document.visibilityState === 'visible' && this.idleEngine) {
+                this.idleEngine.resume();
+                this.updateUI();
+            }
+        };
+        document.addEventListener('visibilitychange', this.visibilityHandler);
+
         // 监听场景的 shutdown 事件，自动清理引擎
         this.events.once('shutdown', () => {
             if (this.idleEngine) {
                 this.idleEngine.stop();
             }
+            document.removeEventListener('visibilitychange', this.visibilityHandler);
         });
 
         this.createUI();

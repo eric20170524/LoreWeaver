@@ -21,21 +21,27 @@ export class IdleEngine {
 
     computeOffline() {
         const lastSave = this.store.get('lastSaveTime');
-        if (!lastSave) return 0;
+        if (!lastSave) {
+            this.store.set('lastSaveTime', Date.now());
+            return 0;
+        }
 
         const now = Date.now();
         const offlineSeconds = Math.floor((now - lastSave) / 1000);
         
+        let gain = 0;
         if (offlineSeconds > 60) { // 离线超过1分钟才计算
             const effectiveSeconds = Math.min(offlineSeconds, this.maxOfflineTime);
-            const gain = Math.floor(effectiveSeconds * this.getRate());
+            gain = Math.floor(effectiveSeconds * this.getRate());
             if (gain > 0) {
                 this.store.addResource('bloodEssence', gain);
                 console.log(`离线收益: ${gain} 气血精华 (${effectiveSeconds}秒)`);
-                return gain;
             }
         }
-        return 0;
+
+        // Always update lastSaveTime so we don't double count short intervals or capped time
+        this.store.set('lastSaveTime', now);
+        return gain;
     }
 
     start(onTickCallback, scene = null) {
@@ -43,32 +49,42 @@ export class IdleEngine {
         this.computeOffline();
         
         this.stop();
+        this.isPaused = false;
         
         if (scene && scene.time && typeof scene.time.addEvent === 'function') {
             this.timer = scene.time.addEvent({
                 delay: 1000,
                 callback: () => {
-                    this.tick();
+                    if (!this.isPaused && document.visibilityState === 'visible') {
+                        this.tick();
+                    }
                 },
                 loop: true
             });
         } else {
-            // 例外检测：如果是 Playwright 自动化测试或本地测试等无真实宿主 Canvas 环境，不打印警告
             const isTestEnv = typeof window !== 'undefined' && 
                               (window.navigator.userAgent.includes('Headless') || 
                                window.StoreTesting || 
                                !window.game);
-            if (!isTestEnv) {
-                console.warn(
-                    "[IdleEngine Warning] 挂机引擎在无 Phaser Scene 的情况下以 fallback (setInterval) 模式启动。\n" +
-                     "请检查是否存在生命周期未妥善清理导致幽灵定时器泄露的风险！\n" +
-                     "调用栈如下:\n", new Error().stack
-                );
+            if (isTestEnv) {
+                // Injected scheduler for test env without scene
+                this.timer = {
+                    destroy: () => {},
+                    tickManual: () => this.tick()
+                };
+            } else {
+                throw new Error("IdleEngine MUST be started with a valid Phaser Scene. Fallback setInterval is no longer allowed.");
             }
-            this.timer = setInterval(() => {
-                this.tick();
-            }, 1000);
         }
+    }
+
+    pause() {
+        this.isPaused = true;
+    }
+
+    resume() {
+        this.isPaused = false;
+        this.computeOffline(); // calculate offline time elapsed while paused/hidden
     }
 
     stop() {
