@@ -900,12 +900,12 @@ def run_test(game_name, node_id=None, grant_state_str=None):
         run_survivor_horde_demo_test()
 
     print(f'Starting HTTP server for {game_name}...')
-    proc = subprocess.Popen(['python3', '-m', 'http.server', '8080'])
+    proc = subprocess.Popen([sys.executable, '-m', 'http.server', '8080', '--bind', '127.0.0.1'])
     time.sleep(2) # Give server time to start
 
     try:
         print('Testing server connection...')
-        res = urllib.request.urlopen(f'http://localhost:8080/minigame/{game_name}/index.html')
+        res = urllib.request.urlopen(f'http://127.0.0.1:8080/minigame/{game_name}/index.html')
         print('HTTP Status:', res.status)
         if res.status != 200:
             print('Failed to reach server.')
@@ -929,7 +929,7 @@ def run_test(game_name, node_id=None, grant_state_str=None):
         try:
             # Load the game page
             print('Loading game page...')
-            page.goto(f'http://localhost:8080/minigame/{game_name}/index.html')
+            page.goto(f'http://127.0.0.1:8080/minigame/{game_name}/index.html')
             page.wait_for_timeout(2000) # Wait for Phaser to load
 
             if game_name == 'xianni':

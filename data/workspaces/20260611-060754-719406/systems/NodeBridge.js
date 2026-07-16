@@ -58,7 +58,7 @@ export class NodeBridge {
         };
     }
 
-    static createNodeResult(nodeScene, { success, reason = null, rewards = {}, failureReason = null } = {}) {
+    static createNodeResult(nodeScene, { success, reason = null, rewards = {}, failureReason = null, score = 0 } = {}) {
         const nodeConfig = nodeScene.nodeConfig || {};
         const resolvedReason = reason || (success ? RESULT_REASONS.COMPLETED : RESULT_REASONS.FAILED);
         const unlocks = this.getUnlocks(nodeConfig, success && resolvedReason === RESULT_REASONS.COMPLETED);
@@ -82,6 +82,7 @@ export class NodeBridge {
             unlockNextNode: unlocks.nodes[0] || null,
             flags: unlocks.flags,
             failureReason,
+            score,
             buildSnapshot: {
                 activeSkills,
                 playerPerks: [...(nodeScene.playerPerks || [])],

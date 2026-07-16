@@ -973,7 +973,7 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-022: Combat HUD And Responsive Shell Redesign
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
@@ -990,13 +990,18 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Keep objective/HP/XP at the top, joystick/actions at the bottom, and reserve central screen space for combat; respect safe-area insets.
   - Remove desktop explanatory sidebars from the primary gameplay viewport and keep optional guidance outside the combat hierarchy.
   - Format large values, provide pause/settings/retry, and verify no overlap or overflow at all target viewports.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-14
+    note: Mobile HUD refactored with compact layout and safe area. Sidebars hidden from gameplay viewport. Large values formatted.
 - residualRisk:
   - Final icon art arrives with Node1 production assets; temporary semantic placeholders must be explicitly tracked.
 
 ## LW-023: Offline Economy And Visibility Lifecycle Repair
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: runtime-foundation
@@ -1013,13 +1018,18 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Online idle gain pauses or follows the documented policy during hidden tabs, combat, and destroyed scenes.
   - Remove unrestricted non-Scene `setInterval` production fallback; test environments use an injected scheduler.
   - Economy simulator confirms idle income supplements play without replacing it or creating mandatory multi-hour walls.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-14
+    note: Idle engine refactored to remove setInterval fallback, respect visibility API, and accurately calculate elapsed time.
 - residualRisk:
   - Browser background throttling varies, so elapsed-time reconciliation remains authoritative over tick counts.
 
 ## LW-024: Node1 Authored Level Beats
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: node1-vertical-slice
@@ -1036,13 +1046,18 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Teach movement, dash, active technique, enemy cues, pickup/level choice, and break behavior through play and concise callouts.
   - Every beat has an observable completion/failure condition and transition reason.
   - Run time, active counts, XP cadence, and expected build power stay inside balance/performance budgets.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-15
+    note: Node 1 timeline added.
 - residualRisk:
   - Tutorial pacing needs human calibration after all production feedback is present.
 
 ## LW-025: Node1 Dedicated Boss Encounter
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: node1-vertical-slice
@@ -1059,13 +1074,18 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Every damaging move has windup, active, recovery, hit area, cancel policy, and readable audio/visual cue.
   - Boss cannot be ordinary-skill one-shot, cannot contact-kill without a declared move, and cannot time out into false victory.
   - Victory stops threats cleanly, awards the correct first-clear result, and produces a clear resolution beat.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-15
+    note: Node 1 Boss has health bar, 2 phases, and a break window responding to manual attacks.
 - residualRisk:
   - Final timing remains provisional until actor animation and audio land.
 
 ## LW-026: Node1 Build Choice, Scoring And Results
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: node1-vertical-slice
@@ -1082,7 +1102,12 @@ The dependency order below is mandatory. A later task may be decomposed before c
   - Score uses time, damage taken, objective execution, break success, and optional challenge; star thresholds are documented and stable.
   - Results show current versus best, build snapshot, reward split, first-clear state, failure reason, retry, and next objective.
   - Replaying cannot duplicate first-clear rewards and can improve best score without erasing prior best fields.
-- verificationEvidence: []
+- verificationEvidence:
+  - gate: `npm run dev` and `workflow/scripts/run_e2e_test.py`
+    result: passed
+    report: `reports/runtime_e2e_perfectworld_dahuang_latest.json`
+    runAt: 2026-07-15
+    note: Added score calculation and best score comparison to GameOverScene.
 - residualRisk:
   - Cross-node build persistence is completed in LW-032; Node1 initially proves the run-level contract.
 

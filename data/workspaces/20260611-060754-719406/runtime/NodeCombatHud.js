@@ -6,51 +6,78 @@ export class Node1UI extends Phaser.Scene {
         super({ key, active: false });
     }
 
+    formatNumber(num) {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+        return Math.floor(num).toString();
+    }
+
+
     create(data) {
+
         this.parentScene = data.parent;
         this.width = 720;
         this.height = 1280;
         this.actionButtons = {};
-        this.timeText = this.add.text(20, 20, '时间: 0 / 120', { fontSize: '24px', fill: '#fff' });
-        this.killText = this.add.text(20, 60, '击杀: 0', { fontSize: '24px', fill: '#fff' });
-        this.levelText = this.add.text(20, 100, '等级: 1', { fontSize: '24px', fill: '#ffd700' });
+
+        // Compact Top Layout (respecting safe area insets via layout later, but we use reasonable margins)
+        this.timeText = this.add.text(20, 20, '时间: 0 / 120', { fontSize: '20px', fill: '#fff', fontStyle: 'bold' });
+        this.killText = this.add.text(20, 50, '击杀: 0', { fontSize: '20px', fill: '#fff' });
+        this.levelText = this.add.text(20, 80, 'Lv. 1', { fontSize: '20px', fill: '#ffd700', fontStyle: 'bold' });
+
         this.expBarBg = this.add.graphics();
         this.expBarBg.fillStyle(0x222222, 0.8);
-        this.expBarBg.fillRect(20, 140, 200, 20);
+        this.expBarBg.fillRect(90, 84, 150, 12);
         this.expBar = this.add.graphics();
         this.updateExp(0, 20, 1);
+
         this.hpBarBg = this.add.graphics();
         this.hpBarBg.fillStyle(0x222222, 0.8);
-        this.hpBarBg.fillRect(20, 180, 200, 20);
+        this.hpBarBg.fillRect(20, 110, 220, 16);
         this.hpBar = this.add.graphics();
         this.hpText = null;
         this.updateHp(this.parentScene.playerHp, this.parentScene.playerMaxHp);
 
-        // Compact skill summary (full panel redesign is LW-022; keep height small).
-        this.skillPanelBg = this.add.rectangle(20, 214, 320, 88, 0x071316, 0.78).setOrigin(0, 0);
-        this.skillPanelBg.setStrokeStyle(2, 0x1f7774, 0.85);
-        this.skillTitleText = this.add.text(34, 224, '自动宝术', { fontSize: '16px', fill: '#80ffea', fontStyle: 'bold' });
-        this.skillText = this.add.text(34, 248, '', {
-            fontSize: '15px',
-            fill: '#ffffff',
-            wordWrap: { width: 292, useAdvancedWrap: true },
-            lineSpacing: 2
+        // Compact skill summary (LW-022: replaced 520x154 panel with minimal icons/text)
+        this.skillPanelBg = this.add.rectangle(20, 140, 220, 44, 0x071316, 0.6).setOrigin(0, 0);
+        this.skillPanelBg.setStrokeStyle(1, 0x1f7774, 0.5);
+        this.skillTitleText = this.add.text(30, 146, '自动宝术: 0', { fontSize: '13px', fill: '#80ffea' });
+        this.skillText = this.add.text(30, 162, '仅基础自动拳', {
+            fontSize: '11px',
+            fill: '#ffffff'
         });
-        this.skillHintText = this.add.text(34, 278, '', { fontSize: '12px', fill: '#9dd9d2' });
-        this.skillCastText = this.add.text(20, 310, '最近施展: —', { fontSize: '13px', fill: '#ffd27a' });
+        this.skillHintText = null; // Removed
+        this.skillCastText = this.add.text(20, 190, '最近: —', { fontSize: '12px', fill: '#ffd27a' });
         this.updateSkills(this.parentScene.activeSkills || []);
 
-        this.actionHelpText = this.add.text(this.width - 20, this.height - 360, 'Space/J/K · 闪避/术法/爆发', {
+        this.actionHelpText = this.add.text(this.width - 20, this.height - 300, 'Space/J/K · 闪避/术法/爆发', {
             fontSize: '12px',
             fill: '#9dd9d2'
         }).setOrigin(1, 1);
 
         this.createActionBar();
 
-        this.retreatBtn = this.add.text(this.width - 80, 40, '撤退', {
-            fontSize: '24px', fill: '#ffffff', backgroundColor: '#8b0000', padding: { x: 15, y: 8 }
+        // Pause/Settings/Retreat buttons at top right
+        this.pauseBtn = this.add.text(this.width - 140, 20, '暂停', {
+            fontSize: '20px', fill: '#ffffff', backgroundColor: '#333333', padding: { x: 10, y: 5 }
+        }).setOrigin(0.5).setInteractive();
+        UIHelper.bindButtonBounce(this.pauseBtn, () => {
+            if (this.parentScene.isPaused) {
+                this.parentScene.isPaused = false;
+                this.parentScene.physics.resume();
+                this.pauseBtn.setText('暂停');
+            } else {
+                this.parentScene.isPaused = true;
+                this.parentScene.physics.pause();
+                this.pauseBtn.setText('继续');
+            }
+        });
+
+        this.retreatBtn = this.add.text(this.width - 60, 20, '撤退', {
+            fontSize: '20px', fill: '#ffffff', backgroundColor: '#8b0000', padding: { x: 10, y: 5 }
         }).setOrigin(0.5).setInteractive();
         UIHelper.bindButtonBounce(this.retreatBtn, () => this.showRetreatConfirm());
+
         this.events.once('shutdown', () => this.teardown());
         this.events.once('destroy', () => this.teardown());
 
@@ -58,7 +85,7 @@ export class Node1UI extends Phaser.Scene {
         if (snapshot) this.updateActionBar(snapshot);
     }
 
-    createActionBar() {
+createActionBar() {
         const size = 76;
         // Stable bottom-right action-button cluster (right thumb).
         const slots = {
@@ -241,23 +268,25 @@ export class Node1UI extends Phaser.Scene {
     }
 
     updateTime(current, max) { this.timeText.setText(`时间: ${current} / ${max}`); }
-    updateKills(kills) { this.killText.setText(`击杀: ${kills}`); }
+    updateKills(kills) { this.killText.setText(`击杀: ${this.formatNumber(kills)}`); }
 
     updateSkills(activeSkills = []) {
-        if (!this.skillTitleText || !this.skillText || !this.skillHintText) return;
+        if (!this.skillTitleText || !this.skillText) return;
         const manualIds = new Set(this.parentScene?.playerActionController?.getBoundManualSkillIds?.() || []);
         const autoSkills = activeSkills.filter((skill) => !manualIds.has(skill.id));
-        const rows = autoSkills.map((skillState) => {
+        const names = autoSkills.map((skillState) => {
             const skillData = this.parentScene?.findSkillData?.(skillState.id);
-            return `${skillData?.name || skillState.id} Lv.${skillState.level}`;
+            return `${skillData?.name || skillState.id}`;
         });
-        const overflow = Math.max(rows.length - 2, 0);
-        const visibleRows = rows.slice(0, 2);
-        if (overflow > 0) visibleRows.push(`另有 ${overflow} 项自动运行`);
-        const candidateCount = this.parentScene?.availableSkillPool?.length || 0;
-        this.skillTitleText.setText(`自动宝术 (${autoSkills.length})`);
-        this.skillText.setText(visibleRows.length > 0 ? visibleRows.join('\n') : '仅基础自动拳');
-        this.skillHintText.setText(`候选 ${candidateCount} · 闪避/术法/爆发需主动`);
+
+        this.skillTitleText.setText(`自动宝术: ${autoSkills.length}`);
+
+        let displayStr = '仅基础自动拳';
+        if (names.length > 0) {
+            displayStr = names.slice(0, 3).join(' / ');
+            if (names.length > 3) displayStr += ` +${names.length - 3}`;
+        }
+        this.skillText.setText(displayStr);
     }
 
     updateLastCast(skillName, level) {
@@ -265,10 +294,10 @@ export class Node1UI extends Phaser.Scene {
     }
 
     updateExp(current, max, level) {
-        this.levelText.setText(`等级: ${level}`);
+        this.levelText.setText(`Lv. ${level}`);
         this.expBar.clear();
         this.expBar.fillStyle(0x00aaff, 1);
-        this.expBar.fillRect(20, 140, 200 * Math.min(current / max, 1), 20);
+        this.expBar.fillRect(90, 84, 150 * Math.min(current / max, 1), 12);
     }
 
     updateHp(current, max) {
@@ -277,9 +306,10 @@ export class Node1UI extends Phaser.Scene {
         const drawHp = (value) => {
             this.hpBar.clear();
             this.hpBar.fillStyle(0xff0000, 1);
-            this.hpBar.fillRect(20, 180, 200 * Math.max(Math.min(value / max, 1), 0), 20);
-            if (!this.hpText) this.hpText = this.add.text(230, 178, `${Math.ceil(current)} / ${max}`, { fontSize: '18px', fill: '#ff4444', fontStyle: 'bold' });
-            else this.hpText.setText(`${Math.ceil(current)} / ${max}`);
+            this.hpBar.fillRect(20, 110, 220 * Math.max(Math.min(value / max, 1), 0), 16);
+            const textStr = `${this.formatNumber(Math.ceil(current))} / ${this.formatNumber(max)}`;
+            if (!this.hpText) this.hpText = this.add.text(250, 108, textStr, { fontSize: '16px', fill: '#ff4444', fontStyle: 'bold' });
+            else this.hpText.setText(textStr);
         };
         this.hpTween = this.tweens.add({
             targets: this.hpDisplay, value: current, duration: 180, ease: 'Sine.easeOut',

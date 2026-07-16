@@ -688,43 +688,80 @@ export class Node1Scene extends Phaser.Scene {
     onSecondTick() {
         if (this.isGameOver || this.isPaused) return;
         this.surviveTime++;
-        this.uiScene.updateTime(this.surviveTime, this.nodeConfig.duration);
+        // Force timeline duration for Node 1 to 90s
+        const duration = this.nodeConfig.id === 1 ? 90 : this.nodeConfig.duration;
+        this.uiScene.updateTime(this.surviveTime, duration);
 
-        // 生成敌人 (随时间增加生成频率)
-        const spawnCount = 1 + Math.floor(this.surviveTime / 30);
-        for (let i = 0; i < spawnCount; i++) {
-            this.spawnEnemy({
-                radius: this.nodeConfig.id === 1 && this.surviveTime <= 10 ? 360 : undefined
-            });
-        }
+        if (this.nodeConfig.id === 1) {
+            if (this.surviveTime === 2) {
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '拖动摇杆移动', "#80ffea", 3000);
+                this.spawnEnemy({ enemyType: 'wild_rhino', radius: 400 });
+            } else if (this.surviveTime === 10) {
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '拾取气血精华升级', "#80ffea", 3000);
+                for (let i = 0; i < 3; i++) this.spawnEnemy({ enemyType: 'wild_rhino', radius: 400 });
+            } else if (this.surviveTime === 20) {
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '点击图标闪避攻击', "#80ffea", 3000);
+                for (let i = 0; i < 4; i++) this.spawnEnemy({ enemyType: 'green_scaled_eagle', radius: 450 });
+            } else if (this.surviveTime === 35) {
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '主动施放术法！', "#ffd700", 3000);
+                for (let i = 0; i < 6; i++) this.spawnEnemy({ enemyType: 'rock_golem', radius: 450 });
+            } else if (this.surviveTime === 50) {
+                this.spawnEliteSilverWingedEagle();
+                this.showWorldFloatText(this.player.x, this.player.y - 120, '精英凶禽来袭！', "#ff4444", 3000);
+                for (let i = 0; i < 4; i++) this.spawnEnemy({ enemyType: 'wild_rhino', radius: 450 });
+            } else if (this.surviveTime === 75 && !this.bossSpawned) {
+                this.spawnBoss();
+                this.bossSpawned = true;
+            } else if (this.surviveTime > 35 && this.surviveTime < 75 && this.surviveTime % 5 === 0) {
+                for (let i = 0; i < 2; i++) this.spawnEnemy({ radius: 450 });
+            }
 
-        // 60秒时生成精英怪银羽神雕
-        if (this.nodeConfig.id === 1 && this.surviveTime === 60) {
-            this.spawnEliteSilverWingedEagle();
-        }
+            if (this.surviveTime >= duration) {
+                this.endGame(true);
+            }
+        } else {
+            // 生成敌人 (随时间增加生成频率)
+            const spawnCount = 1 + Math.floor(this.surviveTime / 30);
+            for (let i = 0; i < spawnCount; i++) {
+                this.spawnEnemy({
+                    radius: this.nodeConfig.id === 1 && this.surviveTime <= 10 ? 360 : undefined
+                });
+            }
 
-        // 90% 时间生成 Boss
-        if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.9) && !this.bossSpawned) {
-            this.spawnBoss();
-            this.bossSpawned = true;
-        }
+            // 60秒时生成精英怪银羽神雕
+            if (this.nodeConfig.id === 1 && this.surviveTime === 60) {
+                this.spawnEliteSilverWingedEagle();
+            }
 
-        // 胜利判定
-        if (this.surviveTime >= this.nodeConfig.duration) {
-            this.endGame(true);
+            // 90% 时间生成 Boss
+            if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.9) && !this.bossSpawned) {
+                this.spawnBoss();
+                this.bossSpawned = true;
+            }
+
+            // 胜利判定
+            if (this.surviveTime >= this.nodeConfig.duration) {
+                this.endGame(true);
+            }
         }
     }
 
     spawnBoss() {
         const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId];
-        this.createRuntimeEnemy(this.nodeConfig.bossId, this.player.x + 300, this.player.y, {
-            hp: enemyData.hp,
-            speed: enemyData.speed,
-            exp: enemyData.exp,
+        const boss = this.createRuntimeEnemy(this.nodeConfig.bossId, this.player.x, this.player.y - 300, {
+            hp: enemyData.hp * 5, // make sure it takes time
+            speed: enemyData.speed * 0.8,
+            exp: enemyData.exp * 5,
             lootList: enemyData.lootList,
-            scaleMultiplier: 1.2
+            scaleMultiplier: 2.0
         });
         
+        boss.setData('isBoss', true);
+        boss.setData('maxHp', enemyData.hp * 5);
+        boss.setData('phase', 1);
+        boss.setData('state', 'idle'); // idle, windup, active, recovery, break
+        boss.setData('stateTimer', 0);
+
         const txt = this.add.text(this.player.x, this.player.y - 100, '穷奇幼崽降临！', { fontSize: '32px', fill: '#ff0000', fontStyle: 'bold' }).setOrigin(0.5);
         this.tweens.add({
             targets: txt,
@@ -733,7 +770,119 @@ export class Node1Scene extends Phaser.Scene {
             duration: 2000,
             onComplete: () => txt.destroy()
         });
+
+        this.activeBoss = boss;
+
+        // Add boss health bar
+        this.bossHpBarBg = this.add.graphics().setScrollFactor(0).setDepth(200);
+        this.bossHpBarBg.fillStyle(0x222222, 0.8).fillRect(this.width / 2 - 150, 60, 300, 16);
+        this.bossHpBar = this.add.graphics().setScrollFactor(0).setDepth(200);
+        this.bossNameText = this.add.text(this.width / 2, 40, '穷奇幼崽 (Phase 1)', { fontSize: '18px', fill: '#ff4444', fontStyle: 'bold' }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
     }
+
+    updateBoss(boss) {
+        if (!boss || !boss.active) {
+            // Boss Defeated
+            if (this.bossHpBarBg) {
+                this.bossHpBarBg.destroy();
+                this.bossHpBar.destroy();
+                this.bossNameText.destroy();
+                this.bossHpBarBg = null;
+            }
+            if (this.activeBoss) {
+                this.activeBoss = null;
+                // Game clear
+                this.endGame(true, 'Boss Defeated', NodeBridge.RESULT_REASONS.BOSS_DEFEATED);
+            }
+            return;
+        }
+
+        const hp = boss.getData('hp');
+        const maxHp = boss.getData('maxHp');
+        const phase = boss.getData('phase');
+        const state = boss.getData('state');
+        let stateTimer = boss.getData('stateTimer');
+
+        // Update HP Bar
+        this.bossHpBar.clear();
+        this.bossHpBar.fillStyle(0xff0000, 1).fillRect(this.width / 2 - 150, 60, 300 * Math.max(hp / maxHp, 0), 16);
+
+        // Phase transition
+        if (phase === 1 && hp < maxHp * 0.5) {
+            boss.setData('phase', 2);
+            this.bossNameText.setText('穷奇幼崽 (Phase 2)');
+            boss.setTint(0xff8800);
+            boss.setData('speed', boss.getData('speed') * 1.5);
+            this.showWorldFloatText(boss.x, boss.y - 80, '进入狂暴！', '#ff8800', 2000);
+        }
+
+        // State Machine
+        if (state === 'idle') {
+            stateTimer++;
+            boss.setData('speed', ENEMY_REGISTRY[this.nodeConfig.bossId].speed * (phase === 2 ? 1.2 : 0.8));
+            if (stateTimer > 120) {
+                boss.setData('state', 'windup');
+                boss.setData('stateTimer', 0);
+                boss.setData('speed', 0); // Stop moving to prepare attack
+
+                // Telegraph
+                boss.telegraph = this.add.circle(boss.x, boss.y, 150, 0xff0000, 0.2);
+                this.tweens.add({
+                    targets: boss.telegraph,
+                    alpha: 0.5,
+                    duration: 1500
+                });
+            }
+        } else if (state === 'windup') {
+            stateTimer++;
+            if (stateTimer > 90) { // 1.5s windup
+                boss.setData('state', 'active');
+                boss.setData('stateTimer', 0);
+
+                // Active attack
+                if (boss.telegraph) {
+                    boss.telegraph.destroy();
+                    boss.telegraph = null;
+                }
+
+                const blast = this.add.circle(boss.x, boss.y, 150, 0xff0000, 0.8);
+                this.tweens.add({
+                    targets: blast,
+                    alpha: 0,
+                    scale: 1.2,
+                    duration: 300,
+                    onComplete: () => blast.destroy()
+                });
+
+                // Damage player if in range
+                if (Phaser.Math.Distance.Between(boss.x, boss.y, this.player.x, this.player.y) <= 150) {
+                    this.combatRuntime.onPlayerHit(this.player, boss);
+                    this.combatRuntime.onPlayerHit(this.player, boss); // double hit for boss move
+                }
+            }
+        } else if (state === 'active') {
+            stateTimer++;
+            if (stateTimer > 30) { // 0.5s active
+                boss.setData('state', 'recovery');
+                boss.setData('stateTimer', 0);
+            }
+        } else if (state === 'recovery') {
+            stateTimer++;
+            if (stateTimer > 120) { // 2s recovery (break window)
+                boss.setData('state', 'idle');
+                boss.setData('stateTimer', 0);
+            }
+        } else if (state === 'break') {
+            stateTimer++;
+            if (stateTimer > 180) { // 3s break
+                boss.setData('state', 'idle');
+                boss.setData('stateTimer', 0);
+            }
+        }
+
+        boss.setData('stateTimer', stateTimer);
+    }
+
 
     spawnOpeningWave() {
         [
@@ -762,6 +911,19 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     damageEnemy(enemy, dmg, skillData = null) {
+        if (enemy.getData('isBoss') && skillData && skillData.castMode === 'manual') {
+            const state = enemy.getData('state');
+            if (state === 'windup' || state === 'recovery') {
+                enemy.setData('state', 'break');
+                enemy.setData('stateTimer', 0);
+                enemy.setData('speed', 0);
+                if (enemy.telegraph) {
+                    enemy.telegraph.destroy();
+                    enemy.telegraph = null;
+                }
+                this.showWorldFloatText(enemy.x, enemy.y - 80, '破招！', '#00ffff', 2000);
+            }
+        }
         return this.combatRuntime.damageEnemy(enemy, dmg, skillData);
     }
 
