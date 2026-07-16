@@ -104,7 +104,9 @@ export class Node1Scene extends Phaser.Scene {
 
     createCombatTextures() {
         this.createPlayerTexture();
-        Object.keys(ENEMY_REGISTRY).forEach(enemyType => this.createEnemyTexture(enemyType));
+        const activeEnemies = [...this.nodeConfig.enemyPool];
+        if (this.nodeConfig.bossId) activeEnemies.push(this.nodeConfig.bossId);
+        activeEnemies.forEach(enemyType => this.createEnemyTexture(enemyType));
         this.createSkillProjectileTexture();
         this.createPickupTexture();
         createAtlasFrameTexture(this, 'pickup_blood_essence', 'pickup_particle');
@@ -304,6 +306,39 @@ export class Node1Scene extends Phaser.Scene {
         this.width = 720;
         this.height = 1280;
         this.createCombatTextures();
+
+        // Scene Background Implementation
+        const bgWidth = this.sys.game.config.width * 2;
+        const bgHeight = this.sys.game.config.height * 2;
+
+        // Use a grid texture as a base, simulating the ground
+        const bgGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+        bgGraphics.fillStyle(0x3e2723, 1);
+        bgGraphics.fillRect(0, 0, 1024, 1024);
+        bgGraphics.lineStyle(2, 0x4e342e, 1);
+        for(let i=0; i<1024; i+=128) {
+            bgGraphics.moveTo(i, 0);
+            bgGraphics.lineTo(i, 1024);
+            bgGraphics.moveTo(0, i);
+            bgGraphics.lineTo(1024, i);
+        }
+        bgGraphics.strokePath();
+        bgGraphics.generateTexture('bg_dirt', 1024, 1024);
+        bgGraphics.destroy();
+
+        this.add.tileSprite(0, 0, bgWidth * 2, bgHeight * 2, 'bg_dirt').setDepth(-100).setAlpha(0.6);
+
+        // Add some random landmarks / ground variation
+        for (let i = 0; i < 20; i++) {
+            const lx = Phaser.Math.Between(-bgWidth/2, bgWidth/2);
+            const ly = Phaser.Math.Between(-bgHeight/2, bgHeight/2);
+            const lSize = Phaser.Math.Between(20, 60);
+            const rock = this.add.graphics();
+            rock.fillStyle(0x2e1b15, 0.8);
+            rock.fillCircle(lx, ly, lSize);
+            rock.setDepth(-99);
+        }
+
 
         // 背景
         this.add.grid(0, 0, this.width * 3, this.height * 3, 64, 64, 0x222222).setOrigin(0, 0);
@@ -586,6 +621,7 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     update(time, delta) {
+        if (this.activeBoss) this.updateBoss(this.activeBoss, time, delta);
         if (!this.canAcceptMovementInput()) {
             this.movementMode = this.isGameOver || this.isTransitioning ? 'inactive' : 'locked';
             this.releaseTouchMovement(this.getInputLockReason() || 'input_locked');

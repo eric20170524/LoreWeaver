@@ -26,11 +26,11 @@
 
 ## Current Coordination
 
-- currentTask: `LW-026`
+- currentTask: `LW-027`
 - currentRole: Antigravity implementer
 - currentOwner: Antigravity
 - currentReviewer: Codex
-- currentStatus: needs_review
+- currentStatus: in_progress
 - implementationModel: `gpt-5.6-terra/Anscombe` for LW-018; the `gpt-5.6-sol` fallback record applies only to LW-016
 - handoff: `LoreWeaver/docs_collab/handoff.md`
 

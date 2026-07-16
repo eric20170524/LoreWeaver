@@ -1113,7 +1113,7 @@ The dependency order below is mandatory. A later task may be decomposed before c
 
 ## LW-027: Node1 Production Bitmap Art Slice
 
-- status: todo
+- status: needs_review
 - requirementId: REQ-20260711-001
 - iteration: 1
 - stage: node1-vertical-slice

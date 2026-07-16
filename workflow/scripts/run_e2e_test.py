@@ -1215,7 +1215,7 @@ def run_test(game_name, node_id=None, grant_state_str=None):
                         }
                         const activeUiScene = window.game.scene.scenes.find(s => s.sys.isActive() && s.scene.key.endsWith('UI'));
                         if (activeUiScene) {
-                            const confirmBtn = activeUiScene.children.list.find(c => c.type === 'Text' && c.text === '撤退' && c !== activeUiScene.retreatBtn);
+                            const confirmBtn = activeUiScene.children.list.find(c => c.type === 'Text' && c.text === '撤退' && c.depth >= 100);
                             if (confirmBtn) {
                                 confirmBtn.emit('pointerdown');
                                 confirmBtn.emit('pointerup');
@@ -1415,7 +1415,7 @@ def run_test(game_name, node_id=None, grant_state_str=None):
                             }
                             const activeUiScene = window.game.scene.scenes.find(s => s.sys.isActive() && s.scene.key.endsWith('UI'));
                             if (activeUiScene) {
-                                const confirmBtn = activeUiScene.children.list.find(c => c.type === 'Text' && c.text === '撤退' && c !== activeUiScene.retreatBtn);
+                                const confirmBtn = activeUiScene.children.list.find(c => c.type === 'Text' && c.text === '撤退' && c.depth >= 100);
                                 if (confirmBtn) {
                                     confirmBtn.emit('pointerdown');
                                     confirmBtn.emit('pointerup');
