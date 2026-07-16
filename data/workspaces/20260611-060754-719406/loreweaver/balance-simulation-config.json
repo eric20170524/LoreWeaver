@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "loreweaver.balance-simulation-config.v1",
+  "thresholds": {
+    "minimumBossTtkSeconds": 20,
+    "minimumPlayerHitsToKill": 3,
+    "maximumPlayerHitsToKill": 30,
+    "maximumMandatoryRepeats": 3
+  },
+  "pickupAssumptions": {
+    "collectionRate": 0.75,
+    "p05ZScore": -1.645,
+    "p95ZScore": 1.645,
+    "description": "Expected pickup values assume 75% of spawned enemies are defeated and their pickups collected. P05/P95 are normal-approximation bounds for independent configured loot chances after that collection rate; they are estimates, not guaranteed drops."
+  },
+  "bossRuntime": {
+    "1": { "kind": "configured_boss", "hpMultiplier": 1 },
+    "2": { "kind": "configured_boss", "hpMultiplier": 1 },
+    "3": { "kind": "configured_boss", "hpMultiplier": 1 },
+    "4": { "kind": "configured_boss", "hpMultiplier": 1 },
+    "5": { "kind": "configured_boss", "hpMultiplier": 1 },
+    "6": { "kind": "configured_boss", "hpMultiplier": 1 },
+    "7": { "kind": "wave_final_boss", "hpMultiplier": 4, "finalWave": 5, "perWaveFactor": 0.8 },
+    "8": { "kind": "configured_boss_normal_portal", "hpMultiplier": 1, "sourceMultiplier": "difficultyMultiplier" },
+    "9": { "kind": "configured_boss", "hpMultiplier": 1 },
+    "10": { "kind": "configured_boss", "hpMultiplier": 1.5 },
+    "11": { "kind": "configured_boss", "hpMultiplier": 2 },
+    "12": { "kind": "configured_boss", "hpMultiplier": 2.5 }
+  },
+  "spawnRuntime": {
+    "1": { "kind": "base", "first": 1, "stepSeconds": 30 },
+    "2": { "kind": "base", "first": 1, "stepSeconds": 30 },
+    "3": { "kind": "override", "first": 2, "stepSeconds": 20 },
+    "4": { "kind": "inherits_base", "first": 1, "stepSeconds": 30 },
+    "5": { "kind": "inherits_base", "first": 1, "stepSeconds": 30 },
+    "6": { "kind": "inherits_base", "first": 1, "stepSeconds": 30 },
+    "7": { "kind": "wave_only", "first": 0, "stepSeconds": 0 },
+    "8": { "kind": "inherits_base", "first": 1, "stepSeconds": 30 },
+    "9": { "kind": "inherits_base", "first": 1, "stepSeconds": 30 },
+    "10": { "kind": "inherits_base", "first": 1, "stepSeconds": 30 },
+    "11": { "kind": "override", "first": 2, "stepSeconds": 15 },
+    "12": { "kind": "inherits_base", "first": 1, "stepSeconds": 30 }
+  }
+}

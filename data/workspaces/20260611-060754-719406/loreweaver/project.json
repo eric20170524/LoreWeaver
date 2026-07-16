@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "loreweaver.split.v1",
+  "title": "星渊试炼·荒域觉醒",
+  "themeColor": "#f59e0b",
+  "sourceProject": {
+    "type": "legacy-phaser-vite",
+    "path": "minigame/perfectworld_dahuang",
+    "packageName": "perfectworld-dahuang",
+    "entry": "index.html",
+    "notes": "Migrated from the standalone Phaser 3 H5 project. Original runtime code, docs, scenes, systems, and node implementations remain in the source folder."
+  }
+}

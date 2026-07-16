@@ -1,0 +1,61 @@
+{
+  "id": 6,
+  "title": "药都风云",
+  "intro": "毒雾弥漫药都，视野与生命持续受压。击杀携带解药光环的精英怪，维持生存节奏。",
+  "taunts": [
+    "毒雾幻影：在此沉沦吧……",
+    "星骁：区区毒雾，也想困住我？"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +10000，纯血 +4~6，圣药精华",
+  "goalValue": 240,
+  "resourceMultiplier": 6.2,
+  "difficulty": 6,
+  "durationLimit": 240,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "survivor_horde",
+    "modifiers": [
+      {
+        "id": "poison_fog",
+        "knobs": {
+          "requiresAntidoteElite": true,
+          "hpDrain": "scaling"
+        }
+      }
+    ],
+    "knobs": {
+      "legacySceneClass": "Node6Scene",
+      "realmRequired": 6,
+      "bossId": "ancient_beast_king",
+      "sourceRewards": {
+        "bloodEssence": 10000,
+        "pureBlood": [
+          4,
+          6
+        ]
+      }
+    },
+    "patchLevel": "L3"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery",
+      "pure_blood_trial"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "dual_pupil",
+      "kunpeng_art",
+      "true_phoenix_art"
+    ],
+    "rewardUnlocks": [
+      "true_phoenix_art"
+    ],
+    "notes": "药都风云通过纯血洗礼开放真凰宝术，用持续光环回应毒雾和密集怪潮。"
+  }
+}

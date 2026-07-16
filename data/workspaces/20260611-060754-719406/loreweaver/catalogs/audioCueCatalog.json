@@ -1,0 +1,295 @@
+[
+  {
+    "id": "short_fist_whoosh",
+    "runtimeSkillId": "primordial_fist",
+    "synth": {
+      "frequencies": [
+        260,
+        180
+      ],
+      "wave": "square",
+      "durationMs": 90,
+      "volume": 0.16
+    },
+    "mixRole": "attack_click",
+    "description": "短促拳风，下扫频率表现肉身出拳。"
+  },
+  {
+    "id": "beast_roar_sweep",
+    "runtimeSkillId": "suan_ni_roar",
+    "synth": {
+      "frequencies": [
+        180,
+        110,
+        90
+      ],
+      "wave": "sawtooth",
+      "durationMs": 140,
+      "volume": 0.18
+    },
+    "mixRole": "aoe_impact",
+    "description": "狻猊怒啸，宽频下扫但保持短促，避免自动释放时吵闹。"
+  },
+  {
+    "id": "soft_leaf_chime",
+    "runtimeSkillId": "willow_blessing",
+    "synth": {
+      "frequencies": [
+        620,
+        780
+      ],
+      "wave": "sine",
+      "durationMs": 120,
+      "volume": 0.1
+    },
+    "mixRole": "support_feedback",
+    "description": "柳叶回春的柔和提示音。"
+  },
+  {
+    "id": "eagle_wind_cut",
+    "runtimeSkillId": "green_scaled_eagle",
+    "synth": {
+      "frequencies": [
+        720,
+        420
+      ],
+      "wave": "triangle",
+      "durationMs": 100,
+      "volume": 0.14
+    },
+    "mixRole": "targeted_burst",
+    "description": "鹰影俯冲的风切声。"
+  },
+  {
+    "id": "wooden_shield_knock",
+    "runtimeSkillId": "bone_shield",
+    "synth": {
+      "frequencies": [
+        180,
+        240
+      ],
+      "wave": "triangle",
+      "durationMs": 130,
+      "volume": 0.12
+    },
+    "mixRole": "defense_feedback",
+    "description": "护盾刷新时的木质敲击。"
+  },
+  {
+    "id": "leaf_hum",
+    "runtimeSkillId": "willow_seed_field",
+    "synth": {
+      "frequencies": [
+        330,
+        440
+      ],
+      "wave": "sine",
+      "durationMs": 160,
+      "volume": 0.08
+    },
+    "mixRole": "aura_tick",
+    "description": "小型柳叶场的低音量循环感提示。"
+  },
+  {
+    "id": "electric_arc_snap",
+    "runtimeSkillId": "thunder_god_finger",
+    "synth": {
+      "frequencies": [
+        880,
+        1320,
+        660
+      ],
+      "wave": "square",
+      "durationMs": 70,
+      "volume": 0.13
+    },
+    "mixRole": "chain_lightning",
+    "description": "雷帝指的电弧爆点。"
+  },
+  {
+    "id": "roar_thunder_pulse",
+    "runtimeSkillId": "suan_ni_thunder_pulse",
+    "synth": {
+      "frequencies": [
+        220,
+        440,
+        120
+      ],
+      "wave": "sawtooth",
+      "durationMs": 160,
+      "volume": 0.16
+    },
+    "mixRole": "aoe_impact",
+    "description": "狻猊雷环的兽吼与雷鸣合成。"
+  },
+  {
+    "id": "air_suction_dash",
+    "runtimeSkillId": "kunpeng_dodge",
+    "synth": {
+      "frequencies": [
+        420,
+        260
+      ],
+      "wave": "triangle",
+      "durationMs": 100,
+      "volume": 0.13
+    },
+    "mixRole": "mobility",
+    "description": "潮翼身法的空气抽吸声。"
+  },
+  {
+    "id": "grass_bind_sweep",
+    "runtimeSkillId": "divine_vine",
+    "synth": {
+      "frequencies": [
+        300,
+        360
+      ],
+      "wave": "triangle",
+      "durationMs": 120,
+      "volume": 0.11
+    },
+    "mixRole": "control",
+    "description": "神藤缠绕时的草叶扫动。"
+  },
+  {
+    "id": "soft_fire_crackle",
+    "runtimeSkillId": "true_phoenix_fire",
+    "synth": {
+      "frequencies": [
+        520,
+        390
+      ],
+      "wave": "square",
+      "durationMs": 80,
+      "volume": 0.08
+    },
+    "mixRole": "aura_tick",
+    "description": "真凰火的细小火星声。"
+  },
+  {
+    "id": "sharp_space_cut",
+    "runtimeSkillId": "void_slash",
+    "synth": {
+      "frequencies": [
+        960,
+        300
+      ],
+      "wave": "sawtooth",
+      "durationMs": 110,
+      "volume": 0.14
+    },
+    "mixRole": "slash",
+    "description": "虚空斩的利落切面。"
+  },
+  {
+    "id": "low_tide_pull",
+    "runtimeSkillId": "kunpeng_tide_pull",
+    "synth": {
+      "frequencies": [
+        120,
+        180
+      ],
+      "wave": "sine",
+      "durationMs": 180,
+      "volume": 0.12
+    },
+    "mixRole": "control",
+    "description": "潮汐牵引的低频吸卷。"
+  },
+  {
+    "id": "deep_bell_impact",
+    "runtimeSkillId": "heaven_hand",
+    "synth": {
+      "frequencies": [
+        90,
+        180,
+        360
+      ],
+      "wave": "sine",
+      "durationMs": 220,
+      "volume": 0.2
+    },
+    "mixRole": "ultimate",
+    "description": "上苍之手的厚重钟鸣。"
+  },
+  {
+    "id": "focused_beam_hum",
+    "runtimeSkillId": "dual_pupil",
+    "synth": {
+      "frequencies": [
+        740,
+        980
+      ],
+      "wave": "sine",
+      "durationMs": 180,
+      "volume": 0.12
+    },
+    "mixRole": "beam",
+    "description": "紫曜瞳聚焦时的高频嗡鸣。"
+  },
+  {
+    "id": "heartbeat_bell",
+    "runtimeSkillId": "supreme_bone_awaken",
+    "synth": {
+      "frequencies": [
+        80,
+        160,
+        420
+      ],
+      "wave": "triangle",
+      "durationMs": 230,
+      "volume": 0.18
+    },
+    "mixRole": "transform",
+    "description": "星骨觉醒的心跳与钟鸣。"
+  },
+  {
+    "id": "stacked_cave_resonance",
+    "runtimeSkillId": "ten_cave_resonance",
+    "synth": {
+      "frequencies": [
+        120,
+        240,
+        480
+      ],
+      "wave": "sine",
+      "durationMs": 210,
+      "volume": 0.18
+    },
+    "mixRole": "ultimate",
+    "description": "十洞天共鸣的叠层谐振。"
+  },
+  {
+    "id": "deep_leaf_chorus",
+    "runtimeSkillId": "heaven_willow_domain",
+    "synth": {
+      "frequencies": [
+        260,
+        520,
+        780
+      ],
+      "wave": "sine",
+      "durationMs": 200,
+      "volume": 0.1
+    },
+    "mixRole": "support_ultimate",
+    "description": "青枝法域的深层叶鸣。"
+  },
+  {
+    "id": "layered_voice_bell",
+    "runtimeSkillId": "he_hua_projection",
+    "synth": {
+      "frequencies": [
+        110,
+        220,
+        660
+      ],
+      "wave": "triangle",
+      "durationMs": 260,
+      "volume": 0.18
+    },
+    "mixRole": "finale_transform",
+    "description": "万象化影的多层人声式钟响。"
+  }
+]

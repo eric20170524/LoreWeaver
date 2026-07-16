@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>星渊试炼·荒域觉醒</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23071316'/%3E%3Cpath d='M32 10l7 15 15 7-15 7-7 15-7-15-15-7 15-7z' fill='%2380ffea'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Phaser 3 CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+</head>
+<body data-sim-scale="fit">
+    <div id="app-container">
+        <!-- Left Sidebar: Lore & Controls -->
+        <div class="sidebar left-sidebar animate-fade-in">
+            <div class="sidebar-header">
+                <h2>原创荒域试炼</h2>
+                <div class="sub-title">荒域觉醒 · 星骨试炼</div>
+            </div>
+            <div class="sidebar-content">
+                <div class="section">
+                    <h3>☯ 游戏背景</h3>
+                    <p>玩家扮演荒域少年星骁，在边境村落觉醒星骨纹路，穿越荒原、秘径与镜魄试炼，开启洞天、掌握原创骨术，逐步守住十二重试炼。</p>
+                </div>
+                <div class="section">
+                    <h3>🎮 历练操作指南</h3>
+                    <div class="control-guide">
+                        <div class="control-item">
+                            <div class="control-key">🕹️ 移动</div>
+                            <div class="control-desc">在画布内拖拽或滑动，星骁将敏捷跟随。</div>
+                        </div>
+                        <div class="control-item">
+                            <div class="control-key">⚡ 雷吼骨术</div>
+                            <div class="control-desc">自动释放雷吼骨纹震荡兽潮，高频持续范围伤害。</div>
+                        </div>
+                        <div class="control-item">
+                            <div class="control-key">👉 裂雷指</div>
+                            <div class="control-desc">自动激射裂雷指劲，瞬间穿透一条线上的凶兽。</div>
+                        </div>
+                        <div class="control-item">
+                            <div class="control-key">☠️ 星骨</div>
+                            <div class="control-desc">升级可点亮星骨纹路，提供生命回复、暴击和额外弹幕。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <p>Antigravity Studio · 星渊试炼开发组</p>
+            </div>
+        </div>
+
+        <!-- Floating H5 Mobile Simulator View -->
+        <div class="game-wrapper" id="simulator-panel" aria-label="H5 mobile simulator">
+            <div class="simulator-toolbar">
+                <div class="simulator-title">
+                    <span class="simulator-dot"></span>
+                    <span>H5 模拟器 · 720x1280</span>
+                </div>
+                <div class="simulator-actions" aria-label="模拟器预览控制">
+                    <button type="button" class="simulator-icon-btn" data-sim-scale-button="small" title="小尺寸预览" aria-label="小尺寸预览">S</button>
+                    <button type="button" class="simulator-icon-btn" data-sim-scale-button="medium" title="中尺寸预览" aria-label="中尺寸预览">M</button>
+                    <button type="button" class="simulator-icon-btn" data-sim-scale-button="large" title="大尺寸预览" aria-label="大尺寸预览">L</button>
+                    <button type="button" class="simulator-icon-btn" data-sim-scale-button="fit" title="适配当前窗口" aria-label="适配当前窗口">↔</button>
+                    <button type="button" class="simulator-icon-btn" id="simulator-fullscreen-btn" title="全屏预览" aria-label="全屏预览">⛶</button>
+                </div>
+            </div>
+            <div class="simulator-viewport">
+                <div id="game-container"></div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar: Realm Status & Completion -->
+        <div class="sidebar right-sidebar animate-fade-in">
+            <div class="sidebar-header">
+                <h2>洞天与大境</h2>
+                <div class="sub-title">星骁修行大境一览</div>
+            </div>
+            <div class="sidebar-content">
+                <div class="section">
+                    <h3>修行境界一览</h3>
+                    <div class="realm-list" id="realm-list">
+                        <div class="realm-item" id="realm-item-1" data-level="1">
+                            <span class="realm-name">1. 搬血境 (起步)</span>
+                            <span class="realm-status">Node 1: 荒域初试</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-2" data-level="2">
+                            <span class="realm-name">2. 洞天境</span>
+                            <span class="realm-status">Node 2: 千崖秘径</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-3" data-level="3">
+                            <span class="realm-name">3. 化灵境</span>
+                            <span class="realm-status">Node 3: 镜魄试炼场</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-4" data-level="4">
+                            <span class="realm-name">4. 铭纹境</span>
+                            <span class="realm-status">Node 4: 天潮巢</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-5" data-level="5">
+                            <span class="realm-name">5. 列阵境</span>
+                            <span class="realm-status">Node 5: 石都大战</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-6" data-level="6">
+                            <span class="realm-name">6. 尊者境</span>
+                            <span class="realm-status">Node 6: 药都风云</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-7" data-level="7">
+                            <span class="realm-name">7. 神火境</span>
+                            <span class="realm-status">Node 7: 三千星州天才战</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-8" data-level="8">
+                            <span class="realm-name">8. 真一境</span>
+                            <span class="realm-status">Node 8: 星古遗地</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-9" data-level="9">
+                            <span class="realm-name">9. 天神境</span>
+                            <span class="realm-status">Node 9: 星脉书院</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-10" data-level="10">
+                            <span class="realm-name">10. 虚道境</span>
+                            <span class="realm-status">Node 10: 边境星关</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-11" data-level="11">
+                            <span class="realm-name">11. 至尊境</span>
+                            <span class="realm-status">Node 11: 裂隙边境大战</span>
+                        </div>
+                        <div class="realm-item" id="realm-item-12" data-level="12">
+                            <span class="realm-name">12. 仙王境 (至强)</span>
+                            <span class="realm-status">Node 12: 终极血战</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <p>金阙残影当破，玄垒战线当开！</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Floating Button -->
+    <button id="mobile-guide-btn" onclick="toggleMobileDrawer(true)">📜 修行秘籍</button>
+
+    <!-- Mobile Guide Drawer -->
+    <div id="mobile-guide-drawer">
+        <div class="drawer-header">
+            <h2>📜 修行秘籍</h2>
+            <button class="drawer-close-btn" onclick="toggleMobileDrawer(false)">✖ 关闭</button>
+        </div>
+        <div class="drawer-tabs">
+            <button id="tab-btn-guide" class="tab-btn active" onclick="switchDrawerTab('guide')">☯ 历练指南</button>
+            <button id="tab-btn-realms" class="tab-btn" onclick="switchDrawerTab('realms')">🏆 境界历练</button>
+        </div>
+        <div class="drawer-content">
+            <div id="drawer-tab-content-guide" class="tab-content active"></div>
+            <div id="drawer-tab-content-realms" class="tab-content"></div>
+        </div>
+    </div>
+
+    <!-- DOM Interaction Script for sidebars -->
+    <script>
+        window.updateSidebar = function() {
+            if (!window.store || !window.store.state) return;
+            const currentRealm = window.store.get('progression.realm') || 1;
+            const unlockedNodes = window.store.get('unlockedNodes') || [1];
+            const nodeResults = window.store.get('nodeResults') || {};
+            
+            // Highlight current realm and completed nodes across both PC sidebar and mobile drawer
+            for (let i = 1; i <= 12; i++) {
+                const items = document.querySelectorAll('.realm-item[data-level="' + i + '"]');
+                items.forEach(item => {
+                    // Clear classes
+                    item.className = 'realm-item';
+                    
+                    const isUnlocked = unlockedNodes.includes(i);
+                    const isCompleted = nodeResults[i] && nodeResults[i].success;
+                    
+                    if (currentRealm === i) {
+                        item.classList.add('active');
+                    }
+                    
+                    // Reset standard text inside status span
+                    const statusSpan = item.querySelector('.realm-status');
+                    const baseNodeTitles = [
+                        "Node 1: 荒域初试",
+                        "Node 2: 千崖秘径",
+                        "Node 3: 镜魄试炼场",
+                        "Node 4: 天潮巢",
+                        "Node 5: 石都大战",
+                        "Node 6: 药都风云",
+                        "Node 7: 三千星州天才战",
+                        "Node 8: 星古遗地",
+                        "Node 9: 星脉书院",
+                        "Node 10: 边境星关",
+                        "Node 11: 裂隙边境大战",
+                        "Node 12: 终极血战"
+                    ];
+                    let baseTitle = baseNodeTitles[i - 1];
+
+                    if (isCompleted) {
+                        item.classList.add('completed');
+                        statusSpan.innerHTML = baseTitle + ' <span class="check-mark">✓已通关</span>';
+                    } else if (!isUnlocked && currentRealm < i) {
+                        item.classList.add('locked');
+                        statusSpan.innerHTML = '🔒 ' + baseTitle;
+                    } else {
+                        statusSpan.innerHTML = baseTitle;
+                    }
+                });
+            }
+        };
+
+        // Mobile drawer toggle functions
+        function toggleMobileDrawer(open) {
+            const drawer = document.getElementById('mobile-guide-drawer');
+            if (drawer) {
+                if (open) {
+                    drawer.classList.add('open');
+                    if (window.updateSidebar) window.updateSidebar();
+                } else {
+                    drawer.classList.remove('open');
+                }
+            }
+        }
+
+        function switchDrawerTab(tab) {
+            const guideContent = document.getElementById('drawer-tab-content-guide');
+            const realmsContent = document.getElementById('drawer-tab-content-realms');
+            const guideBtn = document.getElementById('tab-btn-guide');
+            const realmsBtn = document.getElementById('tab-btn-realms');
+            
+            if (tab === 'guide') {
+                guideContent.classList.add('active');
+                realmsContent.classList.remove('active');
+                guideBtn.classList.add('active');
+                realmsBtn.classList.remove('active');
+            } else {
+                guideContent.classList.remove('active');
+                realmsContent.classList.add('active');
+                guideBtn.classList.remove('active');
+                realmsBtn.classList.add('active');
+            }
+        }
+
+        // Copy PC sidebar HTML contents to Mobile Drawer once loaded
+        window.addEventListener('DOMContentLoaded', () => {
+            const leftContent = document.querySelector('.left-sidebar .sidebar-content');
+            const rightContent = document.querySelector('.right-sidebar .sidebar-content');
+            const drawerGuide = document.getElementById('drawer-tab-content-guide');
+            const drawerRealms = document.getElementById('drawer-tab-content-realms');
+            
+            if (leftContent && drawerGuide) drawerGuide.innerHTML = leftContent.innerHTML;
+            if (rightContent && drawerRealms) drawerRealms.innerHTML = rightContent.innerHTML;
+            
+            // Initial call to ensure states sync
+            setTimeout(() => {
+                if (window.updateSidebar) window.updateSidebar();
+            }, 500);
+        });
+
+        // Try to update periodically in case of load latency or store state switches
+        setInterval(() => {
+            if (window.updateSidebar) window.updateSidebar();
+        }, 1000);
+
+        function refreshGameScale() {
+            window.dispatchEvent(new Event('resize'));
+            requestAnimationFrame(() => {
+                if (window.game && window.game.scale && window.game.scale.refresh) {
+                    window.game.scale.refresh();
+                }
+            });
+        }
+
+        function setSimulatorScale(scale) {
+            document.body.dataset.simScale = scale;
+            localStorage.setItem('dahuang_simulator_scale', scale);
+            document.querySelectorAll('[data-sim-scale-button]').forEach(button => {
+                button.classList.toggle('active', button.dataset.simScaleButton === scale);
+            });
+            refreshGameScale();
+        }
+
+        async function toggleSimulatorFullscreen() {
+            const panel = document.getElementById('simulator-panel');
+            const fullscreenBtn = document.getElementById('simulator-fullscreen-btn');
+            if (!panel) return;
+
+            if (document.fullscreenElement) {
+                document.body.classList.remove('simulator-fullscreen');
+                await document.exitFullscreen();
+            } else if (document.body.classList.contains('simulator-fullscreen')) {
+                document.body.classList.remove('simulator-fullscreen');
+            } else if (panel.requestFullscreen) {
+                try {
+                    await panel.requestFullscreen();
+                } catch (error) {
+                    document.body.classList.add('simulator-fullscreen');
+                }
+                if (!document.fullscreenElement) {
+                    document.body.classList.add('simulator-fullscreen');
+                }
+            } else {
+                document.body.classList.add('simulator-fullscreen');
+            }
+
+            if (fullscreenBtn) {
+                const isFullscreen = Boolean(document.fullscreenElement || document.body.classList.contains('simulator-fullscreen'));
+                fullscreenBtn.textContent = isFullscreen ? '↙' : '⛶';
+                fullscreenBtn.setAttribute('aria-label', isFullscreen ? '退出全屏预览' : '全屏预览');
+                fullscreenBtn.setAttribute('title', isFullscreen ? '退出全屏预览' : '全屏预览');
+            }
+            refreshGameScale();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedScale = localStorage.getItem('dahuang_simulator_scale') || 'fit';
+            setSimulatorScale(savedScale);
+            document.querySelectorAll('[data-sim-scale-button]').forEach(button => {
+                button.addEventListener('click', () => setSimulatorScale(button.dataset.simScaleButton));
+            });
+            const fullscreenBtn = document.getElementById('simulator-fullscreen-btn');
+            if (fullscreenBtn) fullscreenBtn.addEventListener('click', toggleSimulatorFullscreen);
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            const fullscreenBtn = document.getElementById('simulator-fullscreen-btn');
+            if (fullscreenBtn) {
+                const isFullscreen = Boolean(document.fullscreenElement);
+                fullscreenBtn.textContent = isFullscreen ? '↙' : '⛶';
+                fullscreenBtn.setAttribute('aria-label', isFullscreen ? '退出全屏预览' : '全屏预览');
+                fullscreenBtn.setAttribute('title', isFullscreen ? '退出全屏预览' : '全屏预览');
+            }
+            refreshGameScale();
+        });
+    </script>
+
+    <!-- Main Entry (ES Module) -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

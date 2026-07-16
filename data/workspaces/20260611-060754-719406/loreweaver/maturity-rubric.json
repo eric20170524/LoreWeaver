@@ -1,0 +1,165 @@
+{
+  "schemaVersion": "loreweaver.maturity-rubric.v1",
+  "reportSchemaVersion": "loreweaver.maturity-report.v1",
+  "target": {
+    "score": 90,
+    "dimensionMinimumRatio": 0.8,
+    "coreDimensionMinimumRatio": 0.85,
+    "coreDimensions": [
+      "combat_agency",
+      "enemy_boss_design",
+      "level_campaign",
+      "art_animation_ui",
+      "mobile_performance"
+    ]
+  },
+  "categories": [
+    {
+      "id": "combat_agency",
+      "label": "Combat agency and feel",
+      "weight": 18,
+      "target": 18,
+      "minimumRatio": 0.85,
+      "criteria": [
+        { "id": "keyboard_movement", "max": 1 },
+        { "id": "touch_movement", "max": 2 },
+        { "id": "manual_action_surface", "max": 5 },
+        { "id": "combat_build_decisions", "max": 4 },
+        { "id": "hit_and_hurt_feedback", "max": 3 },
+        { "id": "human_decision_playtest", "max": 3 }
+      ]
+    },
+    {
+      "id": "enemy_boss_design",
+      "label": "Enemy and Boss design",
+      "weight": 12,
+      "target": 12,
+      "minimumRatio": 0.85,
+      "criteria": [
+        { "id": "enemy_registry", "max": 2 },
+        { "id": "boss_variety", "max": 2 },
+        { "id": "documented_telegraph_path", "max": 2 },
+        { "id": "counterplay_coverage", "max": 3 },
+        { "id": "boss_phase_e2e", "max": 3 }
+      ]
+    },
+    {
+      "id": "level_campaign",
+      "label": "Level and campaign content",
+      "weight": 14,
+      "target": 14,
+      "minimumRatio": 0.85,
+      "criteria": [
+        { "id": "registered_nodes", "max": 2 },
+        { "id": "node_scene_files", "max": 1 },
+        { "id": "node12_specific_path", "max": 1 },
+        { "id": "authored_level_contracts", "max": 4 },
+        { "id": "mechanics_e2e_coverage", "max": 3 },
+        { "id": "campaign_pacing_evidence", "max": 3 }
+      ]
+    },
+    {
+      "id": "progression_economy",
+      "label": "Progression, economy, replay",
+      "weight": 14,
+      "target": 14,
+      "minimumRatio": 0.8,
+      "criteria": [
+        { "id": "structured_realms", "max": 1 },
+        { "id": "skill_tiers", "max": 1 },
+        { "id": "basic_result_storage", "max": 1 },
+        { "id": "ability_unlocks", "max": 1 },
+        { "id": "balanced_campaign_curve", "max": 4 },
+        { "id": "three_viable_builds", "max": 3 },
+        { "id": "natural_replay_contract", "max": 3 }
+      ]
+    },
+    {
+      "id": "art_animation_ui",
+      "label": "Art, animation, UI readability",
+      "weight": 14,
+      "target": 14,
+      "minimumRatio": 0.85,
+      "criteria": [
+        { "id": "generated_atlas", "max": 1 },
+        { "id": "provenance", "max": 1 },
+        { "id": "runtime_art_status", "max": 1 },
+        { "id": "actor_action_clip_coverage", "max": 4 },
+        { "id": "environment_asset_coverage", "max": 4 },
+        { "id": "ui_readability_evidence", "max": 3 }
+      ]
+    },
+    {
+      "id": "audio_vfx_payoff",
+      "label": "Audio, VFX, emotional payoff",
+      "weight": 8,
+      "target": 8,
+      "minimumRatio": 0.8,
+      "criteria": [
+        { "id": "runtime_audio_manager", "max": 1 },
+        { "id": "semantic_audio_catalog", "max": 1 },
+        { "id": "managed_bgm_coverage", "max": 2 },
+        { "id": "runtime_sfx_coverage", "max": 2 },
+        { "id": "boss_and_result_payoff", "max": 2 }
+      ]
+    },
+    {
+      "id": "mobile_performance",
+      "label": "Mobile UX, performance, accessibility",
+      "weight": 8,
+      "target": 8,
+      "minimumRatio": 0.85,
+      "criteria": [
+        { "id": "touch_movement", "max": 2 },
+        { "id": "smoke_mobile_viewport", "max": 1 },
+        { "id": "pause_surface", "max": 1 },
+        { "id": "narrow_mobile_performance", "max": 2 },
+        { "id": "accessibility_settings", "max": 2 }
+      ]
+    },
+    {
+      "id": "original_identity",
+      "label": "Original identity and release safety",
+      "weight": 4,
+      "target": 4,
+      "minimumRatio": 0.8,
+      "criteria": [
+        { "id": "asset_provenance", "max": 1 },
+        { "id": "active_runtime_content_scan", "max": 2 },
+        { "id": "export_content_scan", "max": 1 }
+      ]
+    },
+    {
+      "id": "qa_save_release",
+      "label": "QA, telemetry, save and release reliability",
+      "weight": 8,
+      "target": 8,
+      "minimumRatio": 0.8,
+      "criteria": [
+        { "id": "release_smoke", "max": 4 },
+        { "id": "progression_contract", "max": 1 },
+        { "id": "clean_save_campaign", "max": 1 },
+        { "id": "save_migration", "max": 1 },
+        { "id": "standalone_export_smoke", "max": 1 }
+      ]
+    }
+  ],
+  "hardCaps": [
+    { "id": "auto_combat", "maxScore": 60, "label": "Critical combat decisions are mostly automatic" },
+    { "id": "late_game_balance", "maxScore": 55, "label": "Late-game stats trivialize Bosses or make player damage negligible" },
+    { "id": "thin_levels", "maxScore": 70, "label": "Production levels remain timer/spawn variants with generic Boss paths" },
+    { "id": "fallback_art", "maxScore": 65, "label": "Primary actors, Bosses, or scenes still depend on procedural fallback" },
+    { "id": "no_bgm", "maxScore": 70, "label": "No real BGM assets and managed audio channels" },
+    { "id": "no_natural_progression", "maxScore": 75, "label": "No clean-save natural campaign evidence" },
+    { "id": "mobile_readability", "maxScore": 70, "label": "Mobile readability and reachability have no passing evidence" },
+    { "id": "release_integrity", "maxScore": 80, "label": "Release smoke has runtime errors or missing resources" },
+    { "id": "originality_release", "maxScore": 80, "label": "Active runtime content still contains high-risk unreviewed IP text" }
+  ],
+  "requiredMissingEvidence": [
+    "human_playtest",
+    "clean_save_campaign",
+    "mobile_visual_performance",
+    "standalone_export_smoke"
+  ],
+  "waivers": []
+}

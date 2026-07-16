@@ -1,0 +1,58 @@
+{
+  "id": 3,
+  "title": "镜魄试炼场",
+  "intro": "镜魄试炼场内天才云集，最后三十秒出现强压 Boss 投影。目标是在高压围攻中完成封王试炼。",
+  "taunts": [
+    "玄曜虚影：我的好弟弟，你终究是不如我！",
+    "星骁：今日便要败你！"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +1000，纯血 +2，解锁荒域少年标记",
+  "goalValue": 180,
+  "resourceMultiplier": 2.2,
+  "difficulty": 3,
+  "durationLimit": 180,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "rhythm_timing",
+    "modifiers": [],
+    "knobs": {
+      "legacySceneClass": "Node3Scene",
+      "realmRequired": 3,
+      "enemyPool": [
+        "human_genius",
+        "genius_beast",
+        "shi_yi_projection",
+        "huo_linger_projection"
+      ],
+      "bossId": "shi_yi_phantom",
+      "sourceRewards": {
+        "bloodEssence": 1000,
+        "pureBlood": [
+          2,
+          2
+        ]
+      },
+      "unlocksFlag": "young_supreme"
+    },
+    "patchLevel": "L2"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "green_eagle_art",
+      "dual_pupil"
+    ],
+    "rewardUnlocks": [
+      "dual_pupil"
+    ],
+    "notes": "镜魄试炼场用玄曜投影引出紫曜瞳能力，作为高阶 Boss 与直线压制技能来源。"
+  }
+}

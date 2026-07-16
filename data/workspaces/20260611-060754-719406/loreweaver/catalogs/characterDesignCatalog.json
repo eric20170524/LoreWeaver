@@ -1,0 +1,228 @@
+[
+  {
+    "id": "shi_hao_young",
+    "name": "星骁 / 小猎者",
+    "role": "player_character",
+    "appearsNodeIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "combatIdentity": "高机动自动施法割草主角，靠境界、洞天、宝术与被动树逐步放大成长。",
+    "visualDesign": {
+      "silhouette": "少年体型，赤脚兽皮起步，后期叠加骨文光纹、洞天圆环与白金胸骨核心。",
+      "palette": [
+        "#f59e0b",
+        "#fef3c7",
+        "#38bdf8"
+      ],
+      "stageVariants": [
+        {
+          "realmRange": [
+            1,
+            3
+          ],
+          "look": "星槎村少年，兽皮短衣，拳罡和雷吼骨文是主要识别点。"
+        },
+        {
+          "realmRange": [
+            4,
+            8
+          ],
+          "look": "荒域少年，背后短暂浮现洞天光环，潮翼法与真凰火开始改变动作残影。"
+        },
+        {
+          "realmRange": [
+            9,
+            12
+          ],
+          "look": "星骁，胸口星骨白金核心常亮，终局可出现未来身残影。"
+        }
+      ]
+    },
+    "animationCues": [
+      "普通移动保持轻快脚步与拖尾，不做重甲感。",
+      "释放原始真解时身体前压，拳罡从手臂短促推出。",
+      "星骨觉醒时先停顿一拍，再从胸口向外扩散光环。"
+    ],
+    "skillConnections": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "kunpeng_art",
+      "supreme_bone",
+      "he_hua_zizai"
+    ],
+    "audioDirection": "早期偏拳风和骨片共鸣，中期加入雷、水、火三类元素声，终局加入低频钟鸣与多层合成人声。"
+  },
+  {
+    "id": "liu_shen",
+    "name": "青枝守护",
+    "role": "guardian_support",
+    "appearsNodeIds": [
+      1,
+      5,
+      6,
+      9,
+      12
+    ],
+    "combatIdentity": "不直接参战的守护意志，负责回复、护盾、缠绕和安全感。",
+    "visualDesign": {
+      "silhouette": "一截焦黑柳木与少量嫩绿枝条，特效上优先表现枝叶而非完整人形。",
+      "palette": [
+        "#22c55e",
+        "#ecfccb",
+        "#111827"
+      ],
+      "stageVariants": [
+        {
+          "realmRange": [
+            1,
+            6
+          ],
+          "look": "星槎村祭灵，只在回血和护盾时浮现柳叶粒子。"
+        },
+        {
+          "realmRange": [
+            7,
+            12
+          ],
+          "look": "法域化守护，终局节点可在画面边缘出现柳枝光幕。"
+        }
+      ]
+    },
+    "animationCues": [
+      "柳叶从屏幕边缘飘入角色附近，避免遮挡敌潮。",
+      "护盾刷新时枝条快速绕身一圈后淡出。",
+      "法域技能使用半透明绿金圆环承载长时状态。"
+    ],
+    "skillConnections": [
+      "willow_guard"
+    ],
+    "audioDirection": "极轻树叶摩擦、风铃和柔和木质敲击，音量低于主角攻击音。"
+  },
+  {
+    "id": "shi_yi_rival",
+    "name": "玄曜投影",
+    "role": "rival_boss",
+    "appearsNodeIds": [
+      3,
+      7,
+      10,
+      12
+    ],
+    "combatIdentity": "镜魄试炼场和终局压力源，提供紫曜瞳术的宿敌来源。",
+    "visualDesign": {
+      "silhouette": "冷色少年投影，双眼发紫白光，身形比星骁更直、更静。",
+      "palette": [
+        "#c084fc",
+        "#ffffff",
+        "#312e81"
+      ],
+      "stageVariants": [
+        {
+          "realmRange": [
+            3,
+            7
+          ],
+          "look": "镜魄试炼场投影，边缘有扫描线和碎片化轮廓。"
+        },
+        {
+          "realmRange": [
+            10,
+            12
+          ],
+          "look": "终局复现为弹幕与光束机制，不再依赖完整角色动画。"
+        }
+      ]
+    },
+    "animationCues": [
+      "出场时先亮眼再显形，制造被凝视感。",
+      "紫曜光束前有细线预警，给玩家反应空间。",
+      "被击败时不碎成血肉，而是化作紫白裂片。"
+    ],
+    "skillConnections": [
+      "dual_pupil"
+    ],
+    "audioDirection": "高频聚焦嗡鸣、冷色电流声、空间裂响。"
+  },
+  {
+    "id": "huo_linger_projection",
+    "name": "焰翎投影",
+    "role": "elite_memory",
+    "appearsNodeIds": [
+      3,
+      6,
+      7
+    ],
+    "combatIdentity": "中期火系精英与真凰火表现参照，不承担主线 UI 复杂关系系统。",
+    "visualDesign": {
+      "silhouette": "火红轻甲少女投影，身边有小型火羽与圆环火纹。",
+      "palette": [
+        "#ef4444",
+        "#fb923c",
+        "#fde68a"
+      ],
+      "stageVariants": [
+        {
+          "realmRange": [
+            3,
+            7
+          ],
+          "look": "以投影和火环机制出现，后续可扩展为剧情支援角色。"
+        }
+      ]
+    },
+    "animationCues": [
+      "火环展开时向外一圈热浪，随后保留轻微火星。",
+      "精英冲刺不做残忍表现，强调法术压力。"
+    ],
+    "skillConnections": [
+      "true_phoenix_art"
+    ],
+    "audioDirection": "细火噼啪与短促火羽掠过声。"
+  },
+  {
+    "id": "anlan_projection",
+    "name": "金阙君投影",
+    "role": "finale_boss_presence",
+    "appearsNodeIds": [
+      12
+    ],
+    "combatIdentity": "终极血战的阶段性压迫感来源，触发万象化影作为机制答案。",
+    "visualDesign": {
+      "silhouette": "不做完整大体量模型，采用屏幕边缘金色长矛、天渊裂隙和远处巨影。",
+      "palette": [
+        "#facc15",
+        "#1f2937",
+        "#ffffff"
+      ],
+      "stageVariants": [
+        {
+          "realmRange": [
+            12,
+            12
+          ],
+          "look": "阶段切换时短暂出现巨影和长矛轮廓，日常战斗中用弹幕与预警表现。"
+        }
+      ]
+    },
+    "animationCues": [
+      "阶段切换前屏幕降噪变暗，随后一束金色长矛预警落下。",
+      "万象化影触发时让金阙巨影短暂后退，形成情绪释放。"
+    ],
+    "skillConnections": [
+      "he_hua_zizai",
+      "supreme_bone"
+    ],
+    "audioDirection": "厚重钟鸣、低频冲击、远处金属长矛震颤。"
+  }
+]

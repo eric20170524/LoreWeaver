@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0",
+  "id": "survivor_horde",
+  "title": "Survivor Horde",
+  "category": "action_survival",
+  "status": "candidate",
+  "runtime": {
+    "engineTargets": ["phaser"],
+    "adapter": "SurvivorHordeAdapter",
+    "container": "phaser_scene"
+  },
+  "inputs": ["pointer_move", "keyboard_move"],
+  "objectives": ["survive_duration", "kill_count", "boss_defeat"],
+  "failure": ["player_hp_zero", "escort_dead", "timer_expired", "retreated"],
+  "knobs": {
+    "durationSec": {
+      "type": "number",
+      "default": 120,
+      "min": 10,
+      "max": 600,
+      "patchLevel": "L1",
+      "description": "Run duration."
+    },
+    "enemySpawnRateSec": {
+      "type": "number",
+      "default": 1,
+      "min": 0.05,
+      "max": 20,
+      "patchLevel": "L1",
+      "description": "Enemy spawn cadence."
+    },
+    "enemyPool": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L1",
+      "description": "Enemy definitions or texture ids."
+    },
+    "boss": {
+      "type": "object",
+      "default": null,
+      "patchLevel": "L1",
+      "description": "Optional boss configuration."
+    },
+    "modifiers": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L2",
+      "description": "Modifier ids attached to the run."
+    },
+    "rewardTable": {
+      "type": "object",
+      "default": {},
+      "patchLevel": "L1",
+      "description": "Rewards returned in NodeResult."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": ["L0", "L1", "L2"],
+    "requiresReview": ["L3", "L4"]
+  },
+  "requiredCoreSystems": ["NodePayload", "NodeResult", "GameplayAdapter", "GameplayModifier", "SceneLifecycle", "Store", "VFX", "WebAudioSynth", "ButtonBuilder", "ModalManager", "TestHooks"],
+  "resultContract": {
+    "successReason": "completed",
+    "failureReason": "hp_zero",
+    "telemetry": ["kills", "durationSec", "damageTaken", "soulsCollected"]
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "scene starts from NodePayload",
+      "player can move",
+      "enemy spawns",
+      "timer updates",
+      "retreat returns NodeResult",
+      "no console error during 10 second smoke run"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node1.js",
+    "minigame/xianni/js/data.js",
+    "minigame/perfectworld_dahuang/nodes/node1.js",
+    "minigame/perfectworld_dahuang/js/data.js"
+  ],
+  "fit": {
+    "goodFor": ["cultivation trials", "monster waves", "survival validation", "power fantasy combat"],
+    "poorFor": ["quiet puzzle scenes", "dialogue-only branches", "precision platforming"]
+  },
+  "knownRisks": [
+    "scene cleanup and timer cleanup are historically fragile",
+    "too many one-off subclasses can undermine modifier composition",
+    "needs deterministic test mode for E2E"
+  ]
+}

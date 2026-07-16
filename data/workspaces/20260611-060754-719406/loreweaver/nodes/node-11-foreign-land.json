@@ -1,0 +1,52 @@
+{
+  "id": 11,
+  "title": "异域大战",
+  "intro": "孤军深入异域，混合精英与王兽狂化袭击同时出现。考验极限走位和高频爆发。",
+  "taunts": [
+    "异域至尊：狂妄的后生，这里是异域！",
+    "星骁：异域又如何？照样杀穿！"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +500000，纯血 +30~50，不朽物质",
+  "goalValue": 300,
+  "resourceMultiplier": 38,
+  "difficulty": 11,
+  "durationLimit": 300,
+  "gameplay": {
+    "adapter": "iframe",
+    "cardId": "sequence_synthesis",
+    "modifiers": [],
+    "knobs": {
+      "legacySceneClass": "Node11Scene",
+      "realmRequired": 11,
+      "bossId": "ancient_beast_king",
+      "sourceRewards": {
+        "bloodEssence": 500000,
+        "pureBlood": [
+          30,
+          50
+        ]
+      }
+    },
+    "patchLevel": "L2"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery",
+      "pure_blood_trial"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "dual_pupil",
+      "kunpeng_art",
+      "true_phoenix_art",
+      "supreme_bone"
+    ],
+    "rewardUnlocks": [],
+    "notes": "首通意图: reinforce_existing(dual_pupil,true_phoenix_art,supreme_bone); 裂隙边境大战为终局前综合压测，读取全部已解锁宝术与主干被动。"
+  }
+}

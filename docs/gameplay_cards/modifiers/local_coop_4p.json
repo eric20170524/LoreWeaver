@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "id": "local_coop_4p",
+  "title": "Local Co-op 4P",
+  "category": "input_modifier",
+  "status": "candidate",
+  "modifierFor": ["side_scrolling_brawler"],
+  "knobs": {
+    "playersMax": { "type": "integer", "default": 4, "min": 1, "max": 4, "patchLevel": "L1" },
+    "keyboardLayoutCount": { "type": "integer", "default": 4, "min": 0, "max": 4, "patchLevel": "L1" },
+    "gamepadSlots": { "type": "integer", "default": 4, "min": 0, "max": 4, "patchLevel": "L1" },
+    "touchVirtualControls": { "type": "boolean", "default": true, "patchLevel": "L1" },
+    "perPlayerInventory": { "type": "boolean", "default": true, "patchLevel": "L1" },
+    "sharedCamera": { "type": "boolean", "default": true, "patchLevel": "L2" },
+    "edgeTriggeredActions": {
+      "type": "array",
+      "default": ["attack", "heavy", "dash", "special", "item", "jump", "coin", "start"],
+      "patchLevel": "L1"
+    }
+  },
+  "requiredCoreSystems": ["GameplayModifier", "LocalCoopInput", "GamepadMapper", "TouchControls", "HUD", "ActorController", "CameraController", "Inventory"],
+  "sourceProvenance": [
+    "minigame/three_kingdoms_brawl/README.md",
+    "minigame/three_kingdoms_brawl/js/input-controller.js",
+    "minigame/three_kingdoms_brawl/js/game-data.js",
+    "minigame/three_kingdoms_brawl/js/game.js"
+  ],
+  "knownRisks": [
+    "four keyboard layouts can conflict with browser shortcuts unless prevention is centralized",
+    "shared-camera clamps must keep all active players inside playable bounds",
+    "gamepad, WebHID, keyboard, and touch input should produce the same normalized action frame"
+  ]
+}

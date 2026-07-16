@@ -1,0 +1,56 @@
+{
+  "id": 2,
+  "title": "千崖秘径",
+  "intro": "千崖秘径遗迹开启，宝箱遍地而群敌环伺。玩家需要在夺宝与清怪之间切换节奏。",
+  "taunts": [
+    "千崖兽王：此地机缘，尽归吾所有！",
+    "星骁：你的宝骨，我看上了！"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +500，较高概率获得纯血",
+  "goalValue": 150,
+  "resourceMultiplier": 1.6,
+  "difficulty": 2,
+  "durationLimit": 150,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "drag_collect_grid",
+    "modifiers": [],
+    "knobs": {
+      "legacySceneClass": "Node2Scene",
+      "realmRequired": 2,
+      "enemyPool": [
+        "bandit_cultivator",
+        "burrow_wyrm",
+        "sky_predator",
+        "rock_golem"
+      ],
+      "bossId": "ancient_beast_king",
+      "sourceRewards": {
+        "bloodEssence": 500,
+        "pureBlood": [
+          0,
+          1
+        ]
+      }
+    },
+    "patchLevel": "L2"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "green_eagle_art"
+    ],
+    "rewardUnlocks": [
+      "green_eagle_art"
+    ],
+    "notes": "千崖秘径承接宝箱夺宝，通关后补青鳞鹰宝术，强化定点爆发。"
+  }
+}

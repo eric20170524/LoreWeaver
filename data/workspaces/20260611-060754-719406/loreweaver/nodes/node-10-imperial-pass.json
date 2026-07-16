@@ -1,0 +1,60 @@
+{
+  "id": 10,
+  "title": "边荒帝关",
+  "intro": "异域大军冲击城墙，玩家需要利用巨型床弩与自身宝术配合清屏，守住帝关防线。",
+  "taunts": [
+    "不朽者：帝关必破，九天当灭！",
+    "星骁：有我在，帝关不倒！"
+  ],
+  "mechanics": "survivor_horde",
+  "rewards": "气血精华 +250000，纯血 +20~30，边荒战功",
+  "goalValue": 300,
+  "resourceMultiplier": 26,
+  "difficulty": 10,
+  "durationLimit": 300,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "survivor_horde",
+    "modifiers": [
+      {
+        "id": "defend_core",
+        "knobs": {
+          "coreName": "帝关城墙",
+          "supportWeapon": "床弩"
+        }
+      }
+    ],
+    "knobs": {
+      "legacySceneClass": "Node10Scene",
+      "realmRequired": 10,
+      "bossId": "shi_yi_phantom",
+      "sourceRewards": {
+        "bloodEssence": 250000,
+        "pureBlood": [
+          20,
+          30
+        ]
+      }
+    },
+    "patchLevel": "L3"
+  },
+  "planning": {
+    "mainlineHooks": [
+      "blood_tempering",
+      "cave_opening",
+      "bone_script_mastery",
+      "pure_blood_trial"
+    ],
+    "runSkillPool": [
+      "primordial_true_record",
+      "suan_ni_baoshu",
+      "willow_guard",
+      "dual_pupil",
+      "kunpeng_art",
+      "true_phoenix_art",
+      "supreme_bone"
+    ],
+    "rewardUnlocks": [],
+    "notes": "首通意图: reinforce_existing(kunpeng_art,true_phoenix_art,supreme_bone); 边境星关需要高阶宝术应对同屏大军，planning 明确允许清屏、光环和机动方案。"
+  }
+}
