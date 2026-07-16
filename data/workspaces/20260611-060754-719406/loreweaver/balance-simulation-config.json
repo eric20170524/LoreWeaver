@@ -24,7 +24,7 @@
     "9": { "kind": "configured_boss", "hpMultiplier": 1 },
     "10": { "kind": "configured_boss", "hpMultiplier": 1.5 },
     "11": { "kind": "configured_boss", "hpMultiplier": 2 },
-    "12": { "kind": "configured_boss", "hpMultiplier": 1 }
+    "12": { "kind": "configured_boss", "hpMultiplier": 2.5 }
   },
   "spawnRuntime": {
     "1": { "kind": "base", "first": 1, "stepSeconds": 30 },

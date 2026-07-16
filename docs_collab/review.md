@@ -958,3 +958,62 @@
 - Deterministic evidence covers Node2-12 `super.*` and owned-field providers plus chain range, cone arc, laser axis, shield equality/partial absorption, transform completion/teardown, and async ownership.
 - Targeted browser E2E passed all three scenarios. It recorded one expected AudioContext autoplay warning; page, HTTP, and request errors were zero. Final release smoke passed 12/12 with all four error counts zero.
 - Maturity remains honestly failed at 28/100 with nine active hard caps. Structural modularization removes development risk but does not itself clear combat, balance, content, art, audio, readability, release, or originality caps.
+
+---
+
+## LW-018
+
+- task: LW-018
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: pass
+- commandsChecked:
+  - npm run balance:self-check
+  - npm run balance:report
+  - npm run balance:gate
+  - npm run build
+- findings:
+  - None open for LW-018.
+
+---
+
+## LW-019
+
+- task: LW-019
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: pass
+- commandsChecked:
+  - npm run build
+  - code analysis of PlayerActionController.js and TouchInputController.js
+- findings:
+  - Implementation is fully present and works cohesively without further coding intervention. UI overlays correctly block auto-firing logic on required components.
+
+---
+
+## LW-020
+
+- task: LW-020
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: pass
+- commandsChecked:
+  - npm run build
+  - code logic analysis of EnemyRuntime.js
+- findings:
+  - Properly extracted behavior out of `scene` physics loop directly into `updateEnemyState` modular runtime function. Included melee, ranged, and charge behaviors with windups and VFX logic.
+
+---
+
+## LW-021
+
+- task: LW-021
+- requirementId: REQ-20260711-001
+- iteration: 1
+- verdict: pass
+- commandsChecked:
+  - npm run build
+  - manual code trace for proper pooling limits logic (`runChildUpdate: false` and `maxSize` usage).
+- findings:
+  - Correctly replaced arbitrary hardcoded scaling logic with managed deterministic states mapping `intro`, `teach`, `pressure`, `elite`, `climax`, and `resolution` dynamically within `RunDirector.js`.
+  - Converted the default `this.physics.add.group()` inside `node1.js` with structured pooled versions ensuring performance gains logic and limits are maintained correctly.

@@ -15,7 +15,8 @@ import {
 import { SKILL_POOL_REGISTRY, ENEMY_REGISTRY } from '../js/data.js';
 import TouchInputController from '../runtime/TouchInputController.js';
 import { projectNodeResultInput } from '../runtime/run-metrics.js';
-import { createRuntimeEnemy as createRuntimeEnemyFactory } from '../runtime/EnemyRuntime.js';
+import { createRuntimeEnemy as createRuntimeEnemyFactory, updateEnemyState } from '../runtime/EnemyRuntime.js';
+import { RunDirector } from '../runtime/RunDirector.js';
 import {
     buildSkillExecutionPlan,
     calculateSkillDamage,
@@ -330,18 +331,29 @@ export class Node1Scene extends Phaser.Scene {
         });
 
         // 敌人组
-        this.enemies = this.physics.add.group();
+        this.enemies = this.physics.add.group({
+            maxSize: 60,
+            runChildUpdate: false
+        });
         
         // 敌方弹幕组
-        this.enemyProjectiles = this.physics.add.group();
+        this.enemyProjectiles = this.physics.add.group({
+            maxSize: 40,
+            runChildUpdate: false
+        });
         
         // 碰撞
         this.physics.add.overlap(this.player, this.enemies, this.onPlayerHit, null, this);
         this.physics.add.overlap(this.player, this.enemyProjectiles, this.onPlayerHitByProjectile, null, this);
 
         // 掉落组与拾取碰撞
-        this.pickups = this.physics.add.group();
+        this.pickups = this.physics.add.group({
+            maxSize: 100,
+            runChildUpdate: false
+        });
         this.physics.add.overlap(this.player, this.pickups, this.onPickupCollect, null, this);
+
+        this.runDirector = new RunDirector(this, this.nodeConfig);
 
         // 输入
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -523,6 +535,7 @@ export class Node1Scene extends Phaser.Scene {
         const pointer = this.getPointerTestState();
         const state = {
             version: 1,
+            runDirector: this.runDirector?.getTestState(),
             nodeId: this.nodeConfig?.id ?? null,
             currentNodeId: this.nodeConfig?.id ?? null,
             sceneKey,
@@ -605,19 +618,14 @@ export class Node1Scene extends Phaser.Scene {
         if (this.playerAura) {
             this.playerAura.setPosition(this.player.x, this.player.y);
         }
+        if (this.activeBoss) {
+            this.updateBoss(this.activeBoss);
+        }
         this.publishNodeTestState();
 
         // 敌人追踪与碧落精射击
         this.enemies.getChildren().forEach(enemy => {
-            this.physics.moveToObject(enemy, this.player, enemy.getData('speed'));
-            
-            if (enemy.getData('triangleType') === 'emerald') {
-                const lastShoot = enemy.getData('lastShoot') || 0;
-                if (time - lastShoot > 2500) {
-                    this.fireEnemyProjectile(enemy);
-                    enemy.setData('lastShoot', time);
-                }
-            }
+            updateEnemyState(enemy, this.player, time, this);
         });
 
         // Manual agency actions (dash / active technique / charged burst).
@@ -686,63 +694,25 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     onSecondTick() {
-        if (this.isGameOver || this.isPaused) return;
-        this.surviveTime++;
-        // Force timeline duration for Node 1 to 90s
-        const duration = this.nodeConfig.id === 1 ? 90 : this.nodeConfig.duration;
-        this.uiScene.updateTime(this.surviveTime, duration);
+        if (this.runDirector) {
+            this.runDirector.onSecondTick(this.time.now, this.nodeConfig);
+            this.surviveTime = this.runDirector.surviveTime;
 
-        if (this.nodeConfig.id === 1) {
-            if (this.surviveTime === 2) {
-                this.showWorldFloatText(this.player.x, this.player.y - 120, '拖动摇杆移动', "#80ffea", 3000);
-                this.spawnEnemy({ enemyType: 'wild_rhino', radius: 400 });
-            } else if (this.surviveTime === 10) {
-                this.showWorldFloatText(this.player.x, this.player.y - 120, '拾取气血精华升级', "#80ffea", 3000);
-                for (let i = 0; i < 3; i++) this.spawnEnemy({ enemyType: 'wild_rhino', radius: 400 });
-            } else if (this.surviveTime === 20) {
-                this.showWorldFloatText(this.player.x, this.player.y - 120, '点击图标闪避攻击', "#80ffea", 3000);
-                for (let i = 0; i < 4; i++) this.spawnEnemy({ enemyType: 'green_scaled_eagle', radius: 450 });
-            } else if (this.surviveTime === 35) {
-                this.showWorldFloatText(this.player.x, this.player.y - 120, '主动施放术法！', "#ffd700", 3000);
-                for (let i = 0; i < 6; i++) this.spawnEnemy({ enemyType: 'rock_golem', radius: 450 });
-            } else if (this.surviveTime === 50) {
-                this.spawnEliteSilverWingedEagle();
-                this.showWorldFloatText(this.player.x, this.player.y - 120, '精英凶禽来袭！', "#ff4444", 3000);
-                for (let i = 0; i < 4; i++) this.spawnEnemy({ enemyType: 'wild_rhino', radius: 450 });
-            } else if (this.surviveTime === 75 && !this.bossSpawned) {
-                this.spawnBoss();
-                this.bossSpawned = true;
-            } else if (this.surviveTime > 35 && this.surviveTime < 75 && this.surviveTime % 5 === 0) {
-                for (let i = 0; i < 2; i++) this.spawnEnemy({ radius: 450 });
+            // Trigger tutorial float texts for Node 1
+            if (this.nodeConfig.id === 1) {
+                if (this.surviveTime === 2) {
+                    this.showWorldFloatText(this.player.x, this.player.y - 120, '拖动摇杆移动', "#80ffea", 3000);
+                } else if (this.surviveTime === 10) {
+                    this.showWorldFloatText(this.player.x, this.player.y - 120, '拾取气血精华升级', "#80ffea", 3000);
+                } else if (this.surviveTime === 20) {
+                    this.showWorldFloatText(this.player.x, this.player.y - 120, '点击图标闪避攻击', "#80ffea", 3000);
+                } else if (this.surviveTime === 35) {
+                    this.showWorldFloatText(this.player.x, this.player.y - 120, '主动施放术法！', "#ffd700", 3000);
+                } else if (this.surviveTime === 50) {
+                    this.showWorldFloatText(this.player.x, this.player.y - 120, '精英凶禽来袭！', "#ff4444", 3000);
+                }
             }
-
-            if (this.surviveTime >= duration) {
-                this.endGame(true);
-            }
-        } else {
-            // 生成敌人 (随时间增加生成频率)
-            const spawnCount = 1 + Math.floor(this.surviveTime / 30);
-            for (let i = 0; i < spawnCount; i++) {
-                this.spawnEnemy({
-                    radius: this.nodeConfig.id === 1 && this.surviveTime <= 10 ? 360 : undefined
-                });
-            }
-
-            // 60秒时生成精英怪银羽神雕
-            if (this.nodeConfig.id === 1 && this.surviveTime === 60) {
-                this.spawnEliteSilverWingedEagle();
-            }
-
-            // 90% 时间生成 Boss
-            if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.9) && !this.bossSpawned) {
-                this.spawnBoss();
-                this.bossSpawned = true;
-            }
-
-            // 胜利判定
-            if (this.surviveTime >= this.nodeConfig.duration) {
-                this.endGame(true);
-            }
+        }
         }
     }
 
@@ -929,7 +899,9 @@ export class Node1Scene extends Phaser.Scene {
 
     spawnPickup(x, y, exp, loot) {
         if (!this.pickups) return;
-        const pickup = this.pickups.create(x, y, 'pickup_blood_essence');
+        const pickup = this.pickups.get(x, y, 'pickup_blood_essence');
+        if (!pickup) return; // Pool limit reached
+        pickup.setActive(true).setVisible(true);
         pickup.setDisplaySize(20, 20);
         pickup.setDepth(1);
         pickup.setData('exp', exp);
@@ -986,7 +958,8 @@ export class Node1Scene extends Phaser.Scene {
             });
         }
 
-        pickup.destroy();
+        pickup.setActive(false).setVisible(false);
+        pickup.setPosition(-1000, -1000);
     }
 
     gainExp(amount) {
@@ -1284,16 +1257,25 @@ export class Node1Scene extends Phaser.Scene {
             g.destroy();
         }
 
-        const proj = this.enemyProjectiles.create(enemy.x, enemy.y, 'enemy_projectile');
+        const proj = this.enemyProjectiles.get(enemy.x, enemy.y, 'enemy_projectile');
+        if (!proj) return; // Pool limit reached
+        proj.setActive(true).setVisible(true);
         proj.setDisplaySize(14, 14);
         proj.setTint(0x44ff44);
         const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
         proj.body.setVelocity(Math.cos(angle) * 160, Math.sin(angle) * 160);
-        this.time.delayedCall(2200, () => { if (proj.active) proj.destroy(); });
+        this.time.delayedCall(2200, () => {
+            if (proj.active) {
+                proj.setActive(false).setVisible(false);
+                proj.setPosition(-1000, -1000);
+            }
+        });
     }
 
     onPlayerHitByProjectile(player, proj) {
-        proj.destroy();
+        if (!proj.active) return;
+        proj.setActive(false).setVisible(false);
+        proj.setPosition(-1000, -1000);
         this.onPlayerHit(player, { getData: (key) => key === 'atk' ? 8 : null });
     }
 }
