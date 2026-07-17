@@ -24,3 +24,4 @@ data/workspaces/*/node_modules/
 **/source/
 docs_collab/screenshots/
 package-lock.json
+minigame/

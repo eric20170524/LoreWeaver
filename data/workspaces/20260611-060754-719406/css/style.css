@@ -204,18 +204,7 @@ body.simulator-fullscreen #game-container {
 
 /* Sidebars */
 .sidebar {
-    width: 320px;
-    height: 100%;
-    background: rgba(18, 14, 10, 0.7); /* 荒古巨石底板色 */
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border-right: 1px solid rgba(255, 170, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    padding: 35px 25px;
-    box-sizing: border-box;
-    overflow-y: auto;
-    z-index: 5;
+    display: none !important;
 }
 
 .right-sidebar {
