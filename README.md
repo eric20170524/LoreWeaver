@@ -9,6 +9,38 @@ The current product direction is not a one-shot game generator. LoreWeaver is
 designed as a controllable personal workflow for building, revising, auditing,
 and reusing small game prototypes.
 
+## Product Showcase / 产品形态效果展示
+
+Here is the visual walkthrough of the LoreWeaver AI game workbench.
+以下是 LoreWeaver 个人游戏工作台各功能板块的实际界面效果展示：
+
+### 1. Main Workbench & Simulator / 主工作台与 H5 模拟器
+The main dashboard displays the orchestrator DAG pipeline on the left, the real-time world-building agent chat in the middle (supporting HITL micro-adjustments), and the active WebGL H5 Phaser game simulator on the right.
+主控制面板：左侧为自动化编排 DAG 管线，中间为双语智能助手（支持人机协作微调数值与境界），右侧为内嵌的 Phaser WebGL 物理模拟器。
+
+![Main Workbench with Simulator](assets/03_workbench_emulator.png)
+
+---
+
+### 2. Tab Navigation & Interactive Panels / 板块导航与交互面板
+
+| Functional Module / 功能模块 | Interface Snapshot / 界面截图 | Description / 功能详述 |
+| :--- | :--- | :--- |
+| **Workspace Selector**<br>工作区项目大厅 | ![Workspace Selector](assets/02_workspace_selector_open.png) | Manages localized isolated project sandboxes and directory imports.<br>支持隔离工作区的新建、导入和多项目平滑切换。 |
+| **Design Brief (GDD)**<br>小说 IP 企划方案 | ![Design Brief](assets/04_workbench_prd.png) | Displays generated theme settings, core economies, and progression levels.<br>系统自动解构生成的同人小说 IP 专属设计文案与数值蓝图。 |
+| **Gameplay Catalog**<br>玩法卡工作台 | ![Gameplay Catalog](assets/05_workbench_gameplay.png) | Patches individual level nodes with gameplay cards and modifiers (e.g. survivor horde).<br>以可复用玩法卡与修饰器（如割草、反应聚灵）对关卡进行局部分片修补。 |
+| **Manifest Editor**<br>游戏配置清单 | ![Manifest Editor](assets/06_workbench_manifest.png) | Views and validates the unified `manifest.json` game configuration.<br>查看并校验驱动游戏运转的统一标准化 JSON 数据注册表。 |
+| **VLM Visual Audit**<br>视觉多模态审计 | ![VLM Visual Audit](assets/07_workbench_vlm.png) | Automatically detects layout overlaps, text wrapping, and page hygiene via Vision models.<br>通过大语言视觉模型（VLM）智能判定游戏画面的折行溢出与重叠异常。 |
+| **Multilingual Support**<br>国际化语言切换 | ![English Design Brief](assets/08_workbench_prd_en.png) | Demonstrates full English and Chinese localization of the workbench.<br>支持中英文双语一键无缝切换，适配全球化协同场景。 |
+
+---
+
+### 3. Startup & Empty State / 初始状态与冷启动
+When no theme is compiled or active, the workbench presents an elegant empty state prompting the user to type an IP theme and hit the compilation switch.
+在未加载或编译任何主题前，工作台展示优雅的冷启动状态，指引用户输入修真/东方同人设定并一键唤醒管线。
+
+![Empty Workbench Lobby](assets/01_lobby_empty.png)
+
 ## What It Does
 
 - Creates isolated project workspaces from a name and theme.

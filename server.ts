@@ -34,26 +34,31 @@ let pythonProcess: any = null;
 let viteProcess: any = null;
 
 function getPythonCommand(): string {
+  const isWindows = process.platform === "win32";
+  const binDir = isWindows ? "Scripts" : "bin";
+  const pythonExe = isWindows ? "python.exe" : "python";
+  const python3Exe = isWindows ? "python.exe" : "python3";
+
   if (process.env.VIRTUAL_ENV) {
-    const envPython = path.join(process.env.VIRTUAL_ENV, "bin", "python");
+    const envPython = path.join(process.env.VIRTUAL_ENV, binDir, pythonExe);
     if (fs.existsSync(envPython)) return envPython;
-    const envPython3 = path.join(process.env.VIRTUAL_ENV, "bin", "python3");
+    const envPython3 = path.join(process.env.VIRTUAL_ENV, binDir, python3Exe);
     if (fs.existsSync(envPython3)) return envPython3;
   }
 
   const parentVenv = path.join(process.cwd(), "..", "venv");
-  const parentPython = path.join(parentVenv, "bin", "python");
+  const parentPython = path.join(parentVenv, binDir, pythonExe);
   if (fs.existsSync(parentPython)) return parentPython;
-  const parentPython3 = path.join(parentVenv, "bin", "python3");
+  const parentPython3 = path.join(parentVenv, binDir, python3Exe);
   if (fs.existsSync(parentPython3)) return parentPython3;
 
   const localVenv = path.join(process.cwd(), "venv");
-  const localPython = path.join(localVenv, "bin", "python");
+  const localPython = path.join(localVenv, binDir, pythonExe);
   if (fs.existsSync(localPython)) return localPython;
-  const localPython3 = path.join(localVenv, "bin", "python3");
+  const localPython3 = path.join(localVenv, binDir, python3Exe);
   if (fs.existsSync(localPython3)) return localPython3;
 
-  return "python3";
+  return isWindows ? "python" : "python3";
 }
 
 function tryLaunchPythonBackend() {
@@ -103,7 +108,8 @@ function pipeChildLogs(label: string, child: any) {
 }
 
 function tryLaunchViteFrontend() {
-  const viteBin = path.join(process.cwd(), "node_modules", ".bin", "vite");
+  const isWindows = process.platform === "win32";
+  const viteBin = path.join(process.cwd(), "node_modules", ".bin", isWindows ? "vite.cmd" : "vite");
   console.log(`Attempting to spawn Vite frontend on port ${VITE_DEV_PORT}...`);
   viteProcess = spawn(viteBin, [
     "--host",
@@ -116,7 +122,8 @@ function tryLaunchViteFrontend() {
     env: {
       ...process.env,
       DISABLE_HMR: "true"
-    }
+    },
+    shell: isWindows
   });
   pipeChildLogs("Vite", viteProcess);
 }

@@ -7,11 +7,11 @@ import {
   createSurvivorHordeModifier,
   TapReactionAdapter,
   CollectDodgeAdapter
-} from "../../../minigame_master/core/lib/gameplay/index.js";
+} from "../../minigame_master/core/lib/gameplay/index.js";
 import {
   createNodePayload,
   TestHooks
-} from "../../../minigame_master/core/lib/contracts/index.js";
+} from "../../minigame_master/core/lib/contracts/index.js";
 
 const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
   hazard_telegraph: {
