@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "defend_core",
   "title": "Defend Core",
   "category": "defense_objective",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -45,5 +45,30 @@
   "knownRisks": [
     "needs clear core damage feedback and failure messaging"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+defend_core"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "defend_core"
+    ],
+    "audioCues": [
+      "sfx_defend_core"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

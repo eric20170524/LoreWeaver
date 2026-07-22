@@ -346,7 +346,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.state.score += 1;
         this.playSynthSound('loot');
         this.spawnParticles(f.go.x, f.go.y, 0x10b981);
-        this.spawnFloatingText(f.go.x, f.go.y, '+1 灵气', '#10b981');
+        this.spawnFloatingText(f.go.x, f.go.y, '+1', '#10b981');
 
         if (this.state.score >= this.config.goalValue) {
             this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);

@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "branch_route_chain",
   "title": "Branch Route Chain",
   "category": "route_modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "side_scrolling_brawler",
     "node_iframe_microgame"
@@ -67,5 +67,32 @@
     "route history needs stable keys so repeated retries do not double-award rewards",
     "branch room rewards must remain optional when a runtime cannot render side rooms"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "side_scrolling_brawler",
+    "node_iframe_microgame"
+  ],
+  "verifiedCombinations": [
+    "side_scrolling_brawler+branch_route_chain",
+    "node_iframe_microgame+branch_route_chain"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "branch_route_chain"
+    ],
+    "audioCues": [
+      "sfx_branch_route_chain"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

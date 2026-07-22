@@ -68,7 +68,7 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
         this.lifecycle.start();
         const { width, height } = scene.scale;
 
-        this.ui.title = scene.add.text(width / 2, 40, '符文连阵', {
+        this.ui.title = scene.add.text(width / 2, 40, '顺序连线', {
             fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
         this.ui.hint = scene.add.text(width / 2, 68, '', {

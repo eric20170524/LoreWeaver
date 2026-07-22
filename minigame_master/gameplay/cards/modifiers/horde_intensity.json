@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "horde_intensity",
   "title": "Horde Intensity",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -29,5 +29,30 @@
     "minigame/perfectworld_dahuang/nodes/node3.js"
   ],
   "knownRisks": [],
-  "implementationNotes": "Survivor_horde modifier factory wired."
+  "implementationNotes": "Survivor_horde modifier factory wired.",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+horde_intensity"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "horde_intensity"
+    ],
+    "audioCues": [
+      "sfx_horde_intensity"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

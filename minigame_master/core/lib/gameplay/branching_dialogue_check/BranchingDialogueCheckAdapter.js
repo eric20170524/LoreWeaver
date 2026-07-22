@@ -5,51 +5,51 @@ import SceneLifecycle from '../../contracts/SceneLifecycle.js';
 const DEFAULT_NODES = Object.freeze([
     {
         id: 'start',
-        speaker: '引路人',
-        text: '前路分岔。你的修为与法宝，将决定可走的道途。',
+        speaker: '引导者',
+        text: '前路分岔。你的能力与持有物品，将决定可选择的探索路线。',
         choices: [
             { id: 'humble', label: '谦逊求教', favorDelta: 15, next: 'path_a', requires: {} },
-            { id: 'proud', label: '傲然宣称', favorDelta: -10, next: 'path_b', requires: {} },
-            { id: 'relic', label: '出示法宝求证', favorDelta: 25, next: 'path_c', requires: { flag: 'has_relic' }, fallback: 'path_blocked' }
+            { id: 'proud', label: '自信宣称', favorDelta: -10, next: 'path_b', requires: {} },
+            { id: 'relic', label: '展示关键物品', favorDelta: 25, next: 'path_c', requires: { flag: 'has_relic' }, fallback: 'path_blocked' }
         ]
     },
     {
         id: 'path_a',
-        speaker: '引路人',
-        text: '他点头认可你的心性，赠予一线机缘。',
+        speaker: '引导者',
+        text: '对方认可你的态度，提供了一条有价值的线索。',
         choices: [
-            { id: 'accept', label: '受之有愧，仍坦然收下', favorDelta: 10, next: 'end_good', requires: {} }
+            { id: 'accept', label: '表示感谢并接受', favorDelta: 10, next: 'end_good', requires: {} }
         ]
     },
     {
         id: 'path_b',
-        speaker: '引路人',
-        text: '对方神色冷淡。你仍可强行争锋，或低头缓和。',
+        speaker: '引导者',
+        text: '对方语气冷淡。你可以尝试展示实力，或转为低调。',
         choices: [
-            { id: 'fight', label: '强行争锋', favorDelta: -20, next: 'end_bad', requires: { minRealm: 3 }, fallback: 'end_neutral' },
-            { id: 'soften', label: '放低姿态', favorDelta: 12, next: 'end_neutral', requires: {} }
+            { id: 'fight', label: '展示实力', favorDelta: -20, next: 'end_bad', requires: { minRealm: 3 }, fallback: 'end_neutral' },
+            { id: 'soften', label: '调整语气', favorDelta: 12, next: 'end_neutral', requires: {} }
         ]
     },
     {
         id: 'path_c',
-        speaker: '引路人',
-        text: '法宝光华一闪，关卡为你洞开。',
+        speaker: '引导者',
+        text: '关键物品确认成功，前往核心区域的通道已打开。',
         choices: [
-            { id: 'enter', label: '踏入秘境', favorDelta: 20, next: 'end_good', requires: {} }
+            { id: 'enter', label: '进入核心区域', favorDelta: 20, next: 'end_good', requires: {} }
         ]
     },
     {
         id: 'path_blocked',
-        speaker: '引路人',
-        text: '你并无对应法宝，对方只留下一句冷嘲。',
+        speaker: '引导者',
+        text: '未检测到必需物品，无法开启该路线。',
         choices: [
-            { id: 'leave', label: '退回岔路', favorDelta: -5, next: 'end_neutral', requires: {} }
+            { id: 'leave', label: '返回主路线', favorDelta: -5, next: 'end_neutral', requires: {} }
         ]
     },
     {
         id: 'end_good',
         speaker: '系统',
-        text: '你获得上佳机缘。',
+        text: '你获得额外提升。',
         ending: 'good',
         rewardTier: 2
     },
@@ -118,7 +118,7 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
         const storyFlags = payload.storyFlags || payload.flags || [];
         const flags = Array.isArray(storyFlags) ? storyFlags.slice() : [];
         if (inventory.relics?.length || knobs.hasRelic) flags.push('has_relic');
-        if (payload.playerPerks?.some?.((p) => /relic|法宝/i.test(String(p)))) flags.push('has_relic');
+        if (payload.playerPerks?.some?.((p) => /relic/i.test(String(p)))) flags.push('has_relic');
 
         this.state.favor = Number(knobs.startFavor ?? this.config.startFavor ?? 40);
         this.state.nodeId = nodes[0]?.id || 'start';
@@ -194,7 +194,7 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
 
         this.ui.speaker?.setText(node.speaker || '—');
         this.ui.body?.setText(node.text || '');
-        this.ui.meta?.setText(`好感 ${this.state.favor}  ·  境界 ${this.state.realmStage}  ·  路径 ${this.state.path.join(' → ')}`);
+        this.ui.meta?.setText(`属性 ${this.state.favor}  ·  阶段 ${this.state.realmStage}  ·  路径 ${this.state.path.join(' → ')}`);
 
         if (node.ending) {
             this.state.score = (node.rewardTier || 0) * 50 + Math.max(0, this.state.favor);

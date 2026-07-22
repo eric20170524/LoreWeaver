@@ -222,7 +222,7 @@ function inferEnemyArchetype(enemyId, design = {}) {
     if (/huo|火/.test(read)) return 'fire_elite';
     if (/shi_yi|重瞳|投影|虚影/.test(read)) return 'rival_projection';
     if (/qiongqi|king|boss|穷奇|兽王|巨兽/.test(read)) return 'boss';
-    if (/human|bandit|cultivator|人形|修士|天才/.test(read)) return 'humanoid';
+    if (/human|bandit|cultivator|humanoid|character/.test(read)) return 'humanoid';
     return 'horned_beast';
 }
 

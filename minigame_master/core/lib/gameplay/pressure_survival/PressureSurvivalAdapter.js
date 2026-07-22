@@ -65,7 +65,7 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
         this.lifecycle.start();
         const { width, height } = scene.scale;
 
-        this.ui.title = scene.add.text(width / 2, 40, '煞气压境', {
+        this.ui.title = scene.add.text(width / 2, 40, '极限抗压', {
             fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
         this.ui.bar = scene.add.graphics();
@@ -79,7 +79,7 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
         this.ui.skill = scene.add.rectangle(width - 70, height - 90, 100, 44, 0xf97316, 0.9)
             .setStrokeStyle(2, 0xffffff, 0.35)
             .setInteractive({ useHandCursor: true });
-        this.ui.skillLabel = scene.add.text(width - 70, height - 90, '御煞', {
+        this.ui.skillLabel = scene.add.text(width - 70, height - 90, '强压', {
             fontFamily: 'Inter, sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#0f172a'
         }).setOrigin(0.5);
         this.ui.skill.on('pointerdown', () => this.useSkill());
@@ -193,7 +193,7 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
             `压力 ${Math.ceil(this.state.pressure)}/${this.config.pressureMax}  ·  剩余 ${left.toFixed(1)}s  ·  技能CD ${this.state.skillCd.toFixed(1)}s`
         );
         this.ui.skill?.setAlpha(this.state.skillCd > 0 ? 0.4 : 0.95);
-        this.ui.skillLabel?.setText(this.state.skillCd > 0 ? `${this.state.skillCd.toFixed(1)}s` : '御煞');
+        this.ui.skillLabel?.setText(this.state.skillCd > 0 ? `${this.state.skillCd.toFixed(1)}s` : '强压');
     }
 
     getTestState() {

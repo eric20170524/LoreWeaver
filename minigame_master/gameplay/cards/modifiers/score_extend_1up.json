@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "score_extend_1up",
   "title": "Score Extend 1UP",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "side_scrolling_brawler"
   ],
@@ -35,5 +35,30 @@
     "minigame/three_kingdoms_brawl/js/score-awards.js"
   ],
   "knownRisks": [],
-  "implementationNotes": "Brawler modifier factory wired."
+  "implementationNotes": "Brawler modifier factory wired.",
+  "compatibleBaseCards": [
+    "side_scrolling_brawler"
+  ],
+  "verifiedCombinations": [
+    "side_scrolling_brawler+score_extend_1up"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "score_extend_1up"
+    ],
+    "audioCues": [
+      "sfx_score_extend_1up"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

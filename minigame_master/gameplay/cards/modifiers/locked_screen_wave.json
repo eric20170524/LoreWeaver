@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "locked_screen_wave",
   "title": "Locked Screen Wave",
   "category": "brawler_wave_modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "side_scrolling_brawler"
   ],
@@ -62,5 +62,30 @@
     "wave completion must clear spawned hazards and pending timers before advancing",
     "boss intro freeze/grace windows can hide input bugs if TestHooks do not expose them"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "side_scrolling_brawler"
+  ],
+  "verifiedCombinations": [
+    "side_scrolling_brawler+locked_screen_wave"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "locked_screen_wave"
+    ],
+    "audioCues": [
+      "sfx_locked_screen_wave"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

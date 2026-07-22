@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "self_destruct_enemy",
   "title": "Self Destruct Enemy",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -13,5 +13,30 @@
     "minigame/xianni/nodes/node2.js"
   ],
   "knownRisks": [],
-  "implementationNotes": "Survivor modifier factory wired."
+  "implementationNotes": "Survivor modifier factory wired.",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+self_destruct_enemy"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "self_destruct_enemy"
+    ],
+    "audioCues": [
+      "sfx_self_destruct_enemy"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

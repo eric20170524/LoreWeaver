@@ -131,7 +131,7 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         g.lineStyle(2, 0xf59e0b, 0.5);
         g.strokeRoundedRect(width * 0.18, height * 0.16, width * 0.64, height * 0.28, 18);
 
-        this.ui.title = this.scene.add.text(width / 2, height * 0.2, '顺序炼制', {
+        this.ui.title = this.scene.add.text(width / 2, height * 0.2, '顺序合成', {
             fontFamily: 'Inter, sans-serif',
             fontSize: '22px',
             fontStyle: 'bold',

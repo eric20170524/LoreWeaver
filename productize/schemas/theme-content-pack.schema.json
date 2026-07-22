@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "loreweaver.theme-content-pack.v1",
+  "title": "Theme Content Pack V1",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "themeId",
+    "locales",
+    "defaultLocale",
+    "levelMeta",
+    "entities"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "themeId": { "type": "string", "minLength": 1 },
+    "locales": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "defaultLocale": { "type": "string" },
+    "levelMeta": {
+      "type": "object",
+      "required": ["title", "intro", "objectiveText", "controlHints", "hudLabels", "victoryText", "failureText", "retreatText"],
+      "properties": {
+        "title": { "type": "object", "additionalProperties": { "type": "string" } },
+        "intro": { "type": "object", "additionalProperties": { "type": "string" } },
+        "objectiveText": { "type": "object", "additionalProperties": { "type": "string" } },
+        "controlHints": { "type": "object", "additionalProperties": { "type": "string" } },
+        "hudLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "victoryText": { "type": "object", "additionalProperties": { "type": "string" } },
+        "failureText": { "type": "object", "additionalProperties": { "type": "string" } },
+        "retreatText": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "entities": {
+      "type": "object",
+      "properties": {
+        "player": { "type": "object", "additionalProperties": { "type": "string" } },
+        "enemies": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } },
+        "bosses": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } },
+        "pickups": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } },
+        "materials": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } },
+        "skills": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } },
+        "statuses": { "type": "object", "additionalProperties": { "type": "object", "additionalProperties": { "type": "string" } } }
+      }
+    },
+    "dialogue": {
+      "type": "object",
+      "properties": {
+        "nodes": { "type": "array" },
+        "choices": { "type": "array" },
+        "conditionPrompts": { "type": "object" },
+        "endings": { "type": "object" }
+      }
+    },
+    "copyKeys": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "string" }
+      }
+    }
+  },
+  "additionalProperties": true
+}

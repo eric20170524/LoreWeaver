@@ -1,14 +1,15 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "rhythm_then_pickup",
   "title": "Rhythm Then Pickup",
   "category": "microgame",
-  "status": "validated",
+  "status": "runtime_ready",
   "runtime": {
     "engineTargets": [
       "phaser"
     ],
-    "adapter": "RhythmThenPickupAdapter"
+    "adapter": "RhythmThenPickupAdapter",
+    "template": "rhythm_then_pickup"
   },
   "inputs": [
     "pointer",
@@ -57,5 +58,56 @@
     "poorFor": []
   },
   "knownRisks": [],
-  "implementationNotes": "Core adapter wired."
+  "implementationNotes": "Core adapter wired.",
+  "requiredAssets": {
+    "playerClips": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt",
+      "death"
+    ],
+    "enemyKinds": [
+      "mob",
+      "elite",
+      "boss"
+    ],
+    "environments": [
+      "bg_default"
+    ],
+    "audioCues": [
+      "bgm_main",
+      "sfx_attack",
+      "sfx_hit",
+      "sfx_win",
+      "sfx_lose"
+    ]
+  },
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "bossP95Fps": 45,
+    "maxActiveEnemies": 50
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "visual",
+      "audio",
+      "e2e"
+    ],
+    "notes": "Migrated to Gameplay Card V2 maturity model."
+  },
+  "testScenarios": [
+    {
+      "id": "smoke_test",
+      "tags": [
+        "smoke",
+        "runtime"
+      ]
+    }
+  ],
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting P1-P7 production readiness certification"
+  }
 }

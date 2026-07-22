@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { GameSpec, PlayerState, NodeSpec, GameplayModifierSpec, NodeResult } from "../types";
 import { synth } from "../utils/AudioSynth";
+import AudioAssetResolver from "../../minigame_master/core/lib/audio/AudioAssetResolver.js";
 import { RewardApplier } from "../utils/RewardApplier";
 import {
   SurvivorHordeAdapter,
@@ -38,6 +39,7 @@ import {
   RuntimeArtBinder
 } from "../../minigame_master/core/lib/graphics/index.js";
 import { UIPlugin, UIPluginContext } from "./ui/UIPlugin";
+import { GAMEPLAY_CARD_OPTIONS } from "../utils/gameplayManifest";
 import { DefaultUIPlugin } from "./ui/DefaultUIPlugin";
 import { CultivationUIPlugin } from "./ui/CultivationUIPlugin";
 
@@ -222,7 +224,7 @@ export function initializePhaserGame(
       } as any).setOrigin(0.5);
 
       const subtitleText = this.add.text(width / 2, height / 2 + 190, String(
-        bootKnobs.statusText || "正在初始化修真世界沙盒 INITIALIZING..."
+        bootKnobs.statusText || "正在初始化游戏运行沙盒 INITIALIZING..."
       ), {
         fontFamily: "JetBrains Mono, monospace",
         fontSize: "20px",
@@ -243,6 +245,7 @@ export function initializePhaserGame(
     private scrollContainer!: Phaser.GameObjects.Container;
     private bgGraphics!: Phaser.GameObjects.Graphics;
     private activeUIPlugin!: UIPlugin;
+    private audioResolver: any = null;
 
     constructor() {
       super({ key: "MainScene" });
@@ -362,7 +365,7 @@ export function initializePhaserGame(
         this.scrollContainer.add(titleText);
 
         // Sub description intro text
-        const introTextStr = isUnlocked ? node.intro : "未觉醒。请先参透前面境界及关卡桎梏。";
+        const introTextStr = isUnlocked ? node.intro : "尚未解锁。请先完成前置节点。";
         const descText = this.add.text(42, dy + 42, introTextStr, {
           fontFamily: "Inter, sans-serif",
           fontSize: "16px",
@@ -387,7 +390,7 @@ export function initializePhaserGame(
             padding: { x: 5, y: 3 }
           });
           
-          const rwd = this.add.text(230, dy + 82, `造化: ${node.rewards}`, {
+          const rwd = this.add.text(230, dy + 82, `奖励: ${node.rewards}`, {
             fontFamily: "Inter, sans-serif",
             fontSize: "15px",
             color: "#f59e0b"
@@ -473,6 +476,7 @@ export function initializePhaserGame(
     private activeIframe: HTMLIFrameElement | null = null;
     private iframeListener: ((ev: MessageEvent) => void) | null = null;
     private iframeContainer: any = null;
+    private audioResolver: any = null;
 
     // Tap Reaction lists
     private spawnTimer!: Phaser.Time.TimerEvent;
@@ -809,12 +813,12 @@ export function initializePhaserGame(
 
       const knobs = (this.node.gameplay?.knobs || {}) as Record<string, any>;
 
-      // Ambient BGM — prefer knobs.bgmKey for workspace audio contract, fallback synth
-      const bgmKey = typeof knobs.bgmKey === "string" ? knobs.bgmKey : "";
-      if (bgmKey) {
-        onLog(`🎵 节点 BGM 合同: ${bgmKey}${knobs.bossBgmKey ? ` · boss=${knobs.bossBgmKey}` : ""}`);
+      if (!this.audioResolver) {
+        this.audioResolver = new AudioAssetResolver({ synthFallback: true });
       }
-      synth.startBgm();
+      const bgmKey = typeof knobs.bgmKey === "string" && knobs.bgmKey ? knobs.bgmKey : "bgm_default";
+      onLog(`🎵 节点 BGM 合同: ${bgmKey}${knobs.bossBgmKey ? ` · boss=${knobs.bossBgmKey}` : ""}`);
+      this.audioResolver.playBgm(bgmKey);
 
       // Show level introductory overlay, and launch game only when skipped/completed
       this.showLevelIntro(() => {
@@ -872,7 +876,7 @@ export function initializePhaserGame(
           /* ignore */
         }
         synth.playClick();
-        onLog(`◀ 已主动撤出境界考验 [节点 ${this.node.id}]。正在返回修真卷轴主态。`);
+        onLog(`◀ 已主动撤出节点考验 [节点 ${this.node.id}]。正在返回主视图。`);
         // Always leave the node scene; adapter.retreat notifies rewards/path, then force shell.
         try {
           if (this.iframeContainer) {
@@ -944,7 +948,7 @@ export function initializePhaserGame(
     private drawLevelHeader(width: number, height: number, themeHex: number) {
       // Display Boss dialogue / Taunt quotes
       const idx = Phaser.Math.Between(0, this.node.taunts.length - 1);
-      const chosenTaunt = this.node.taunts[idx] || "「境界凡愚，命数如此！」";
+      const chosenTaunt = this.node.taunts[idx] || "「挑战尚未成功，再试一次吧！」";
       
       const phraseText = this.add.text(width / 2, 100, chosenTaunt, {
         fontFamily: "Inter, sans-serif",
@@ -1266,7 +1270,7 @@ export function initializePhaserGame(
         this.scoreHUD.setText(`已吸收: ${this.scoreCount} / ${this.node.goalValue}`);
         
         // Spawn micro numbers floating animation
-        const fx = this.add.text(rx, ry, `+${gain} 灵气`, { fontFamily: "JetBrains Mono", fontSize: "18px", color: spec.themeColor });
+        const fx = this.add.text(rx, ry, `+${gain} 能量`, { fontFamily: "JetBrains Mono", fontSize: "18px", color: spec.themeColor });
         this.tweens.add({
           targets: fx,
           y: ry - 40,
@@ -1559,7 +1563,7 @@ export function initializePhaserGame(
         this.scoreHUD.setText(`心神共鸣: ${this.scoreCount} / ${this.node.goalValue}`);
 
         const { width, height } = this.scale;
-        const fx = this.add.text(width / 2, height / 2 - 40, `+${gain} 灵气`, {
+        const fx = this.add.text(width / 2, height / 2 - 40, `+${gain} 能量`, {
           fontFamily: "JetBrains Mono, monospace",
           fontSize: "22px",
           color: spec.themeColor || "#10b981"
@@ -1590,11 +1594,11 @@ export function initializePhaserGame(
         synth.stopBossTheme();
         synth.stopBgm();
         synth.playVictoryFanfare();
-        onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！`);
+        onLog(`🎉 关卡胜利！已成功通过节点 [${this.node.id}: ${this.node.title}]！`);
 
         const pState = { ...this.game.registry.get("playerState") } as PlayerState;
         const r = result.reward || {};
-        const rwdKey = spec.economy.resources[0] || "灵石";
+        const rwdKey = spec.economy.resources[0] || "金币";
         const secondaryResources = r.secondaryResources || { [rwdKey]: 1 };
         const unlockedAbilities = r.unlockedAbilities || this.node.planning?.rewardUnlocks || [];
         const storyFlags = r.storyFlags || [];
@@ -1636,9 +1640,9 @@ export function initializePhaserGame(
           this.safeRetreat();
         } else {
           synth.playDamage();
-          onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${result.reason || "未知"}]。`);
+          onLog(`❌ 关卡失败: 已从节点中震退，原因: [${result.reason || "未知"}]。`);
           this.cameras.main.shake(250, 0.015);
-          this.showDefeatOverlay(result.reason || "天劫强力，元神溃散");
+          this.showDefeatOverlay(result.reason || "能量耗尽，挑战失败");
         }
       }
     }
@@ -1676,14 +1680,13 @@ export function initializePhaserGame(
       }).setOrigin(0.5);
 
       let mechDesc = "";
-      if (this.node.gameplay?.cardId === "survivor_horde") {
-        mechDesc = "⚔️ 割草生存：躲避敌人，利用法宝自动击杀怪物，并在最后击败降临的邪道首领。";
-      } else if (this.node.gameplay?.cardId === "rhythm_timing") {
-        mechDesc = "🔮 快速聚灵：点击屏幕上不断收缩的灵能法阵。漏掉会导致生命值受损，后期需击破劫雷法阵。";
-      } else if (this.node.gameplay?.cardId === "drag_collect_grid") {
-        mechDesc = "🍃 虚空飞渡：左右滑动躲避漫天红雷，收集绿灵珠。最后收集飞剑攻击劈落的天雷巨兽。";
+      const cardOpt = GAMEPLAY_CARD_OPTIONS.find((c) => c.id === this.node.gameplay?.cardId);
+      if (cardOpt) {
+        const cardTitle = cardOpt.title;
+        const cardSummary = cardOpt.effectSummary || cardOpt.victory || "完成本关目标考验。";
+        mechDesc = `⚔️ ${cardTitle}：${cardSummary}`;
       } else {
-        mechDesc = "🔮 天道感应：体验由工作台配置的经典玩法考验。";
+        mechDesc = "🔮 玩法考验：完成本关卡配置的目标要求。";
       }
 
       const mech = this.add.text(width / 2, height / 2 - 30, mechDesc, {
@@ -1825,45 +1828,45 @@ export function initializePhaserGame(
         repeat: 12
       });
 
-      const title = this.add.text(width / 2, height / 2 - 190, "🍀 功德圆满 / SUCCESS", {
+      const title = this.add.text(width / 2, height / 2 - 190, "🍀 挑战成功 / STAGE CLEAR", {
         fontFamily: "Inter, sans-serif",
         fontSize: "33px",
         fontStyle: "bold",
         color: "#f59e0b"
       }).setOrigin(0.5);
 
-      const sub = this.add.text(width / 2, height / 2 - 130, `顺利参透第 ${this.node.id} 关：${this.node.title}`, {
+      const sub = this.add.text(width / 2, height / 2 - 130, `顺利通关第 ${this.node.id} 关：${this.node.title}`, {
         fontFamily: "Inter, sans-serif",
         fontSize: "20px",
         color: "#94a3b8"
       }).setOrigin(0.5);
 
-      const rwdTitle = this.add.text(width / 2, height / 2 - 70, "获得天道造化奖励", {
+      const rwdTitle = this.add.text(width / 2, height / 2 - 70, "获得通关结算奖励", {
         fontFamily: "Inter, sans-serif",
         fontSize: "21px",
         fontStyle: "bold",
         color: "#ffffff"
       }).setOrigin(0.5);
 
-      const rwd1 = this.add.text(width / 2, height / 2 - 20, `✨ 修为挂机效率: +${(multiplierGain * 1.5).toFixed(2)}/秒`, {
+      const rwd1 = this.add.text(width / 2, height / 2 - 20, `✨ 基础收益效率: +${(multiplierGain * 1.5).toFixed(2)}/秒`, {
         fontFamily: "Inter, sans-serif",
         fontSize: "20px",
         color: "#10b981"
       }).setOrigin(0.5);
 
-      const rwd2 = this.add.text(width / 2, height / 2 + 20, `💎 额外获取造化: ${this.node.rewards}`, {
+      const rwd2 = this.add.text(width / 2, height / 2 + 20, `💎 额外结算积分: ${this.node.rewards}`, {
         fontFamily: "Inter, sans-serif",
         fontSize: "20px",
         color: "#f59e0b"
       }).setOrigin(0.5);
 
-      const rwd3 = this.add.text(width / 2, height / 2 + 60, `💼 奇珍机缘: ${resourceKey} +1`, {
+      const rwd3 = this.add.text(width / 2, height / 2 + 60, `💼 获得资源: ${resourceKey} +1`, {
         fontFamily: "Inter, sans-serif",
         fontSize: "20px",
         color: "#38bdf8"
       }).setOrigin(0.5);
 
-      const btn = this.add.text(width / 2, height / 2 + 150, "领取天道机缘并返回", {
+      const btn = this.add.text(width / 2, height / 2 + 150, "确认并继续", {
         fontFamily: "Inter, sans-serif",
         fontSize: "21px",
         fontStyle: "bold",
@@ -1907,8 +1910,8 @@ export function initializePhaserGame(
       }).setOrigin(0.5);
 
       let reasonZh = reason;
-      if (reason === "hp_zero") reasonZh = "生命元神耗尽归零";
-      else if (reason === "timer_expired") reasonZh = "劫数倒计时大限已到";
+      if (reason === "hp_zero") reasonZh = "生命值耗尽归零";
+      else if (reason === "timer_expired") reasonZh = "倒计时结束超时";
 
       const sub = this.add.text(width / 2, height / 2 - 70, `败因: [ ${reasonZh} ]`, {
         fontFamily: "Inter, sans-serif",
@@ -1918,7 +1921,7 @@ export function initializePhaserGame(
         align: "center"
       }).setOrigin(0.5);
 
-      const desc = this.add.text(width / 2, height / 2 - 10, "天雷凶险，仙途坎坷。请重整旗鼓再试，\n或先行退回主界面积攒修为。", {
+      const desc = this.add.text(width / 2, height / 2 - 10, "关卡考验极具挑战。请重整旗鼓再试，\n或先行退回主界面提升基础等级。", {
         fontFamily: "Inter, sans-serif",
         fontSize: "18px",
         color: "#64748b",
@@ -1967,10 +1970,10 @@ export function initializePhaserGame(
 
     private handleLevelWin() {
       synth.playVictoryFanfare();
-      onLog(`💎 功德圆满！已成功通过考验 [节点 ${this.node.id}: ${this.node.title}]！悟得通关造化: [${this.node.rewards}]。`);
+      onLog(`🎉 关卡胜利！已成功通过节点 [${this.node.id}: ${this.node.title}]！获得通关奖励: [${this.node.rewards}]。`);
 
       const pState = { ...this.game.registry.get("playerState") } as PlayerState;
-      const rwdKey = spec.economy.resources[0] || "灵石";
+      const rwdKey = spec.economy.resources[0] || "金币";
       
       const nodeResult: NodeResult = {
         success: true,
@@ -2029,11 +2032,11 @@ export function initializePhaserGame(
 
     private handleLevelLoss(reason: string) {
       synth.playDamage();
-      onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${reason}]。请重新尝试。`);
+      onLog(`❌ 关卡失败: 已从节点中震退，原因: [${reason}]。请重新尝试。`);
       
       this.cameras.main.shake(250, 0.015);
       
-      this.add.text(this.scale.width / 2, this.scale.height / 2, "💀 渡劫失败", {
+      this.add.text(this.scale.width / 2, this.scale.height / 2, "💀 挑战失败", {
         fontFamily: "Inter, sans-serif",
         fontSize: "38px",
         fontStyle: "bold",
@@ -2121,10 +2124,10 @@ export function initializePhaserGame(
         synth.stopBossTheme();
         synth.stopBgm();
         synth.playVictoryFanfare();
-        onLog(`💎 功德圆满！独立 H5 玩法容器 [节点 ${this.node.id}: ${this.node.title}] 通关成功！`);
+        onLog(`🎉 关卡胜利！独立 H5 玩法容器 [节点 ${this.node.id}: ${this.node.title}] 通关成功！`);
 
         const pState = { ...this.game.registry.get("playerState") } as PlayerState;
-        const rwdKey = spec.economy.resources[0] || "灵石";
+        const rwdKey = spec.economy.resources[0] || "金币";
 
         const mappedSecondary: { [key: string]: number } = {};
         if (typeof reward.qi === "number") {
@@ -2189,9 +2192,9 @@ export function initializePhaserGame(
           this.safeRetreat();
         } else {
           synth.playDamage();
-          onLog(`❌ 考验失败: 已从心魔灵阵中被震退，原因: [${reward.reason || "挑战失败"}]。`);
+          onLog(`❌ 关卡失败: 已从节点中震退，原因: [${reward.reason || "挑战失败"}]。`);
           this.cameras.main.shake(250, 0.015);
-          this.showDefeatOverlay(reward.reason || "天劫强力，元神溃散");
+          this.showDefeatOverlay(reward.reason || "能量耗尽，挑战失败");
         }
       }
     }
@@ -2253,7 +2256,10 @@ export function initializePhaserGame(
         this.iframeListener = null;
       }
 
-      // Stop Synthesizer Drones BGM and Boss Theme
+      // Stop Synthesizer Drones BGM and Audio Resolver
+      if (this.audioResolver) {
+        this.audioResolver.stopAll();
+      }
       synth.stopBgm();
       synth.stopBossTheme();
 

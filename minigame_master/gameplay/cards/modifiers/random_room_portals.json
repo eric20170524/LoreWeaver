@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "random_room_portals",
   "title": "Random Room Portals",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -13,5 +13,30 @@
     "minigame/perfectworld_dahuang/nodes/node8.js"
   ],
   "knownRisks": [],
-  "implementationNotes": "Survivor modifier factory wired."
+  "implementationNotes": "Survivor modifier factory wired.",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+random_room_portals"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "random_room_portals"
+    ],
+    "audioCues": [
+      "sfx_random_room_portals"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "poison_fog",
   "title": "Poison Fog",
   "category": "environment_pressure",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -42,5 +42,30 @@
   "knownRisks": [
     "continuous damage needs clear visual feedback"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+poison_fog"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "poison_fog"
+    ],
+    "audioCues": [
+      "sfx_poison_fog"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

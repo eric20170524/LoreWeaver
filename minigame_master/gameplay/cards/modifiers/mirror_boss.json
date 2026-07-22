@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "mirror_boss",
   "title": "Mirror Boss",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -13,5 +13,30 @@
     "minigame/xianni/nodes/node11.js"
   ],
   "knownRisks": [],
-  "implementationNotes": "Survivor modifier factory wired."
+  "implementationNotes": "Survivor modifier factory wired.",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+mirror_boss"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "mirror_boss"
+    ],
+    "audioCues": [
+      "sfx_mirror_boss"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

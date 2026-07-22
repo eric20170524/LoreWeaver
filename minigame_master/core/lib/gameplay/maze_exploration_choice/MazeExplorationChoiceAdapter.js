@@ -193,12 +193,12 @@ export default class MazeExplorationChoiceAdapter extends GameplayAdapter {
         const { width, height } = this.scene.scale;
         const panel = this.scene.add.rectangle(width / 2, height / 2, width * 0.8, 160, 0x0f172a, 0.95)
             .setStrokeStyle(2, 0xfbbf24, 0.6);
-        const text = this.scene.add.text(width / 2, height / 2 - 40, `发现被困者。救助需 ${this.config.rescueCost} 灵气。`, {
+        const text = this.scene.add.text(width / 2, height / 2 - 40, `发现目标点。救援需 ${this.config.rescueCost} 能量。`, {
             fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#e2e8f0', wordWrap: { width: width * 0.7 }
         }).setOrigin(0.5);
         const yes = this.scene.add.rectangle(width / 2 - 70, height / 2 + 36, 110, 36, 0x22c55e, 0.9)
             .setInteractive({ useHandCursor: true });
-        const yesL = this.scene.add.text(width / 2 - 70, height / 2 + 36, '救助', {
+        const yesL = this.scene.add.text(width / 2 - 70, height / 2 + 36, '救援', {
             fontFamily: 'Inter, sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#0f172a'
         }).setOrigin(0.5);
         const no = this.scene.add.rectangle(width / 2 + 70, height / 2 + 36, 110, 36, 0x64748b, 0.9)
@@ -212,9 +212,9 @@ export default class MazeExplorationChoiceAdapter extends GameplayAdapter {
                 this.state.qi -= this.config.rescueCost;
                 this.state.rescued = true;
                 this.state.score += 50;
-                this.closeChoice('已救助，获得玉佩机缘');
+                this.closeChoice('已救援，获得奖励');
             } else {
-                this.closeChoice('灵气不足，未能救助');
+                this.closeChoice('能量不足，未能救援');
             }
         });
         no.on('pointerdown', () => this.closeChoice('你选择继续前行'));
@@ -239,7 +239,7 @@ export default class MazeExplorationChoiceAdapter extends GameplayAdapter {
     }
 
     refreshHud() {
-        this.ui.status?.setText(`灵气 ${this.state.qi}  ·  位置 (${this.state.gx},${this.state.gy})  ·  ${this.state.rescued ? '已救助' : '探索中'}`);
+        this.ui.status?.setText(`能量 ${this.state.qi}  ·  位置 (${this.state.gx},${this.state.gy})  ·  ${this.state.rescued ? '已完成' : '探索中'}`);
     }
 
     getTestState() {

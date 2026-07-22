@@ -3,8 +3,8 @@ import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
 
 const POOL = [
-    { id: 'jade', label: '玉佩', color: 0x34d399 },
-    { id: 'pill', label: '丹药', color: 0xfbbf24 },
+    { id: 'item_a', label: '目标道具A', color: 0x34d399 },
+    { id: 'item_b', label: '目标道具B', color: 0xfbbf24 },
     { id: 'sword', label: '残剑', color: 0x60a5fa },
     { id: 'trap', label: '陷阱', color: 0xef4444, trap: true },
     { id: 'mirror', label: '幻镜', color: 0xa78bfa, trap: true },

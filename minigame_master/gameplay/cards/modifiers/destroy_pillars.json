@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "destroy_pillars",
   "title": "Destroy Pillars",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -28,5 +28,30 @@
     "minigame/xianni/nodes/node8.js"
   ],
   "knownRisks": [],
-  "implementationNotes": "Survivor_horde modifier factory wired."
+  "implementationNotes": "Survivor_horde modifier factory wired.",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+destroy_pillars"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "destroy_pillars"
+    ],
+    "audioCues": [
+      "sfx_destroy_pillars"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

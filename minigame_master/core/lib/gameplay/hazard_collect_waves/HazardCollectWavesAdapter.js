@@ -56,13 +56,13 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
         this.lifecycle.start();
         const { width, height } = scene.scale;
 
-        this.ui.title = scene.add.text(width / 2, 36, '雷劫采集', {
+        this.ui.title = scene.add.text(width / 2, 36, '闪避采集', {
             fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
         this.ui.status = scene.add.text(width / 2, 68, '', {
             fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
         }).setOrigin(0.5);
-        this.ui.hint = scene.add.text(width / 2, height - 36, '拖动躲避预警区 · 雷击后拾取灵珠', {
+        this.ui.hint = scene.add.text(width / 2, height - 36, '拖动躲避预警区 · 限时拾取能量珠', {
             fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#64748b'
         }).setOrigin(0.5);
 

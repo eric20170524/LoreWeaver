@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "resource_pressure",
   "title": "Resource Pressure",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -35,5 +35,30 @@
     "minigame/perfectworld_dahuang/nodes/node6.js"
   ],
   "knownRisks": [],
-  "implementationNotes": "Survivor_horde modifier factory wired."
+  "implementationNotes": "Survivor_horde modifier factory wired.",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+resource_pressure"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "resource_pressure"
+    ],
+    "audioCues": [
+      "sfx_resource_pressure"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

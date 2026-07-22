@@ -1,16 +1,17 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "sequence_synthesis",
   "title": "Sequence Synthesis",
   "category": "crafting_puzzle",
-  "status": "validated",
+  "status": "runtime_ready",
   "runtime": {
     "engineTargets": [
       "html_canvas",
       "phaser"
     ],
     "adapter": "SequenceSynthesisAdapter",
-    "container": "node_iframe_microgame"
+    "container": "node_iframe_microgame",
+    "template": "sequence_synthesis"
   },
   "inputs": [
     "pointer",
@@ -111,5 +112,56 @@
     "strict order can feel like rote clicking without meaningful hints",
     "must expose current required material clearly for accessibility"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "requiredAssets": {
+    "playerClips": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt",
+      "death"
+    ],
+    "enemyKinds": [
+      "mob",
+      "elite",
+      "boss"
+    ],
+    "environments": [
+      "bg_default"
+    ],
+    "audioCues": [
+      "bgm_main",
+      "sfx_attack",
+      "sfx_hit",
+      "sfx_win",
+      "sfx_lose"
+    ]
+  },
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "bossP95Fps": 45,
+    "maxActiveEnemies": 50
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "visual",
+      "audio",
+      "e2e"
+    ],
+    "notes": "Migrated to Gameplay Card V2 maturity model."
+  },
+  "testScenarios": [
+    {
+      "id": "smoke_test",
+      "tags": [
+        "smoke",
+        "runtime"
+      ]
+    }
+  ],
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting P1-P7 production readiness certification"
+  }
 }

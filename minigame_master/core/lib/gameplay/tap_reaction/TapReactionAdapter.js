@@ -196,7 +196,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
             this.state.score += gain;
             this.playSynthSound('loot');
             this.spawnClickParticle(x, y, 0x10b981);
-            this.spawnFloatingText(x, y, `+${gain} 灵气`, '#10b981');
+            this.spawnFloatingText(x, y, `+${gain}`, '#10b981');
             shrinkTween.stop();
             this.cleanOrb(orbContainer);
 
@@ -243,7 +243,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
         bossCore.strokeCircle(0, 0, 52);
         this.bossGroup.add(bossCore);
 
-        const bossText = this.scene.add.text(0, 0, "劫雷真身", {
+        const bossText = this.scene.add.text(0, 0, "Boss 首领", {
             fontFamily: "Inter, sans-serif",
             fontSize: "14px",
             fontStyle: "bold",
@@ -292,27 +292,26 @@ export default class TapReactionAdapter extends GameplayAdapter {
             this.bossWeakPoints.push(wp);
         }
 
-        // Start Boss attack loop
-        this.bossAttackEvent = this.scene.time.addEvent({
-            delay: this.config.boss.attackIntervalMs || 2200,
-            callback: this.triggerBossAttack,
-            callbackScope: this,
+        // Start Boss timer attack loop
+        this.bossTimer = this.scene.time.addEvent({
+            delay: 3500,
+            callback: () => this.triggerBossAttack(),
             loop: true
         });
-        this.lifecycle.trackTimer(this.bossAttackEvent);
+        this.lifecycle.trackTimer(this.bossTimer);
     }
 
     spawnBossInstructionBanner() {
         const { width, height } = this.world;
         const bannerBg = this.scene.add.graphics().setDepth(200);
-        bannerBg.fillStyle(0x0f172a, 0.88);
+        bannerBg.fillStyle(0x0f172a, 0.92);
         bannerBg.fillRect(20, height / 2 - 220, width - 40, 56);
         bannerBg.lineStyle(2, 0xa855f7, 0.9);
         bannerBg.strokeRect(20, height / 2 - 220, width - 40, 56);
 
         const bannerText = this.scene.add.text(
             width / 2, height / 2 - 192,
-            "⚡ 劫雷真身降临！点击红色【🎯击破】痛击Boss，点击蓝色【🛡️防御】拦截雷击！",
+            "⚡ Boss 降临！点击红色【🎯击破】痛击 Boss，点击蓝色【🛡️防御】拦截攻击！",
             {
                 fontFamily: "Inter, sans-serif",
                 fontSize: "13px",
@@ -385,7 +384,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
         warningLine.lineStyle(4, 0xef4444, 0.7);
         warningLine.lineBetween(12, py, width - 12, py);
 
-        const warningText = this.scene.add.text(width / 2, py - 18, "⚡ 劫雷蓄力中！点击弱点打断！", {
+        const warningText = this.scene.add.text(width / 2, py - 18, "⚡ 蓄力中！点击弱点打断！", {
             fontFamily: "Inter, sans-serif",
             fontSize: "13px",
             fontStyle: "bold",
@@ -406,7 +405,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
             warningLine.clear();
             warningLine.lineStyle(10, 0xffffff, 1);
             warningLine.lineBetween(12, py, width - 12, py);
-            warningText.setText("⚡ 劫雷轰顶！");
+            warningText.setText("⚡ 强力轰击！");
             this.playSynthSound('damage'); // fire sweep
             this.triggerScreenShake(200, 0.01);
             this.damagePlayer(12, NODE_RESULT_REASONS.HP_ZERO);
@@ -439,7 +438,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
         try { warningTimer?.destroy?.(); } catch (_) {}
         if (warningLine?.active) warningLine.destroy();
         if (warningText?.active) {
-            warningText.setText("💥 成功打断劫雷蓄力！");
+            warningText.setText("💥 成功打断蓄力！");
             warningText.setStyle({ color: "#10b981" });
             this.scene.tweens.add({
                 targets: warningText,
@@ -449,7 +448,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
                 onComplete: () => warningText.destroy()
             });
         }
-        this.spawnFloatingText(this.world.width / 2, this.world.height / 2 - 120, "💥 打断劫雷！", "#10b981");
+        this.spawnFloatingText(this.world.width / 2, this.world.height / 2 - 120, "💥 打断成功！", "#10b981");
     }
 
     triggerShieldDeflectAttack() {

@@ -119,7 +119,7 @@ export default class RhythmThenPickupAdapter extends GameplayAdapter {
     startPhase2() {
         this.phase = 2;
         this.ring.setVisible(false);
-        this.ui.hint?.setText('阶段二：限时点击灵瓶');
+        this.ui.hint?.setText('阶段二：限时点击目标');
         this.state.phase2Left = this.config.phase2LimitSec;
         this.scheduleBottle();
     }
@@ -196,7 +196,7 @@ export default class RhythmThenPickupAdapter extends GameplayAdapter {
             this.ui.status?.setText(`节奏 ${this.state.hits}/${this.config.phase1Target}  ·  连击 ${this.state.combo}`);
         } else {
             this.ui.status?.setText(
-                `灵瓶 ${this.state.bottles}/${this.config.bottlesNeeded}  ·  剩余 ${Math.max(0, this.state.phase2Left).toFixed(1)}s`
+                `收集物 ${this.state.bottles}/${this.config.bottlesNeeded}  ·  剩余 ${Math.max(0, this.state.phase2Left).toFixed(1)}s`
             );
         }
     }

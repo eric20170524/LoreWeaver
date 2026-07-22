@@ -376,11 +376,16 @@ export function GameplayPanel({
                         }}
                         className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 text-2xs transition"
                       >
-                        {baseGameplayOptions.map((card) => (
-                          <option key={card.id} value={card.id}>
-                            {locale === "en" ? card.titleEn || card.title : card.title}
-                          </option>
-                        ))}
+                        {baseGameplayOptions.map((card) => {
+                          const status = card.maturityStatus || (card.implementationStatus === "implemented" ? "runtime_ready" : "card_json");
+                          const isRunnable = ["runtime_ready", "gate_verified", "production_ready"].includes(status);
+                          const titleStr = locale === "en" ? card.titleEn || card.title : card.title;
+                          return (
+                            <option key={card.id} value={card.id} disabled={!isRunnable}>
+                              {titleStr} [{status}]{!isRunnable ? " (待接入/不可运行)" : ""}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   </label>
@@ -592,23 +597,51 @@ export function GameplayPanel({
                     </div>
                   </div>
 
-                  {/* Readiness State display banner */}
-                  <div className={`mt-2 border p-2.5 rounded-lg flex items-center gap-2 text-3xs ${
-                    summary.hasDesignOnly
-                      ? "border-amber-500/30 bg-amber-500/5 text-amber-800 dark:text-amber-400"
-                      : "border-emerald-500/30 bg-emerald-500/5 text-emerald-800 dark:text-emerald-400"
-                  }`}>
-                    {summary.hasDesignOnly ? (
-                      <>
-                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                        <span className="font-medium">{lc.designOnlyWarning}</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                        <span className="font-medium">{lc.readyToRun}</span>
-                      </>
-                    )}
+                  {/* Readiness State display banner (P0 Maturity Model) */}
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between text-3xs font-mono">
+                      <span className="text-slate-500 font-bold uppercase">成熟度 (Maturity):</span>
+                      <span className={`px-2 py-0.5 rounded font-bold border ${
+                        baseCard?.maturityStatus === "production_ready"
+                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                          : baseCard?.maturityStatus === "gate_verified"
+                          ? "bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30"
+                          : baseCard?.maturityStatus === "runtime_ready"
+                          ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                          : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                      }`}>
+                        {baseCard?.maturityStatus || "runtime_ready"}
+                      </span>
+                    </div>
+
+                    <div className={`border p-2.5 rounded-lg flex items-center gap-2 text-3xs ${
+                      baseCard?.maturityStatus === "production_ready" && !summary.hasDesignOnly
+                        ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-800 dark:text-emerald-400"
+                        : summary.hasDesignOnly || (baseCard?.maturityStatus && !["runtime_ready", "gate_verified", "production_ready"].includes(baseCard.maturityStatus))
+                        ? "border-amber-500/30 bg-amber-500/5 text-amber-800 dark:text-amber-400"
+                        : "border-blue-500/30 bg-blue-500/5 text-blue-800 dark:text-blue-400"
+                    }`}>
+                      {baseCard?.maturityStatus === "production_ready" && !summary.hasDesignOnly ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span className="font-medium">{locale === "en" ? "Maturity: Production Ready (Release Eligible)" : "发布状态：成熟 / 可发布 (Release Eligible)"}</span>
+                        </>
+                      ) : summary.hasDesignOnly ? (
+                        <>
+                          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span className="font-medium">{lc.designOnlyWarning}</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-4 h-4 text-blue-500 shrink-0" />
+                          <span className="font-medium">
+                            {locale === "en" 
+                              ? `Status: Prototype / Unverified (${baseCard?.maturityStatus || "runtime_ready"}) - Simulator Runnable` 
+                              : `发布状态：原型 / 待验证 (${baseCard?.maturityStatus || "runtime_ready"}) - 模拟器可运行`}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 

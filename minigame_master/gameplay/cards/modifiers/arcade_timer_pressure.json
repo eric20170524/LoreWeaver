@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "arcade_timer_pressure",
   "title": "Arcade Timer Pressure",
   "category": "time_pressure_modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "side_scrolling_brawler",
     "hazard_collect_waves"
@@ -91,5 +91,32 @@
     "HURRY and TIME OVER events should be observable in TestHooks for deterministic E2E checks",
     "timer pressure can conflict with dialogue-heavy or accessibility-sensitive nodes"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "side_scrolling_brawler",
+    "hazard_collect_waves"
+  ],
+  "verifiedCombinations": [
+    "side_scrolling_brawler+arcade_timer_pressure",
+    "hazard_collect_waves+arcade_timer_pressure"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "arcade_timer_pressure"
+    ],
+    "audioCues": [
+      "sfx_arcade_timer_pressure"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

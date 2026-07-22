@@ -1,15 +1,16 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "survivor_horde",
   "title": "Survivor Horde",
   "category": "action_survival",
-  "status": "validated",
+  "status": "runtime_ready",
   "runtime": {
     "engineTargets": [
       "phaser"
     ],
     "adapter": "SurvivorHordeAdapter",
-    "container": "phaser_scene"
+    "container": "phaser_scene",
+    "template": "survivor_horde"
   },
   "inputs": [
     "pointer_move",
@@ -232,5 +233,57 @@
     "planned_migration capability contracts are not implementation claims",
     "semantic presentation events still require the shared host resolver for real audio and voice playback"
   ],
-  "implementationNotes": "Card stores contracts and configuration only. Executable behavior belongs to the shared core; legacy node scenes remain provenance and parity fixtures, never a second production runtime. Channel interaction slice implemented 2026-07-18; ability/upgrades/enemy action parity remains tracked work."
+  "implementationNotes": "Card stores contracts and configuration only. Executable behavior belongs to the shared core; legacy node scenes remain provenance and parity fixtures, never a second production runtime. Channel interaction slice implemented 2026-07-18; ability/upgrades/enemy action parity remains tracked work.",
+  "requiredAssets": {
+    "playerClips": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt",
+      "death"
+    ],
+    "enemyKinds": [
+      "mob",
+      "elite",
+      "boss"
+    ],
+    "environments": [
+      "bg_default"
+    ],
+    "audioCues": [
+      "bgm_main",
+      "sfx_attack",
+      "sfx_hit",
+      "sfx_win",
+      "sfx_lose"
+    ]
+  },
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "bossP95Fps": 45,
+    "maxActiveEnemies": 50
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "visual",
+      "audio",
+      "e2e"
+    ],
+    "notes": "Migrated to Gameplay Card V2 maturity model."
+  },
+  "testScenarios": [
+    {
+      "id": "smoke_test",
+      "tags": [
+        "smoke",
+        "runtime",
+        "e2e"
+      ]
+    }
+  ],
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting build, E2E, visual, audio, and performance gate evidence"
+  }
 }

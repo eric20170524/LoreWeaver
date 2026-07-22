@@ -14,20 +14,32 @@
     "failure",
     "maturityImpact",
     "performanceBudget",
-    "testScenarios"
+    "testScenarios",
+    "requiredAssets",
+    "exportPolicy"
   ],
   "properties": {
     "schemaVersion": { "const": "2.0" },
     "id": { "type": "string", "minLength": 1, "pattern": "^[a-z0-9_]+$" },
     "title": { "type": "string", "minLength": 1 },
-    "status": { "enum": ["design_only", "candidate", "validated", "deprecated"] },
+    "status": {
+      "enum": [
+        "inventoried",
+        "card_json",
+        "ui_registered",
+        "runtime_ready",
+        "gate_verified",
+        "production_ready"
+      ]
+    },
     "runtime": {
       "type": "object",
       "required": ["template", "engineTargets", "adapter"],
       "properties": {
         "template": { "type": "string" },
         "engineTargets": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-        "adapter": { "type": "string" }
+        "adapter": { "type": "string" },
+        "container": { "type": "string" }
       }
     },
     "inputs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
@@ -91,6 +103,7 @@
     },
     "exportPolicy": {
       "type": "object",
+      "required": ["productionReady"],
       "properties": {
         "productionReady": { "type": "boolean" },
         "blockReason": { "type": ["string", "null"] }

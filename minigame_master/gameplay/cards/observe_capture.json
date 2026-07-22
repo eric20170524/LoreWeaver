@@ -1,14 +1,15 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "observe_capture",
   "title": "Observe Capture",
   "category": "microgame",
-  "status": "validated",
+  "status": "runtime_ready",
   "runtime": {
     "engineTargets": [
       "phaser"
     ],
-    "adapter": "ObserveCaptureAdapter"
+    "adapter": "ObserveCaptureAdapter",
+    "template": "observe_capture"
   },
   "inputs": [
     "pointer"
@@ -78,5 +79,56 @@
     ]
   },
   "knownRisks": [],
-  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner.",
+  "requiredAssets": {
+    "playerClips": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt",
+      "death"
+    ],
+    "enemyKinds": [
+      "mob",
+      "elite",
+      "boss"
+    ],
+    "environments": [
+      "bg_default"
+    ],
+    "audioCues": [
+      "bgm_main",
+      "sfx_attack",
+      "sfx_hit",
+      "sfx_win",
+      "sfx_lose"
+    ]
+  },
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "bossP95Fps": 45,
+    "maxActiveEnemies": 50
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "visual",
+      "audio",
+      "e2e"
+    ],
+    "notes": "Migrated to Gameplay Card V2 maturity model."
+  },
+  "testScenarios": [
+    {
+      "id": "smoke_test",
+      "tags": [
+        "smoke",
+        "runtime"
+      ]
+    }
+  ],
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting P1-P7 production readiness certification"
+  }
 }

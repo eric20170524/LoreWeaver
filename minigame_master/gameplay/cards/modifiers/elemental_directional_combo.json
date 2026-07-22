@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "elemental_directional_combo",
   "title": "Elemental Directional Combo",
   "category": "ability_modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "side_scrolling_brawler"
   ],
@@ -84,5 +84,30 @@
     "input buffering and attack locks can make combos feel unresponsive if patched blindly",
     "element names and skill callouts need to be catalog-driven for public export"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "side_scrolling_brawler"
+  ],
+  "verifiedCombinations": [
+    "side_scrolling_brawler+elemental_directional_combo"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "elemental_directional_combo"
+    ],
+    "audioCues": [
+      "sfx_elemental_directional_combo"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

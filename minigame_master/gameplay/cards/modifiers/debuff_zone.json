@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "debuff_zone",
   "title": "Debuff Zone",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -34,5 +34,30 @@
     "minigame/xianni/nodes/node10.js"
   ],
   "knownRisks": [],
-  "implementationNotes": "Survivor_horde modifier factory wired."
+  "implementationNotes": "Survivor_horde modifier factory wired.",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+debuff_zone"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "debuff_zone"
+    ],
+    "audioCues": [
+      "sfx_debuff_zone"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

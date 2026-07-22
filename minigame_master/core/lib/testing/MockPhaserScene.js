@@ -118,7 +118,13 @@ export function createMockPhaser(width = 720, height = 1280) {
         setSize() {
             return this;
         }
-        setScale() {
+        setRadius(r) {
+            this.radius = r;
+            if (this.body) this.body.setCircle(r);
+            return this;
+        }
+        setScale(s) {
+            this.scale = s;
             return this;
         }
         setAngle() {
@@ -127,6 +133,13 @@ export function createMockPhaser(width = 720, height = 1280) {
         setRotation() {
             return this;
         }
+        setFontFamily() { return this; }
+        setFontSize() { return this; }
+        setFontStyle() { return this; }
+        setWordWrapWidth() { return this; }
+        setAlign() { return this; }
+        setStroke() { return this; }
+        setShadow() { return this; }
         setData(key, value) {
             this._data.set(key, value);
             return this;
@@ -154,6 +167,10 @@ export function createMockPhaser(width = 720, height = 1280) {
             super(x, y);
             this.radius = r || 10;
         }
+        setRadius(r) {
+            this.radius = r;
+            return this;
+        }
     }
 
     class Group {
@@ -178,7 +195,17 @@ export function createMockPhaser(width = 720, height = 1280) {
 
     const scene = {
         scale: { width, height },
-        cameras: { main: { shake() {}, flash() {}, fade() {} } },
+        cameras: {
+            main: {
+                shake() {},
+                flash() {},
+                fade() {},
+                setBounds() { return this; },
+                startFollow() { return this; },
+                stopFollow() { return this; },
+                setScroll() { return this; }
+            }
+        },
         input: {
             on(ev, fn) {
                 (scene.input._l ||= {})[ev] = fn;

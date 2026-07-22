@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "boss_phases",
   "title": "Boss Phases",
   "category": "boss_modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde",
     "shooter_duel",
@@ -42,5 +42,34 @@
   "knownRisks": [
     "phase transitions need cleanup to avoid stacked timers/projectiles"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "survivor_horde",
+    "shooter_duel",
+    "dodge_counter_boss"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+boss_phases",
+    "shooter_duel+boss_phases",
+    "dodge_counter_boss+boss_phases"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "boss_phases"
+    ],
+    "audioCues": [
+      "sfx_boss_phases"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

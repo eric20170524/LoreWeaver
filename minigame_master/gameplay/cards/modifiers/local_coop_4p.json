@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "local_coop_4p",
   "title": "Local Co-op 4P",
   "category": "input_modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "side_scrolling_brawler"
   ],
@@ -80,5 +80,30 @@
     "shared-camera clamps must keep all active players inside playable bounds",
     "gamepad, WebHID, keyboard, and touch input should produce the same normalized action frame"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "side_scrolling_brawler"
+  ],
+  "verifiedCombinations": [
+    "side_scrolling_brawler+local_coop_4p"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "local_coop_4p"
+    ],
+    "audioCues": [
+      "sfx_local_coop_4p"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

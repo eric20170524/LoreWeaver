@@ -23,6 +23,14 @@ export interface KnobDefinition {
   descriptionEn?: string;
 }
 
+export type MaturityStatus =
+  | "inventoried"
+  | "card_json"
+  | "ui_registered"
+  | "runtime_ready"
+  | "gate_verified"
+  | "production_ready";
+
 export interface GameplayCardOption {
   id: string;
   title: string;
@@ -30,8 +38,15 @@ export interface GameplayCardOption {
   category: "base" | "container" | "modifier";
   adapter: string;
   
+  // Maturity metadata (P0)
+  maturityStatus?: MaturityStatus;
+  knownRisks?: string[];
+  supportedPlatforms?: string[];
+  lastGateTime?: string;
+
   // Relational metadata
   modifierFor?: string[];
+  compatibleBaseCards?: string[];
   effectSummary?: string;
   effectSummaryEn?: string;
   changes?: string;
@@ -58,6 +73,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "container",
     adapter: "iframe",
     implementationStatus: "implemented",
+    maturityStatus: "runtime_ready",
     knobs: {
       payloadEncoding: {
         type: "enum",
@@ -81,6 +97,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
+    maturityStatus: "runtime_ready",
     victory: "存活至倒计时结束",
     victoryEn: "Survive until timer ends",
     failure: "玩家角色死亡 (HP <= 0)",

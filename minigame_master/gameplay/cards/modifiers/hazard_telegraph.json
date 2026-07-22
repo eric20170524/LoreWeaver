@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "hazard_telegraph",
   "title": "Hazard Telegraph",
   "category": "hazard_modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde",
     "platform_escape",
@@ -59,5 +59,36 @@
     "the visual warning must match the actual hit area",
     "timers must be cleaned up on retreat and scene transition"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "compatibleBaseCards": [
+    "survivor_horde",
+    "platform_escape",
+    "hazard_collect_waves",
+    "dodge_counter_boss"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+hazard_telegraph",
+    "platform_escape+hazard_telegraph",
+    "hazard_collect_waves+hazard_telegraph",
+    "dodge_counter_boss+hazard_telegraph"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "hazard_telegraph"
+    ],
+    "audioCues": [
+      "sfx_hazard_telegraph"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

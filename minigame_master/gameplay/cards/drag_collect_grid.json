@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.1",
+  "schemaVersion": "2.0",
   "id": "drag_collect_grid",
   "title": "Drag Collect / Falling Collect",
   "category": "collection",
-  "status": "validated",
+  "status": "runtime_ready",
   "runtime": {
     "engineTargets": [
       "phaser",
@@ -11,7 +11,8 @@
     ],
     "adapter": "CollectDodgeAdapter",
     "adapterModule": "minigame_master/core/lib/gameplay/collect_dodge",
-    "container": "host_node_scene"
+    "container": "host_node_scene",
+    "template": "drag_collect_grid"
   },
   "inputs": [
     "pointer_drag",
@@ -33,7 +34,10 @@
       "min": 5,
       "max": 300,
       "patchLevel": "L1",
-      "aliases": ["durationSec", "duration"],
+      "aliases": [
+        "durationSec",
+        "duration"
+      ],
       "description": "Time limit in seconds (card standard)."
     },
     "needAmount": {
@@ -42,7 +46,10 @@
       "min": 1,
       "max": 200,
       "patchLevel": "L1",
-      "aliases": ["collectGoal", "goalValue"],
+      "aliases": [
+        "collectGoal",
+        "goalValue"
+      ],
       "description": "Target collectibles required to win (not a duration proxy)."
     },
     "spawnIntervalMs": {
@@ -88,7 +95,11 @@
     "victoryMode": {
       "type": "string",
       "default": "objective",
-      "enum": ["objective", "survive", "boss_only"],
+      "enum": [
+        "objective",
+        "survive",
+        "boss_only"
+      ],
       "patchLevel": "L1",
       "description": "Win condition class (PlayabilityContract)."
     },
@@ -185,5 +196,57 @@
     "Do not set needAmount ≈ timeLimitSec (unplayable collect quota)",
     "Prefer manual fall kinematics over arcade velocity for host stability"
   ],
-  "implementationNotes": "Runtime adapter is CollectDodgeAdapter (not a separate DragCollectGridAdapter). Card knobs use timeLimitSec/needAmount; runtime normalizes legacy durationSec/goalValue/collectGoal via PlayabilityContract."
+  "implementationNotes": "Runtime adapter is CollectDodgeAdapter (not a separate DragCollectGridAdapter). Card knobs use timeLimitSec/needAmount; runtime normalizes legacy durationSec/goalValue/collectGoal via PlayabilityContract.",
+  "requiredAssets": {
+    "playerClips": [
+      "idle",
+      "walk",
+      "attack",
+      "hurt",
+      "death"
+    ],
+    "enemyKinds": [
+      "mob",
+      "elite",
+      "boss"
+    ],
+    "environments": [
+      "bg_default"
+    ],
+    "audioCues": [
+      "bgm_main",
+      "sfx_attack",
+      "sfx_hit",
+      "sfx_win",
+      "sfx_lose"
+    ]
+  },
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "bossP95Fps": 45,
+    "maxActiveEnemies": 50
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "visual",
+      "audio",
+      "e2e"
+    ],
+    "notes": "Migrated to Gameplay Card V2 maturity model."
+  },
+  "testScenarios": [
+    {
+      "id": "smoke_test",
+      "tags": [
+        "smoke",
+        "runtime",
+        "e2e"
+      ]
+    }
+  ],
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting P1-P7 production readiness certification"
+  }
 }

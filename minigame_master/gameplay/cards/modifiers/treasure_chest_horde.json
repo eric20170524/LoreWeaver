@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "id": "treasure_chest_horde",
   "title": "Treasure Chest Horde",
   "category": "modifier",
-  "status": "validated",
+  "status": "runtime_ready",
   "modifierFor": [
     "survivor_horde"
   ],
@@ -190,5 +190,30 @@
     "Presentation hosts must resolve injected cue and asset ids; the modifier emits semantic events only.",
     "finishOnRequiredOpen changes the node victory condition and therefore requires L2 review."
   ],
-  "implementationNotes": "Node2 risk/reward channel loop migrated into reusable core state machine and existing modifier; no legacy scene subclass is required."
+  "implementationNotes": "Node2 risk/reward channel loop migrated into reusable core state machine and existing modifier; no legacy scene subclass is required.",
+  "compatibleBaseCards": [
+    "survivor_horde"
+  ],
+  "verifiedCombinations": [
+    "survivor_horde+treasure_chest_horde"
+  ],
+  "requiredAssets": {
+    "propKeys": [
+      "treasure_chest_horde"
+    ],
+    "audioCues": [
+      "sfx_treasure_chest_horde"
+    ]
+  },
+  "maturityImpact": {
+    "dimensions": [
+      "gameplay",
+      "modifier_contract"
+    ],
+    "notes": "Migrated modifier to V2 maturity model."
+  },
+  "exportPolicy": {
+    "productionReady": false,
+    "blockReason": "Awaiting modifier verification on compatible base cards"
+  }
 }

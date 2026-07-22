@@ -15,7 +15,7 @@ const DEFAULT_CONFIG = Object.freeze({
     playerAtk: 20,
     enemyHp: 180,
     enemyAtk: 18,
-    enemyName: '心魔投影',
+    enemyName: '敌方目标',
     skillDeck: DEFAULT_SKILL_DECK.slice(),
     rewardTable: { score: 1 }
 });
@@ -139,13 +139,13 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
         this.playerSprite = this.scene.add.circle(width * 0.28, height * 0.32, 34, 0x66fcf1, 1);
         this.enemySprite = this.scene.add.circle(width * 0.72, height * 0.32, 42, 0xf43f5e, 1);
 
-        this.scene.add.text(width * 0.28, height * 0.32 + 52, '修士', {
+        this.scene.add.text(width * 0.28, height * 0.32 + 52, '玩家角色', {
             fontFamily: 'Inter, sans-serif',
             fontSize: '14px',
             color: '#e2e8f0'
         }).setOrigin(0.5);
 
-        this.scene.add.text(width * 0.72, height * 0.32 + 56, this.config.enemyName || '心魔投影', {
+        this.scene.add.text(width * 0.72, height * 0.32 + 56, this.config.enemyName || '敌方目标', {
             fontFamily: 'Inter, sans-serif',
             fontSize: '14px',
             color: '#fecdd3'
