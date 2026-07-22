@@ -1,106 +1,109 @@
-# LoreWeaver Docs Index
+# LoreWeaver 全局架构与文档导航索引
 
-This file is mandatory reading whenever entering the `LoreWeaver` project.
-
-## Must-Read Architecture Boundary
-
-`LoreWeaver` is not the same thing as the old `minigame/*` projects. Before making changes, identify which surface the user is actually testing.
-
-```mermaid
-flowchart TD
-    A["LoreWeaver Workbench<br/>src + backend + docs"] --> B["GameRunner<br/>src/game/GameRunner.ts"]
-    B --> C["Reusable Runtime Engine<br/>minigame_master/core/lib"]
-    B --> D["Target Workspace Artifact<br/>LoreWeaver/data/workspaces/[workspace-id]"]
-    E["Legacy Reference Projects<br/>minigame/xianni<br/>minigame/perfectworld_dahuang"] --> F["Gameplay evidence, catalogs, provenance"]
-    F --> A
-    F --> C
-```
-
-| Zone | Role | Write Guidance |
-| --- | --- | --- |
-| `LoreWeaver/src` | Workbench shell UI, emulator host, manifest editing, orchestration UI | Change this when the LoreWeaver app itself needs a panel, control, workflow, or runtime payload bridge. UI components here are not the generated game runtime. |
-| `LoreWeaver/backend` | API, workspace persistence, import/export, orchestration endpoints | Change this when workspace files, jobs, presets, or export behavior are wrong. |
-| `minigame_master/core/lib` | Reusable engine/runtime contracts and gameplay adapters | Change this when the WebGL emulator/core gameplay behavior is wrong across generated workspaces. Keep it generic and avoid IP-specific story text. |
-| `LoreWeaver/data/workspaces/[workspace-id]` | Concrete generated target workspace artifact that the user may be testing directly | Change this when the user names a specific target workspace, such as `LoreWeaver/data/workspaces/20260611-060754-719406`. This directory is git-ignored, so verify by direct file inspection/builds, not only `git status`. |
-| `minigame/xianni` | Legacy reference project | Read as evidence/provenance only unless the task explicitly asks to modify the old project. |
-| `minigame/perfectworld_dahuang` | Legacy reference/source package for old H5 implementation and some LoreWeaver manifests/catalogs | Read as evidence/provenance or source-package material only. Do not place new LoreWeaver Workbench UI here. Do not assume edits here automatically affect a target workspace. |
-
-### Practical Routing Rules
-
-- If the user says they tested a **LoreWeaver target workspace**, inspect and patch `LoreWeaver/data/workspaces/[workspace-id]` first.
-- If the user says the **Workbench emulator** still renders wrong, inspect `LoreWeaver/src/game/GameRunner.ts` and the relevant adapter under `minigame_master/core/lib`.
-- If the task is about **Workbench panels, tabs, controls, or app chrome**, edit `LoreWeaver/src/components` and related Workbench CSS.
-- If the task is about **manifest schemas, gameplay cards, runtime feature packs, gates, or docs**, edit `LoreWeaver/docs`, `LoreWeaver/minigame_master/templates`, `LoreWeaver/minigame_master/capabilities`, `LoreWeaver/minigame_master/skills`, and associated schema/check scripts.
-- Treat `minigame/xianni` and `minigame/perfectworld_dahuang` as legacy references by default. They can inform adapters, manifests, catalogs, and tests, but they are not the active target workspace unless the user explicitly says so.
-- When a reusable runtime change is made, also check whether any named target workspace must be synced or regenerated. A passing core build does not prove a git-ignored workspace artifact changed.
-- If a request can plausibly refer to more than one surface, ask one clarifying question before editing. Do not guess between Workbench UI, engine runtime, target workspace artifact, and legacy reference project.
-
-For the full boundary policy, read `architecture/LoreWeaver_Workspace_Boundaries.md` before making architectural or runtime edits.
+本文档为进入 `LoreWeaver` 项目时的**必读总览指南**。
 
 ---
 
-This directory is split into active workbench documents and archived reference material.
+## 1. 项目两级分层架构 (Two-Level Architecture Hierarchy)
 
-## Active Documents By Category
+`LoreWeaver` 采用了清晰的**“宿主工作台系统 + AI 游戏引擎主框架”**两级分层架构：
 
-These files describe the current planning, contracts, schemas, gates, and operating rules.
+```mermaid
+flowchart TD
+    subgraph L1 ["Level 1: 宿主工作台系统 (LoreWeaver)"]
+        UI["前端 Web 工作台 UI<br/>src/"]
+        BE["后端服务与持久化<br/>backend/"]
+        DOCS["工作台规范与路线图<br/>docs/"]
+        PROD["产品化导出与打包工具<br/>productize/"]
+    end
 
-### Architecture
+    subgraph L2 ["Level 2: 独立 AI 游戏引擎主框架 (minigame_master)"]
+        CORE["1. 运行时核心 (Core Engine)<br/>minigame_master/core/lib"]
+        CONTRACTS["2. 引擎契约与 Schema<br/>minigame_master/contracts/"]
+        GAMEPLAY["3. 玩法卡数据库与 Schema<br/>minigame_master/gameplay/"]
+        TEMPLATES["4. 引擎生成与开发模板<br/>minigame_master/templates/"]
+        CAPABILITIES["5. 工程校验与验证工具箱<br/>minigame_master/capabilities/"]
+        SKILLS["6. Agent 技能与角色规范<br/>minigame_master/skills/"]
+    end
 
-| File | Purpose |
-| --- | --- |
-| `architecture/current_system_architecture_and_core_features.md` | Current implemented architecture and core feature design |
-| `architecture/LoreWeaver_Workspace_Boundaries.md` | Write boundaries between case studies, core runtime, and workbench |
-| `architecture/core_contracts.md` | Stable NodePayload, NodeResult, adapter, modifier, lifecycle, and test hook contracts |
-
-### Roadmap
-
-| File | Purpose |
-| --- | --- |
-| `roadmap/0_TASKLIST.md` | Current roadmap and execution backlog |
-| `roadmap/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md` | Current product and gameplay-core direction |
-
-### Engine Gameplay Library (`minigame_master/gameplay/`)
-
-| File / Path | Purpose |
-| --- | --- |
-| `minigame_master/gameplay/gameplay_inventory.md` | Active evidence inventory for gameplay cards and runtime planning |
-| `minigame_master/gameplay/gameplay_card_schema.md` | Gameplay Card schema and review gate |
-| `minigame_master/gameplay/cards/` | Gameplay Card JSON database used by the workbench and planning flow |
-| `minigame_master/gameplay/cards/modifiers/` | Modifier card JSON files |
-
-### Engine Contracts & Schemas (`minigame_master/contracts/`)
-
-| File / Path | Purpose |
-| --- | --- |
-| `minigame_master/contracts/runtime_feature_pack_contract.md` | Reusable MVP feature-pack contract for abilities, passives, character/enemy design, VFX/SFX, first-node skill loops, and simulator preview status |
-| `minigame_master/contracts/runtime_feature_pack.schema.json` | Machine-readable Runtime Feature Pack schema |
-| `minigame_master/contracts/asset_pipeline_contract.md` | Ability VFX/voice, generated bitmap art, audio manifest, runtime wiring, and verification contract |
-| `minigame_master/contracts/runtime_parity_fixture.schema.json` | Machine-readable schema for runtime parity verification |
-| `minigame_master/contracts/survivor_horde_capability_fixture.schema.json` | Machine-readable schema for survivor horde capability fixtures |
-
-### Workflow Guides And Roles
-
-| File | Purpose |
-| --- | --- |
-| `guides/precise_pipeline_1_1_to_3_3.md` | Cross-cutting generation pipeline from world DNA to QA |
-| `guides/patch_revision_workflow.md` | Patch/revision workflow and patch level policy |
-| `guides/visual_audit_and_vlm_backlog.md` | Visual audit and VLM gate backlog |
-| `guides/agent_roles_artifact_ownership.md` | Agent roles organized by artifact ownership |
-| `guides/production_department_agents.md` | Department agents & workflow responsibility guide |
-
-### Policy
-
-| File | Purpose |
-| --- | --- |
-| `policy/copyright_and_fanwork_deferred_policy.md` | Current fanwork and export cleanup policy |
-
-## Archive
-
-Historical PRDs, older architecture whitepapers, naming notes, and broad reference material live under:
-
-```text
-archive/
+    UI --> |模拟器运行/事件桥接| CORE
+    UI --> |调用 API| BE
+    BE --> |加载契约与校验门禁| CAPABILITIES
+    BE --> |读取 Agent 注册表| SKILLS
+    PROD --> |离线打包与编译| GAMEPLAY
+    PROD --> |包含运行时壳| CORE
 ```
 
-Archived documents are useful for context, but they are not the source of truth for current execution unless a task explicitly promotes their content back into an active document.
+---
+
+## 2. 区域职责与修改指南 (Zone Responsibilities & Write Guidance)
+
+| 区域 | 角色与定位 | 写入与修改指南 |
+| --- | --- | --- |
+| **`LoreWeaver/src`** | **工作台 Shell UI**<br/>宿主 Web 前端、模拟器宿主、Manifest 编辑器、编排面板 | 修改此处用于扩展 LoreWeaver 工作台本身的 UI 控件、Agent 交互面板、标签页或数据通信桥接。此处 UI 并非生成的游戏本体。 |
+| **`LoreWeaver/backend`** | **后端 API 服务**<br/>数据持久化、工作区管理、编排 Endpoint、SQLite | 修改此处用于调整工作区文件读写、Job 编排、预设加载或导出 API。 |
+| **`LoreWeaver/docs`** | **工作台规范与路线图**<br/>全局架构规范、协作指南、路线图 Tasklist、策略 | 用于记录宿主工作台的架构边界、协作流程、Roadmap 及版权缓释策略。 |
+| **`LoreWeaver/productize`** | **产品化打包流水线**<br/>独立游戏导出、产物编译、发布包校验 | 用于管理单机独立包的构建编译、卡片校验、Patch 提取与最终验收打包。 |
+| **`minigame_master`** | **AI 游戏引擎主框架**<br/>高内聚、自包含的 AI 引擎与工具链 | **整个 AI 游戏引擎的实体**。包含 Core 运行时、Schema 契约、玩法卡数据库、Prompt/设计模板、校验工具箱及 Agent 技能。 |
+| `LoreWeaver/data/workspaces/[id]` | **生成的具体游戏工作区**<br/>AI 编排生成的具体游戏项目目标产物 | 仅在针对特定生成的游戏工作区（如 `data/workspaces/20260611-060754-719406`）做直接调试或 Patch 时修改。该目录已被 gitignore 忽略。 |
+| `minigame/xianni`<br/>`minigame/perfectworld_dahuang` | **历史参考案例库**<br/>玩法抽样样本、证据源、图库参考 | 仅作为机制抽样的证据源（Provenance）。除非显式修改旧项目，否则默认**只读**。 |
+
+---
+
+## 3. 实用代码路由与改动规则
+
+1. **测试生成的具体游戏工作区时**：优先检查并修复 `LoreWeaver/data/workspaces/[workspace-id]`。
+2. **工作台模拟器渲染或游戏核心逻辑有误时**：检查 `LoreWeaver/src/game/GameRunner.ts` 以及 `minigame_master/core/lib` 下对应的 Gameplay Adapter。
+3. **工作台面板、控件、标签页或 UI Chrome 变动时**：修改 `LoreWeaver/src/components` 及其 CSS 样式。
+4. **修改引擎契约、玩法卡、生成模板或门禁校验时**：编辑 `minigame_master/` 下对应的 `contracts/`、`gameplay/`、`templates/`、`capabilities/` 或 `skills/` 目录。
+5. **全局架构与工作流指南修改时**：修改 `LoreWeaver/docs/` 下对应的 `architecture/` 或 `guides/` 目录。
+
+详细架构边界政策请参阅 [docs/architecture/LoreWeaver_Workspace_Boundaries.md](file:///Users/lm/pyProj/LoreWeaver/docs/architecture/LoreWeaver_Workspace_Boundaries.md)。
+
+---
+
+## 4. 目录与资产全局导航
+
+### 宿主工作台说明文档库 (`docs/`)
+
+- **[architecture/](file:///Users/lm/pyProj/LoreWeaver/docs/architecture/)**：系统架构与工作区边界规范
+  - [current_system_architecture_and_core_features.md](file:///Users/lm/pyProj/LoreWeaver/docs/architecture/current_system_architecture_and_core_features.md)：当前系统架构与核心功能设计
+  - [LoreWeaver_Workspace_Boundaries.md](file:///Users/lm/pyProj/LoreWeaver/docs/architecture/LoreWeaver_Workspace_Boundaries.md)：案例库、核心运行时与工作台的写入边界规范
+  - [LoreWeaver.md](file:///Users/lm/pyProj/LoreWeaver/docs/architecture/LoreWeaver.md)：工作台设计白皮书
+- **[guides/](file:///Users/lm/pyProj/LoreWeaver/docs/guides/)**：协作流程与指南
+  - [precise_pipeline_1_1_to_3_3.md](file:///Users/lm/pyProj/LoreWeaver/docs/guides/precise_pipeline_1_1_to_3_3.md)：Step 1.1 至 Step 3.3 全流程跨角色彩排指南
+  - [patch_revision_workflow.md](file:///Users/lm/pyProj/LoreWeaver/docs/guides/patch_revision_workflow.md)：Patch/Revision 工作流与级别政策 (L0-L4)
+  - [production_department_agents.md](file:///Users/lm/pyProj/LoreWeaver/docs/guides/production_department_agents.md)：电影剧组式多 Agent 部门分工与责任界定
+  - [agent_roles_artifact_ownership.md](file:///Users/lm/pyProj/LoreWeaver/docs/guides/agent_roles_artifact_ownership.md)：Agent 角色与产物归属对应表
+- **[roadmap/](file:///Users/lm/pyProj/LoreWeaver/docs/roadmap/)**：产品路线图与任务 Backlog
+  - [0_TASKLIST.md](file:///Users/lm/pyProj/LoreWeaver/docs/roadmap/0_TASKLIST.md)：当前全量执行 Backlog 与完成状态
+  - [LoreWeaver_Workbench_Gameplay_Core_Roadmap.md](file:///Users/lm/pyProj/LoreWeaver/docs/roadmap/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md)：玩法核心与工作台长期演进 Roadmap
+- **[policy/](file:///Users/lm/pyProj/LoreWeaver/docs/policy/)**：策略文档
+  - [copyright_and_fanwork_deferred_policy.md](file:///Users/lm/pyProj/LoreWeaver/docs/policy/copyright_and_fanwork_deferred_policy.md)：同人题材版权与离线发布清洗策略
+- **[archive/](file:///Users/lm/pyProj/LoreWeaver/docs/archive/)**：历史 PRD、早期架构草稿与归档资料
+
+---
+
+### AI 游戏引擎主框架库 (`minigame_master/`)
+
+- **[core/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/core/)**：引擎运行时核心代码
+  - `lib/`：通用模块（Audio, Systems, Interaction, Juice, Gameplay Adapters & Modifiers）
+  - `demo/`：引擎独立测试与模拟环境
+- **[contracts/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/contracts/)**：引擎契约与机器可读 Schema
+  - [core_contracts.md](file:///Users/lm/pyProj/LoreWeaver/minigame_master/contracts/core_contracts.md)：NodePayload, NodeResult, Adapter, Modifier, Lifecycle 稳定契约
+  - [runtime_feature_pack_contract.md](file:///Users/lm/pyProj/LoreWeaver/minigame_master/contracts/runtime_feature_pack_contract.md)：可复用 Feature Pack 契约
+  - `runtime_feature_pack.schema.json`：Runtime Feature Pack Schema 校验文件
+  - `asset_pipeline_contract.md`：资产流水线契约
+- **[gameplay/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/gameplay/)**：玩法卡数据库与机制盘点
+  - [gameplay_inventory.md](file:///Users/lm/pyProj/LoreWeaver/minigame_master/gameplay/gameplay_inventory.md)：玩法机制全量盘点与源码索引
+  - [gameplay_card_schema.md](file:///Users/lm/pyProj/LoreWeaver/minigame_master/gameplay/gameplay_card_schema.md)：Gameplay Card 机器可读 Schema 规范
+  - [cards/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/gameplay/cards/)：包含了割草生存、即时反应、横版格斗、回合对战等全量 Gameplay Card JSON 数据库及其 `modifiers/` 修饰符与 `fixtures/`
+- **[templates/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/templates/)**：引擎构建与开发模板库
+  - [document_templates/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/templates/document_templates/)：PRD、架构、Canvas UI、GameFeel 等 11 个标准文档模板
+  - [prompt_templates/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/templates/prompt_templates/)：Step 1.1 至 Step 3.3 节点生成提示词模板
+- **[capabilities/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/)**：引擎工程校验与自动化能力
+  - [verification/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/verification/)：E2E 测试 (`run_e2e_test.py`)、烟雾测试 (`run_node_smoke.mjs`)、构建门禁 (`run_build_gate.mjs`)、代码卫生 (`check_scene_hygiene.mjs`) 与安全扫描脚本
+  - [reports/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/)：测试门禁运行结果输出目录
+- **[skills/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/skills/)**：引擎 AI Agent 技能与角色规范
+  - [agents/](file:///Users/lm/pyProj/LoreWeaver/minigame_master/skills/agents/)：Playwright Tester 等 Agent 角色规范
+  - [department_agents.registry.json](file:///Users/lm/pyProj/LoreWeaver/minigame_master/skills/department_agents.registry.json)：AI 部门代理注册表 JSON
