@@ -19,7 +19,7 @@ LORE_ROOT = SCRIPT_PATH.parents[2]
 REPO_ROOT = LORE_ROOT.parent
 if not (REPO_ROOT / "minigame_master").exists():
     REPO_ROOT = LORE_ROOT
-REPORTS_DIR = LORE_ROOT / "capabilities" / "reports"
+REPORTS_DIR = LORE_ROOT / "minigame_master" / "capabilities" / "reports"
 SURVIVOR_DEMO_CONFIG = REPO_ROOT / "minigame_master" / "core" / "demo" / "survivor_horde" / "vite.config.mjs"
 
 def utc_now_iso():

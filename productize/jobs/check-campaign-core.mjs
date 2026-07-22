@@ -28,7 +28,7 @@ const out = {
   module: "minigame_master/core/lib/gameplay/campaign",
   assertions: ["level_contract_valid", "game_feel_limits", "theme_agnostic"]
 };
-const reportPath = path.join(root, "capabilities/reports/campaign_core_check_latest.json");
+const reportPath = path.join(root, "minigame_master/capabilities/reports/campaign_core_check_latest.json");
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });
 fs.writeFileSync(reportPath, `${JSON.stringify(out, null, 2)}\n`);
 console.log("Campaign core check passed:", reportPath);

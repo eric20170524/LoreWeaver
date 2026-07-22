@@ -3,8 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const loreRoot = path.resolve(scriptDir, "../..");
-const reportsDir = path.join(loreRoot, "capabilities", "reports");
+const loreRoot = path.resolve(scriptDir, "../../..");
+const reportsDir = path.join(loreRoot, "minigame_master", "capabilities", "reports");
 
 const REQUIRED_ARTIFACTS = [
   "abilityCatalog",

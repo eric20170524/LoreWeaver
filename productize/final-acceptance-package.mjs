@@ -31,10 +31,10 @@ const maturity = readJson(path.join(WS, "reports/maturity_score_latest.json"), {
 const fullQa = readJson(path.join(WS, "reports/full_qa_latest.json"), {});
 const exportSmoke = readJson(path.join(WS, "reports/export_smoke_latest.json"), {});
 const cold = readJson(path.join(LORE_ROOT, "productize/coldstart/latest.json"), {});
-const coreCheck = readJson(path.join(LORE_ROOT, "capabilities/reports/campaign_core_check_latest.json"), {});
-const cardVal = readJson(path.join(LORE_ROOT, "capabilities/reports/gameplay_card_validate_latest.json"), {});
-const assetJob = readJson(path.join(LORE_ROOT, "capabilities/reports/asset_job_latest.json"), {});
-const patch = readJson(path.join(LORE_ROOT, "capabilities/reports/source_patch_latest.json"), {});
+const coreCheck = readJson(path.join(LORE_ROOT, "minigame_master/capabilities/reports/campaign_core_check_latest.json"), {});
+const cardVal = readJson(path.join(LORE_ROOT, "minigame_master/capabilities/reports/gameplay_card_validate_latest.json"), {});
+const assetJob = readJson(path.join(LORE_ROOT, "minigame_master/capabilities/reports/asset_job_latest.json"), {});
+const patch = readJson(path.join(LORE_ROOT, "minigame_master/capabilities/reports/source_patch_latest.json"), {});
 
 const gameScore = maturity?.assessment?.scoreAfterHardCaps ?? maturity?.gate?.score ?? null;
 const hardCaps = (maturity?.hardCaps || []).filter((c) => c.active).map((c) => c.id);
@@ -98,14 +98,14 @@ const evidenceIndex = {
     maturity: `${path.relative(LORE_ROOT, WS).split(path.sep).join("/")}/reports/maturity_score_latest.json`,
     fullQa: `${path.relative(LORE_ROOT, WS).split(path.sep).join("/")}/reports/full_qa_latest.json`,
     exportSmoke: `${path.relative(LORE_ROOT, WS).split(path.sep).join("/")}/reports/export_smoke_latest.json`,
-    exportStandalone: "capabilities/reports/export_standalone_latest.json",
-    campaignCore: "capabilities/reports/campaign_core_check_latest.json",
-    compile: "capabilities/reports/workspace_compile_latest.json",
-    gameplayCard: "capabilities/reports/gameplay_card_validate_latest.json",
-    assetJob: "capabilities/reports/asset_job_latest.json",
-    sourcePatch: "capabilities/reports/source_patch_latest.json",
-    machineAcceptance: "capabilities/reports/final_acceptance_machine_latest.json",
-    loreweaverScore: "capabilities/reports/loreweaver_tool_maturity_latest.json"
+    exportStandalone: "minigame_master/capabilities/reports/export_standalone_latest.json",
+    campaignCore: "minigame_master/capabilities/reports/campaign_core_check_latest.json",
+    compile: "minigame_master/capabilities/reports/workspace_compile_latest.json",
+    gameplayCard: "minigame_master/capabilities/reports/gameplay_card_validate_latest.json",
+    assetJob: "minigame_master/capabilities/reports/asset_job_latest.json",
+    sourcePatch: "minigame_master/capabilities/reports/source_patch_latest.json",
+    machineAcceptance: "minigame_master/capabilities/reports/final_acceptance_machine_latest.json",
+    loreweaverScore: "minigame_master/capabilities/reports/loreweaver_tool_maturity_latest.json"
   },
   taskCoverage: {
     "LW-048": fullQa.status === "passed" && exportSmoke.status === "passed",
@@ -120,10 +120,10 @@ const evidenceIndex = {
   humanGatesRemaining: ["human_playtest", "human_final_acceptance_confirm"]
 };
 
-fs.mkdirSync(path.join(LORE_ROOT, "capabilities/reports"), { recursive: true });
-fs.writeFileSync(path.join(LORE_ROOT, "capabilities/reports/final_acceptance_machine_latest.json"), `${JSON.stringify(machineAcceptance, null, 2)}\n`);
-fs.writeFileSync(path.join(LORE_ROOT, "capabilities/reports/loreweaver_tool_maturity_latest.json"), `${JSON.stringify(loreweaverScore, null, 2)}\n`);
-fs.writeFileSync(path.join(LORE_ROOT, "capabilities/reports/evidence_index_latest.json"), `${JSON.stringify(evidenceIndex, null, 2)}\n`);
+fs.mkdirSync(path.join(LORE_ROOT, "minigame_master/capabilities/reports"), { recursive: true });
+fs.writeFileSync(path.join(LORE_ROOT, "minigame_master/capabilities/reports/final_acceptance_machine_latest.json"), `${JSON.stringify(machineAcceptance, null, 2)}\n`);
+fs.writeFileSync(path.join(LORE_ROOT, "minigame_master/capabilities/reports/loreweaver_tool_maturity_latest.json"), `${JSON.stringify(loreweaverScore, null, 2)}\n`);
+fs.writeFileSync(path.join(LORE_ROOT, "minigame_master/capabilities/reports/evidence_index_latest.json"), `${JSON.stringify(evidenceIndex, null, 2)}\n`);
 fs.writeFileSync(path.join(WS, "reports/final_acceptance_machine_latest.json"), `${JSON.stringify(machineAcceptance, null, 2)}\n`);
 
 console.log(JSON.stringify({

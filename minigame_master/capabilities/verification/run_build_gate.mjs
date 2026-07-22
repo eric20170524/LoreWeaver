@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(__filename);
-const loreRoot = path.resolve(scriptDir, "../..");
+const loreRoot = path.resolve(scriptDir, "../../..");
 const repoRoot = path.resolve(loreRoot, "..");
-const reportsDir = path.join(loreRoot, "capabilities", "reports");
+const reportsDir = path.join(loreRoot, "minigame_master", "capabilities", "reports");
 
 function runStep(step) {
   const startedAt = new Date().toISOString();
@@ -61,7 +61,7 @@ const steps = [
     cwd: repoRoot,
     cmd: "python3",
     args: [
-      "LoreWeaver/capabilities/verification/run_e2e_test.py",
+      "LoreWeaver/minigame_master/capabilities/verification/run_e2e_test.py",
       "--game",
       "survivor_horde"
     ]
@@ -71,7 +71,7 @@ const steps = [
     cwd: repoRoot,
     cmd: "python3",
     args: [
-      "LoreWeaver/capabilities/verification/run_e2e_test.py",
+      "LoreWeaver/minigame_master/capabilities/verification/run_e2e_test.py",
       "--game",
       "loreweaver"
     ]
@@ -81,7 +81,7 @@ const steps = [
     cwd: loreRoot,
     cmd: "node",
     args: [
-      "capabilities/verification/content_safety_scan.mjs"
+      "minigame_master/capabilities/verification/content_safety_scan.mjs"
     ]
   }
 ];

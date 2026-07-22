@@ -22,4 +22,5 @@ docs_collab/screenshots/
 # Local-only gate evidence & exports
 workflow/reports/
 capabilities/reports/
+minigame_master/capabilities/reports/
 productize/exports/

@@ -12,12 +12,12 @@ import { fileURLToPath } from "node:url";
 import {
   smokeAdapter,
   defaultCardIdForNode
-} from "../../minigame_master/core/lib/testing/runAdapterSmoke.js";
-import { PLAYABLE_CARD_IDS } from "../../minigame_master/core/lib/contracts/PlayabilityContract.js";
+} from "../../core/lib/testing/runAdapterSmoke.js";
+import { PLAYABLE_CARD_IDS } from "../../core/lib/contracts/PlayabilityContract.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LORE_ROOT = path.resolve(__dirname, "../..");
-const REPORTS_DIR = path.join(LORE_ROOT, "capabilities", "reports");
+const LORE_ROOT = path.resolve(__dirname, "../../..");
+const REPORTS_DIR = path.join(LORE_ROOT, "minigame_master", "capabilities", "reports");
 
 function parseArgs(argv) {
   const out = {

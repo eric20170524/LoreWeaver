@@ -428,7 +428,7 @@ const report = {
     "loreweaver/generation-log.json", "meta.json", "README.md"
   ]
 };
-write(path.join(LORE_ROOT, "capabilities/reports/workspace_compile_latest.json"), `${JSON.stringify(report, null, 2)}\n`);
+write(path.join(LORE_ROOT, "minigame_master/capabilities/reports/workspace_compile_latest.json"), `${JSON.stringify(report, null, 2)}\n`);
 write(path.join(LORE_ROOT, "productize/coldstart/latest.json"), `${JSON.stringify(report, null, 2)}\n`);
 
 console.log(JSON.stringify({ status: "passed", workspaceId: outId, path: report.path }, null, 2));

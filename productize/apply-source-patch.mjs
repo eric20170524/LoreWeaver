@@ -59,7 +59,7 @@ const report = {
   createdAt: new Date().toISOString()
 };
 
-const out = path.join(LORE_ROOT, "capabilities/reports/source_patch_latest.json");
+const out = path.join(LORE_ROOT, "minigame_master/capabilities/reports/source_patch_latest.json");
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify(report, null, 2));

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const loreRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const fixturePath = 'docs/gameplay_cards/fixtures/survivor_horde/node2_12_capability_contracts.json';
 const schemaPath = 'docs/contracts/survivor_horde_capability_fixture.schema.json';
-const reportPath = path.join(loreRoot, 'capabilities/reports/survivor_migration_fixtures_latest.json');
+const reportPath = path.join(loreRoot, 'minigame_master/capabilities/reports/survivor_migration_fixtures_latest.json');
 
 function readJson(relativePath) {
     return JSON.parse(fs.readFileSync(path.join(loreRoot, relativePath), 'utf8'));

@@ -319,7 +319,7 @@ const exportReport = {
     : { status: "required", reason: browserGate.reason },
   errors: browserGate.report?.errors || null
 };
-const reportPath = path.join(LORE_ROOT, "capabilities/reports/export_standalone_latest.json");
+const reportPath = path.join(LORE_ROOT, "minigame_master/capabilities/reports/export_standalone_latest.json");
 fs.writeFileSync(reportPath, `${JSON.stringify({ ...exportReport, stage }, null, 2)}\n`);
 const workspaceReports = path.join(wsPath, "reports");
 fs.mkdirSync(workspaceReports, { recursive: true });

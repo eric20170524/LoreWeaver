@@ -33,7 +33,7 @@
   },
   "evidence": {
     "commands": ["node productize/jobs/check-campaign-core.mjs"],
-    "reports": ["capabilities/reports/campaign_core_check_latest.json"]
+    "reports": ["minigame_master/capabilities/reports/campaign_core_check_latest.json"]
   },
   "secretsPolicy": {
     "forbidsCredentialsInManifests": true

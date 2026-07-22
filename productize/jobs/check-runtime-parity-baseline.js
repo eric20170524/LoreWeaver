@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const loreRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const reportPath = path.join(loreRoot, 'capabilities/reports/runtime_parity_baseline_latest.json');
+const reportPath = path.join(loreRoot, 'minigame_master/capabilities/reports/runtime_parity_baseline_latest.json');
 
 const files = {
     compiler: 'src/runtime/compileRuntimeSpec.ts',
@@ -17,9 +17,9 @@ const files = {
     standaloneHtml: 'productize/standalone/index.html',
     standaloneVite: 'vite.config.standalone.ts',
     exporter: 'productize/export-standalone.mjs',
-    browserReport: 'capabilities/reports/standalone_browser_latest.json',
-    fingerprintReport: 'capabilities/reports/runtime_host_fingerprint_latest.json',
-    exportReport: 'capabilities/reports/export_standalone_latest.json',
+    browserReport: 'minigame_master/capabilities/reports/standalone_browser_latest.json',
+    fingerprintReport: 'minigame_master/capabilities/reports/runtime_host_fingerprint_latest.json',
+    exportReport: 'minigame_master/capabilities/reports/export_standalone_latest.json',
     legacyNode1: 'data/workspaces/20260611-060754-719406/nodes/node1.js',
     legacyCombat: 'data/workspaces/20260611-060754-719406/runtime/CombatRuntime.js',
     legacyEnemy: 'data/workspaces/20260611-060754-719406/runtime/EnemyArchetypeRuntime.js',

@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(__filename);
-const loreRoot = path.resolve(scriptDir, "../..");
-const reportsDir = path.join(loreRoot, "capabilities", "reports");
+const loreRoot = path.resolve(scriptDir, "../../..");
+const reportsDir = path.join(loreRoot, "minigame_master", "capabilities", "reports");
 const GENERATED_DIRS = new Set([".vite", "node_modules", "dist", "coverage"]);
 
 function read(relPath) {

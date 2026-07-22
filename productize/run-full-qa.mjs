@@ -38,7 +38,7 @@ const runCmd = (cmd, argsArr, cwd = LORE_ROOT) => steps.push(run(cmd, argsArr, c
 runCmd("npm", ["run", "build"]);
 
 // 2. Content safety scan if script present
-const contentScript = path.join(LORE_ROOT, "capabilities/verification/content_safety_scan.mjs");
+const contentScript = path.join(LORE_ROOT, "minigame_master/capabilities/verification/content_safety_scan.mjs");
 if (fs.existsSync(contentScript)) {
   runCmd("node", [contentScript, WS], LORE_ROOT);
 }
@@ -66,6 +66,6 @@ const report = {
 
 const out = path.join(WS, "reports/full_qa_latest.json");
 fs.writeFileSync(out, `${JSON.stringify(report, null, 2)}\n`);
-fs.writeFileSync(path.join(LORE_ROOT, "capabilities/reports/full_qa_latest.json"), `${JSON.stringify(report, null, 2)}\n`);
+fs.writeFileSync(path.join(LORE_ROOT, "minigame_master/capabilities/reports/full_qa_latest.json"), `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify(report.summary, null, 2));
 if (report.status !== "passed") process.exit(1);

@@ -63,6 +63,6 @@ const report = {
   productionExportAllowed: card.status !== "design_only" && card.exportPolicy?.productionReady !== false,
   createdAt: new Date().toISOString()
 };
-fs.writeFileSync(path.join(LORE_ROOT, "capabilities/reports/gameplay_card_validate_latest.json"), `${JSON.stringify(report, null, 2)}\n`);
+fs.writeFileSync(path.join(LORE_ROOT, "minigame_master/capabilities/reports/gameplay_card_validate_latest.json"), `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify(report, null, 2));
 if (report.status !== "passed") process.exit(1);

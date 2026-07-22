@@ -53,10 +53,10 @@ REPO_ROOT = os.path.abspath(os.path.join(LORE_ROOT, ".."))
 MINIGAME_CORE_ROOT = os.path.join(LORE_ROOT, "minigame_master", "core")
 if not os.path.exists(MINIGAME_CORE_ROOT):
     MINIGAME_CORE_ROOT = os.path.join(REPO_ROOT, "minigame_master", "core")
-REPORTS_DIR = os.path.join(LORE_ROOT, "capabilities", "reports")
+REPORTS_DIR = os.path.join(LORE_ROOT, "minigame_master", "capabilities", "reports")
 DATA_DIR = os.path.join(LORE_ROOT, "data")
 WORKSPACES_DIR = os.path.join(DATA_DIR, "workspaces")
-NODE_SMOKE_SCRIPT = os.path.join(LORE_ROOT, "capabilities", "verification", "run_node_smoke.mjs")
+NODE_SMOKE_SCRIPT = os.path.join(LORE_ROOT, "minigame_master", "capabilities", "verification", "run_node_smoke.mjs")
 os.makedirs(WORKSPACES_DIR, exist_ok=True)
 
 

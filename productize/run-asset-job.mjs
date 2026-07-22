@@ -101,7 +101,7 @@ const result = {
 const out = path.join(LORE_ROOT, "productize/jobs", `${jobId}_latest.json`);
 fs.writeFileSync(out, `${JSON.stringify(result, null, 2)}\n`);
 fs.writeFileSync(
-  path.join(LORE_ROOT, "capabilities/reports/asset_job_latest.json"),
+  path.join(LORE_ROOT, "minigame_master/capabilities/reports/asset_job_latest.json"),
   `${JSON.stringify(result, null, 2)}\n`
 );
 console.log(JSON.stringify({ status: result.status, jobId, assets: result.assets?.length || 0 }, null, 2));

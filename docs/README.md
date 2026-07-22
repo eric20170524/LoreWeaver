@@ -30,7 +30,7 @@ flowchart TD
 - If the user says they tested a **LoreWeaver target workspace**, inspect and patch `LoreWeaver/data/workspaces/[workspace-id]` first.
 - If the user says the **Workbench emulator** still renders wrong, inspect `LoreWeaver/src/game/GameRunner.ts` and the relevant adapter under `minigame_master/core/lib`.
 - If the task is about **Workbench panels, tabs, controls, or app chrome**, edit `LoreWeaver/src/components` and related Workbench CSS.
-- If the task is about **manifest schemas, gameplay cards, runtime feature packs, gates, or docs**, edit `LoreWeaver/docs`, `LoreWeaver/templates`, `LoreWeaver/capabilities`, `LoreWeaver/skills`, and associated schema/check scripts.
+- If the task is about **manifest schemas, gameplay cards, runtime feature packs, gates, or docs**, edit `LoreWeaver/docs`, `LoreWeaver/minigame_master/templates`, `LoreWeaver/minigame_master/capabilities`, `LoreWeaver/minigame_master/skills`, and associated schema/check scripts.
 - Treat `minigame/xianni` and `minigame/perfectworld_dahuang` as legacy references by default. They can inform adapters, manifests, catalogs, and tests, but they are not the active target workspace unless the user explicitly says so.
 - When a reusable runtime change is made, also check whether any named target workspace must be synced or regenerated. A passing core build does not prove a git-ignored workspace artifact changed.
 - If a request can plausibly refer to more than one surface, ask one clarifying question before editing. Do not guess between Workbench UI, engine runtime, target workspace artifact, and legacy reference project.

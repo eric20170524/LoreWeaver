@@ -553,7 +553,7 @@ def _check_node_smoke(
             warnings.append(f"qa:node_smoke_score={smoke_score}<50")
         return
     if not smoke and smoke_score is None:
-        blockers.append("qa:node_smoke_missing — run capabilities/verification/run_node_smoke.mjs")
+        blockers.append("qa:node_smoke_missing — run minigame_master/capabilities/verification/run_node_smoke.mjs")
         warnings.append("director: schedule node smoke before advance")
         return
     status = str((smoke or {}).get("status") or "").lower()
@@ -765,7 +765,7 @@ def evaluate_advance_gate(
     """
     Hard gate for production_prep → asset_confirm.
 
-    Ownership for node smoke (see capabilities/verification/run_node_smoke.mjs):
+    Ownership for node smoke (see minigame_master/capabilities/verification/run_node_smoke.mjs):
       - qa: owns gate definition / report
       - code: runtime enter/spawn/retreat failures
       - gameplay: card/duration/goal contract failures

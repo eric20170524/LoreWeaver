@@ -218,7 +218,7 @@ const out = {
         runtimeEventTypes: adapter.runtimeEventHistory.map((event) => event.type)
     }
 };
-const reportPath = path.join(root, 'capabilities/reports/survivor_channel_interaction_latest.json');
+const reportPath = path.join(root, 'minigame_master/capabilities/reports/survivor_channel_interaction_latest.json');
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });
 fs.writeFileSync(reportPath, `${JSON.stringify(out, null, 2)}\n`);
 console.log('Survivor channel interaction check passed:', reportPath);
