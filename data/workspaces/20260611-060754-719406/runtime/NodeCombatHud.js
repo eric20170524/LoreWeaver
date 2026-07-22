@@ -1,5 +1,7 @@
 import UIHelper from '../utils/UIHelper.js';
 import NodeBridge from '../systems/NodeBridge.js';
+import GameFeel from './GameFeel.js';
+import AudioManager from '../utils/AudioManager.js';
 
 export class Node1UI extends Phaser.Scene {
     constructor(key = 'Node1UI') {
@@ -20,47 +22,62 @@ export class Node1UI extends Phaser.Scene {
         this.height = 1280;
         this.actionButtons = {};
 
-        // Compact Top Layout (respecting safe area insets via layout later, but we use reasonable margins)
-        this.timeText = this.add.text(20, 20, '时间: 0 / 120', { fontSize: '20px', fill: '#fff', fontStyle: 'bold' });
-        this.killText = this.add.text(20, 50, '击杀: 0', { fontSize: '20px', fill: '#fff' });
-        this.levelText = this.add.text(20, 80, 'Lv. 1', { fontSize: '20px', fill: '#ffd700', fontStyle: 'bold' });
+        // Safe-area aware top margin (notch / status bar). Virtual design coords + CSS env().
+        this.safeTop = 28;
+        this.safeBottom = 24;
+
+        // Compact Top Layout
+        this.timeText = this.add.text(20, this.safeTop, '时间: 0 / 120', { fontSize: '20px', fill: '#fff', fontStyle: 'bold' });
+        this.killText = this.add.text(20, this.safeTop + 30, '击杀: 0', { fontSize: '20px', fill: '#fff' });
+        this.levelText = this.add.text(20, this.safeTop + 60, 'Lv. 1', { fontSize: '20px', fill: '#ffd700', fontStyle: 'bold' });
 
         this.expBarBg = this.add.graphics();
         this.expBarBg.fillStyle(0x222222, 0.8);
-        this.expBarBg.fillRect(90, 84, 150, 12);
+        this.expBarBg.fillRect(90, this.safeTop + 64, 150, 12);
         this.expBar = this.add.graphics();
         this.updateExp(0, 20, 1);
 
         this.hpBarBg = this.add.graphics();
         this.hpBarBg.fillStyle(0x222222, 0.8);
-        this.hpBarBg.fillRect(20, 110, 220, 16);
+        this.hpBarBg.fillRect(20, this.safeTop + 90, 220, 16);
         this.hpBar = this.add.graphics();
         this.hpText = null;
         this.updateHp(this.parentScene.playerHp, this.parentScene.playerMaxHp);
 
         // Compact skill summary (LW-022: replaced 520x154 panel with minimal icons/text)
-        this.skillPanelBg = this.add.rectangle(20, 140, 220, 44, 0x071316, 0.6).setOrigin(0, 0);
+        this.skillPanelBg = this.add.rectangle(20, this.safeTop + 120, 220, 44, 0x071316, 0.6).setOrigin(0, 0);
         this.skillPanelBg.setStrokeStyle(1, 0x1f7774, 0.5);
-        this.skillTitleText = this.add.text(30, 146, '自动宝术: 0', { fontSize: '13px', fill: '#80ffea' });
-        this.skillText = this.add.text(30, 162, '仅基础自动拳', {
+        this.skillTitleText = this.add.text(30, this.safeTop + 126, '自动宝术: 0', { fontSize: '13px', fill: '#80ffea' });
+        this.skillText = this.add.text(30, this.safeTop + 142, '仅基础自动拳', {
             fontSize: '11px',
             fill: '#ffffff'
         });
         this.skillHintText = null; // Removed
-        this.skillCastText = this.add.text(20, 190, '最近: —', { fontSize: '12px', fill: '#ffd27a' });
+        this.skillCastText = this.add.text(20, this.safeTop + 170, '最近: —', { fontSize: '12px', fill: '#ffd27a' });
         this.updateSkills(this.parentScene.activeSkills || []);
 
-        this.actionHelpText = this.add.text(this.width - 20, this.height - 300, 'Space/J/K · 闪避/术法/爆发', {
+        this.actionHelpText = this.add.text(this.width - 20, this.height - 300 - this.safeBottom, 'Space/J/K · 闪避/术法/爆发', {
             fontSize: '12px',
             fill: '#9dd9d2'
         }).setOrigin(1, 1);
 
         this.createActionBar();
 
-        // Pause/Settings/Retreat buttons at top right
-        this.pauseBtn = this.add.text(this.width - 140, 20, '暂停', {
-            fontSize: '20px', fill: '#ffffff', backgroundColor: '#333333', padding: { x: 10, y: 5 }
-        }).setOrigin(0.5).setInteractive();
+        // Pause/Settings/Retreat buttons at top right.
+        // Fixed virtual size keeps the downscaled mobile hit target above 44 CSS px.
+        const topButtonStyle = {
+            fontSize: '20px',
+            fill: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 10, y: 10 },
+            fixedWidth: 96,
+            fixedHeight: 96,
+            align: 'center'
+        };
+        const topY = this.safeTop + 36;
+        this.pauseBtn = this.add.text(this.width - 260, topY, '暂停', topButtonStyle)
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });
         UIHelper.bindButtonBounce(this.pauseBtn, () => {
             if (this.parentScene.isPaused) {
                 this.parentScene.isPaused = false;
@@ -73,9 +90,16 @@ export class Node1UI extends Phaser.Scene {
             }
         });
 
-        this.retreatBtn = this.add.text(this.width - 60, 20, '撤退', {
-            fontSize: '20px', fill: '#ffffff', backgroundColor: '#8b0000', padding: { x: 10, y: 5 }
-        }).setOrigin(0.5).setInteractive();
+        this.settingsBtn = this.add.text(this.width - 156, topY, '设置', {
+            ...topButtonStyle,
+            backgroundColor: '#1f4b4a'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        UIHelper.bindButtonBounce(this.settingsBtn, () => this.showSettingsQuick());
+
+        this.retreatBtn = this.add.text(this.width - 52, topY, '撤退', {
+            ...topButtonStyle,
+            backgroundColor: '#8b0000'
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         UIHelper.bindButtonBounce(this.retreatBtn, () => this.showRetreatConfirm());
 
         this.events.once('shutdown', () => this.teardown());
@@ -87,11 +111,12 @@ export class Node1UI extends Phaser.Scene {
 
 createActionBar() {
         const size = 76;
-        // Stable bottom-right action-button cluster (right thumb).
+        // Stable bottom-right action-button cluster (right thumb) with safe-bottom inset.
+        const bottom = 48 + (this.safeBottom || 0);
         const slots = {
-            dash: { x: this.width - 36 - size / 2, y: this.height - 48 - size * 2 - 18 },
-            active: { x: this.width - 36 - size / 2, y: this.height - 48 - size / 2 },
-            burst: { x: this.width - 36 - size * 1.55 - 12, y: this.height - 48 - size / 2 }
+            dash: { x: this.width - 36 - size / 2, y: this.height - bottom - size * 2 - 18 },
+            active: { x: this.width - 36 - size / 2, y: this.height - bottom - size / 2 },
+            burst: { x: this.width - 36 - size * 1.55 - 12, y: this.height - bottom - size / 2 }
         };
 
         // Explicit markers for maturity/source scanners and E2E.
@@ -297,18 +322,20 @@ createActionBar() {
         this.levelText.setText(`Lv. ${level}`);
         this.expBar.clear();
         this.expBar.fillStyle(0x00aaff, 1);
-        this.expBar.fillRect(90, 84, 150 * Math.min(current / max, 1), 12);
+        const y = (this.safeTop || 0) + 64;
+        this.expBar.fillRect(90, y, 150 * Math.min(current / max, 1), 12);
     }
 
     updateHp(current, max) {
         if (!this.hpDisplay) this.hpDisplay = { value: current };
         this.hpTween?.stop?.();
+        const y = (this.safeTop || 0) + 90;
         const drawHp = (value) => {
             this.hpBar.clear();
             this.hpBar.fillStyle(0xff0000, 1);
-            this.hpBar.fillRect(20, 110, 220 * Math.max(Math.min(value / max, 1), 0), 16);
+            this.hpBar.fillRect(20, y, 220 * Math.max(Math.min(value / max, 1), 0), 16);
             const textStr = `${this.formatNumber(Math.ceil(current))} / ${this.formatNumber(max)}`;
-            if (!this.hpText) this.hpText = this.add.text(250, 108, textStr, { fontSize: '16px', fill: '#ff4444', fontStyle: 'bold' });
+            if (!this.hpText) this.hpText = this.add.text(250, y - 2, textStr, { fontSize: '16px', fill: '#ff4444', fontStyle: 'bold' });
             else this.hpText.setText(textStr);
         };
         this.hpTween = this.tweens.add({
@@ -316,5 +343,66 @@ createActionBar() {
             onUpdate: () => drawHp(this.hpDisplay.value), onComplete: () => drawHp(current)
         });
         drawHp(this.hpDisplay.value);
+    }
+
+    /** In-combat quick toggles for a11y / feel (persists via Save v2). */
+    showSettingsQuick() {
+        if (this.settingsOpen) return;
+        this.settingsOpen = true;
+        const wasPaused = Boolean(this.parentScene?.isPaused);
+        if (this.parentScene && !wasPaused) {
+            this.parentScene.isPaused = true;
+            this.parentScene.physics?.pause?.();
+        }
+        const w = this.width;
+        const h = this.height;
+        const settings = GameFeel.getSettings();
+        const keys = [
+            ['reducedMotion', '减少动态'],
+            ['screenShake', '屏幕震动'],
+            ['damageNumbers', '伤害数字'],
+            ['highContrastCues', '高对比提示'],
+            ['vibrationEnabled', '震动反馈'],
+            ['sfxEnabled', '音效']
+        ];
+        const nodes = [];
+        const overlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.65).setDepth(500).setInteractive().setScrollFactor(0);
+        const panel = this.add.rectangle(w / 2, h / 2, 480, 520, 0x120e0a, 0.96).setDepth(501).setScrollFactor(0);
+        panel.setStrokeStyle(3, 0x80ffea);
+        const title = this.add.text(w / 2, h / 2 - 220, '战斗设置', {
+            fontSize: '26px', fill: '#ffd700', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(502).setScrollFactor(0);
+        nodes.push(overlay, panel, title);
+        keys.forEach(([key, label], i) => {
+            const y = h / 2 - 150 + i * 58;
+            const row = this.add.text(w / 2 - 180, y, label, { fontSize: '18px', fill: '#e5d9c8' })
+                .setOrigin(0, 0.5).setDepth(502).setScrollFactor(0);
+            const on = Boolean(settings[key]);
+            const btn = this.add.text(w / 2 + 140, y, on ? '开' : '关', {
+                fontSize: '18px', fill: '#fff', backgroundColor: on ? '#166534' : '#555',
+                padding: { x: 16, y: 6 }, fixedWidth: 64, align: 'center'
+            }).setOrigin(0.5).setDepth(502).setScrollFactor(0).setInteractive({ useHandCursor: true });
+            btn.on('pointerdown', () => {
+                AudioManager.playClick();
+                const next = !GameFeel.getSettings()[key];
+                GameFeel.setSetting(key, next);
+                btn.setText(next ? '开' : '关');
+                btn.setStyle({ backgroundColor: next ? '#166534' : '#555' });
+            });
+            nodes.push(row, btn);
+        });
+        const close = this.add.text(w / 2, h / 2 + 210, '完成', {
+            fontSize: '22px', fill: '#fff', backgroundColor: '#8b0000', padding: { x: 24, y: 8 }
+        }).setOrigin(0.5).setDepth(502).setScrollFactor(0).setInteractive({ useHandCursor: true });
+        UIHelper.bindButtonBounce(close, () => {
+            nodes.forEach((n) => n.destroy?.());
+            close.destroy?.();
+            this.settingsOpen = false;
+            if (this.parentScene && !wasPaused) {
+                this.parentScene.isPaused = false;
+                this.parentScene.physics?.resume?.();
+            }
+        });
+        nodes.push(close);
     }
 }

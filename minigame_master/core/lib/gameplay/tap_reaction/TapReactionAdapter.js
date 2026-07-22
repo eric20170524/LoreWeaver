@@ -91,11 +91,18 @@ export default class TapReactionAdapter extends GameplayAdapter {
         this.bossGroup = scene.add.container(width / 2, height / 2);
 
         this.lifecycle.addCleanup(() => {
-            this.orbs.forEach(orb => orb.destroy());
-            this.bossWeakPoints.forEach(wp => wp.destroy());
-            this.bossGroup?.destroy();
-            this.bossLaser?.destroy();
-            this.deflectShield?.destroy();
+            this.orbs.forEach(orb => orb?.destroy?.());
+            this.bossWeakPoints.forEach(wp => {
+                wp.labelObj?.destroy?.();
+                wp.destroy?.();
+            });
+            this.bossGroup?.destroy?.();
+            this.bossLaser?.destroy?.();
+            this.deflectShield?.destroy?.();
+            if (this.activeLaserWarning) {
+                this.activeLaserWarning.warningLine?.destroy?.();
+                this.activeLaserWarning.warningText?.destroy?.();
+            }
         });
 
         this.startTimers();
@@ -129,11 +136,18 @@ export default class TapReactionAdapter extends GameplayAdapter {
         if (this.state.bossSpawned && this.bossGroup) {
             this.bossGroup.angle += 0.5 * (this.config.difficulty || 1);
             // Update weak points position around Boss center
+            const count = this.config.boss.weakPointsCount || 4;
             this.bossWeakPoints.forEach((wp, index) => {
-                if (!wp.active) return;
-                const angle = (this.bossGroup.angle + index * (360 / this.config.boss.weakPointsCount)) * (Math.PI / 180);
-                wp.x = this.world.width / 2 + Math.cos(angle) * 90;
-                wp.y = this.world.height / 2 + Math.sin(angle) * 90;
+                if (!wp || !wp.active) return;
+                const angle = (this.bossGroup.angle + index * (360 / count)) * (Math.PI / 180);
+                const wx = this.world.width / 2 + Math.cos(angle) * 90;
+                const wy = this.world.height / 2 + Math.sin(angle) * 90;
+                wp.x = wx;
+                wp.y = wy;
+                if (wp.labelObj && wp.labelObj.active) {
+                    wp.labelObj.x = wx;
+                    wp.labelObj.y = wy;
+                }
             });
         }
         this.publishTestState();
@@ -178,10 +192,11 @@ export default class TapReactionAdapter extends GameplayAdapter {
 
         coreCircle.on('pointerdown', () => {
             if (!this.isRunning()) return;
-            this.state.score += 1;
+            const gain = Math.floor(Math.random() * 5) + 1;
+            this.state.score += gain;
             this.playSynthSound('loot');
             this.spawnClickParticle(x, y, 0x10b981);
-            this.spawnFloatingText(x, y, '+1 灵气', '#10b981');
+            this.spawnFloatingText(x, y, `+${gain} 灵气`, '#10b981');
             shrinkTween.stop();
             this.cleanOrb(orbContainer);
 
@@ -210,39 +225,68 @@ export default class TapReactionAdapter extends GameplayAdapter {
         this.playSynthSound('breakthrough');
         this.playSynthSound('boss');
 
+        // Destroy remaining orbs
+        this.orbs.forEach(orb => orb?.destroy?.());
+        this.orbs = [];
+
+        // Instruction overlay banner
+        this.spawnBossInstructionBanner();
+
         // Draw Boss Core Graphics inside container
         const themeColor = this.payload.nodeConfig.gameplay?.themeColor || 0xa855f7; // Purple Boss core
         const bossCore = this.scene.add.graphics();
-        bossCore.fillStyle(themeColor, 0.2);
-        bossCore.fillCircle(0, 0, 70);
+        bossCore.fillStyle(themeColor, 0.25);
+        bossCore.fillCircle(0, 0, 75);
         bossCore.lineStyle(3, themeColor, 0.85);
-        bossCore.strokeCircle(0, 0, 70);
+        bossCore.strokeCircle(0, 0, 75);
         bossCore.lineStyle(1.5, themeColor, 0.5);
-        bossCore.strokeCircle(0, 0, 50);
+        bossCore.strokeCircle(0, 0, 52);
         this.bossGroup.add(bossCore);
 
+        const bossText = this.scene.add.text(0, 0, "劫雷真身", {
+            fontFamily: "Inter, sans-serif",
+            fontSize: "14px",
+            fontStyle: "bold",
+            color: "#e9d5ff"
+        }).setOrigin(0.5);
+        this.bossGroup.add(bossText);
+
         // Boss Health Bar background & foreground
-        this.bossHpGraphics = this.scene.add.graphics();
+        this.bossHpGraphics = this.scene.add.graphics().setDepth(150);
         this.updateBossHpBar();
 
         // Spawn weak points around Boss
-        const count = this.config.boss.weakPointsCount;
+        const count = this.config.boss.weakPointsCount || 4;
         for (let i = 0; i < count; i++) {
             const angle = (i * (360 / count)) * (Math.PI / 180);
             const wx = this.world.width / 2 + Math.cos(angle) * 90;
             const wy = this.world.height / 2 + Math.sin(angle) * 90;
 
-            const wp = this.scene.add.circle(wx, wy, this.config.boss.weakPointRadius, 0xef4444, 0.75);
-            wp.setStrokeStyle(2, 0xffffff, 1);
+            const wp = this.scene.add.circle(wx, wy, this.config.boss.weakPointRadius || 22, 0xef4444, 0.85);
+            wp.setStrokeStyle(3, 0xffffff, 1);
+            wp.setDepth(100);
             wp.setInteractive({ useHandCursor: true });
+
+            const wpText = this.scene.add.text(wx, wy, "🎯 击破", {
+                fontFamily: "Inter, sans-serif",
+                fontSize: "11px",
+                fontStyle: "bold",
+                color: "#ffffff"
+            }).setOrigin(0.5).setDepth(101);
+            wp.labelObj = wpText;
             
             wp.on('pointerdown', () => {
                 if (!this.isRunning()) return;
-                this.damageBoss(15);
+                this.damageBoss(20);
                 this.playSynthSound('loot');
                 this.spawnClickParticle(wp.x, wp.y, 0xef4444);
-                this.spawnFloatingText(wp.x, wp.y, '-15 劫力', '#ef4444');
+                this.spawnFloatingText(wp.x, wp.y, '-20 劫力', '#ef4444');
                 this.triggerScreenShake(80, 0.003);
+
+                // Interrupt active laser warning if hit
+                if (this.activeLaserWarning) {
+                    this.interruptLaserSweep();
+                }
             });
 
             this.bossWeakPoints.push(wp);
@@ -250,12 +294,45 @@ export default class TapReactionAdapter extends GameplayAdapter {
 
         // Start Boss attack loop
         this.bossAttackEvent = this.scene.time.addEvent({
-            delay: this.config.boss.attackIntervalMs,
+            delay: this.config.boss.attackIntervalMs || 2200,
             callback: this.triggerBossAttack,
             callbackScope: this,
             loop: true
         });
         this.lifecycle.trackTimer(this.bossAttackEvent);
+    }
+
+    spawnBossInstructionBanner() {
+        const { width, height } = this.world;
+        const bannerBg = this.scene.add.graphics().setDepth(200);
+        bannerBg.fillStyle(0x0f172a, 0.88);
+        bannerBg.fillRect(20, height / 2 - 220, width - 40, 56);
+        bannerBg.lineStyle(2, 0xa855f7, 0.9);
+        bannerBg.strokeRect(20, height / 2 - 220, width - 40, 56);
+
+        const bannerText = this.scene.add.text(
+            width / 2, height / 2 - 192,
+            "⚡ 劫雷真身降临！点击红色【🎯击破】痛击Boss，点击蓝色【🛡️防御】拦截雷击！",
+            {
+                fontFamily: "Inter, sans-serif",
+                fontSize: "13px",
+                fontStyle: "bold",
+                color: "#fbbf24",
+                align: "center",
+                wordWrap: { width: width - 60 }
+            }
+        ).setOrigin(0.5).setDepth(201);
+
+        this.scene.tweens.add({
+            targets: [bannerBg, bannerText],
+            alpha: 0,
+            delay: 4500,
+            duration: 800,
+            onComplete: () => {
+                bannerBg.destroy();
+                bannerText.destroy();
+            }
+        });
     }
 
     updateBossHpBar() {
@@ -304,33 +381,75 @@ export default class TapReactionAdapter extends GameplayAdapter {
         const py = this.Phaser.Math.Between(260, height - 320);
 
         // Laser warning line
-        const warningLine = this.scene.add.graphics();
-        warningLine.lineStyle(2, 0xef4444, 0.4);
+        const warningLine = this.scene.add.graphics().setDepth(150);
+        warningLine.lineStyle(4, 0xef4444, 0.7);
         warningLine.lineBetween(12, py, width - 12, py);
+
+        const warningText = this.scene.add.text(width / 2, py - 18, "⚡ 劫雷蓄力中！点击弱点打断！", {
+            fontFamily: "Inter, sans-serif",
+            fontSize: "13px",
+            fontStyle: "bold",
+            color: "#ef4444",
+            backgroundColor: "rgba(15, 23, 42, 0.8)",
+            padding: { x: 8, y: 4 }
+        }).setOrigin(0.5).setDepth(151);
 
         this.playSynthSound('damage'); // warning beep
 
-        this.scene.time.delayedCall(1000, () => {
-            if (!this.isRunning()) {
+        const warningTimer = this.scene.time.delayedCall(1500, () => {
+            if (!this.isRunning() || !warningLine.active) {
                 warningLine.destroy();
+                warningText.destroy();
                 return;
             }
             // Fire real laser beam
             warningLine.clear();
-            warningLine.lineStyle(8, 0xffffff, 1);
+            warningLine.lineStyle(10, 0xffffff, 1);
             warningLine.lineBetween(12, py, width - 12, py);
+            warningText.setText("⚡ 劫雷轰顶！");
             this.playSynthSound('damage'); // fire sweep
             this.triggerScreenShake(200, 0.01);
-            this.damagePlayer(15, NODE_RESULT_REASONS.HP_ZERO);
+            this.damagePlayer(12, NODE_RESULT_REASONS.HP_ZERO);
 
             // Fade out
             this.scene.tweens.add({
-                targets: warningLine,
+                targets: [warningLine, warningText],
                 alpha: 0,
-                duration: 300,
-                onComplete: () => warningLine.destroy()
+                duration: 400,
+                onComplete: () => {
+                    warningLine.destroy();
+                    warningText.destroy();
+                }
             });
+            this.activeLaserWarning = null;
         });
+
+        this.activeLaserWarning = {
+            warningLine,
+            warningText,
+            warningTimer
+        };
+    }
+
+    interruptLaserSweep() {
+        if (!this.activeLaserWarning) return;
+        const { warningLine, warningText, warningTimer } = this.activeLaserWarning;
+        this.activeLaserWarning = null;
+
+        try { warningTimer?.destroy?.(); } catch (_) {}
+        if (warningLine?.active) warningLine.destroy();
+        if (warningText?.active) {
+            warningText.setText("💥 成功打断劫雷蓄力！");
+            warningText.setStyle({ color: "#10b981" });
+            this.scene.tweens.add({
+                targets: warningText,
+                y: warningText.y - 30,
+                alpha: 0,
+                duration: 800,
+                onComplete: () => warningText.destroy()
+            });
+        }
+        this.spawnFloatingText(this.world.width / 2, this.world.height / 2 - 120, "💥 打断劫雷！", "#10b981");
     }
 
     triggerShieldDeflectAttack() {
@@ -339,22 +458,24 @@ export default class TapReactionAdapter extends GameplayAdapter {
         const sy = this.Phaser.Math.Between(260, height - 320);
 
         // Create a fast flashing Deflect Shield orb
-        const shield = this.scene.add.circle(sx, sy, 35, 0x38bdf8, 0.1);
-        shield.setStrokeStyle(3, 0x38bdf8, 1);
+        const shield = this.scene.add.circle(sx, sy, 38, 0x38bdf8, 0.25).setDepth(180);
+        shield.setStrokeStyle(4, 0x38bdf8, 1);
         shield.setInteractive({ useHandCursor: true });
         this.deflectShield = shield;
 
         // Label indicator
         const shieldText = this.scene.add.text(sx, sy, "🛡️ 点按防御", {
             fontFamily: "Inter, sans-serif",
-            fontSize: "11px",
+            fontSize: "13px",
             fontStyle: "bold",
-            color: "#38bdf8"
-        }).setOrigin(0.5);
+            color: "#ffffff",
+            backgroundColor: "rgba(14, 165, 233, 0.8)",
+            padding: { x: 6, y: 3 }
+        }).setOrigin(0.5).setDepth(181);
 
-        const failTimer = this.scene.time.delayedCall(1600, () => {
+        const failTimer = this.scene.time.delayedCall(1800, () => {
             if (shield.active) {
-                this.damagePlayer(20, NODE_RESULT_REASONS.HP_ZERO);
+                this.damagePlayer(15, NODE_RESULT_REASONS.HP_ZERO);
                 this.playSynthSound('damage');
                 this.triggerScreenShake(180, 0.008);
                 shield.destroy();
@@ -365,8 +486,9 @@ export default class TapReactionAdapter extends GameplayAdapter {
         shield.on('pointerdown', () => {
             if (!this.isRunning()) return;
             this.playSynthSound('loot');
+            this.damageBoss(10); // Counter damage!
             this.spawnClickParticle(sx, sy, 0x38bdf8);
-            this.spawnFloatingText(sx, sy, '拦截雷劈！', '#38bdf8');
+            this.spawnFloatingText(sx, sy, '🛡️ 防御成功！反弹-10', '#38bdf8');
             failTimer.destroy();
             shield.destroy();
             shieldText.destroy();
@@ -472,6 +594,17 @@ export default class TapReactionAdapter extends GameplayAdapter {
             duration: 600,
             onComplete: () => txt.destroy()
         });
+    }
+
+    getTestState() {
+        return {
+            ...super.getTestState(),
+            score: this.state.score,
+            hp: this.state.hp,
+            timer: this.state.timeRemaining,
+            bossSpawned: this.state.bossSpawned,
+            bossHp: this.state.bossHp
+        };
     }
 
     publishTestState() {

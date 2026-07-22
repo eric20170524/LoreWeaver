@@ -1,28 +1,1441 @@
-const imagegenManifest = {
+export default {
   "generatedAtlasStatus": "present",
-  "generationStatus": "generated_with_builtin_imagegen",
+  "generationStatus": "generated_campaign_node1_12_bitmap_slice",
   "atlasImage": "assets/imagegen/atlas.png",
   "provenancePath": "assets/imagegen/provenance.json",
   "sourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628.png",
   "transparentSourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
-  "atlasSize": { "w": 256, "h": 192 },
-  "frameSize": { "w": 64, "h": 64 },
+  "atlasSize": {
+    "w": 768,
+    "h": 768
+  },
+  "frameSize": {
+    "w": 64,
+    "h": 64
+  },
   "frames": {
-    "shihao_young_runtime": { "frame": { "x": 0, "y": 0, "w": 64, "h": 64 } },
-    "enemy_wild_rhino": { "frame": { "x": 64, "y": 0, "w": 64, "h": 64 } },
-    "enemy_green_scaled_eagle": { "frame": { "x": 128, "y": 0, "w": 64, "h": 64 } },
-    "enemy_rock_golem": { "frame": { "x": 192, "y": 0, "w": 64, "h": 64 } },
-    "enemy_qiongqi_cub": { "frame": { "x": 0, "y": 64, "w": 64, "h": 64 } },
-    "skill_fist_projectile": { "frame": { "x": 64, "y": 64, "w": 64, "h": 64 } },
-    "pickup_blood_essence": { "frame": { "x": 128, "y": 64, "w": 64, "h": 64 } },
-    "vfx_effect_frame": { "frame": { "x": 192, "y": 64, "w": 64, "h": 64 } },
-    "chest_gold": { "frame": { "x": 0, "y": 128, "w": 64, "h": 64 } },
-    "boss_projectile": { "frame": { "x": 64, "y": 128, "w": 64, "h": 64 } }
+    "player_idle": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "player_walk_0": {
+      "frame": {
+        "x": 64,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "player_walk_1": {
+      "frame": {
+        "x": 128,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "player_attack": {
+      "frame": {
+        "x": 192,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "player_hurt": {
+      "frame": {
+        "x": 256,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "player_death": {
+      "frame": {
+        "x": 320,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "player_dash": {
+      "frame": {
+        "x": 384,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "shihao_young_runtime": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_wild_rhino": {
+      "frame": {
+        "x": 448,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_wild_rhino_idle": {
+      "frame": {
+        "x": 448,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_wild_rhino_walk": {
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_wild_rhino_attack": {
+      "frame": {
+        "x": 576,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_wild_rhino_hurt": {
+      "frame": {
+        "x": 640,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_wild_rhino_death": {
+      "frame": {
+        "x": 704,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_green_scaled_eagle": {
+      "frame": {
+        "x": 0,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_green_scaled_eagle_idle": {
+      "frame": {
+        "x": 0,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_green_scaled_eagle_walk": {
+      "frame": {
+        "x": 64,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_green_scaled_eagle_attack": {
+      "frame": {
+        "x": 128,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_green_scaled_eagle_hurt": {
+      "frame": {
+        "x": 192,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_green_scaled_eagle_death": {
+      "frame": {
+        "x": 256,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_rock_golem": {
+      "frame": {
+        "x": 320,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_rock_golem_idle": {
+      "frame": {
+        "x": 320,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_rock_golem_walk": {
+      "frame": {
+        "x": 384,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_rock_golem_attack": {
+      "frame": {
+        "x": 448,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_rock_golem_hurt": {
+      "frame": {
+        "x": 512,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_rock_golem_death": {
+      "frame": {
+        "x": 576,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_qiongqi_cub": {
+      "frame": {
+        "x": 640,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_qiongqi_cub_idle": {
+      "frame": {
+        "x": 640,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_qiongqi_cub_walk": {
+      "frame": {
+        "x": 704,
+        "y": 64,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_qiongqi_cub_attack": {
+      "frame": {
+        "x": 0,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_qiongqi_cub_hurt": {
+      "frame": {
+        "x": 64,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_qiongqi_cub_death": {
+      "frame": {
+        "x": 128,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_bandit_cultivator": {
+      "frame": {
+        "x": 192,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_bandit_cultivator_idle": {
+      "frame": {
+        "x": 192,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_bandit_cultivator_walk": {
+      "frame": {
+        "x": 256,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_bandit_cultivator_attack": {
+      "frame": {
+        "x": 320,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_bandit_cultivator_hurt": {
+      "frame": {
+        "x": 384,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_bandit_cultivator_death": {
+      "frame": {
+        "x": 448,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_burrow_wyrm": {
+      "frame": {
+        "x": 512,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_burrow_wyrm_idle": {
+      "frame": {
+        "x": 512,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_burrow_wyrm_walk": {
+      "frame": {
+        "x": 576,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_burrow_wyrm_attack": {
+      "frame": {
+        "x": 640,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_burrow_wyrm_hurt": {
+      "frame": {
+        "x": 704,
+        "y": 128,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_burrow_wyrm_death": {
+      "frame": {
+        "x": 0,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_sky_predator": {
+      "frame": {
+        "x": 64,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_sky_predator_idle": {
+      "frame": {
+        "x": 64,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_sky_predator_walk": {
+      "frame": {
+        "x": 128,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_sky_predator_attack": {
+      "frame": {
+        "x": 192,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_sky_predator_hurt": {
+      "frame": {
+        "x": 256,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_sky_predator_death": {
+      "frame": {
+        "x": 320,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_human_genius": {
+      "frame": {
+        "x": 384,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_human_genius_idle": {
+      "frame": {
+        "x": 384,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_human_genius_walk": {
+      "frame": {
+        "x": 448,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_human_genius_attack": {
+      "frame": {
+        "x": 512,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_human_genius_hurt": {
+      "frame": {
+        "x": 576,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_human_genius_death": {
+      "frame": {
+        "x": 640,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_genius_beast": {
+      "frame": {
+        "x": 704,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_genius_beast_idle": {
+      "frame": {
+        "x": 704,
+        "y": 192,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_genius_beast_walk": {
+      "frame": {
+        "x": 0,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_genius_beast_attack": {
+      "frame": {
+        "x": 64,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_genius_beast_hurt": {
+      "frame": {
+        "x": 128,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_genius_beast_death": {
+      "frame": {
+        "x": 192,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_huo_linger_projection": {
+      "frame": {
+        "x": 256,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_huo_linger_projection_idle": {
+      "frame": {
+        "x": 256,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_huo_linger_projection_walk": {
+      "frame": {
+        "x": 320,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_huo_linger_projection_attack": {
+      "frame": {
+        "x": 384,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_huo_linger_projection_hurt": {
+      "frame": {
+        "x": 448,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_huo_linger_projection_death": {
+      "frame": {
+        "x": 512,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_projection": {
+      "frame": {
+        "x": 576,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_projection_idle": {
+      "frame": {
+        "x": 576,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_projection_walk": {
+      "frame": {
+        "x": 640,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_projection_attack": {
+      "frame": {
+        "x": 704,
+        "y": 256,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_projection_hurt": {
+      "frame": {
+        "x": 0,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_projection_death": {
+      "frame": {
+        "x": 64,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_ancient_beast_king": {
+      "frame": {
+        "x": 128,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_ancient_beast_king_idle": {
+      "frame": {
+        "x": 128,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_ancient_beast_king_walk": {
+      "frame": {
+        "x": 192,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_ancient_beast_king_attack": {
+      "frame": {
+        "x": 256,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_ancient_beast_king_hurt": {
+      "frame": {
+        "x": 320,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_ancient_beast_king_death": {
+      "frame": {
+        "x": 384,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_phantom": {
+      "frame": {
+        "x": 448,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_phantom_idle": {
+      "frame": {
+        "x": 448,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_phantom_walk": {
+      "frame": {
+        "x": 512,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_phantom_attack": {
+      "frame": {
+        "x": 576,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_phantom_hurt": {
+      "frame": {
+        "x": 640,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "enemy_shi_yi_phantom_death": {
+      "frame": {
+        "x": 704,
+        "y": 320,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "skill_fist_projectile": {
+      "frame": {
+        "x": 0,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "pickup_blood_essence": {
+      "frame": {
+        "x": 64,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "vfx_effect_frame": {
+      "frame": {
+        "x": 128,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "chest_gold": {
+      "frame": {
+        "x": 192,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "boss_projectile": {
+      "frame": {
+        "x": 256,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ui_icon_dash": {
+      "frame": {
+        "x": 320,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ui_icon_active": {
+      "frame": {
+        "x": 384,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ui_icon_burst": {
+      "frame": {
+        "x": 448,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_landmark_rock": {
+      "frame": {
+        "x": 512,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_ground_patch": {
+      "frame": {
+        "x": 576,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "objective_totem": {
+      "frame": {
+        "x": 640,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "antidote_gem": {
+      "frame": {
+        "x": 704,
+        "y": 384,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "portal_ring": {
+      "frame": {
+        "x": 0,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "ballista_bolt": {
+      "frame": {
+        "x": 64,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "escort_npc": {
+      "frame": {
+        "x": 128,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "wall_segment": {
+      "frame": {
+        "x": 192,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "whirlpool": {
+      "frame": {
+        "x": 256,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "core_eye": {
+      "frame": {
+        "x": 320,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_desert": {
+      "frame": {
+        "x": 384,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_cliff": {
+      "frame": {
+        "x": 448,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_arena": {
+      "frame": {
+        "x": 512,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_tide": {
+      "frame": {
+        "x": 576,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_city": {
+      "frame": {
+        "x": 640,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_poison": {
+      "frame": {
+        "x": 704,
+        "y": 448,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_tournament": {
+      "frame": {
+        "x": 0,
+        "y": 512,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_ruins": {
+      "frame": {
+        "x": 64,
+        "y": 512,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_escort": {
+      "frame": {
+        "x": 128,
+        "y": 512,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_wall": {
+      "frame": {
+        "x": 192,
+        "y": 512,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_void": {
+      "frame": {
+        "x": 256,
+        "y": 512,
+        "w": 64,
+        "h": 64
+      }
+    },
+    "env_bg_finale": {
+      "frame": {
+        "x": 320,
+        "y": 512,
+        "w": 64,
+        "h": 64
+      }
+    }
+  },
+  "animationClips": {
+    "player": {
+      "idle": [
+        "player_idle"
+      ],
+      "walk": [
+        "player_walk_0",
+        "player_walk_1"
+      ],
+      "attack": [
+        "player_attack"
+      ],
+      "hurt": [
+        "player_hurt"
+      ],
+      "death": [
+        "player_death"
+      ],
+      "dash": [
+        "player_dash"
+      ]
+    },
+    "enemy_wild_rhino": {
+      "idle": [
+        "enemy_wild_rhino"
+      ],
+      "walk": [
+        "enemy_wild_rhino_walk"
+      ],
+      "attack": [
+        "enemy_wild_rhino_attack"
+      ],
+      "hurt": [
+        "enemy_wild_rhino_hurt"
+      ],
+      "death": [
+        "enemy_wild_rhino_death"
+      ]
+    },
+    "enemy_green_scaled_eagle": {
+      "idle": [
+        "enemy_green_scaled_eagle"
+      ],
+      "walk": [
+        "enemy_green_scaled_eagle_walk"
+      ],
+      "attack": [
+        "enemy_green_scaled_eagle_attack"
+      ],
+      "hurt": [
+        "enemy_green_scaled_eagle_hurt"
+      ],
+      "death": [
+        "enemy_green_scaled_eagle_death"
+      ]
+    },
+    "enemy_rock_golem": {
+      "idle": [
+        "enemy_rock_golem"
+      ],
+      "walk": [
+        "enemy_rock_golem_walk"
+      ],
+      "attack": [
+        "enemy_rock_golem_attack"
+      ],
+      "hurt": [
+        "enemy_rock_golem_hurt"
+      ],
+      "death": [
+        "enemy_rock_golem_death"
+      ]
+    },
+    "enemy_qiongqi_cub": {
+      "idle": [
+        "enemy_qiongqi_cub"
+      ],
+      "walk": [
+        "enemy_qiongqi_cub_walk"
+      ],
+      "attack": [
+        "enemy_qiongqi_cub_attack"
+      ],
+      "hurt": [
+        "enemy_qiongqi_cub_hurt"
+      ],
+      "death": [
+        "enemy_qiongqi_cub_death"
+      ]
+    },
+    "enemy_bandit_cultivator": {
+      "idle": [
+        "enemy_bandit_cultivator"
+      ],
+      "walk": [
+        "enemy_bandit_cultivator_walk"
+      ],
+      "attack": [
+        "enemy_bandit_cultivator_attack"
+      ],
+      "hurt": [
+        "enemy_bandit_cultivator_hurt"
+      ],
+      "death": [
+        "enemy_bandit_cultivator_death"
+      ]
+    },
+    "enemy_burrow_wyrm": {
+      "idle": [
+        "enemy_burrow_wyrm"
+      ],
+      "walk": [
+        "enemy_burrow_wyrm_walk"
+      ],
+      "attack": [
+        "enemy_burrow_wyrm_attack"
+      ],
+      "hurt": [
+        "enemy_burrow_wyrm_hurt"
+      ],
+      "death": [
+        "enemy_burrow_wyrm_death"
+      ]
+    },
+    "enemy_sky_predator": {
+      "idle": [
+        "enemy_sky_predator"
+      ],
+      "walk": [
+        "enemy_sky_predator_walk"
+      ],
+      "attack": [
+        "enemy_sky_predator_attack"
+      ],
+      "hurt": [
+        "enemy_sky_predator_hurt"
+      ],
+      "death": [
+        "enemy_sky_predator_death"
+      ]
+    },
+    "enemy_human_genius": {
+      "idle": [
+        "enemy_human_genius"
+      ],
+      "walk": [
+        "enemy_human_genius_walk"
+      ],
+      "attack": [
+        "enemy_human_genius_attack"
+      ],
+      "hurt": [
+        "enemy_human_genius_hurt"
+      ],
+      "death": [
+        "enemy_human_genius_death"
+      ]
+    },
+    "enemy_genius_beast": {
+      "idle": [
+        "enemy_genius_beast"
+      ],
+      "walk": [
+        "enemy_genius_beast_walk"
+      ],
+      "attack": [
+        "enemy_genius_beast_attack"
+      ],
+      "hurt": [
+        "enemy_genius_beast_hurt"
+      ],
+      "death": [
+        "enemy_genius_beast_death"
+      ]
+    },
+    "enemy_huo_linger_projection": {
+      "idle": [
+        "enemy_huo_linger_projection"
+      ],
+      "walk": [
+        "enemy_huo_linger_projection_walk"
+      ],
+      "attack": [
+        "enemy_huo_linger_projection_attack"
+      ],
+      "hurt": [
+        "enemy_huo_linger_projection_hurt"
+      ],
+      "death": [
+        "enemy_huo_linger_projection_death"
+      ]
+    },
+    "enemy_shi_yi_projection": {
+      "idle": [
+        "enemy_shi_yi_projection"
+      ],
+      "walk": [
+        "enemy_shi_yi_projection_walk"
+      ],
+      "attack": [
+        "enemy_shi_yi_projection_attack"
+      ],
+      "hurt": [
+        "enemy_shi_yi_projection_hurt"
+      ],
+      "death": [
+        "enemy_shi_yi_projection_death"
+      ]
+    },
+    "enemy_ancient_beast_king": {
+      "idle": [
+        "enemy_ancient_beast_king"
+      ],
+      "walk": [
+        "enemy_ancient_beast_king_walk"
+      ],
+      "attack": [
+        "enemy_ancient_beast_king_attack"
+      ],
+      "hurt": [
+        "enemy_ancient_beast_king_hurt"
+      ],
+      "death": [
+        "enemy_ancient_beast_king_death"
+      ]
+    },
+    "enemy_shi_yi_phantom": {
+      "idle": [
+        "enemy_shi_yi_phantom"
+      ],
+      "walk": [
+        "enemy_shi_yi_phantom_walk"
+      ],
+      "attack": [
+        "enemy_shi_yi_phantom_attack"
+      ],
+      "hurt": [
+        "enemy_shi_yi_phantom_hurt"
+      ],
+      "death": [
+        "enemy_shi_yi_phantom_death"
+      ]
+    }
+  },
+  "animations": {
+    "player": {
+      "idle": [
+        "player_idle"
+      ],
+      "walk": [
+        "player_walk_0",
+        "player_walk_1"
+      ],
+      "attack": [
+        "player_attack"
+      ],
+      "hurt": [
+        "player_hurt"
+      ],
+      "death": [
+        "player_death"
+      ],
+      "dash": [
+        "player_dash"
+      ]
+    },
+    "enemy_wild_rhino": {
+      "idle": [
+        "enemy_wild_rhino"
+      ],
+      "walk": [
+        "enemy_wild_rhino_walk"
+      ],
+      "attack": [
+        "enemy_wild_rhino_attack"
+      ],
+      "hurt": [
+        "enemy_wild_rhino_hurt"
+      ],
+      "death": [
+        "enemy_wild_rhino_death"
+      ]
+    },
+    "enemy_green_scaled_eagle": {
+      "idle": [
+        "enemy_green_scaled_eagle"
+      ],
+      "walk": [
+        "enemy_green_scaled_eagle_walk"
+      ],
+      "attack": [
+        "enemy_green_scaled_eagle_attack"
+      ],
+      "hurt": [
+        "enemy_green_scaled_eagle_hurt"
+      ],
+      "death": [
+        "enemy_green_scaled_eagle_death"
+      ]
+    },
+    "enemy_rock_golem": {
+      "idle": [
+        "enemy_rock_golem"
+      ],
+      "walk": [
+        "enemy_rock_golem_walk"
+      ],
+      "attack": [
+        "enemy_rock_golem_attack"
+      ],
+      "hurt": [
+        "enemy_rock_golem_hurt"
+      ],
+      "death": [
+        "enemy_rock_golem_death"
+      ]
+    },
+    "enemy_qiongqi_cub": {
+      "idle": [
+        "enemy_qiongqi_cub"
+      ],
+      "walk": [
+        "enemy_qiongqi_cub_walk"
+      ],
+      "attack": [
+        "enemy_qiongqi_cub_attack"
+      ],
+      "hurt": [
+        "enemy_qiongqi_cub_hurt"
+      ],
+      "death": [
+        "enemy_qiongqi_cub_death"
+      ]
+    },
+    "enemy_bandit_cultivator": {
+      "idle": [
+        "enemy_bandit_cultivator"
+      ],
+      "walk": [
+        "enemy_bandit_cultivator_walk"
+      ],
+      "attack": [
+        "enemy_bandit_cultivator_attack"
+      ],
+      "hurt": [
+        "enemy_bandit_cultivator_hurt"
+      ],
+      "death": [
+        "enemy_bandit_cultivator_death"
+      ]
+    },
+    "enemy_burrow_wyrm": {
+      "idle": [
+        "enemy_burrow_wyrm"
+      ],
+      "walk": [
+        "enemy_burrow_wyrm_walk"
+      ],
+      "attack": [
+        "enemy_burrow_wyrm_attack"
+      ],
+      "hurt": [
+        "enemy_burrow_wyrm_hurt"
+      ],
+      "death": [
+        "enemy_burrow_wyrm_death"
+      ]
+    },
+    "enemy_sky_predator": {
+      "idle": [
+        "enemy_sky_predator"
+      ],
+      "walk": [
+        "enemy_sky_predator_walk"
+      ],
+      "attack": [
+        "enemy_sky_predator_attack"
+      ],
+      "hurt": [
+        "enemy_sky_predator_hurt"
+      ],
+      "death": [
+        "enemy_sky_predator_death"
+      ]
+    },
+    "enemy_human_genius": {
+      "idle": [
+        "enemy_human_genius"
+      ],
+      "walk": [
+        "enemy_human_genius_walk"
+      ],
+      "attack": [
+        "enemy_human_genius_attack"
+      ],
+      "hurt": [
+        "enemy_human_genius_hurt"
+      ],
+      "death": [
+        "enemy_human_genius_death"
+      ]
+    },
+    "enemy_genius_beast": {
+      "idle": [
+        "enemy_genius_beast"
+      ],
+      "walk": [
+        "enemy_genius_beast_walk"
+      ],
+      "attack": [
+        "enemy_genius_beast_attack"
+      ],
+      "hurt": [
+        "enemy_genius_beast_hurt"
+      ],
+      "death": [
+        "enemy_genius_beast_death"
+      ]
+    },
+    "enemy_huo_linger_projection": {
+      "idle": [
+        "enemy_huo_linger_projection"
+      ],
+      "walk": [
+        "enemy_huo_linger_projection_walk"
+      ],
+      "attack": [
+        "enemy_huo_linger_projection_attack"
+      ],
+      "hurt": [
+        "enemy_huo_linger_projection_hurt"
+      ],
+      "death": [
+        "enemy_huo_linger_projection_death"
+      ]
+    },
+    "enemy_shi_yi_projection": {
+      "idle": [
+        "enemy_shi_yi_projection"
+      ],
+      "walk": [
+        "enemy_shi_yi_projection_walk"
+      ],
+      "attack": [
+        "enemy_shi_yi_projection_attack"
+      ],
+      "hurt": [
+        "enemy_shi_yi_projection_hurt"
+      ],
+      "death": [
+        "enemy_shi_yi_projection_death"
+      ]
+    },
+    "enemy_ancient_beast_king": {
+      "idle": [
+        "enemy_ancient_beast_king"
+      ],
+      "walk": [
+        "enemy_ancient_beast_king_walk"
+      ],
+      "attack": [
+        "enemy_ancient_beast_king_attack"
+      ],
+      "hurt": [
+        "enemy_ancient_beast_king_hurt"
+      ],
+      "death": [
+        "enemy_ancient_beast_king_death"
+      ]
+    },
+    "enemy_shi_yi_phantom": {
+      "idle": [
+        "enemy_shi_yi_phantom"
+      ],
+      "walk": [
+        "enemy_shi_yi_phantom_walk"
+      ],
+      "attack": [
+        "enemy_shi_yi_phantom_attack"
+      ],
+      "hurt": [
+        "enemy_shi_yi_phantom_hurt"
+      ],
+      "death": [
+        "enemy_shi_yi_phantom_death"
+      ]
+    }
+  },
+  "campaignCoverage": {
+    "playerClips": 7,
+    "enemyKinds": 13,
+    "envBackgrounds": 12,
+    "propKeys": 18,
+    "totalFrames": 116
   }
 };
-
-if (typeof window !== "undefined") {
-  window.__LOREWEAVER_IMAGEGEN_MANIFEST__ = imagegenManifest;
-}
-
-export default imagegenManifest;

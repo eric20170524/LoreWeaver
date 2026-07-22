@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1.0",
+  "id": "branch_route_chain",
+  "title": "Branch Route Chain",
+  "category": "route_modifier",
+  "status": "validated",
+  "modifierFor": [
+    "side_scrolling_brawler",
+    "node_iframe_microgame"
+  ],
+  "knobs": {
+    "eventSpecs": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L1"
+    },
+    "conditionTypes": {
+      "type": "array",
+      "default": [
+        "speedClear",
+        "noDamage",
+        "jumpDodge",
+        "comboClear",
+        "secretCache"
+      ],
+      "patchLevel": "L1"
+    },
+    "branchSpecs": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L1"
+    },
+    "promptDurationSec": {
+      "type": "number",
+      "default": 3.2,
+      "min": 0,
+      "max": 20,
+      "patchLevel": "L1"
+    },
+    "rewardItems": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L1"
+    },
+    "supplyRoomTemplate": {
+      "type": "object",
+      "default": null,
+      "patchLevel": "L2"
+    }
+  },
+  "requiredCoreSystems": [
+    "GameplayModifier",
+    "RouteConditionEvaluator",
+    "RewardSpawner",
+    "BranchRoomBuilder",
+    "Telemetry",
+    "TestHooks"
+  ],
+  "sourceProvenance": [
+    "minigame/three_kingdoms_brawl/js/route-events.js",
+    "minigame/three_kingdoms_brawl/js/branch-rooms.js",
+    "minigame/three_kingdoms_brawl/js/game.js",
+    "minigame/three_kingdoms_brawl/js/verify-scenarios.js"
+  ],
+  "knownRisks": [
+    "branch conditions must be theme-neutral and expressed as enums rather than story-specific labels",
+    "route history needs stable keys so repeated retries do not double-award rewards",
+    "branch room rewards must remain optional when a runtime cannot render side rooms"
+  ],
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+}

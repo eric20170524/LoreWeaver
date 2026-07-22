@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "1.0",
+  "id": "qix_area_capture",
+  "title": "Qix Area Capture",
+  "category": "area_control",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser",
+      "html_canvas"
+    ],
+    "adapter": "QixAreaCaptureAdapter"
+  },
+  "inputs": [
+    "keyboard_move",
+    "pointer"
+  ],
+  "objectives": [
+    "capture_ratio_met"
+  ],
+  "failure": [
+    "hp_zero",
+    "timer_expired",
+    "retreated"
+  ],
+  "knobs": {
+    "captureTarget": {
+      "type": "number",
+      "default": 0.7,
+      "min": 0.3,
+      "max": 0.95,
+      "patchLevel": "L1",
+      "description": "Required claimed interior ratio."
+    },
+    "enemyCount": {
+      "type": "integer",
+      "default": 2,
+      "patchLevel": "L1",
+      "description": "Number of bouncing enemies."
+    },
+    "timeLimitSec": {
+      "type": "number",
+      "default": 90,
+      "patchLevel": "L1",
+      "description": "Time limit seconds."
+    },
+    "gridCols": {
+      "type": "integer",
+      "default": 24,
+      "patchLevel": "L1",
+      "description": "Grid columns."
+    },
+    "gridRows": {
+      "type": "integer",
+      "default": 16,
+      "patchLevel": "L1",
+      "description": "Grid rows."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "PathTrail",
+    "PolygonArea",
+    "EnemyCollision",
+    "NodeResult"
+  ],
+  "resultContract": {
+    "successReason": "objective_met",
+    "telemetry": [
+      "captureRatio",
+      "elapsedSec",
+      "hp"
+    ]
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "border movement",
+      "path close claims area",
+      "enemy cuts open path"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/gals_panic/docs/1_PRD.md",
+    "minigame/gals_panic/game/scripts/logic.rpy"
+  ],
+  "fit": {
+    "goodFor": [
+      "area control",
+      "stage reveal masks",
+      "territory mini-games"
+    ],
+    "poorFor": [
+      "dialogue-only nodes"
+    ]
+  },
+  "knownRisks": [
+    "flood-fill edge cases",
+    "open path collision fairness"
+  ],
+  "implementationNotes": "Phaser adapter; de-themed from Ren'Py source."
+}

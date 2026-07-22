@@ -6,11 +6,19 @@ class WorkspaceCreate(BaseModel):
     theme: str
 
 class WorkspaceImport(BaseModel):
-    model_config = ConfigDict(validate_by_name=True)
+    # populate_by_name: accept both workspaceId and workspace_id
+    model_config = ConfigDict(populate_by_name=True)
 
-    source_path: str = Field(..., alias="sourcePath")
+    # Either absolute/relative sourcePath, or a workspaceId under data/workspaces.
+    source_path: Optional[str] = Field(default=None, alias="sourcePath")
+    workspace_id: Optional[str] = Field(default=None, alias="workspaceId")
     name: Optional[str] = None
     theme: Optional[str] = None
+
+class SelectDirectoryRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    default_path: Optional[str] = Field(default=None, alias="defaultPath")
 
 class WorkspaceModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -48,6 +56,8 @@ class JobResponse(BaseModel):
 class FeedbackRequest(BaseModel):
     message: str
     agent_role: Optional[str] = "world_builder"
+    department_id: Optional[str] = None
 
 class ApproveRequest(BaseModel):
     modifications: Optional[Any] = None
+

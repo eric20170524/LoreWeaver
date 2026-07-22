@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "loreweaver.asset-job.v1",
+  "jobId": "campaign_atlas_verify",
+  "workspace": "data/workspaces/20260611-060754-719406",
+  "createdAt": "2026-07-16T10:19:06.080Z",
+  "kind": "image_verify",
+  "status": "passed",
+  "assets": [
+    {
+      "path": "assets/imagegen/atlas.png",
+      "bytes": 25099,
+      "sha256": "921864d1a7ff66c79486b4c309abac4ea185d08a2acba7bca68cf16aa6157cb5",
+      "frameCount": 116,
+      "license": "original-generated",
+      "provider": "local"
+    }
+  ],
+  "provenance": "assets/imagegen/provenance.json",
+  "secrets": {
+    "leaked": false
+  }
+}

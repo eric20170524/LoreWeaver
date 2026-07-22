@@ -4,6 +4,7 @@
 import AudioManager from '../utils/AudioManager.js';
 import UIHelper from '../utils/UIHelper.js';
 import store from '../js/store.js';
+import GameFeel from '../runtime/GameFeel.js';
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -14,8 +15,10 @@ export class MenuScene extends Phaser.Scene {
         const width = 720;
         const height = 1280;
 
-        // 初始化音频
+        // 初始化音频 + 应用已持久化的无障碍/音量设置
         AudioManager.init();
+        GameFeel.applyAudioChannels();
+        GameFeel.publishStatus();
 
         // 标题
         this.add.text(width / 2, height / 3, '星渊试炼·荒域觉醒', {
@@ -65,9 +68,18 @@ export class MenuScene extends Phaser.Scene {
         helpBtn.on('pointerout', () => {
             helpBtn.setStyle({ fill: '#ffffff' });
         });
+
+        // LW-047: 设置 / 无障碍
+        const settingsBtn = this.add.text(width / 2, height / 2 + 220, '设置 / 无障碍', {
+            fontSize: '22px',
+            fill: '#ffffff',
+            backgroundColor: '#1f4b4a',
+            padding: { x: 18, y: 10 }
+        }).setOrigin(0.5).setInteractive();
+        UIHelper.bindButtonBounce(settingsBtn, () => this.showSettingsModal(width, height));
         
         // 重置存档按钮 (测试用)
-        const resetBtn = this.add.text(width / 2, height / 2 + 250, '重置轮回', {
+        const resetBtn = this.add.text(width / 2, height / 2 + 300, '重置轮回', {
             fontSize: '20px',
             fill: '#aaaaaa'
         }).setOrigin(0.5).setInteractive();
@@ -83,6 +95,69 @@ export class MenuScene extends Phaser.Scene {
                 }
             );
         });
+    }
+
+    showSettingsModal(width, height) {
+        const settings = GameFeel.getSettings();
+        const labels = [
+            { key: 'musicEnabled', label: '音乐' },
+            { key: 'sfxEnabled', label: '音效' },
+            { key: 'vibrationEnabled', label: '震动反馈' },
+            { key: 'reducedMotion', label: '减少动态' },
+            { key: 'screenShake', label: '屏幕震动' },
+            { key: 'damageNumbers', label: '伤害数字' },
+            { key: 'highContrastCues', label: '高对比提示' }
+        ];
+
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.72)
+            .setDepth(3000).setInteractive();
+        const panel = this.add.rectangle(width / 2, height / 2, 560, 720, 0x120e0a, 0.97)
+            .setDepth(3001).setStrokeStyle(3, 0xffd700);
+        const title = this.add.text(width / 2, height / 2 - 310, '设置 / 无障碍', {
+            fontSize: '28px', fill: '#ffd700', fontStyle: 'bold'
+        }).setOrigin(0.5).setDepth(3002);
+        const hint = this.add.text(width / 2, height / 2 - 270, '设置写入 Save v2，跨会话保留', {
+            fontSize: '14px', fill: '#9dd9d2'
+        }).setOrigin(0.5).setDepth(3002);
+
+        const nodes = [overlay, panel, title, hint];
+        const toggleBtns = [];
+
+        labels.forEach((item, index) => {
+            const y = height / 2 - 210 + index * 70;
+            const row = this.add.text(width / 2 - 220, y, item.label, {
+                fontSize: '20px', fill: '#e5d9c8'
+            }).setOrigin(0, 0.5).setDepth(3002);
+            const on = Boolean(settings[item.key]);
+            const btn = this.add.text(width / 2 + 160, y, on ? '开' : '关', {
+                fontSize: '20px',
+                fill: '#ffffff',
+                backgroundColor: on ? '#166534' : '#555555',
+                padding: { x: 18, y: 8 },
+                fixedWidth: 72,
+                align: 'center'
+            }).setOrigin(0.5).setDepth(3002).setInteractive({ useHandCursor: true });
+            btn.on('pointerdown', () => {
+                AudioManager.playClick();
+                const next = !GameFeel.getSettings()[item.key];
+                GameFeel.setSetting(item.key, next);
+                // also mirror through store API when available
+                store.setSetting?.(item.key, next);
+                btn.setText(next ? '开' : '关');
+                btn.setStyle({ backgroundColor: next ? '#166534' : '#555555' });
+            });
+            nodes.push(row, btn);
+            toggleBtns.push(btn);
+        });
+
+        const closeBtn = this.add.text(width / 2, height / 2 + 310, '完成', {
+            fontSize: '24px', fill: '#ffffff', backgroundColor: '#8b0000', padding: { x: 28, y: 10 }
+        }).setOrigin(0.5).setDepth(3002).setInteractive({ useHandCursor: true });
+        UIHelper.bindButtonBounce(closeBtn, () => {
+            nodes.forEach((n) => n.destroy?.());
+            closeBtn.destroy?.();
+        });
+        nodes.push(closeBtn);
     }
 
     showHelpModal(width, height) {

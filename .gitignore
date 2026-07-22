@@ -14,14 +14,12 @@ __pycache__/
 venv/
 .venv/
 
-# LoreWeaver Local Runtime State & Database
-data/loreweaver.db
-data/workspaces/*/reports/
-data/workspaces/*/tests/
-data/workspaces/*/scripts/
-data/workspaces/*/dist/
-data/workspaces/*/node_modules/
+# Local runtime data (workspaces, SQLite, generated assets) — never commit
+data/
 **/source/
 docs_collab/screenshots/
-package-lock.json
-minigame/
+
+# Local-only gate evidence & exports
+workflow/reports/
+capabilities/reports/
+productize/exports/

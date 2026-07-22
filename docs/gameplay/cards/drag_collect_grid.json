@@ -1,0 +1,189 @@
+{
+  "schemaVersion": "1.1",
+  "id": "drag_collect_grid",
+  "title": "Drag Collect / Falling Collect",
+  "category": "collection",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser",
+      "html_canvas"
+    ],
+    "adapter": "CollectDodgeAdapter",
+    "adapterModule": "minigame_master/core/lib/gameplay/collect_dodge",
+    "container": "host_node_scene"
+  },
+  "inputs": [
+    "pointer_drag",
+    "touch_drag",
+    "pointer_move"
+  ],
+  "objectives": [
+    "collect_target_amount"
+  ],
+  "failure": [
+    "timer_expired",
+    "hp_zero",
+    "retreated"
+  ],
+  "knobs": {
+    "timeLimitSec": {
+      "type": "number",
+      "default": 40,
+      "min": 5,
+      "max": 300,
+      "patchLevel": "L1",
+      "aliases": ["durationSec", "duration"],
+      "description": "Time limit in seconds (card standard)."
+    },
+    "needAmount": {
+      "type": "integer",
+      "default": 16,
+      "min": 1,
+      "max": 200,
+      "patchLevel": "L1",
+      "aliases": ["collectGoal", "goalValue"],
+      "description": "Target collectibles required to win (not a duration proxy)."
+    },
+    "spawnIntervalMs": {
+      "type": "integer",
+      "default": 700,
+      "min": 200,
+      "max": 3000,
+      "patchLevel": "L1",
+      "description": "Milliseconds between falling spawns."
+    },
+    "itemSpeed": {
+      "type": "number",
+      "default": 280,
+      "min": 80,
+      "max": 800,
+      "patchLevel": "L1",
+      "description": "Fall speed in px/sec (manual kinematics)."
+    },
+    "hazardRate": {
+      "type": "number",
+      "default": 0.35,
+      "min": 0,
+      "max": 0.9,
+      "patchLevel": "L1",
+      "description": "Probability a spawn is a hazard instead of a collectible."
+    },
+    "damageOnHit": {
+      "type": "number",
+      "default": 15,
+      "min": 1,
+      "max": 100,
+      "patchLevel": "L1",
+      "description": "HP lost when touching a hazard."
+    },
+    "difficulty": {
+      "type": "integer",
+      "default": 1,
+      "min": 1,
+      "max": 6,
+      "patchLevel": "L1",
+      "description": "Scales spawn cadence and fall speed slightly."
+    },
+    "victoryMode": {
+      "type": "string",
+      "default": "objective",
+      "enum": ["objective", "survive", "boss_only"],
+      "patchLevel": "L1",
+      "description": "Win condition class (PlayabilityContract)."
+    },
+    "allowQuit": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "Host may show retreat; adapter must emit retreated NodeResult."
+    },
+    "allowPause": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "Whether pause is permitted by contract."
+    },
+    "failOnTimeout": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "Timer expiry fails unless objective already met."
+    },
+    "envKey": {
+      "type": "string",
+      "default": null,
+      "patchLevel": "L1",
+      "description": "Optional RuntimeArtBinder environment key."
+    },
+    "bgmKey": {
+      "type": "string",
+      "default": null,
+      "patchLevel": "L1",
+      "description": "Optional host BGM cue key."
+    },
+    "sfxVictory": {
+      "type": "string",
+      "default": "victory_sting",
+      "patchLevel": "L1",
+      "description": "Victory sting cue key."
+    },
+    "sfxDefeat": {
+      "type": "string",
+      "default": "defeat_sting",
+      "patchLevel": "L1",
+      "description": "Defeat sting cue key."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "GameplayAdapter",
+    "PlayabilityContract",
+    "SceneLifecycle",
+    "NodeResult",
+    "Timer"
+  ],
+  "resultContract": {
+    "successReason": "objective_met",
+    "failureReason": "timer_expired",
+    "retreatReason": "retreated"
+  },
+  "testFixture": {
+    "type": "adapter_smoke",
+    "path": "minigame_master/core/lib/testing/runAdapterSmoke.js",
+    "assertions": [
+      "create spawns falling items (spawnedTotal > 0)",
+      "player can collect via proximity",
+      "retreat emits NodeResult reason=retreated and onEnd"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame_master/core/lib/gameplay/collect_dodge/CollectDodgeAdapter.js"
+  ],
+  "fit": {
+    "goodFor": [
+      "gathering",
+      "dodge while collecting",
+      "resource collection under pressure"
+    ],
+    "poorFor": [
+      "narrative-only nodes",
+      "pure grid path-drawing (legacy path_to_immortality board)"
+    ]
+  },
+  "knownRisks": [
+    "Do not set needAmount ≈ timeLimitSec (unplayable collect quota)",
+    "Prefer manual fall kinematics over arcade velocity for host stability"
+  ],
+  "implementationNotes": "Runtime adapter is CollectDodgeAdapter (not a separate DragCollectGridAdapter). Card knobs use timeLimitSec/needAmount; runtime normalizes legacy durationSec/goalValue/collectGoal via PlayabilityContract."
+}

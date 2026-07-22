@@ -6,7 +6,7 @@
     "玄曜虚影：我的好弟弟，你终究是不如我！",
     "星骁：今日便要败你！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "rhythm_timing",
   "rewards": "气血精华 +1000，纯血 +2，解锁荒域少年标记",
   "goalValue": 180,
   "resourceMultiplier": 2.2,
@@ -33,7 +33,25 @@
           2
         ]
       },
-      "unlocksFlag": "young_supreme"
+      "unlocksFlag": "young_supreme",
+      "durationSec": 180,
+      "goalValue": 180,
+      "difficulty": 3,
+      "victoryMode": "objective",
+      "envKey": "env_bg_arena",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node3_rival",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme",
+      "runtimeCardId": "rhythm_timing",
+      "shellRetreat": true
     },
     "patchLevel": "L2"
   },
@@ -43,14 +61,14 @@
       "cave_opening",
       "bone_script_mastery"
     ],
+    "rewardUnlocks": [
+      "dual_pupil"
+    ],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
       "willow_guard",
       "green_eagle_art",
-      "dual_pupil"
-    ],
-    "rewardUnlocks": [
       "dual_pupil"
     ],
     "notes": "镜魄试炼场用玄曜投影引出紫曜瞳能力，作为高阶 Boss 与直线压制技能来源。"

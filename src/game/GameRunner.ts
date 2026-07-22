@@ -6,12 +6,40 @@ import {
   SurvivorHordeAdapter,
   createSurvivorHordeModifier,
   TapReactionAdapter,
-  CollectDodgeAdapter
+  CollectDodgeAdapter,
+  TurnBasedSkillBattleAdapter,
+  SequenceSynthesisAdapter,
+  SideScrollingBrawlerAdapter,
+  createSideScrollingBrawlerModifier,
+  IframeNodeContainer,
+  EnergyBalanceAdapter,
+  RuneConnectSequenceAdapter,
+  BranchingDialogueCheckAdapter,
+  PressureSurvivalAdapter,
+  ReactionPickAdapter,
+  ObserveCaptureAdapter,
+  ShooterDuelAdapter,
+  DragToCoreAdapter,
+  DodgeCounterBossAdapter,
+  MazeExplorationChoiceAdapter,
+  PlatformEscapeAdapter,
+  HazardCollectWavesAdapter,
+  SequencePuzzleComboAdapter,
+  RhythmThenPickupAdapter,
+  QixAreaCaptureAdapter,
+  PointDragProgressionAdapter
 } from "../../minigame_master/core/lib/gameplay/index.js";
 import {
   createNodePayload,
-  TestHooks
+  TestHooks,
+  normalizePlayabilityKnobs
 } from "../../minigame_master/core/lib/contracts/index.js";
+import {
+  RuntimeArtBinder
+} from "../../minigame_master/core/lib/graphics/index.js";
+import { UIPlugin, UIPluginContext } from "./ui/UIPlugin";
+import { DefaultUIPlugin } from "./ui/DefaultUIPlugin";
+import { CultivationUIPlugin } from "./ui/CultivationUIPlugin";
 
 const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
   hazard_telegraph: {
@@ -73,28 +101,6 @@ type FirstNodeGrowthState = {
   events: FirstNodeGrowthEvent[];
 };
 
-type ImageGenFrameSpec = {
-  frame?: {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-  };
-};
-
-const IMAGEGEN_ATLAS_TEXTURE_KEY = "lw_imagegen_combat_atlas";
-const IMAGEGEN_MANIFEST_CACHE_KEY = "lw_imagegen_manifest";
-const IMAGEGEN_TEXTURE_BINDINGS: Array<{ frameKey: string; textureKey: string; group: string }> = [
-  { frameKey: "shihao_young_runtime", textureKey: "lw_runtime_player_shihao", group: "heroes" },
-  { frameKey: "enemy_wild_rhino", textureKey: "lw_enemy_wild_rhino", group: "enemies" },
-  { frameKey: "enemy_green_scaled_eagle", textureKey: "lw_enemy_green_scaled_eagle", group: "enemies" },
-  { frameKey: "enemy_rock_golem", textureKey: "lw_enemy_rock_golem", group: "enemies" },
-  { frameKey: "enemy_qiongqi_cub", textureKey: "lw_enemy_qiongqi_cub", group: "enemies" },
-  { frameKey: "skill_fist_projectile", textureKey: "lw_skill_fist_projectile", group: "projectiles" },
-  { frameKey: "pickup_blood_essence", textureKey: "lw_pickup_blood_essence", group: "items" },
-  { frameKey: "vfx_effect_frame", textureKey: "lw_vfx_effect_frame", group: "vfx" }
-];
-
 type ImageGenAssetPaths = {
   manifestPath: string;
   atlasPath: string;
@@ -132,110 +138,6 @@ function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths 
   };
 }
 
-function publishImageGenArtStatus(patch: Record<string, any>) {
-  if (typeof window === "undefined") return;
-
-  const previous = (window as any).__LOREWEAVER_ART_PIPELINE__ || {};
-  (window as any).__LOREWEAVER_ART_PIPELINE__ = {
-    ...previous,
-    ...patch,
-    updatedAt: new Date().toISOString()
-  };
-}
-
-function preloadImageGenAtlas(scene: Phaser.Scene, paths: ImageGenAssetPaths | null) {
-  if (!paths) {
-    publishImageGenArtStatus({
-      status: "skipped_no_workspace_assets",
-      manifestPath: null,
-      atlasPath: null,
-      expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
-      loadedCount: 0,
-      loadedKeys: [],
-      missingKeys: IMAGEGEN_TEXTURE_BINDINGS.map((binding) => binding.textureKey)
-    });
-    return;
-  }
-
-  publishImageGenArtStatus({
-    status: "loading",
-    mode: paths.mode,
-    manifestPath: paths.manifestPath,
-    atlasPath: paths.atlasPath,
-    provenancePath: paths.provenancePath,
-    sourceImage: paths.sourceImagePath,
-    transparentSourceImage: paths.transparentSourceImagePath,
-    expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
-    loadedCount: 0,
-    loadedKeys: [],
-    missingKeys: []
-  });
-
-  scene.load.json(IMAGEGEN_MANIFEST_CACHE_KEY, paths.manifestPath);
-  scene.load.image(IMAGEGEN_ATLAS_TEXTURE_KEY, paths.atlasPath);
-  scene.load.on("loaderror", (file: any) => {
-    publishImageGenArtStatus({
-      status: "error",
-      manifestError: `failed to load ${file?.src || file?.key || "unknown imagegen asset"}`
-    });
-  });
-}
-
-function copyAtlasFrameToTexture(scene: Phaser.Scene, manifest: any, binding: { frameKey: string; textureKey: string; group: string }) {
-  const frameSpec = manifest?.frames?.[binding.frameKey] as ImageGenFrameSpec | undefined;
-  const frame = frameSpec?.frame;
-  if (!frame || !scene.textures.exists(IMAGEGEN_ATLAS_TEXTURE_KEY)) return false;
-
-  const atlasTexture = scene.textures.get(IMAGEGEN_ATLAS_TEXTURE_KEY);
-  const sourceImage = atlasTexture.getSourceImage() as CanvasImageSource;
-  if (!sourceImage) return false;
-
-  if (scene.textures.exists(binding.textureKey)) {
-    scene.textures.remove(binding.textureKey);
-  }
-
-  const canvasTexture = scene.textures.createCanvas(binding.textureKey, frame.w, frame.h);
-  const ctx = canvasTexture.getContext();
-  ctx.clearRect(0, 0, frame.w, frame.h);
-  ctx.drawImage(sourceImage, frame.x, frame.y, frame.w, frame.h, 0, 0, frame.w, frame.h);
-  canvasTexture.refresh();
-  return true;
-}
-
-function installImageGenAtlasTextures(scene: Phaser.Scene, paths: ImageGenAssetPaths | null) {
-  if (!paths) return;
-
-  const manifest = scene.cache.json.get(IMAGEGEN_MANIFEST_CACHE_KEY);
-  const loadedKeys: string[] = [];
-  const missingKeys: string[] = [];
-  const groups: Record<string, string[]> = {};
-
-  for (const binding of IMAGEGEN_TEXTURE_BINDINGS) {
-    if (copyAtlasFrameToTexture(scene, manifest, binding)) {
-      loadedKeys.push(binding.textureKey);
-      groups[binding.group] = [...(groups[binding.group] || []), binding.textureKey];
-    } else {
-      missingKeys.push(binding.textureKey);
-    }
-  }
-
-  publishImageGenArtStatus({
-    status: loadedKeys.length > 0 ? "loaded" : "error",
-    mode: paths.mode,
-    generatedAtlasStatus: manifest?.generatedAtlasStatus || "unknown",
-    generationStatus: manifest?.generationStatus || "unknown",
-    provenancePath: manifest?.provenancePath || null,
-    sourceImage: manifest?.sourceImage || null,
-    transparentSourceImage: manifest?.transparentSourceImage || null,
-    expectedCount: IMAGEGEN_TEXTURE_BINDINGS.length,
-    loadedCount: loadedKeys.length,
-    loadedKeys,
-    missingKeys,
-    groups,
-    frameKeys: Object.keys(manifest?.frames || {})
-  });
-}
-
 
 export function initializePhaserGame(
   parentEl: HTMLElement,
@@ -246,6 +148,7 @@ export function initializePhaserGame(
   options: PhaserGameOptions = {}
 ): Phaser.Game {
   const imageGenAssetPaths = getImageGenAssetPaths(options.workspaceId);
+  const runtimeArtBinder = new RuntimeArtBinder();
   
   // Custom scenes configuration
   class BootScene extends Phaser.Scene {
@@ -254,12 +157,33 @@ export function initializePhaserGame(
     }
 
     preload() {
-      preloadImageGenAtlas(this, imageGenAssetPaths);
+      runtimeArtBinder.preload(this, imageGenAssetPaths);
+      this.load.on("loaderror", (file: any) => {
+        if (typeof window !== "undefined") {
+          const prev = (window as any).__LOREWEAVER_ART_PIPELINE__ || {};
+          (window as any).__LOREWEAVER_ART_PIPELINE__ = {
+            ...prev,
+            status: "error",
+            manifestError: `failed to load ${file?.src || file?.key || "unknown imagegen asset"}`,
+            updatedAt: new Date().toISOString()
+          };
+        }
+      });
     }
 
     create() {
       const { width, height } = this.scale;
-      installImageGenAtlasTextures(this, imageGenAssetPaths);
+      const bootKnobs = spec.nodes?.[0]?.gameplay?.knobs || {};
+      const artStatus = runtimeArtBinder.install(this, imageGenAssetPaths);
+      this.game.registry.set("runtimeArtBinder", runtimeArtBinder);
+      this.game.registry.set("runtimeArt", runtimeArtBinder.createContext(this));
+      if (artStatus?.status === "loaded") {
+        onLog(`🎨 美术 atlas 已接线：${artStatus.loadedCount}/${artStatus.expectedCount} 帧 (RuntimeArtBinder)`);
+      } else if (artStatus?.status === "skipped_no_workspace_assets") {
+        onLog(`🎨 未找到 workspace imagegen 资源，玩法将使用程序化兜底精灵。`);
+      } else if (artStatus?.status === "error") {
+        onLog(`⚠️ 美术 atlas 接线失败，将回退程序化精灵。`);
+      }
       
       // Draw background
       const bg = this.add.graphics();
@@ -289,7 +213,7 @@ export function initializePhaserGame(
       });
 
       // Loading text
-      const titleText = this.add.text(width / 2, height / 2 - 220, "LORE WEAVER", {
+      const titleText = this.add.text(width / 2, height / 2 - 220, String(bootKnobs.loadingLabel || "LORE WEAVER"), {
         fontFamily: "Inter, sans-serif",
         fontSize: "28px",
         fontWeight: "bold",
@@ -297,7 +221,9 @@ export function initializePhaserGame(
         letterSpacing: "4"
       } as any).setOrigin(0.5);
 
-      const subtitleText = this.add.text(width / 2, height / 2 + 190, "正在初始化修真世界沙盒 INITALIZING...", {
+      const subtitleText = this.add.text(width / 2, height / 2 + 190, String(
+        bootKnobs.statusText || "正在初始化修真世界沙盒 INITIALIZING..."
+      ), {
         fontFamily: "JetBrains Mono, monospace",
         fontSize: "20px",
         color: "#94a3b8"
@@ -312,12 +238,11 @@ export function initializePhaserGame(
 
   class MainScene extends Phaser.Scene {
     private state!: PlayerState;
-    private scoreText!: Phaser.GameObjects.Text;
-    private multiplierText!: Phaser.GameObjects.Text;
     private idleTimer!: Phaser.Time.TimerEvent;
     private progressBars: Phaser.GameObjects.Graphics[] = [];
     private scrollContainer!: Phaser.GameObjects.Container;
     private bgGraphics!: Phaser.GameObjects.Graphics;
+    private activeUIPlugin!: UIPlugin;
 
     constructor() {
       super({ key: "MainScene" });
@@ -325,6 +250,12 @@ export function initializePhaserGame(
 
     init() {
       this.state = { ...this.game.registry.get("playerState") };
+      const pluginType = spec.uiConfig?.plugin || "default";
+      if (pluginType === "cultivation") {
+        this.activeUIPlugin = new CultivationUIPlugin();
+      } else {
+        this.activeUIPlugin = new DefaultUIPlugin();
+      }
     }
 
     create() {
@@ -339,15 +270,20 @@ export function initializePhaserGame(
       // Draw subtle background ambient particles
       this.createAmbientNebula();
 
+      const uiContext: UIPluginContext = {
+        onLog: onLog,
+        saveStateToStore: () => this.saveStateToStore()
+      };
+
       // Top Header HUD bounds
-      this.drawTopHUD(width, themeHex);
+      this.activeUIPlugin.renderTopHUD(this, this.state, spec, uiContext);
 
       // Create scrollable container for 12 nodes
       this.scrollContainer = this.add.container(0, 0);
       this.createNodeScrollList(width, themeHex);
 
       // Floating click Cultivator (Mandala)
-      this.createCultivateMandala(width, height, themeHex);
+      this.activeUIPlugin.renderClickCore(this, this.state, spec, uiContext);
 
       // Start delta timer for passive production accumulation
       this.idleTimer = this.time.addEvent({
@@ -381,180 +317,7 @@ export function initializePhaserGame(
       }
     }
 
-    private drawTopHUD(width: number, themeColor: number) {
-      // Background outline panel
-      const topHud = this.add.graphics();
-      topHud.fillStyle(0x090d16, 0.9);
-      topHud.fillRoundedRect(16, 16, width - 32, 110, 8);
-      topHud.lineStyle(1.5, themeColor, 0.6);
-      topHud.strokeRoundedRect(16, 16, width - 32, 110, 8);
 
-      // Realm display
-      const realmTextStr = spec.economy.realms[this.state.currentRealmIndex] || "炼气期 Initial";
-      this.add.text(32, 28, realmTextStr.toUpperCase(), {
-        fontFamily: "Inter, sans-serif",
-        fontSize: "22px",
-        style: "bold",
-        color: spec.themeColor,
-        letterSpacing: "2"
-      } as any);
-
-      // Passive income rate tag
-      const passiveRate = (this.state.activeMultiplier * 1.5).toFixed(1);
-      this.multiplierText = this.add.text(32, 48, `挂机修炼效率: +${passiveRate}/秒`, {
-        fontFamily: "JetBrains Mono, monospace",
-        fontSize: "16px",
-        color: "#64748b"
-      });
-
-      // Primary Currency Score displaying
-      this.add.text(32, 70, `${spec.economy.currencyName.split("/")[0]}:`, {
-        fontFamily: "Inter, sans-serif",
-        fontSize: "20px",
-        color: "#94a3b8"
-      });
-
-      this.scoreText = this.add.text(125, 65, Math.floor(this.state.mainCurrencyCount).toString(), {
-        fontFamily: "JetBrains Mono, monospace",
-        fontSize: "25px",
-        fontStyle: "bold",
-        color: "#ffffff"
-      });
-
-      // Sound Mute Switch
-      const soundText = this.add.text(width - 92, 32, synth.getMuteState() ? "🔇 静音" : "🔊 音效", {
-        fontFamily: "JetBrains Mono, monospace",
-        fontSize: "16px",
-        color: synth.getMuteState() ? "#ef4444" : spec.themeColor
-      }).setInteractive({ useHandCursor: true });
-
-      soundText.on("pointerdown", () => {
-        const nextMute = synth.toggleMute();
-        soundText.setText(nextMute ? "🔇 静音" : "🔊 音效");
-        soundText.setColor(nextMute ? "#ef4444" : spec.themeColor);
-        synth.playClick();
-        onLog(`🔊 切换音效输出: ${nextMute ? "静音(MUTE)" : "开启(ACTIVE)"}`);
-      });
-
-      // Breakthrough controller
-      const nextBound = Math.pow(4, this.state.currentRealmIndex + 1) * 35;
-      const canBrk = this.state.mainCurrencyCount >= nextBound && this.state.currentRealmIndex < spec.economy.realms.length - 1;
-      
-      const brkBtn = this.add.text(width - 145, 68, canBrk ? "⚡ 突破境界" : `🔒 需修为: ${nextBound}`, {
-        fontFamily: "Inter, sans-serif",
-        fontSize: "18px",
-        fontStyle: "bold",
-        backgroundColor: canBrk ? spec.themeColor : "#1e293b",
-        color: canBrk ? "#020617" : "#64748b",
-        padding: { x: 10, y: 7 }
-      }).setInteractive({ useHandCursor: true });
-
-      brkBtn.on("pointerdown", () => {
-        if (!canBrk) {
-          synth.playDamage();
-          this.cameras.main.shake(150, 0.005);
-          onLog(`⚠️ ${spec.economy.currencyName}蕴能储量不足，无法突破天劫桎梏。`);
-          return;
-        }
-
-        synth.playBreakthrough();
-        this.cameras.main.flash(400, 255, 255, 255);
-        this.cameras.main.shake(250, 0.01);
-        
-        this.state.mainCurrencyCount -= nextBound;
-        this.state.currentRealmIndex += 1;
-        this.state.activeMultiplier += 1.8;
-        this.state.clickPower += 1.5;
-
-        // Trigger safe storage commit
-        this.saveStateToStore();
-        this.scene.restart();
-
-        onLog(`🔥 天梯跃迁: 成功逆天飞升破镜至全新天梯境界: [${spec.economy.realms[this.state.currentRealmIndex]}]！`);
-      });
-    }
-
-    private createCultivateMandala(width: number, height: number, themeColor: number) {
-      // Cultivate physical interactive mandala circle
-      const cx = width / 2;
-      const cy = height - 120;
-      
-      const aura = this.add.graphics();
-      aura.fillStyle(themeColor, 0.06);
-      aura.fillCircle(cx, cy, 75);
-      aura.lineStyle(2, themeColor, 0.65);
-      aura.strokeCircle(cx, cy, 65);
-
-      const centerCore = this.add.graphics();
-      centerCore.fillStyle(themeColor, 0.85);
-      centerCore.fillCircle(cx, cy, 32);
-
-      const circleLabel = this.add.text(cx, cy, "修炼\nCULTIVATE", {
-        fontFamily: "Inter, sans-serif",
-        fontSize: "16px",
-        fontStyle: "bold",
-        color: "#ffffff",
-        align: "center"
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-      // Hover and push scaling triggers
-      circleLabel.on("pointerover", () => {
-        this.tweens.add({
-          targets: [circleLabel, centerCore],
-          scale: 1.12,
-          duration: 150
-        });
-      });
-
-      circleLabel.on("pointerout", () => {
-        this.tweens.add({
-          targets: [circleLabel, centerCore],
-          scale: 1.0,
-          duration: 150
-        });
-      });
-
-      circleLabel.on("pointerdown", () => {
-        // Increment primary currency based on click power
-        const gain = parseFloat((this.state.clickPower * 1.0).toFixed(1));
-        this.state.mainCurrencyCount += gain;
-        this.scoreText.setText(Math.floor(this.state.mainCurrencyCount).toString());
-
-        // Play feedback sounds
-        synth.playClick();
-
-        // Screen micro shock
-        this.tweens.add({
-          targets: [centerCore, aura],
-          scale: 0.92,
-          yoyo: true,
-          duration: 60
-        });
-
-        // Floating floating texts
-        const px = cx + Phaser.Math.Between(-30, 30);
-        const py = cy - 40;
-        const flTxt = this.add.text(px, py, `+${gain}`, {
-          fontFamily: "JetBrains Mono, monospace",
-          fontSize: "27px",
-          fontStyle: "bold",
-          color: "#ffffff"
-        }).setOrigin(0.5);
-
-        this.tweens.add({
-          targets: flTxt,
-          y: py - 60,
-          alpha: 0,
-          scale: 1.35,
-          duration: 800,
-          onComplete: () => {
-            flTxt.destroy();
-          }
-        });
-
-        this.saveStateToStore();
-      });
-    }
 
     private createNodeScrollList(width: number, themeColor: number) {
       const { height } = this.scale;
@@ -672,7 +435,9 @@ export function initializePhaserGame(
       // passively accumulation state increase
       const increment = parseFloat((this.state.activeMultiplier * 1.5).toFixed(2));
       this.state.mainCurrencyCount += increment;
-      this.scoreText.setText(Math.floor(this.state.mainCurrencyCount).toString());
+      if ((this.activeUIPlugin as any).onIncomeTick) {
+        (this.activeUIPlugin as any).onIncomeTick(this, this.state, increment);
+      }
       this.saveStateToStore();
     };
 
@@ -707,6 +472,7 @@ export function initializePhaserGame(
     private growthHUD: Phaser.GameObjects.Text | null = null;
     private activeIframe: HTMLIFrameElement | null = null;
     private iframeListener: ((ev: MessageEvent) => void) | null = null;
+    private iframeContainer: any = null;
 
     // Tap Reaction lists
     private spawnTimer!: Phaser.Time.TimerEvent;
@@ -730,6 +496,8 @@ export function initializePhaserGame(
     }
 
     init(data: { node: NodeSpec }) {
+      (this as any)._didRetreat = false;
+      (this as any)._retreatBtn = null;
       this.node = data.node;
       this.timeLeft = data.node.durationLimit || 30;
       this.scoreCount = 0;
@@ -755,28 +523,45 @@ export function initializePhaserGame(
           characterDesignCatalog: spec.characterDesignCatalog || [],
           enemyDesignCatalog: spec.enemyDesignCatalog || []
         };
+        const artBinder = this.game.registry.get("runtimeArtBinder") as RuntimeArtBinder | null;
+        const runtimeArt = artBinder
+          ? artBinder.createContext(this)
+          : this.game.registry.get("runtimeArt") || null;
         const baseKnobs: any = {
           duration: this.node.durationLimit || 30,
+          durationSec: this.node.durationLimit || 30,
+          timeLimitSec: this.node.durationLimit || 30,
           goalValue: this.node.goalValue,
+          needAmount: this.node.goalValue,
           difficulty: this.node.difficulty,
-          resourceMultiplier: this.node.resourceMultiplier
+          resourceMultiplier: this.node.resourceMultiplier,
+          cardId
         };
 
-        const mergedKnobs = this.node.gameplay.knobs
-          ? { ...baseKnobs, ...this.node.gameplay.knobs }
+        const mergedRaw = this.node.gameplay.knobs
+          ? { ...baseKnobs, ...this.node.gameplay.knobs, cardId }
           : baseKnobs;
+        // Shared PlayabilityContract — card-standard + legacy aliases
+        const mergedKnobs = normalizePlayabilityKnobs(cardId, mergedRaw, {
+          durationLimit: this.node.durationLimit,
+          goalValue: this.node.goalValue,
+          gameplay: { cardId }
+        });
 
         const payload = createNodePayload({
           id: this.node.id,
           nodeId: `node_${this.node.id}`,
           nodeConfig: {
-            duration: this.node.durationLimit,
+            duration: mergedKnobs.durationSec || this.node.durationLimit,
+            durationLimit: mergedKnobs.durationSec || this.node.durationLimit,
+            goalValue: mergedKnobs.needAmount ?? this.node.goalValue,
             rewards: {
-              score: this.node.goalValue
+              score: mergedKnobs.needAmount ?? this.node.goalValue
             },
             planning,
             abilityCatalog,
             runtimeVisuals,
+            runtimeArtStatus: runtimeArt?.status?.() || null,
             gameplay: {
               cardId: cardId,
               runtimeVisuals,
@@ -797,6 +582,9 @@ export function initializePhaserGame(
             runSkillPool: planning.runSkillPool
           }
         });
+        // Attach non-serializable art context for adapters (not part of NodeResult contract)
+        (payload as any).runtimeArt = runtimeArt;
+        (payload as any).art = runtimeArt;
 
         if (cardId === "survivor_horde") {
           const modifiersList = (this.node.gameplay?.modifiers || []).flatMap((modSpec: GameplayModifierSpec) => {
@@ -818,6 +606,9 @@ export function initializePhaserGame(
           this.adapter = new SurvivorHordeAdapter({
             testHooks: this.testHooks,
             modifiers: modifiersList,
+            onPresentationEvent: (event: any) => {
+              this.handleSurvivorPresentationEvent(event);
+            },
             onEnd: (result: any) => {
               this.handleAdapterEnd(result);
             }
@@ -844,6 +635,153 @@ export function initializePhaserGame(
               this.spawnParticleExplosion(x, y, color);
             }
           });
+        } else if (cardId === "turn_based_skill_battle") {
+          this.adapter = new TurnBasedSkillBattleAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            }
+          });
+        } else if (cardId === "sequence_synthesis") {
+          this.adapter = new SequenceSynthesisAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            },
+            spawnParticles: (x: number, y: number, color: number) => {
+              this.spawnParticleExplosion(x, y, color);
+            }
+          });
+        } else if (cardId === "side_scrolling_brawler") {
+          const modifiersList = (this.node.gameplay?.modifiers || []).flatMap((modSpec: GameplayModifierSpec) => {
+            try {
+              return [createSideScrollingBrawlerModifier({
+                id: modSpec.id,
+                knobs: { ...(modSpec.knobs || {}) }
+              })];
+            } catch (error) {
+              onLog(`⚠️ 跳过暂不支持的 side_scrolling_brawler modifier: ${modSpec.id}`);
+              return [];
+            }
+          });
+          this.adapter = new SideScrollingBrawlerAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            modifiers: modifiersList,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            }
+          });
+        } else if (cardId === "energy_balance") {
+          this.adapter = new EnergyBalanceAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            },
+            spawnParticles: (x: number, y: number, color: number) => {
+              this.spawnParticleExplosion(x, y, color);
+            }
+          });
+        } else if (cardId === "rune_connect_sequence") {
+          this.adapter = new RuneConnectSequenceAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            },
+            spawnParticles: (x: number, y: number, color: number) => {
+              this.spawnParticleExplosion(x, y, color);
+            }
+          });
+        } else if (cardId === "branching_dialogue_check") {
+          this.adapter = new BranchingDialogueCheckAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => {
+              this.handleAdapterEnd(result);
+            }
+          });
+        } else if (cardId === "pressure_survival") {
+          this.adapter = new PressureSurvivalAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result),
+            spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
+          });
+        } else if (cardId === "reaction_pick") {
+          this.adapter = new ReactionPickAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result)
+          });
+        } else if (cardId === "observe_capture") {
+          this.adapter = new ObserveCaptureAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result),
+            spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
+          });
+        } else if (cardId === "shooter_duel") {
+          this.adapter = new ShooterDuelAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result)
+          });
+        } else if (cardId === "drag_to_core") {
+          this.adapter = new DragToCoreAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result),
+            spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
+          });
+        } else if (cardId === "dodge_counter_boss") {
+          this.adapter = new DodgeCounterBossAdapter({
+            Phaser,
+            testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result),
+            spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
+          });
+        } else if (cardId === "maze_exploration_choice") {
+          this.adapter = new MazeExplorationChoiceAdapter({
+            Phaser, testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result)
+          });
+        } else if (cardId === "platform_escape") {
+          this.adapter = new PlatformEscapeAdapter({
+            Phaser, testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result)
+          });
+        } else if (cardId === "hazard_collect_waves") {
+          this.adapter = new HazardCollectWavesAdapter({
+            Phaser, testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result),
+            spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
+          });
+        } else if (cardId === "sequence_puzzle_combo") {
+          this.adapter = new SequencePuzzleComboAdapter({
+            Phaser, testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result)
+          });
+        } else if (cardId === "rhythm_then_pickup") {
+          this.adapter = new RhythmThenPickupAdapter({
+            Phaser, testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result),
+            spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
+          });
+        } else if (cardId === "qix_area_capture") {
+          this.adapter = new QixAreaCaptureAdapter({
+            Phaser, testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result)
+          });
+        } else if (cardId === "point_drag_progression") {
+          this.adapter = new PointDragProgressionAdapter({
+            Phaser, testHooks: this.testHooks,
+            onEnd: (result: any) => this.handleAdapterEnd(result),
+            spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
+          });
         }
 
         if (this.adapter) {
@@ -869,27 +807,13 @@ export function initializePhaserGame(
       // Level general Header
       this.drawLevelHeader(width, height, col);
 
-      // Retreat Back Button (Returns safely to MainScene - strictly enforces Scene Hygiene)
-      const rBtn = this.add.text(32, 32, "◀ 撤退 / RETREAT", {
-        fontFamily: "Inter, sans-serif",
-        fontSize: "16px",
-        fontStyle: "bold",
-        color: "#ffffff",
-        backgroundColor: "rgba(239, 68, 68, 0.65)",
-        padding: { x: 8, y: 5 }
-      }).setInteractive({ useHandCursor: true });
+      const knobs = (this.node.gameplay?.knobs || {}) as Record<string, any>;
 
-      rBtn.on("pointerdown", () => {
-        synth.playClick();
-        onLog(`◀ 已主动撤出境界考验 [节点 ${this.node.id}]。正在返回修真卷轴主态。`);
-        if (this.adapter) {
-          this.adapter.retreat();
-        } else {
-          this.safeRetreat();
-        }
-      });
-
-      // Play ambient drone BGM
+      // Ambient BGM — prefer knobs.bgmKey for workspace audio contract, fallback synth
+      const bgmKey = typeof knobs.bgmKey === "string" ? knobs.bgmKey : "";
+      if (bgmKey) {
+        onLog(`🎵 节点 BGM 合同: ${bgmKey}${knobs.bossBgmKey ? ` · boss=${knobs.bossBgmKey}` : ""}`);
+      }
       synth.startBgm();
 
       // Show level introductory overlay, and launch game only when skipped/completed
@@ -912,20 +836,106 @@ export function initializePhaserGame(
           // Distribute and trigger minigame core routines
           this.launchMechanicMinigame(width, height, col);
         }
+
+        // Retreat AFTER intro so it is never covered by the skip zone.
+        this.mountRetreatButton(knobs);
+      });
+    }
+
+    /** Mount top-left retreat control above gameplay (not under intro overlay). */
+    private mountRetreatButton(knobs: Record<string, any>) {
+      const allowQuit = knobs.allowQuit !== false && knobs.shellRetreat !== false;
+      if (!allowQuit) {
+        onLog(`🔒 节点 ${this.node.id} 已关闭撤退（allowQuit=false），须通关或失败结算。`);
+        return;
+      }
+      if ((this as any)._retreatBtn && (this as any)._retreatBtn.active) return;
+
+      const rBtn = this.add
+        .text(32, 32, "◀ 撤退 / RETREAT", {
+          fontFamily: "Inter, sans-serif",
+          fontSize: "16px",
+          fontStyle: "bold",
+          color: "#ffffff",
+          backgroundColor: "rgba(239, 68, 68, 0.75)",
+          padding: { x: 10, y: 6 }
+        })
+        .setInteractive({ useHandCursor: true })
+        .setDepth(100000)
+        .setScrollFactor(0);
+      (this as any)._retreatBtn = rBtn;
+
+      rBtn.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+        try {
+          pointer?.event?.stopPropagation?.();
+        } catch {
+          /* ignore */
+        }
+        synth.playClick();
+        onLog(`◀ 已主动撤出境界考验 [节点 ${this.node.id}]。正在返回修真卷轴主态。`);
+        // Always leave the node scene; adapter.retreat notifies rewards/path, then force shell.
+        try {
+          if (this.iframeContainer) {
+            this.iframeContainer.retreat?.();
+          } else if (this.adapter && typeof (this.adapter as any).retreat === "function") {
+            (this.adapter as any).retreat();
+          }
+        } catch (err) {
+          onLog(`⚠️ adapter.retreat 异常：${err}`);
+        }
+        // Safety: even if onEnd is missing, leave the scene.
+        this.time.delayedCall(30, () => {
+          if (this.sys?.isActive()) {
+            this.safeRetreat();
+          }
+        });
       });
     }
 
     update(time: number, delta: number) {
       if (this.adapter) {
         this.adapter.update(time, delta);
-        const testState = this.adapter.getTestState();
+        const testState = this.adapter.getTestState?.() || {};
         if (testState) {
           this.observeFirstNodeGrowth(testState);
-          this.scoreHUD.setText(`目标进度：${testState.score} / ${this.node.goalValue}`);
-          this.livesHUD.setText(`生命精力：${Math.ceil(testState.hp)}`);
-          
-          if (this.adapter.status === "running" && testState.score >= this.node.goalValue) {
-            this.adapter.finish(true, "objective_met");
+          const goal =
+            typeof (testState as any).goalValue === "number"
+              ? (testState as any).goalValue
+              : this.node.goalValue;
+          const score =
+            typeof (testState as any).score === "number"
+              ? (testState as any).score
+              : typeof (this.adapter as any)?.state?.score === "number"
+              ? (this.adapter as any).state.score
+              : typeof (testState as any).progress === "number"
+              ? (testState as any).progress
+              : typeof (testState as any).surviveTime === "number"
+              ? (testState as any).surviveTime
+              : 0;
+          const hp =
+            typeof (testState as any).hp === "number"
+              ? (testState as any).hp
+              : typeof (this.adapter as any)?.state?.hp === "number"
+              ? (this.adapter as any).state.hp
+              : 100;
+          if (this.scoreHUD) {
+            this.scoreHUD.setText(`目标进度：${score} / ${goal}`);
+          }
+          if (this.livesHUD) {
+            this.livesHUD.setText(`生命精力：${Math.ceil(hp)}`);
+          }
+
+          // Prefer adapter-internal win conditions; only force-finish when goal is met
+          // and adapter exposes a numeric score (avoid undefined >= N).
+          if (
+            this.adapter.status === "running" &&
+            typeof score === "number" &&
+            typeof goal === "number" &&
+            goal > 0 &&
+            score >= goal &&
+            typeof (this.adapter as any).finish === "function"
+          ) {
+            (this.adapter as any).finish(true, "objective_met");
           }
         }
       }
@@ -1251,11 +1261,12 @@ export function initializePhaserGame(
       // Click mechanics trigger
       ring.on("pointerdown", () => {
         synth.playLoot();
-        this.scoreCount += 1;
+        const gain = Phaser.Math.Between(1, 5);
+        this.scoreCount += gain;
         this.scoreHUD.setText(`已吸收: ${this.scoreCount} / ${this.node.goalValue}`);
         
         // Spawn micro numbers floating animation
-        const fx = this.add.text(rx, ry, "+1 灵能", { fontFamily: "JetBrains Mono", fontSize: "18px", color: spec.themeColor });
+        const fx = this.add.text(rx, ry, `+${gain} 灵气`, { fontFamily: "JetBrains Mono", fontSize: "18px", color: spec.themeColor });
         this.tweens.add({
           targets: fx,
           y: ry - 40,
@@ -1305,6 +1316,7 @@ export function initializePhaserGame(
 
       // Pointer drag triggers to float avatar on horizontal axis
       this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
+        if (!this.playerCapsule || !(this.playerCapsule as any).active) return;
         // Enforce horizontal bounds boundaries safely
         const tx = Phaser.Math.Clamp(p.x, 48, width - 48);
         this.playerCapsule.x = tx;
@@ -1337,7 +1349,7 @@ export function initializePhaserGame(
           duration: (height - 250) / (fallSpeed / 1000),
           onUpdate: () => {
             // Collision boundary checks
-            if (gem && gem.active && Phaser.Math.Distance.Between(gem.x, gem.y, this.playerCapsule.x, this.playerCapsule.y) < 32) {
+            if (gem && gem.active && this.playerCapsule && (this.playerCapsule as any).active && Phaser.Math.Distance.Between(gem.x, gem.y, this.playerCapsule.x, this.playerCapsule.y) < 32) {
               synth.playLoot();
               this.scoreCount += 1;
               this.scoreHUD.setText(`已收集: ${this.scoreCount} / ${this.node.goalValue}`);
@@ -1366,7 +1378,7 @@ export function initializePhaserGame(
           duration: (height - 250) / (fallSpeed / 1000),
           onUpdate: () => {
             // Collision damage metrics
-            if (hazard && hazard.active && Phaser.Math.Distance.Between(hazard.x, hazard.y, this.playerCapsule.x, this.playerCapsule.y) < 30) {
+            if (hazard && hazard.active && this.playerCapsule && (this.playerCapsule as any).active && Phaser.Math.Distance.Between(hazard.x, hazard.y, this.playerCapsule.x, this.playerCapsule.y) < 30) {
               synth.playDamage();
               this.livesCount -= 1;
               this.livesHUD.setText(`生命精力：${this.livesCount}`);
@@ -1542,8 +1554,23 @@ export function initializePhaserGame(
       this.playerStep += 1;
 
       if (this.playerStep >= this.cpuSequence.length) {
-        this.scoreCount += 1;
+        const gain = Phaser.Math.Between(1, 5);
+        this.scoreCount += gain;
         this.scoreHUD.setText(`心神共鸣: ${this.scoreCount} / ${this.node.goalValue}`);
+
+        const { width, height } = this.scale;
+        const fx = this.add.text(width / 2, height / 2 - 40, `+${gain} 灵气`, {
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "22px",
+          color: spec.themeColor || "#10b981"
+        }).setOrigin(0.5);
+        this.tweens.add({
+          targets: fx,
+          y: height / 2 - 90,
+          alpha: 0,
+          duration: 600,
+          onComplete: () => fx.destroy()
+        });
 
         if (this.scoreCount >= this.node.goalValue) {
           this.handleLevelWin();
@@ -1734,6 +1761,39 @@ export function initializePhaserGame(
           onComplete: () => dot.destroy()
         });
       }
+    }
+
+    private handleSurvivorPresentationEvent(event: any) {
+      if (!event || event.accepted !== true) return;
+
+      if (event.action === "treasure_opened") synth.playLoot();
+      else if (event.action === "channel_interrupted" || event.action === "guards_alerted") synth.playDamage();
+      else if (event.action === "channel_started") synth.playClick();
+
+      const fallback = { x: this.scale.width / 2, y: this.scale.height / 2 };
+      const x = Number.isFinite(event.position?.x) ? event.position.x : fallback.x;
+      const y = Number.isFinite(event.position?.y) ? event.position.y : fallback.y;
+      if (event.vfx?.kind === "reward_burst") {
+        this.spawnParticleExplosion(x, y, event.vfx.color || spec.themeColor);
+        this.cameras.main.flash(120, 245, 158, 11);
+      }
+
+      if (typeof event.callout !== "string" || !event.callout.trim()) return;
+      const callout = this.add.text(x, y - 54, event.callout, {
+        fontFamily: "Inter, sans-serif",
+        fontSize: "17px",
+        fontStyle: "bold",
+        color: "#fff7d6",
+        backgroundColor: "rgba(15, 23, 42, 0.78)",
+        padding: { x: 8, y: 4 }
+      }).setOrigin(0.5).setDepth(30);
+      this.tweens.add({
+        targets: callout,
+        y: y - 82,
+        alpha: 0,
+        duration: 900,
+        onComplete: () => callout.destroy()
+      });
     }
 
     private showVictoryOverlay(multiplierGain: number, resourceKey: string) {
@@ -1995,39 +2055,58 @@ export function initializePhaserGame(
 
       onLog(`📂 正在加载独立 H5 玩法容器 [节点 ${this.node.id}: ${this.node.title}]...`);
 
-      const iframe = document.createElement("iframe");
-      iframe.src = `./nodes/node${this.node.id}.html`;
-      iframe.style.position = "absolute";
-      iframe.style.top = "0px";
-      iframe.style.left = "0px";
-      iframe.style.width = "100%";
-      iframe.style.height = "100%";
-      iframe.style.border = "none";
-      iframe.style.zIndex = "100";
-      iframe.style.background = "#020617";
+      const knobs = this.node.gameplay?.knobs || {};
+      const payload = createNodePayload({
+        nodeId: String(this.node.id),
+        nodeIndex: this.node.id,
+        nodeConfig: {
+          ...this.node,
+          gameplay: this.node.gameplay
+        },
+        playerStats: this.game.registry.get("playerState") || {},
+        source: { engine: "iframe" }
+      });
 
-      parentEl.appendChild(iframe);
-      this.activeIframe = iframe;
-
-      this.iframeListener = (ev: MessageEvent) => {
-        if (!ev.data) return;
-        if (ev.data.type === "NODE_RESULT") {
-          const reward = ev.data.reward || {};
-          onLog(`📥 H5 玩法容器回传奖励数据: ${JSON.stringify(reward)}`);
-
-          const success = reward.success !== false;
-          this.handleIframeResult(success, reward);
-        } else if (ev.data.type === "NODE_CLOSE" || ev.data.type === "NODE_EXIT") {
-          onLog(`🚪 H5 玩法容器请求退出。`);
-          this.handleIframeResult(false, { reason: "retreated" });
+      const container = new IframeNodeContainer({
+        testHooks: this.testHooks,
+        config: {
+          payloadEncoding: knobs.payloadEncoding || "base64_json",
+          messageTypes: knobs.messageTypes || ["NODE_RESULT", "NODE_CLOSE", "NODE_EXIT"],
+          fullscreen: knobs.fullscreen !== false
+        },
+        onEnd: (result: any) => {
+          this.activeIframe = null;
+          this.iframeContainer = null;
+          if (result?.success) {
+            onLog(`📥 H5 玩法容器回传 NodeResult: ${JSON.stringify(result.rewards || {})}`);
+            this.handleIframeResult(true, {
+              ...(result.rewards || {}),
+              success: true,
+              reason: result.reason,
+              storyFlags: result.unlocks?.flags
+            });
+          } else {
+            onLog(`🚪 H5 玩法容器结束: ${result?.reason || "failed"}`);
+            this.handleIframeResult(false, { reason: result?.reason || "retreated" });
+          }
         }
-      };
+      });
 
-      window.addEventListener("message", this.iframeListener);
+      container.init(payload);
+      const iframe = container.mount(parentEl, {
+        src: `./nodes/node${this.node.id}.html`,
+        nodeId: this.node.id
+      });
+      this.activeIframe = iframe;
+      this.iframeContainer = container;
     }
 
     private handleIframeResult(success: boolean, reward: any) {
-      if (this.activeIframe) {
+      if (this.iframeContainer) {
+        this.iframeContainer.destroy?.();
+        this.iframeContainer = null;
+        this.activeIframe = null;
+      } else if (this.activeIframe) {
         if (this.activeIframe.parentElement) {
           this.activeIframe.parentElement.removeChild(this.activeIframe);
         }
@@ -2118,25 +2197,52 @@ export function initializePhaserGame(
     }
 
     private safeRetreat() {
+      if ((this as any)._didRetreat) return;
+      (this as any)._didRetreat = true;
       // Cleans everything before shutdown (Ensures 0% leakage risk)
       this.shutdown();
       this.scene.start("MainScene");
     }
 
     shutdown() {
+      // Kill all active tweens to prevent callbacks on destroyed objects
+      try {
+        this.tweens?.killAll();
+      } catch {}
+
+      // Clear input listeners
+      try {
+        this.input?.removeAllListeners();
+      } catch {}
+
       // Clear timers to prevent ticks executing after destruction
       if (this.gameTimer) this.gameTimer.destroy();
       if (this.spawnTimer) this.spawnTimer.destroy();
       if (this.spawnItemTimer) this.spawnItemTimer.destroy();
 
-      // Clear dynamic array references
+      // Clear dynamic array references & destroy objects
+      this.activeOrbs?.forEach((orb) => orb?.destroy?.());
+      this.activeCollects?.forEach((c) => c?.destroy?.());
+      this.activeHazards?.forEach((h) => h?.destroy?.());
+      this.runeKeyrings?.forEach((r) => r?.destroy?.());
       this.activeOrbs = [];
       this.activeCollects = [];
       this.activeHazards = [];
       this.runeKeyrings = [];
 
+      if (this.playerCapsule) {
+        try {
+          this.playerCapsule.destroy();
+        } catch {}
+        this.playerCapsule = null as any;
+      }
+
       // Clean up active iframe if any
-      if (this.activeIframe) {
+      if (this.iframeContainer) {
+        this.iframeContainer.destroy?.();
+        this.iframeContainer = null;
+        this.activeIframe = null;
+      } else if (this.activeIframe) {
         if (this.activeIframe.parentElement) {
           this.activeIframe.parentElement.removeChild(this.activeIframe);
         }
@@ -2153,7 +2259,9 @@ export function initializePhaserGame(
 
       // Clean up adapter
       if (this.adapter) {
-        this.adapter.destroy();
+        try {
+          this.adapter.destroy();
+        } catch {}
         this.adapter = null;
       }
       if (this.testHooks) {

@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/schemas/runtime_parity_fixture.schema.json",
+  "title": "LoreWeaver Deterministic Runtime Parity Fixture",
+  "description": "Theme-neutral business-state fixture shared by simulator and standalone runtime parity tests.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "fixtureId",
+    "nodeId",
+    "gameplayCardId",
+    "sourceRevision",
+    "specHash",
+    "appliedPatchIds",
+    "determinism",
+    "runtimeSpecInput",
+    "initialState",
+    "inputTimeline",
+    "checkpoints",
+    "tolerances",
+    "expectedInvariants",
+    "excludedObservations"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "loreweaver.runtime-parity-fixture.v1"
+    },
+    "fixtureId": {
+      "$ref": "#/$defs/id"
+    },
+    "nodeId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "gameplayCardId": {
+      "$ref": "#/$defs/id"
+    },
+    "sourceRevision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "specHash": {
+      "description": "A production sha256 hash, or an explicit unmaterialized marker until compileRuntimeSpec exists.",
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        {
+          "type": "string",
+          "pattern": "^unmaterialized:[a-z0-9_.-]+$"
+        }
+      ]
+    },
+    "appliedPatchIds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "uniqueItems": true
+    },
+    "determinism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed", "clock", "randomSource"],
+      "properties": {
+        "seed": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "string", "minLength": 1 }
+          ]
+        },
+        "clock": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "fixedDeltaMs"],
+          "properties": {
+            "mode": { "const": "fixed_step" },
+            "fixedDeltaMs": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
+        "randomSource": {
+          "const": "injected"
+        }
+      }
+    },
+    "runtimeSpecInput": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["runtimeVersion", "cardId", "nodeId", "objective", "durationMs"],
+      "properties": {
+        "runtimeVersion": { "type": "string", "minLength": 1 },
+        "cardId": { "$ref": "#/$defs/id" },
+        "nodeId": { "type": "integer", "minimum": 1 },
+        "objective": { "$ref": "#/$defs/id" },
+        "durationMs": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "initialState": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["lifecycle", "player", "run", "world"],
+      "properties": {
+        "lifecycle": { "const": "ready" },
+        "player": { "type": "object" },
+        "run": { "type": "object" },
+        "world": { "type": "object" }
+      }
+    },
+    "inputTimeline": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/input"
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/checkpoint"
+      }
+    },
+    "tolerances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numericAbsolute", "positionPx", "timeMs", "unorderedCollections"],
+      "properties": {
+        "numericAbsolute": { "type": "number", "minimum": 0 },
+        "positionPx": { "type": "number", "minimum": 0 },
+        "timeMs": { "type": "number", "minimum": 0 },
+        "unorderedCollections": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "expectedInvariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "assertion"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "assertion": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "excludedObservations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "theme_text",
+          "protected_names",
+          "asset_paths",
+          "pixel_output",
+          "procedural_fallback_geometry",
+          "wall_clock_timestamps",
+          "object_ids"
+        ]
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]*$"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atMs", "action"],
+      "properties": {
+        "atMs": { "type": "integer", "minimum": 0 },
+        "action": { "$ref": "#/$defs/id" },
+        "args": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atMs", "id", "expectedState"],
+      "properties": {
+        "atMs": { "type": "integer", "minimum": 0 },
+        "id": { "$ref": "#/$defs/id" },
+        "expectedState": { "type": "object", "additionalProperties": true },
+        "requiredEvents": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "id": "resource_pressure",
+  "title": "Resource Pressure",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "drainPerSecond": {
+      "type": "number",
+      "default": 4,
+      "patchLevel": "L1",
+      "description": "Resist drain per second."
+    },
+    "gemRestore": {
+      "type": "number",
+      "default": 40,
+      "patchLevel": "L1",
+      "description": "Restore on elite kill."
+    },
+    "eliteIntervalMs": {
+      "type": "integer",
+      "default": 15000,
+      "patchLevel": "L1",
+      "description": "Elite spawn interval."
+    }
+  },
+  "requiredCoreSystems": [
+    "ResourceMeter",
+    "EliteSpawner"
+  ],
+  "sourceProvenance": [
+    "minigame/perfectworld_dahuang/nodes/node6.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Survivor_horde modifier factory wired."
+}

@@ -3,6 +3,7 @@ import VFX from '../utils/VFX.js';
 import UIHelper from '../utils/UIHelper.js';
 import { ENEMY_REGISTRY } from '../js/data.js';
 import { resolveShieldAbsorption } from './combat-resolution.js';
+import GameFeel from './GameFeel.js';
 
 export { resolveShieldAbsorption } from './combat-resolution.js';
 
@@ -56,9 +57,17 @@ export class CombatRuntime {
         if (skillData && triangle === 'azure' && (enemy.getData('speed') === 0 || skillData.type === 'aoe_root')) { finalDmg *= 2; countered = true; }
         if (skillData && triangle === 'emerald' && (scene.isInvulnerable || Phaser.Math.Distance.Between(scene.player.x, scene.player.y, enemy.x, enemy.y) <= 90 || skillData.type === 'active_dodge')) { finalDmg *= 2; countered = true; }
         const hp = enemy.getData('hp') - finalDmg;
+        const isBoss = Boolean(enemy.getData('isBoss'));
+        const isCritical = Boolean(skillData?.critical || skillData?.castMode === 'manual');
         AudioManager.playHit();
         VFX.playHitEffect(scene, enemy.x, enemy.y);
-        if (countered) scene.showWorldFloatText(enemy.x, enemy.y - 30, `克制 ${Math.round(finalDmg)}!`, '#ffd700', 700);
+        GameFeel.showDamageNumber(scene, enemy.x, enemy.y - 18, finalDmg, { critical: isCritical || countered });
+        if (countered) scene.showWorldFloatText(enemy.x, enemy.y - 42, `克制!`, '#ffd700', 700);
+        if (isBoss || isCritical || countered) {
+            GameFeel.hitStop(scene, { boss: isBoss, critical: isCritical || countered });
+            GameFeel.haptic(isBoss ? [18, 30, 18] : 10);
+            GameFeel.shake(scene, isBoss ? 90 : 50, isBoss ? 0.005 : 0.0025);
+        }
         if (hp <= 0) {
             scene.kills++;
             scene.uiScene.updateKills(scene.kills);
@@ -69,7 +78,7 @@ export class CombatRuntime {
                 const heal = Math.max(Math.floor(scene.playerMaxHp * 0.02), 1);
                 scene.playerHp = Math.min(scene.playerHp + heal, scene.playerMaxHp);
                 scene.uiScene.updateHp(scene.playerHp, scene.playerMaxHp);
-                scene.showWorldFloatText(scene.player.x, scene.player.y - 58, `战血 +${heal}`, '#ff7777', 700);
+                GameFeel.showDamageNumber(scene, scene.player.x, scene.player.y - 58, heal, { heal: true });
             }
             enemy.destroy();
             scene.playerActionController?.onEnemyDefeated?.();
@@ -113,7 +122,9 @@ export class CombatRuntime {
         if (damage > 0) {
             scene.playerHp = Math.max(scene.playerHp - damage, 0);
             scene.uiScene.updateHp(scene.playerHp, scene.playerMaxHp);
-            scene.showWorldFloatText(scene.player.x, scene.player.y - 40, `-${damage}`, '#ff0000', 1000);
+            GameFeel.showDamageNumber(scene, scene.player.x, scene.player.y - 40, damage);
+            GameFeel.shake(scene, 70, 0.004);
+            GameFeel.haptic(20);
             scene.playerActionController?.onPlayerDamaged?.();
         }
         AudioManager.playHit();

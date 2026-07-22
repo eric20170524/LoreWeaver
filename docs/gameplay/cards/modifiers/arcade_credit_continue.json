@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arcade_credit_continue",
+  "title": "Arcade Credit Continue",
+  "category": "session_modifier",
+  "status": "validated",
+  "modifierFor": [
+    "side_scrolling_brawler",
+    "node_iframe_microgame"
+  ],
+  "knobs": {
+    "maxCredits": {
+      "type": "integer",
+      "default": 9,
+      "min": 0,
+      "max": 99,
+      "patchLevel": "L1"
+    },
+    "startCredits": {
+      "type": "integer",
+      "default": 0,
+      "min": 0,
+      "max": 99,
+      "patchLevel": "L1"
+    },
+    "spendCreditOnStart": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1"
+    },
+    "spendCreditOnContinue": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1"
+    },
+    "continueRespawnInvulnSec": {
+      "type": "number",
+      "default": 2.4,
+      "min": 0,
+      "max": 30,
+      "patchLevel": "L1"
+    },
+    "allowGamepadCoin": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1"
+    }
+  },
+  "requiredCoreSystems": [
+    "GameplayModifier",
+    "ArcadeSession",
+    "LifeStock",
+    "InputMapper",
+    "HUD",
+    "NodeResult",
+    "TestHooks"
+  ],
+  "sourceProvenance": [
+    "minigame/three_kingdoms_brawl/js/arcade-session.js",
+    "minigame/three_kingdoms_brawl/js/input-controller.js",
+    "minigame/three_kingdoms_brawl/js/game.js",
+    "minigame/three_kingdoms_brawl/js/verify-scenarios.js"
+  ],
+  "knownRisks": [
+    "credit insertion should not mutate long-term economy state unless the host shell explicitly maps it",
+    "continue flow must avoid duplicate NodeResult emission after game over",
+    "keyboard, gamepad, and touch confirmations need one shared edge-trigger contract"
+  ],
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+}

@@ -4,6 +4,17 @@ import BossPhasesModifier from './BossPhasesModifier.js';
 import PoisonFogModifier from './PoisonFogModifier.js';
 import EscortNpcModifier from './EscortNpcModifier.js';
 import LaserWarningModifier from './LaserWarningModifier.js';
+import CrystalCollectionModifier from './CrystalCollectionModifier.js';
+import HordeIntensityModifier from './HordeIntensityModifier.js';
+import ResourcePressureModifier from './ResourcePressureModifier.js';
+import DefendLineModifier from './DefendLineModifier.js';
+import DebuffZoneModifier from './DebuffZoneModifier.js';
+import DestroyPillarsModifier from './DestroyPillarsModifier.js';
+import TreasureChestHordeModifier from './TreasureChestHordeModifier.js';
+import ArenaWaveBossModifier from './ArenaWaveBossModifier.js';
+import RandomRoomPortalsModifier from './RandomRoomPortalsModifier.js';
+import MirrorBossModifier from './MirrorBossModifier.js';
+import SelfDestructEnemyModifier from './SelfDestructEnemyModifier.js';
 
 export const SURVIVOR_HORDE_MODIFIER_REGISTRY = Object.freeze({
     hazard_telegraph: HazardTelegraphModifier,
@@ -11,7 +22,18 @@ export const SURVIVOR_HORDE_MODIFIER_REGISTRY = Object.freeze({
     boss_phases: BossPhasesModifier,
     poison_fog: PoisonFogModifier,
     escort_npc: EscortNpcModifier,
-    laser_warning: LaserWarningModifier
+    laser_warning: LaserWarningModifier,
+    crystal_collection: CrystalCollectionModifier,
+    horde_intensity: HordeIntensityModifier,
+    resource_pressure: ResourcePressureModifier,
+    defend_line: DefendLineModifier,
+    debuff_zone: DebuffZoneModifier,
+    destroy_pillars: DestroyPillarsModifier,
+    treasure_chest_horde: TreasureChestHordeModifier,
+    arena_wave_boss: ArenaWaveBossModifier,
+    random_room_portals: RandomRoomPortalsModifier,
+    mirror_boss: MirrorBossModifier,
+    self_destruct_enemy: SelfDestructEnemyModifier
 });
 
 export const SURVIVOR_HORDE_SUPPORTED_MODIFIERS = Object.freeze(

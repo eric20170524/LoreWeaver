@@ -34,7 +34,26 @@
           5,
           10
         ]
-      }
+      },
+      "durationSec": 300,
+      "goalValue": 300,
+      "difficulty": 7,
+      "victoryMode": "survive",
+      "enemyPool": [],
+      "envKey": "env_bg_tournament",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node7_tournament",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme",
+      "runtimeCardId": "survivor_horde",
+      "shellRetreat": true
     },
     "patchLevel": "L3"
   },
@@ -45,6 +64,7 @@
       "bone_script_mastery",
       "pure_blood_trial"
     ],
+    "rewardUnlocks": [],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
@@ -53,7 +73,6 @@
       "kunpeng_art",
       "true_phoenix_art"
     ],
-    "rewardUnlocks": [],
     "notes": "首通意图: reinforce_existing(dual_pupil,kunpeng_art,true_phoenix_art); 三千星州天才战强调已悟宝术组合强度，奖励侧以纯血和境界推进为主。"
   }
 }

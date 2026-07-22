@@ -7,7 +7,9 @@ import { GameSpec, Locale, ManifestPatch, GameplayAssignment } from "../types";
 import { UI_COPY } from "../utils/uiCopy";
 import {
   GAMEPLAY_CARD_OPTIONS,
+  CAMPAIGN_RUNTIME_KNOB_DEFS,
   ensureGameplayManifest,
+  seedCampaignKnobsFromNode,
   toggleModifier,
   GameplayCardOption
 } from "../utils/gameplayManifest";
@@ -612,10 +614,15 @@ export function GameplayPanel({
 
               </div>
               
-              {/* Knobs configuration panel at the bottom of the card */}
+              {/* Knobs: campaign runtime + card + modifiers (workbench is sole writer) */}
               {(() => {
                 const baseCardOpt = GAMEPLAY_CARD_OPTIONS.find((c) => c.id === gameplay.cardId);
-                const baseHasKnobs = baseCardOpt && baseCardOpt.knobs && Object.keys(baseCardOpt.knobs).length > 0;
+                const seededKnobs = seedCampaignKnobsFromNode(node);
+                const baseKnobDefs: Record<string, any> = {
+                  ...CAMPAIGN_RUNTIME_KNOB_DEFS,
+                  ...(baseCardOpt?.knobs || {})
+                };
+                const baseHasKnobs = Object.keys(baseKnobDefs).length > 0;
                 const activeModsWithKnobs = gameplay.modifiers.map((modSpec) => {
                   const opt = GAMEPLAY_CARD_OPTIONS.find((c) => c.id === modSpec.id);
                   return { modSpec, opt };
@@ -629,23 +636,26 @@ export function GameplayPanel({
                       <Settings className="w-3.5 h-3.5 text-slate-400" />
                       {lc.knobsTitle}
                     </div>
+                    <p className="text-[10px] text-slate-500 leading-relaxed">{lc.knobsOwnership}</p>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Base Card Knobs */}
-                      {baseHasKnobs && baseCardOpt?.knobs && (
+                      {/* Campaign + base card knobs */}
+                      {baseHasKnobs && (
                         <div className="bg-slate-50/40 dark:bg-slate-950/20 rounded-lg p-3.5 border border-slate-200/50 dark:border-slate-850/50 space-y-3">
                           <div className="text-2xs font-bold text-slate-700 dark:text-slate-300 border-b border-slate-200/40 dark:border-slate-800/40 pb-1.5 flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                             {lc.baseKnobs}
                           </div>
                           <div className="space-y-3.5">
-                            {Object.entries(baseCardOpt.knobs).map(([key, def]: [string, any]) => {
-                              const val = gameplay.knobs?.[key] !== undefined ? gameplay.knobs[key] : def.default;
+                            {Object.entries(baseKnobDefs).map(([key, def]: [string, any]) => {
+                              const val = gameplay.knobs?.[key] !== undefined
+                                ? gameplay.knobs[key]
+                                : (seededKnobs[key] !== undefined ? seededKnobs[key] : def.default);
                               return (
                                 <div key={key} className="space-y-1.5">
-                                  <div className="flex justify-between items-center text-[10px]">
+                                  <div className="flex justify-between items-center text-[10px] gap-2">
                                     <span className="font-bold text-slate-600 dark:text-slate-400 font-mono">{key}</span>
-                                    <span className="text-slate-500">{locale === "en" ? def.descriptionEn : def.description}</span>
+                                    <span className="text-slate-500 text-right">{locale === "en" ? def.descriptionEn : def.description}</span>
                                   </div>
                                   {renderKnobInput(
                                     def,
@@ -654,12 +664,13 @@ export function GameplayPanel({
                                       const nextGameplay = {
                                         ...gameplay,
                                         knobs: {
+                                          ...seededKnobs,
                                           ...(gameplay.knobs || {}),
                                           [key]: newVal
                                         },
                                         patchLevel: "L2" as const
                                       };
-                                      onQueueGameplayPatch(node.id, nextGameplay, `Update base card knob: ${key} = ${newVal}`);
+                                      onQueueGameplayPatch(node.id, nextGameplay, `Update workbench knob: ${key} = ${newVal}`);
                                     }
                                   )}
                                 </div>
@@ -779,7 +790,8 @@ const LOCAL_COPY = {
     requiresLabel: "依赖:",
     changesLabel: "改变领域:",
     knobsTitle: "配置参数 (Gameplay Knobs)",
-    baseKnobs: "基础玩法参数"
+    baseKnobs: "关卡基础玩法参数",
+    knobsOwnership: "时长 / 难度 / 敌人池 / Boss / 胜利模式等局内参数仅在本工作台修改；作品设计方案中只读展示。"
   },
   en: {
     comboEditor: "Gameplay Combination Editor",
@@ -802,7 +814,8 @@ const LOCAL_COPY = {
     requiresLabel: "Requires:",
     changesLabel: "Changes:",
     knobsTitle: "Gameplay Knobs",
-    baseKnobs: "Base Gameplay Parameters"
+    baseKnobs: "Level runtime parameters",
+    knobsOwnership: "Duration / difficulty / enemy pool / boss / victory mode are edited only here. The design brief shows a read-only summary."
   }
 };
 

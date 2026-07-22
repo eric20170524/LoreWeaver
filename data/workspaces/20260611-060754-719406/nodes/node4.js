@@ -1,8 +1,6 @@
-// nodes/node4.js
-// Node 4: 天潮巢海面漩涡场景 - 转换为 ES Modules
-
+// nodes/node4.js — 天潮巢：潮汐/漩涡机动关
 import Node1Scene from './node1.js';
-import UIHelper from '../utils/UIHelper.js';
+import AudioManager from '../utils/AudioManager.js';
 import { ENEMY_REGISTRY } from '../js/data.js';
 
 export class Node4Scene extends Node1Scene {
@@ -12,112 +10,84 @@ export class Node4Scene extends Node1Scene {
 
     init(data) {
         super.init(data);
-        this.isSlowed = false;
-        this.slowTimer = 0;
+        this.whirlHits = 0;
+        this.safeLaneBonus = 0;
     }
 
     create() {
         super.create();
-        
-        // 挂载特定的 HUD
-        this.statusText = this.uiScene.add.text(this.width / 2, 180, '状态: 正常', {
-            fontSize: '24px', fill: '#00ff00', fontStyle: 'bold'
+        this.statusText = this.uiScene.add.text(this.width / 2, 200, '状态: 正常航道', {
+            fontSize: '18px', fill: '#66ffcc', fontStyle: 'bold'
         }).setOrigin(0.5);
-        
-        // 创建漩涡组
         this.whirlpools = this.physics.add.group();
-        
-        // 定期生成漩涡 (每 4 秒生成一个)
-        this.time.addEvent({
-            delay: 4000,
-            callback: this.spawnWhirlpool,
-            callbackScope: this,
-            loop: true
-        });
-
-        // 碰撞/重叠
         this.physics.add.overlap(this.player, this.whirlpools, this.onPlayerWhirlpool, null, this);
+        this.time.addEvent({ delay: 3500, callback: this.spawnWhirlpool, callbackScope: this, loop: true });
         this.bossSpawned = false;
+        this.publishNodeTestState();
+    }
+
+    publishNodeTestState(overrides = {}) {
+        super.publishNodeTestState({
+            whirlHits: this.whirlHits || 0,
+            objective: 'avoid_whirlpools',
+            ...overrides
+        });
     }
 
     spawnWhirlpool() {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = Phaser.Math.Between(150, 400);
-        const x = this.player.x + Math.cos(angle) * dist;
-        const y = this.player.y + Math.sin(angle) * dist;
-
-        const w = this.add.circle(x, y, 80, 0x00aaff, 0.3);
-        this.physics.add.existing(w);
-        w.body.setCircle(80);
-        this.whirlpools.add(w);
-
-        w.setScale(0);
+        if (this.isGameOver || this.isPaused) return;
+        // Telegraph first — readable before displacement.
+        const x = this.player.x + Phaser.Math.Between(-280, 280);
+        const y = this.player.y + Phaser.Math.Between(-280, 280);
+        const warn = this.add.circle(x, y, 70, 0x3388ff, 0.2).setStrokeStyle(3, 0x66ccff, 0.9);
         this.tweens.add({
-            targets: w,
-            scaleX: 1,
-            scaleY: 1,
-            duration: 1000,
+            targets: warn, alpha: 0.5, duration: 700, yoyo: true, repeat: 1,
             onComplete: () => {
-                this.time.delayedCall(3000, () => {
-                    this.tweens.add({
-                        targets: w,
-                        alpha: 0,
-                        duration: 1000,
-                        onComplete: () => {
-                            if (w.active) w.destroy();
-                        }
-                    });
-                });
+                warn.destroy();
+                if (this.isGameOver) return;
+                const pool = this.add.circle(x, y, 64, 0x2266aa, 0.45);
+                this.physics.add.existing(pool);
+                pool.body.setCircle(64);
+                pool.setData('pull', true);
+                this.whirlpools.add(pool);
+                this.time.delayedCall(4500, () => pool.destroy?.());
             }
         });
     }
 
-    onPlayerWhirlpool(player, whirlpool) {
-        if (!this.isSlowed) {
-            this.isSlowed = true;
-            this.statusText.setText('状态: 减速中！').setFill('#ff0000');
-            UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "陷入漩涡！移速降低 70%", "#ff0000", 1500);
-            
-            this.originalSpeed = this.playerStats.baseSpeed;
-            this.playerStats.baseSpeed = this.originalSpeed * 0.3;
-
-            this.time.delayedCall(3000, () => {
-                this.playerStats.baseSpeed = this.originalSpeed;
-                this.isSlowed = false;
-                if (this.statusText.active) {
-                    this.statusText.setText('状态: 正常').setFill('#00ff00');
-                }
-            });
+    onPlayerWhirlpool(player, pool) {
+        if (!pool.active) return;
+        // Displacement, not free damage — pull toward center then small chip.
+        const angle = Math.atan2(pool.y - player.y, pool.x - player.x);
+        player.x += Math.cos(angle) * 6;
+        player.y += Math.sin(angle) * 6;
+        if (!pool.getData('chipped')) {
+            pool.setData('chipped', true);
+            this.whirlHits += 1;
+            this.statusText.setText(`状态: 卷入潮漩 (x${this.whirlHits})`);
+            AudioManager.playSfx?.('whirl_pull');
+            this.combatRuntime?.onPlayerHit?.(player, { getData: (k) => (k === 'atk' ? 6 : null) });
+            this.time.delayedCall(900, () => pool.setData('chipped', false));
         }
     }
 
     onSecondTick() {
-        if (this.isGameOver || this.isPaused) return;
         super.onSecondTick();
-
-        if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.85) && !this.bossSpawned) {
-            this.spawnBoss();
-            this.bossSpawned = true;
-        }
+        // Safe-lane pulse: away from whirlpools restores a tiny shield feel.
+        const pools = this.whirlpools?.getChildren?.() || [];
+        const near = pools.some((p) => p.active && Phaser.Math.Distance.Between(this.player.x, this.player.y, p.x, p.y) < 120);
+        this.statusText?.setText(near ? '状态: 危险水域' : '状态: 正常航道');
     }
 
     spawnBoss() {
-        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId];
-        this.createRuntimeEnemy(this.nodeConfig.bossId, this.player.x + 300, this.player.y, {
-            hp: enemyData.hp,
-            speed: enemyData.speed,
-            exp: enemyData.exp,
-            lootList: enemyData.lootList,
-            scaleMultiplier: 1.2
-        });
-        
-        const txt = this.add.text(this.player.x, this.player.y - 100, '潮影兽王降临！', { fontSize: '32px', fill: '#00aaff', fontStyle: 'bold' }).setOrigin(0.5);
-        this.tweens.add({
-            targets: txt,
-            y: this.player.y - 150,
-            alpha: 0,
-            duration: 2000,
-            onComplete: () => txt.destroy()
+        return super.spawnBoss({
+            name: ENEMY_REGISTRY[this.nodeConfig.bossId]?.name || '潮主',
+            phases: 3,
+            moves: [
+                { id: 'nova', windup: 90, active: 30, recovery: 100, radius: 160, damageMul: 1.2 },
+                { id: 'charge', windup: 55, active: 45, recovery: 80, radius: 90, damageMul: 1.1 },
+                { id: 'slam', windup: 100, active: 28, recovery: 110, radius: 200, damageMul: 1.35 }
+            ]
         });
     }
 }

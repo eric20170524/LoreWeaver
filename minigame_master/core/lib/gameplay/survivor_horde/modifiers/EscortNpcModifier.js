@@ -41,7 +41,21 @@ export default class EscortNpcModifier extends GameplayModifier {
         this.hp = this.config.hp;
         this.start = resolvePoint(this.config.start, context.adapter.world);
         this.end = resolvePoint(this.config.end, context.adapter.world);
-        this.npc = context.helpers.createCircle(this.start.x, this.start.y, this.config.radius, this.config.color, this.config.alpha);
+        const art = context.adapter.runtimeArt;
+        const artKey = art?.propKey?.('escort_npc')
+            || art?.resolve?.('escort')
+            || (context.scene.textures.exists('lw_art_escort_npc') ? 'lw_art_escort_npc' : null)
+            || (context.scene.textures.exists('escort_npc') ? 'escort_npc' : null);
+        if (artKey && context.scene.textures.exists(artKey)) {
+            this.npc = context.scene.add.sprite(this.start.x, this.start.y, artKey);
+            context.scene.physics.add.existing(this.npc);
+            this.npc.setDisplaySize(this.config.radius * 3.2, this.config.radius * 3.2);
+            this.npc.body?.setCircle?.(this.config.radius);
+            this.npc.setData('artSource', 'atlas');
+        } else {
+            this.npc = context.helpers.createCircle(this.start.x, this.start.y, this.config.radius, this.config.color, this.config.alpha);
+            this.npc.setData?.('artSource', 'primitive');
+        }
         this.npc.setData('escortNpc', true);
 
         if (this.config.allyAura) {

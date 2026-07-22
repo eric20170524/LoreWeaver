@@ -2,29 +2,39 @@ import os
 import json
 import asyncio
 from .theme_presets import get_procedural_preset
+from .llm_client import (
+    generate_json,
+    log_ollama_deferred_notice,
+    llm_status,
+    OLLAMA_SUPPORT_STATUS,
+    resolve_provider,
+)
 
-OLLAMA_SUPPORT_STATUS = "deferred_not_supported"
+async def _generate_json_async(prompt: str):
+    """Offload blocking HTTP LLM call so the event loop stays responsive."""
+    return await asyncio.to_thread(generate_json, prompt)
 
-def log_ollama_deferred_notice():
-    if os.getenv("OLLAMA_API_BASE"):
-        print("OLLAMA_API_BASE is configured but Ollama local model routing is currently deferred and not supported.")
+
+# Re-export for callers that imported from agents
+__all__ = [
+    "WorldBuilderAgent",
+    "log_ollama_deferred_notice",
+    "OLLAMA_SUPPORT_STATUS",
+    "llm_status",
+    "resolve_provider",
+]
+
 
 class WorldBuilderAgent:
     @staticmethod
     async def generate_gdd(theme: str) -> dict:
         log_ollama_deferred_notice()
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            print("No GEMINI_API_KEY found, using procedural fallback.")
+        if not resolve_provider():
+            print("No LLM API key found (XAI_API_KEY / GEMINI_API_KEY), using procedural fallback.")
             await asyncio.sleep(1.0)
             return get_procedural_preset(theme)
 
         try:
-            # Try importing the modern google-genai SDK
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=api_key)
             prompt = f"""You are LoreWeaver Game Orchestrator, an AI game spec designer. The user wants to build a complete 12-stage Fan-Fiction / Cultivation / Anime game called "LoreWeaver" based on the following theme: "{theme}".
 Your task is to deconstruct this theme into a fully fleshed GDD (Game Design Document) and produce a high-fidelity JSON payload matching this specification exactly.
 Progression systems, abilityCatalog, and node planning are project-authored design content: generate them from the requested theme and gameplay needs. Do not rely on the runtime engine to invent generic default abilities or progression systems later.
@@ -81,15 +91,11 @@ CRITICAL SCHEMA REQUIREMENTS (Return EXACTLY this JSON structure, no markdown ou
     }}
   ]
 }}"""
-            response = client.models.generate_content(
-                model='gemini-3.5-flash',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                ),
-            )
-            text_result = response.text.strip()
-            return json.loads(text_result)
+            data, provider = await _generate_json_async(prompt)
+            if not isinstance(data, dict):
+                raise RuntimeError(f"Expected JSON object, got {type(data)}")
+            print(f"[WorldBuilderAgent] GDD generated via {provider}")
+            return data
         except Exception as e:
             print(f"WorldBuilderAgent python error: {e}, falling back.")
             return get_procedural_preset(theme)
@@ -97,19 +103,13 @@ CRITICAL SCHEMA REQUIREMENTS (Return EXACTLY this JSON structure, no markdown ou
     @staticmethod
     async def adjust_gdd(current_gdd: dict, feedback: str, agent_role: str = "world_builder") -> dict:
         log_ollama_deferred_notice()
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            print("No GEMINI_API_KEY for adjust prompt, applying mock tweak.")
+        if not resolve_provider():
+            print("No LLM API key for adjust prompt, applying mock tweak.")
             current_gdd = current_gdd.copy()
             current_gdd["title"] = current_gdd.get("title", "Custom Game") + " (Modified)"
             return current_gdd
 
         try:
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=api_key)
-            
             # Formulate the targeted sub-agent specialized role instructions
             role_instructions = ""
             if agent_role == "world_builder":
@@ -141,15 +141,11 @@ Apply the modifications perfectly to the specification layout. Maintain the EXAC
 
 CRITICAL INSTRUCTION: Always separate theme narrative styling from gameplay numerical parameters. When adjusting gameplay, pacing, balance, long-term progression, or abilities, prioritize updating progressionSystems, abilityCatalog, nodes.planning, and nodes' gameplay knobs (e.g. knobs, goalValue, durationLimit, resourceMultiplier) inside the JSON rather than modifying or recommending modifications to external runtime codebase/adapter files."""
 
-            response = client.models.generate_content(
-                model='gemini-3.5-flash',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                ),
-            )
-            text_result = response.text.strip()
-            return json.loads(text_result)
+            data, provider = await _generate_json_async(prompt)
+            if not isinstance(data, dict):
+                raise RuntimeError(f"Expected JSON object, got {type(data)}")
+            print(f"[WorldBuilderAgent] GDD adjusted via {provider} ({agent_role})")
+            return data
         except Exception as e:
             print(f"WorldBuilderAgent python adjust error: {e}")
             return current_gdd

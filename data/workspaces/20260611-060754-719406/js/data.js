@@ -4,21 +4,26 @@
 let characterDesignCatalog, enemyDesignCatalog;
 
 if (typeof window !== 'undefined') {
-    const loadJsonSync = (url) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', url, false);
-        xhr.send(null);
-        if (xhr.status === 200) {
-            return JSON.parse(xhr.responseText);
-        }
-        throw new Error(`Failed to load JSON: ${url}`);
-    };
-    
-    const scriptUrl = new URL(import.meta.url);
-    const basePath = scriptUrl.pathname.substring(0, scriptUrl.pathname.lastIndexOf('/js/'));
-    
-    characterDesignCatalog = loadJsonSync(basePath + '/loreweaver/character-design-catalog.json');
-    enemyDesignCatalog = loadJsonSync(basePath + '/loreweaver/enemy-design-catalog.json');
+    if (window.__LOREWEAVER_EMBEDDED_SPEC__) {
+        characterDesignCatalog = window.__LOREWEAVER_EMBEDDED_SPEC__.characterDesignCatalog || {};
+        enemyDesignCatalog = window.__LOREWEAVER_EMBEDDED_SPEC__.enemyDesignCatalog || {};
+    } else {
+        const loadJsonSync = (url) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', url, false);
+            xhr.send(null);
+            if (xhr.status === 200) {
+                return JSON.parse(xhr.responseText);
+            }
+            throw new Error(`Failed to load JSON: ${url}`);
+        };
+        
+        const scriptUrl = new URL(import.meta.url);
+        const basePath = scriptUrl.pathname.substring(0, scriptUrl.pathname.lastIndexOf('/js/'));
+        
+        characterDesignCatalog = loadJsonSync(basePath + '/loreweaver/character-design-catalog.json');
+        enemyDesignCatalog = loadJsonSync(basePath + '/loreweaver/enemy-design-catalog.json');
+    }
 } else {
     const fsModule = 'node:fs';
     const pathModule = 'node:path';
@@ -182,19 +187,24 @@ for (let n = 1; n <= numNodes; n++) {
 // REGISTRIES DEFINITIONS
 // ----------------------------------------------------
 
+// Mild crit curve (LW-044): late realms used to grant +0.25 crit / +6.0 critDmg, which
+// exploded representative DPS and forced multi-minute Boss TTKs once HP was rebalanced.
+const REALM_CRIT_RATE = [0, 0, 0.01, 0.02, 0.02, 0.03, 0.03, 0.04, 0.04, 0.05, 0.05, 0.05, 0.06];
+const REALM_CRIT_DMG = [0, 0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6];
+
 export const REALM_REGISTRY = [
     { id: 1, name: "搬血境", caveCount: 3, totalCaveCost: 300, breakthroughCost: { bloodEssence: 1500 }, unlockNodes: [1], statBonus: { hp: 50, atk: 5 }, description: "以凶兽精血熬炼己身" },
     { id: 2, name: "洞天境", caveCount: 5, totalCaveCost: 1000, breakthroughCost: { bloodEssence: 6000 }, unlockNodes: [2], statBonus: { hp: 100, atk: 15, speed: 20 }, description: "开辟洞天，容纳万法" },
-    { id: 3, name: "化灵境", caveCount: 7, totalCaveCost: 15000, breakthroughCost: { bloodEssence: 15000 }, unlockNodes: [3], statBonus: { hp: 200, atk: 30, critRate: 0.05, critDmg: 0.25 }, description: "重塑真我，化灵为神" },
-    { id: 4, name: "铭纹境", caveCount: 9, totalCaveCost: 50000, breakthroughCost: { bloodEssence: 50000 }, unlockNodes: [4], statBonus: { hp: 400, atk: 60, critDmg: 0.5 }, description: "铭刻天地法则" },
-    { id: 5, name: "列阵境", caveCount: 11, totalCaveCost: 120000, breakthroughCost: { bloodEssence: 120000, suanBoneScript: 10 }, unlockNodes: [5], statBonus: { hp: 800, atk: 120, critDmg: 1.0 }, description: "体内刻阵，王侯之威" },
-    { id: 6, name: "尊者境", caveCount: 13, totalCaveCost: 250000, breakthroughCost: { bloodEssence: 250000, suanBoneScript: 25 }, unlockNodes: [6], statBonus: { hp: 1500, atk: 250, critRate: 0.08, critDmg: 1.5 }, description: "凡人极致，超凡脱俗" },
-    { id: 7, name: "神火境", caveCount: 15, totalCaveCost: 500000, breakthroughCost: { bloodEssence: 500000, pureBlood: 5 }, unlockNodes: [7], statBonus: { hp: 3000, atk: 500, speed: 30, critRate: 0.1, critDmg: 2.0 }, description: "点燃神火，超脱凡俗" },
-    { id: 8, name: "真一境", caveCount: 17, totalCaveCost: 1000000, breakthroughCost: { bloodEssence: 1000000, pureBlood: 10 }, unlockNodes: [8], statBonus: { hp: 6000, atk: 1000, speed: 40, critRate: 0.12, critDmg: 2.5 }, description: "真我归一，神道之始" },
-    { id: 9, name: "天神境", caveCount: 19, totalCaveCost: 2000000, breakthroughCost: { bloodEssence: 2000000, pureBlood: 20, suanBoneScript: 50 }, unlockNodes: [9], statBonus: { hp: 12000, atk: 2000, speed: 50, critRate: 0.15, critDmg: 3.0 }, description: "天神之威，俯瞰众生" },
-    { id: 10, name: "虚道/斩我境", caveCount: 21, totalCaveCost: 4000000, breakthroughCost: { bloodEssence: 4000000, pureBlood: 40, suanBoneScript: 80 }, unlockNodes: [10], statBonus: { hp: 25000, atk: 4000, speed: 60, critRate: 0.18, critDmg: 4.0 }, description: "斩尽旧我，明悟虚道" },
-    { id: 11, name: "遁一/至尊境", caveCount: 23, totalCaveCost: 8000000, breakthroughCost: { bloodEssence: 8000000, pureBlood: 80, suanBoneScript: 120 }, unlockNodes: [11], statBonus: { hp: 50000, atk: 8000, speed: 70, critRate: 0.20, critDmg: 5.0 }, description: "执掌乾坤，九天无敌" },
-    { id: 12, name: "真仙/仙王境", caveCount: 25, totalCaveCost: 15000000, breakthroughCost: { bloodEssence: 15000000, pureBlood: 150, suanBoneScript: 200 }, unlockNodes: [12], statBonus: { hp: 100000, atk: 16000, speed: 80, critRate: 0.25, critDmg: 6.0 }, description: "仙道巅峰，不死不灭" }
+    { id: 3, name: "化灵境", caveCount: 7, totalCaveCost: 15000, breakthroughCost: { bloodEssence: 15000 }, unlockNodes: [3], statBonus: { hp: 200, atk: 30 }, description: "重塑真我，化灵为神" },
+    { id: 4, name: "铭纹境", caveCount: 9, totalCaveCost: 50000, breakthroughCost: { bloodEssence: 50000 }, unlockNodes: [4], statBonus: { hp: 400, atk: 60 }, description: "铭刻天地法则" },
+    { id: 5, name: "列阵境", caveCount: 11, totalCaveCost: 120000, breakthroughCost: { bloodEssence: 120000, suanBoneScript: 10 }, unlockNodes: [5], statBonus: { hp: 800, atk: 120 }, description: "体内刻阵，王侯之威" },
+    { id: 6, name: "尊者境", caveCount: 13, totalCaveCost: 250000, breakthroughCost: { bloodEssence: 250000, suanBoneScript: 25 }, unlockNodes: [6], statBonus: { hp: 1500, atk: 250 }, description: "凡人极致，超凡脱俗" },
+    { id: 7, name: "神火境", caveCount: 15, totalCaveCost: 500000, breakthroughCost: { bloodEssence: 500000, pureBlood: 5 }, unlockNodes: [7], statBonus: { hp: 3000, atk: 500, speed: 30 }, description: "点燃神火，超脱凡俗" },
+    { id: 8, name: "真一境", caveCount: 17, totalCaveCost: 1000000, breakthroughCost: { bloodEssence: 1000000, pureBlood: 10 }, unlockNodes: [8], statBonus: { hp: 6000, atk: 1000, speed: 40 }, description: "真我归一，神道之始" },
+    { id: 9, name: "天神境", caveCount: 19, totalCaveCost: 2000000, breakthroughCost: { bloodEssence: 2000000, pureBlood: 20, suanBoneScript: 50 }, unlockNodes: [9], statBonus: { hp: 12000, atk: 2000, speed: 50 }, description: "天神之威，俯瞰众生" },
+    { id: 10, name: "虚道/斩我境", caveCount: 21, totalCaveCost: 4000000, breakthroughCost: { bloodEssence: 4000000, pureBlood: 40, suanBoneScript: 80 }, unlockNodes: [10], statBonus: { hp: 25000, atk: 4000, speed: 60 }, description: "斩尽旧我，明悟虚道" },
+    { id: 11, name: "遁一/至尊境", caveCount: 23, totalCaveCost: 8000000, breakthroughCost: { bloodEssence: 8000000, pureBlood: 80, suanBoneScript: 120 }, unlockNodes: [11], statBonus: { hp: 50000, atk: 8000, speed: 70 }, description: "执掌乾坤，九天无敌" },
+    { id: 12, name: "真仙/仙王境", caveCount: 25, totalCaveCost: 15000000, breakthroughCost: { bloodEssence: 15000000, pureBlood: 150, suanBoneScript: 200 }, unlockNodes: [12], statBonus: { hp: 100000, atk: 16000, speed: 80 }, description: "仙道巅峰，不死不灭" }
 ];
 
 // Dynamically set breakthroughCost, totalCaveCost, and statBonus for realms
@@ -202,6 +212,10 @@ for (let n = 1; n <= numNodes; n++) {
     const realm = REALM_REGISTRY[n - 1];
     realm.statBonus.hp = realmHpBonus[n];
     realm.statBonus.atk = realmAtkBonus[n];
+    if (REALM_CRIT_RATE[n]) realm.statBonus.critRate = REALM_CRIT_RATE[n];
+    else delete realm.statBonus.critRate;
+    if (REALM_CRIT_DMG[n]) realm.statBonus.critDmg = REALM_CRIT_DMG[n];
+    else delete realm.statBonus.critDmg;
     if (n > 1) {
         realm.breakthroughCost = { bloodEssence: breakthroughBE[n] };
         if (breakthroughSBS[n] > 0) realm.breakthroughCost.suanBoneScript = breakthroughSBS[n];
@@ -253,8 +267,9 @@ export const CAVE_COST_REGISTRY = Array.from({ length: 25 }, (_, index) => {
     };
     if (orig.speedBonus) item.speedBonus = orig.speedBonus;
     if (orig.pickupBonus) item.pickupBonus = orig.pickupBonus;
-    if (orig.critBonus) item.critBonus = orig.critBonus;
-    if (orig.critDmgBonus) item.critDmgBonus = orig.critDmgBonus;
+    // Cap cave crit so cumulative trees stay meaningful without trivializing late Bosses.
+    if (orig.critBonus) item.critBonus = Math.min(orig.critBonus, 0.02);
+    if (orig.critDmgBonus) item.critDmgBonus = Math.min(orig.critDmgBonus, 0.25);
     return item;
 });
 
@@ -399,12 +414,12 @@ export const NODE_REGISTRY = [
         taunts: ["裂隙边境至尊：狂妄的后生，这里是裂隙边境！", "星骁：裂隙边境又如何？照样杀穿！"]
     },
     {
-        id: 12, name: "终极血战", subtitle: "万象化影", realmRequired: 12, duration: 600,
+        id: 12, name: "终极血战", subtitle: "万象化影", realmRequired: 12, duration: 360,
         enemyPool: ["shi_yi_phantom", "ancient_beast_king"], bossId: "shi_yi_phantom",
         skillTierAvailable: "tier3", rewards: { bloodEssence: 999999, pureBlood: [100, 100] },
         failRewardMultiplier: 0.1, sceneClass: "Node12Scene", description: "对抗不朽之王的投影，机制复杂的弹幕躲避与阶段性爆发。",
-        intro: "颂我真名者，轮回中得见永生！金阙君、玄垒君，来战！",
-        taunts: ["金阙君：哪怕背负天渊，需一手托原始帝城，我金阙君一样无敌世间！", "星骁：万象化影，他化万古！镇杀！"]
+        intro: "星渊终局开启！金阙君、玄垒君，来战！",
+        taunts: ["金阙君：纵使背负天渊，亦要镇守帝城，金阙之威不灭！", "星骁：万象化影，他化万古！镇杀！"]
     }
 ];
 
@@ -580,25 +595,54 @@ function getFullyUpgradedCritMultiplier(n) {
     return 1 + critRate * (critDmg - 1);
 }
 
+// Campaign balance targets (LW-044): dual-constraint Boss HP.
+// 1) Fresh-save (no optional perks) should feel like a real fight, not a multi-minute slog.
+// 2) Fully-upgraded (all legal caves + passive tree) must stay above the sim floor (~20s).
+// Effective HP after balance-simulation hpMultiplier uses the stricter of the two targets.
+const FRESH_BOSS_TARGET_TTK = Object.freeze({
+    1: 90, 2: 95, 3: 100, 4: 105, 5: 110, 6: 115,
+    7: 95, 8: 120, 9: 125, 10: 130, 11: 135, 12: 145
+});
+const FULL_BOSS_MIN_TTK = 26;
+// Soft upper bound for fresh-save representative fist TTK (multi-skill runs clear faster).
+const FRESH_BOSS_MAX_TTK = 170;
+// Align with loreweaver/balance-simulation-config.json bossRuntime.hpMultiplier
+const BOSS_RUNTIME_HP_MULTIPLIER = Object.freeze({
+    1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1,
+    7: 2, 8: 1, 9: 1, 10: 1.5, 11: 2, 12: 1
+});
+const FIST_BASE_DAMAGE = 20;
+const FIST_COOLDOWN = 1.2;
+
 // Build node-specific normal enemies and Bosses
 for (let n = 1; n <= numNodes; n++) {
     const node = NODE_REGISTRY[n - 1];
     const s = Math.pow(scaleFactor, n - 1);
     
-    // Boss stats under fresh save
+    // Fresh: realm-eligible ATK, no optional perks, single projectile fist.
     const apFresh = freshATK[n];
+    const apFull = fullATK[n];
     const hpFresh = freshHP[n];
-    const critMult = getFullyUpgradedCritMultiplier(n);
-    
-    const targetBossHp = Math.round(200 * apFresh * critMult);
-    const targetBossAtk = Math.round(hpFresh / 7);
-
-    // Boss Multiplier mappings
-    const bossMultipliers = {
-        1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0, 5: 1.0, 6: 1.0,
-        7: 4.0, 8: 1.0, 9: 1.0, 10: 1.5, 11: 2.0, 12: 1.0
-    };
-    const m = bossMultipliers[n];
+    const freshFistDps = (FIST_BASE_DAMAGE * (apFresh / 10)) / FIST_COOLDOWN;
+    // Fully upgraded approximate (matches balance sim order of magnitude without runaway crit):
+    // ATK scale * suan dmg perks * dual projectile * CDR * mild expected crit (~1.35).
+    const atkScale = apFull / Math.max(1, apFresh);
+    const mildExpectedCrit = 1.35;
+    const fullFistDps = freshFistDps * atkScale * 1.15 * 1.25 * 2 * mildExpectedCrit / 0.85;
+    const hpForFreshTarget = freshFistDps * (FRESH_BOSS_TARGET_TTK[n] || 120);
+    const hpForFullFloor = fullFistDps * FULL_BOSS_MIN_TTK;
+    const hpForFreshCap = freshFistDps * FRESH_BOSS_MAX_TTK;
+    // Prefer dual target, but never let fresh-save TTK explode past the campaign cap.
+    let desiredEffectiveHp = Math.max(hpForFreshTarget, hpForFullFloor);
+    if (desiredEffectiveHp > hpForFreshCap) {
+        desiredEffectiveHp = Math.max(hpForFreshCap, fullFistDps * 22);
+    }
+    desiredEffectiveHp = Math.round(desiredEffectiveHp);
+    const m = BOSS_RUNTIME_HP_MULTIPLIER[n] || 1;
+    // Registry stores pre-multiplier HP so runtime + sim (hp * multiplier) land on target.
+    const targetBossHp = Math.max(1, Math.round(desiredEffectiveHp / m));
+    // ~7 contact hits to kill player at fresh HP for readable pressure (not one-shots).
+    const targetBossAtk = Math.max(1, Math.round(hpFresh / 7));
     
     // Get base boss definition
     const baseBossId = node.bossId.replace(/_node\d+$/, '');
@@ -611,9 +655,18 @@ for (let n = 1; n <= numNodes; n++) {
 
     ENEMY_REGISTRY[node.bossId] = {
         ...baseBoss,
-        hp: Math.round(targetBossHp / m),
+        hp: targetBossHp,
         atk: targetBossAtk,
-        lootList: bossLoot
+        lootList: bossLoot,
+        balanceMeta: {
+            freshTargetTtkSeconds: FRESH_BOSS_TARGET_TTK[n],
+            fullMinTtkSeconds: FULL_BOSS_MIN_TTK,
+            runtimeHpMultiplier: m,
+            desiredEffectiveHp,
+            freshFistDps: Math.round(freshFistDps * 100) / 100,
+            fullFistDps: Math.round(fullFistDps * 100) / 100,
+            bindingConstraint: hpForFullFloor >= hpForFreshTarget ? 'full_min_ttk' : 'fresh_target_ttk'
+        }
     };
     
     ENEMY_VISUAL_DESIGN[node.bossId] = {
@@ -658,6 +711,47 @@ Object.entries(BASE_ENEMY_REGISTRY).forEach(([key, val]) => {
     }
 });
 
+// Optional per-node challenge cards for replay (LW-044). Settlement uses reason=challenge_completed.
+export const NODE_CHALLENGE_REGISTRY = Object.freeze({
+    1: [
+        { id: 'n1_fast_clear', name: '血战急袭', description: '在契约时长 70% 内通关', goal: { type: 'duration_ratio_max', value: 0.7 }, rewardMul: 1.15 },
+        { id: 'n1_survivor', name: '血肉无伤', description: '通关时生命不低于 60%', goal: { type: 'hp_ratio_min', value: 0.6 }, rewardMul: 1.1 }
+    ],
+    2: [
+        { id: 'n2_high_risk', name: '夺宝无惧', description: '开启至少 2 个高危宝箱后通关', goal: { type: 'high_risk_chests_min', value: 2 }, rewardMul: 1.2 }
+    ],
+    3: [
+        { id: 'n3_break_master', name: '破招宗师', description: 'Boss 破招窗口内至少打断 2 次', goal: { type: 'break_count_min', value: 2 }, rewardMul: 1.15 }
+    ],
+    4: [
+        { id: 'n4_tide_dancer', name: '踏潮而行', description: '在漩涡激活时累计位移不少于 8 秒仍存活通关', goal: { type: 'hazard_survive_seconds', value: 8 }, rewardMul: 1.15 }
+    ],
+    5: [
+        { id: 'n5_core_guard', name: '阵眼守护', description: '所有核心存活通关', goal: { type: 'all_cores_alive', value: 1 }, rewardMul: 1.2 }
+    ],
+    6: [
+        { id: 'n6_antidote_run', name: '解毒突围', description: '拾取至少 3 枚解毒宝石', goal: { type: 'antidote_min', value: 3 }, rewardMul: 1.15 }
+    ],
+    7: [
+        { id: 'n7_perfect_bracket', name: '不败赛程', description: '五波赛事全胜且自身生命不低于 40%', goal: { type: 'tournament_perfect', value: 1 }, rewardMul: 1.25 }
+    ],
+    8: [
+        { id: 'n8_portal_explorer', name: '遗地探路', description: '至少激活 3 个不同传送门类型', goal: { type: 'portal_types_min', value: 3 }, rewardMul: 1.15 }
+    ],
+    9: [
+        { id: 'n9_escort_safe', name: '护驾周全', description: '护送目标生命不低于 50% 抵达终点', goal: { type: 'escort_hp_min', value: 0.5 }, rewardMul: 1.2 }
+    ],
+    10: [
+        { id: 'n10_wall_hold', name: '城垣不破', description: '城墙生命不低于 30% 通关', goal: { type: 'wall_hp_min', value: 0.3 }, rewardMul: 1.2 }
+    ],
+    11: [
+        { id: 'n11_elite_hunter', name: '精英猎手', description: '击破至少 4 组精英连战', goal: { type: 'elite_clears_min', value: 4 }, rewardMul: 1.15 }
+    ],
+    12: [
+        { id: 'n12_phase_rush', name: '三阶连斩', description: '终局 Boss 三阶段均在破招窗口造成伤害', goal: { type: 'finale_phase_breaks', value: 3 }, rewardMul: 1.3 }
+    ]
+});
+
 export const ABILITY_CATALOG = [
     { id: "primordial_true_record", name: "原始真解", unlockSource: "initial", runtimeSkillIds: ["primordial_fist"], description: "开局自带基础拳意。" },
     { id: "suan_ni_baoshu", name: "雷吼骨术", unlockSource: "node_reward", runtimeSkillIds: ["suan_ni_roar", "thunder_god_finger", "suan_ni_thunder_pulse"], description: "荒域历练首通后解锁，提供怒啸和雷系爆发。" },
@@ -678,6 +772,7 @@ if (typeof window !== 'undefined') {
     window.PASSIVE_SKILL_REGISTRY = PASSIVE_SKILL_REGISTRY;
     window.NODE_REGISTRY = NODE_REGISTRY;
     window.NODE_ABILITY_PLANS = NODE_ABILITY_PLANS;
+    window.NODE_CHALLENGE_REGISTRY = NODE_CHALLENGE_REGISTRY;
     window.CHARACTER_DESIGN_CATALOG = CHARACTER_DESIGN_CATALOG;
     window.ENEMY_DESIGN_CATALOG = enemyDesignCatalog;
     window.ENEMY_VISUAL_DESIGN = ENEMY_VISUAL_DESIGN;

@@ -34,7 +34,26 @@
           3,
           5
         ]
-      }
+      },
+      "durationSec": 240,
+      "goalValue": 240,
+      "difficulty": 5,
+      "victoryMode": "survive",
+      "enemyPool": [],
+      "envKey": "env_bg_city",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node5_defense",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme",
+      "runtimeCardId": "survivor_horde",
+      "shellRetreat": true
     },
     "patchLevel": "L3"
   },
@@ -45,6 +64,7 @@
       "bone_script_mastery",
       "pure_blood_trial"
     ],
+    "rewardUnlocks": [],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
@@ -52,7 +72,6 @@
       "dual_pupil",
       "kunpeng_art"
     ],
-    "rewardUnlocks": [],
     "notes": "首通意图: reinforce_existing(willow_guard,dual_pupil,kunpeng_art); 石都大战检验已有宝术组合，强化守护、光束和机动构筑，不新增 runtime unlock。"
   }
 }

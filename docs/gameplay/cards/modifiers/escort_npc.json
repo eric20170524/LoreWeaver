@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0",
+  "id": "escort_npc",
+  "title": "Escort NPC",
+  "category": "escort_objective",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "npcHp": {
+      "type": "integer",
+      "default": 100,
+      "min": 1,
+      "max": 999999,
+      "patchLevel": "L1"
+    },
+    "npcSpeed": {
+      "type": "number",
+      "default": 60,
+      "min": 0,
+      "max": 2000,
+      "patchLevel": "L1"
+    },
+    "enemyTargetsNpc": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L2"
+    }
+  },
+  "requiredCoreSystems": [
+    "GameplayModifier",
+    "NPCManager",
+    "EnemyTargeting",
+    "ObjectiveHp"
+  ],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node9.js",
+    "minigame/perfectworld_dahuang/docs/01_PRD.md"
+  ],
+  "knownRisks": [
+    "escort AI can frustrate players if pathing is unclear"
+  ],
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+}

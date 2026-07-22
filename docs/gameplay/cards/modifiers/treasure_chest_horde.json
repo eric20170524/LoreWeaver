@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "1.0",
+  "id": "treasure_chest_horde",
+  "title": "Treasure Chest Horde",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "chestCount": {
+      "type": "integer",
+      "default": 6,
+      "min": 1,
+      "max": 20,
+      "patchLevel": "L1",
+      "description": "Initial number of channelled objectives."
+    },
+    "requiredOpenCount": {
+      "type": "integer",
+      "default": 3,
+      "min": 1,
+      "max": 20,
+      "patchLevel": "L1",
+      "description": "Minimum opens required by an objective host."
+    },
+    "finishOnRequiredOpen": {
+      "type": "boolean",
+      "default": false,
+      "patchLevel": "L2",
+      "description": "Whether reaching requiredOpenCount ends the node immediately."
+    },
+    "interactionRadius": {
+      "type": "number",
+      "default": 90,
+      "min": 24,
+      "max": 240,
+      "patchLevel": "L1",
+      "description": "Distance within which channel progress can advance."
+    },
+    "leavePolicy": {
+      "type": "enum",
+      "values": [
+        "reset",
+        "hold",
+        "regress",
+        "cancel"
+      ],
+      "default": "reset",
+      "patchLevel": "L2",
+      "description": "Channel interruption policy when the player leaves range."
+    },
+    "damagePolicy": {
+      "type": "enum",
+      "values": [
+        "reset",
+        "hold",
+        "regress",
+        "cancel"
+      ],
+      "default": "regress",
+      "patchLevel": "L2",
+      "description": "Channel interruption policy after accepted player damage."
+    },
+    "damageRegressMs": {
+      "type": "number",
+      "default": 400,
+      "min": 0,
+      "max": 5000,
+      "patchLevel": "L1",
+      "description": "Progress removed by one accepted hit when using regress."
+    },
+    "riskSequence": {
+      "type": "array",
+      "default": [
+        "high",
+        "mid",
+        "safe"
+      ],
+      "patchLevel": "L2",
+      "description": "Deterministic risk assignment sequence for spawned objectives."
+    },
+    "riskTiers": {
+      "type": "object",
+      "default": {
+        "safe": {
+          "durationMs": 1600,
+          "rewardMultiplier": 1,
+          "color": 11197951,
+          "guardSpawnAt": null,
+          "guardCount": 0
+        },
+        "mid": {
+          "durationMs": 2400,
+          "rewardMultiplier": 2,
+          "color": 16768358,
+          "guardSpawnAt": null,
+          "guardCount": 0
+        },
+        "high": {
+          "durationMs": 3200,
+          "rewardMultiplier": 3,
+          "color": 16737860,
+          "guardSpawnAt": 0.25,
+          "guardCount": 3
+        }
+      },
+      "patchLevel": "L2",
+      "description": "Per-risk channel duration, reward and guard threshold contract."
+    },
+    "baseReward": {
+      "type": "object",
+      "default": {
+        "score": 8
+      },
+      "patchLevel": "L1",
+      "description": "Theme-neutral numeric reward keys multiplied by risk tier."
+    },
+    "guardEnemy": {
+      "type": "object",
+      "default": {
+        "id": "treasure_guard",
+        "hp": 5,
+        "speed": 76,
+        "damage": 14,
+        "radius": 11,
+        "reward": {
+          "score": 2
+        }
+      },
+      "patchLevel": "L2",
+      "description": "Injected enemy archetype used by risk thresholds."
+    },
+    "bossSpawnRatio": {
+      "type": "number",
+      "default": 0.75,
+      "min": 0.2,
+      "max": 0.95,
+      "patchLevel": "L1",
+      "description": "Elapsed run ratio at which the optional boss is queued."
+    }
+  },
+  "requiredCoreSystems": [
+    "ChannelInteractionSystem",
+    "RuntimeEventBus",
+    "SceneLifecycle",
+    "PresentationEvent",
+    "TestHooks"
+  ],
+  "runtimeContract": {
+    "states": [
+      "idle",
+      "channeling",
+      "interrupted",
+      "completed",
+      "cancelled"
+    ],
+    "acceptedEventOrder": [
+      "player_damage_accepted -> player-damaged -> channel_interrupted",
+      "channel_completed -> reward_applied -> treasure_opened_presentation"
+    ],
+    "completionIdempotent": true,
+    "themeDataInjected": [
+      "reward keys",
+      "enemy archetype",
+      "labels",
+      "audio cue ids",
+      "art semantic key"
+    ]
+  },
+  "sourceProvenance": [
+    "data/workspaces/20260611-060754-719406/nodes/node2.js"
+  ],
+  "testFixture": {
+    "type": "deterministic_core_integration",
+    "runner": "productize/jobs/check-survivor-channel-interaction.mjs",
+    "report": "workflow/reports/survivor_channel_interaction_latest.json",
+    "assertions": [
+      "damage regress",
+      "leave reset",
+      "pause freeze",
+      "high-risk guard threshold",
+      "single completion reward",
+      "presentation after accepted completion",
+      "lifecycle cleanup"
+    ]
+  },
+  "knownRisks": [
+    "Multiple in-range objectives require deterministic nearest-id tie breaking.",
+    "Presentation hosts must resolve injected cue and asset ids; the modifier emits semantic events only.",
+    "finishOnRequiredOpen changes the node victory condition and therefore requires L2 review."
+  ],
+  "implementationNotes": "Node2 risk/reward channel loop migrated into reusable core state machine and existing modifier; no legacy scene subclass is required."
+}

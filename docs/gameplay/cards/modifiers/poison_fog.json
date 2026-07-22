@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.0",
+  "id": "poison_fog",
+  "title": "Poison Fog",
+  "category": "environment_pressure",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "damagePerSecond": {
+      "type": "number",
+      "default": 2,
+      "min": 0,
+      "max": 999,
+      "patchLevel": "L1"
+    },
+    "safeZoneRadius": {
+      "type": "number",
+      "default": 180,
+      "min": 0,
+      "max": 2000,
+      "patchLevel": "L1"
+    },
+    "shrinkRate": {
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 100,
+      "patchLevel": "L1"
+    }
+  },
+  "requiredCoreSystems": [
+    "GameplayModifier",
+    "DamageOverTime",
+    "HUD"
+  ],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node2.js",
+    "minigame/xianni/js/data.js"
+  ],
+  "knownRisks": [
+    "continuous damage needs clear visual feedback"
+  ],
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+}

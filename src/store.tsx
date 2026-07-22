@@ -1,47 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { GameSpec, PlayerState, AuditReport, GameplayAssignment, ManifestPatch, Locale } from "./types";
-import { initializePhaserGame } from "./game/GameRunner";
+import { startLoreWeaverRuntime } from "./runtime/LoreWeaverRuntimeKernel";
+import { INITIAL_PLAYER_STATE, normalizePlayerState } from "./runtime/playerState";
 import { synth } from "./utils/AudioSynth";
 import { WorkspaceMeta } from "./components/WorkspaceSelector";
 import {
   applyManifestPatch,
   createGameplayPatch,
-  ensureGameplayManifest
+  ensureGameplayManifest,
+  isKnobOnlyGameplayChange
 } from "./utils/gameplayManifest";
 import { UI_COPY } from "./utils/uiCopy";
 
-// Initialize default player state
-export const INITIAL_PLAYER_STATE: PlayerState = {
-  currentRealmIndex: 0,
-  mainCurrencyCount: 0,
-  secondaryResources: {},
-  unlockedNodeIds: [1], // Only first level unlocked initially
-  completedNodeIds: [],
-  unlockedAbilities: [],
-  activeMultiplier: 1.0,
-  clickPower: 1.5,
-  storyFlags: [],
-  unlockedPassives: []
-};
-
-const normalizePlayerState = (state: Partial<PlayerState> | null | undefined): PlayerState => ({
-  ...INITIAL_PLAYER_STATE,
-  ...(state || {}),
-  secondaryResources: state?.secondaryResources || {},
-  unlockedNodeIds: Array.isArray(state?.unlockedNodeIds) ? state.unlockedNodeIds : [1],
-  completedNodeIds: Array.isArray(state?.completedNodeIds) ? state.completedNodeIds : [],
-  unlockedAbilities: Array.isArray(state?.unlockedAbilities) ? state.unlockedAbilities : [],
-  storyFlags: Array.isArray(state?.storyFlags) ? state.storyFlags : [],
-  unlockedPassives: Array.isArray(state?.unlockedPassives) ? state.unlockedPassives : []
-});
+export { INITIAL_PLAYER_STATE } from "./runtime/playerState";
 
 interface WorkbenchContextType {
   themeMode: "light" | "dark";
   setThemeMode: (mode: "light" | "dark") => void;
   themeInput: string;
   setThemeInput: (input: string) => void;
-  activeTab: "emulator" | "prd" | "gameplay" | "manifest" | "vlm";
-  setActiveTab: (tab: "emulator" | "prd" | "gameplay" | "manifest" | "vlm") => void;
+  activeTab: "prd" | "gameplay" | "manifest" | "vlm" | "departments";
+  setActiveTab: (tab: "prd" | "gameplay" | "manifest" | "vlm" | "departments") => void;
   isEmulatorWindowOpen: boolean;
   setIsEmulatorWindowOpen: (open: boolean) => void;
   emulatorSize: "compact" | "standard" | "large";
@@ -69,6 +48,8 @@ interface WorkbenchContextType {
   setIsAuditing: (val: boolean) => void;
   isExporting: boolean;
   setIsExporting: (val: boolean) => void;
+  isExportingRelease: boolean;
+  setIsExportingRelease: (val: boolean) => void;
   isLogPanelOpen: boolean;
   setIsLogPanelOpen: (val: boolean) => void;
   locale: Locale;
@@ -83,6 +64,7 @@ interface WorkbenchContextType {
   persistManifest: (spec: GameSpec) => Promise<void>;
   handleLoadWorkspace: (ws: WorkspaceMeta) => Promise<void>;
   handleExportWorkspace: () => Promise<void>;
+  handleExportRelease: () => Promise<void>;
   handleRefreshJob: () => Promise<void>;
   runOrchestrationPipeline: () => Promise<void>;
   restartGameInstance: (specToUse: GameSpec, container?: HTMLDivElement | null) => void;
@@ -103,8 +85,10 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return "light";
   });
   const [themeInput, setThemeInput] = useState("原创逆天修行传说，主打突破境界与十二重天劫");
-  const [activeTab, setActiveTab] = useState<"emulator" | "prd" | "gameplay" | "manifest" | "vlm">("prd");
-  const [isEmulatorWindowOpen, setIsEmulatorWindowOpen] = useState(true);
+  /** Production desk is the primary HITL surface; PRD/gameplay are secondary workspaces. */
+  const [activeTab, setActiveTab] = useState<"prd" | "gameplay" | "manifest" | "vlm" | "departments">("departments");
+  /** Floating WebGL window; opened via dedicated button, not a content tab. */
+  const [isEmulatorWindowOpen, setIsEmulatorWindowOpen] = useState(false);
   const [emulatorSize, setEmulatorSize] = useState<"compact" | "standard" | "large">(() => {
     const cached = localStorage.getItem("loreweaver_emulator_size");
     if (cached === "compact" || cached === "standard" || cached === "large") return cached;
@@ -152,6 +136,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingRelease, setIsExportingRelease] = useState(false);
   const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
   const [locale, setLocale] = useState<Locale>(() => (
     localStorage.getItem("loreweaver_locale") === "en" ? "en" : "zh"
@@ -237,7 +222,24 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       const blob = await res.blob();
       const downloadUrl = URL.createObjectURL(blob);
-      const filename = `loreweaver-${activeWorkspace.name.replace(/[^\w.-]+/g, "-") || activeWorkspace.id}.zip`;
+      
+      const disposition = res.headers.get("content-disposition");
+      let filename = "";
+      if (disposition) {
+        const utf8Match = disposition.match(/filename\*=UTF-8''([^;\n]+)/i);
+        if (utf8Match && utf8Match[1]) {
+          filename = decodeURIComponent(utf8Match[1]);
+        } else {
+          const normalMatch = disposition.match(/filename="?([^;\n"]+)"?/i);
+          if (normalMatch && normalMatch[1]) {
+            filename = decodeURIComponent(normalMatch[1]);
+          }
+        }
+      }
+      if (!filename) {
+        const safeName = activeWorkspace.name.replace(/[^\w\s\u4e00-\u9fa5.-]+/g, "-").replace(/^-+|-+$/g, "");
+        filename = `loreweaver-${safeName && safeName !== "-" ? safeName : activeWorkspace.id}.zip`;
+      }
       const anchor = document.createElement("a");
       anchor.href = downloadUrl;
       anchor.download = filename;
@@ -252,6 +254,59 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       addLog(`❌ 工作区导出失败: ${err.message || err}`);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportRelease = async () => {
+    if (!activeWorkspace || isExportingRelease) {
+      if (!activeWorkspace) addLog("⚠️ 请先选择或创建一个工作区，再导出发布包。");
+      return;
+    }
+
+    setIsExportingRelease(true);
+    addLog("⚡ 正在启动打包编译器编译项目工程，这通常需要几秒钟...");
+    try {
+      const res = await fetch(`/api/workspaces/${activeWorkspace.id}/export-release`);
+      if (!res.ok) {
+        const message = await res.text();
+        throw new Error(message || `HTTP ${res.status}`);
+      }
+
+      const blob = await res.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      
+      const disposition = res.headers.get("content-disposition");
+      let filename = "";
+      if (disposition) {
+        const utf8Match = disposition.match(/filename\*=UTF-8''([^;\n]+)/i);
+        if (utf8Match && utf8Match[1]) {
+          filename = decodeURIComponent(utf8Match[1]);
+        } else {
+          const normalMatch = disposition.match(/filename="?([^;\n"]+)"?/i);
+          if (normalMatch && normalMatch[1]) {
+            filename = decodeURIComponent(normalMatch[1]);
+          }
+        }
+      }
+      if (!filename) {
+        const safeName = activeWorkspace.name.replace(/[^\w\s\u4e00-\u9fa5.-]+/g, "-").replace(/^-+|-+$/g, "");
+        filename = `standalone-${safeName && safeName !== "-" ? safeName : activeWorkspace.id}.zip`;
+      }
+      
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      addLog(`🎉 成功导出独立 H5 游戏发布包 ZIP：${filename}`);
+      synth.playClick();
+    } catch (err: any) {
+      addLog(`❌ 导出发布包失败: ${err.message || err}`);
+    } finally {
+      setIsExportingRelease(false);
     }
   };
 
@@ -295,16 +350,19 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (targetContainer) {
       targetContainer.innerHTML = "";
       try {
-        const game = initializePhaserGame(
-          targetContainer,
+        const runtime = startLoreWeaverRuntime(
           specToUse,
-          playerState,
-          handleSaveState,
-          addLog,
-          { workspaceId: activeWorkspace?.id || null }
+          {
+            container: targetContainer,
+            hostKind: "ide",
+            workspaceId: activeWorkspace?.id || null,
+            initialPlayerState: playerState,
+            saveState: handleSaveState,
+            logger: addLog
+          }
         );
-        phaserGameRef.current = game;
-        (window as any).__LOREWEAVER_GAME__ = game;
+        phaserGameRef.current = runtime.game;
+        (window as any).__LOREWEAVER_GAME__ = runtime.game;
       } catch (err) {
         console.error("Phaser boot error:", err);
         addLog(`❌ Phaser WebGL initialization crashed: ${err}`);
@@ -332,8 +390,8 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (currentJob.status === 'completed' || currentJob.status === 'failed' || currentJob.status === 'pending_approval') {
        if (currentJob.status === 'completed' && isOrchestrating) {
            setIsOrchestrating(false);
-           addLog(`🎉 管线完成，配置已落库到后端沙盒！`);
-           setActiveTab("manifest");
+           addLog(`🎉 蓝图冷启动完成，已落库。请进入「部门筹备台」做制作期确认与神识微调。`);
+           setActiveTab("departments");
        }
        if (currentJob.result && JSON.stringify(currentJob.result) !== JSON.stringify(gameSpec)) {
            setGameSpec(ensureGameplayManifest(currentJob.result));
@@ -380,7 +438,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setOrchestrationStage(0);
     setOrchestrationLogs([]);
 
-    addLog(`⚙️ [STAGE 0] Boot_Init: 开始调用服务器主编排器...`);
+    addLog(`⚙️ [冷启动] 正在按主题生成/重建整包蓝图（非日常微调）…`);
     try {
       const res = await fetch("/api/jobs/start", {
         method: "POST",
@@ -391,12 +449,12 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (data.success) {
         setCurrentJob(data.data);
         setOrchestrationStage(1);
-        addLog(`✅ 编排任务运行中（ID: ${data.data.id}）`);
+        addLog(`✅ 冷启动任务运行中（ID: ${data.data.id}）。完成后将进入部门筹备台。`);
       } else {
         throw new Error(data.error);
       }
     } catch (e: any) {
-      addLog(`❌ 编排器启动失败: ${e.message}`);
+      addLog(`❌ 冷启动失败: ${e.message}`);
       setIsOrchestrating(false);
     }
   };
@@ -534,14 +592,18 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     let tempGame: Phaser.Game | null = null;
     try {
-      tempGame = initializePhaserGame(
-        tempHost,
+      const runtime = startLoreWeaverRuntime(
         gameSpec,
-        playerState,
-        () => undefined,
-        () => undefined,
-        { workspaceId: activeWorkspace?.id || null }
+        {
+          container: tempHost,
+          hostKind: "test",
+          workspaceId: activeWorkspace?.id || null,
+          initialPlayerState: playerState,
+          saveState: () => undefined,
+          logger: () => undefined
+        }
       );
+      tempGame = runtime.game;
       await new Promise((resolve) => window.setTimeout(resolve, 800));
       const canvas = tempHost.querySelector("canvas") as HTMLCanvasElement | null;
       if (!canvas) {
@@ -630,7 +692,50 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const queueGameplayPatch = (nodeId: number, nextGameplay: GameplayAssignment, reason: string) => {
     if (!gameSpec) return;
     const normalized = ensureGameplayManifest(gameSpec);
-    setPendingPatch(createGameplayPatch(normalized, nodeId, nextGameplay, reason));
+    const node = normalized.nodes.find((n) => n.id === nodeId);
+    const before = node?.gameplay || { adapter: "phaser", cardId: "survivor_horde", modifiers: [], knobs: {}, patchLevel: "L2" as const };
+    // Knobs / numeric params are L1: apply immediately so sliders stick.
+    // Card / modifier structure changes remain L2 and require confirm.
+    const knobOnly = isKnobOnlyGameplayChange(before, nextGameplay);
+    const level = knobOnly ? "L1" : "L2";
+    const patch = createGameplayPatch(
+      normalized,
+      nodeId,
+      { ...nextGameplay, patchLevel: level },
+      reason,
+      level
+    );
+
+    if (knobOnly) {
+      const nextSpec = applyManifestPatch(normalized, { ...patch, status: "proposed" });
+      setGameSpec(nextSpec);
+      // Clear a pending L2 patch only if it targets the same node gameplay (avoid stale UI).
+      setPendingPatch((prev) => (prev?.target === patch.target ? null : prev));
+      synth.playClick();
+      addLog(
+        locale === "zh"
+          ? `⚙️ 已即时应用参数 patch（L1）：${reason}`
+          : `⚙️ Applied L1 param patch: ${reason}`
+      );
+      void persistManifest(nextSpec)
+        .then(() => {
+          addLog(
+            locale === "zh"
+              ? "💾 参数已写回工作区 manifest.json。"
+              : "💾 Params saved to workspace manifest.json."
+          );
+        })
+        .catch((err: any) => {
+          addLog(
+            locale === "zh"
+              ? `⚠️ 参数已本地应用，写回失败: ${err.message || err}`
+              : `⚠️ Params applied locally, save failed: ${err.message || err}`
+          );
+        });
+      return;
+    }
+
+    setPendingPatch(patch);
     synth.playClick();
   };
 
@@ -683,6 +788,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       auditReport, setAuditReport,
       isAuditing, setIsAuditing,
       isExporting, setIsExporting,
+      isExportingRelease, setIsExportingRelease,
       isLogPanelOpen, setIsLogPanelOpen,
       locale, setLocale,
       copy,
@@ -693,6 +799,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       persistManifest,
       handleLoadWorkspace,
       handleExportWorkspace,
+      handleExportRelease,
       handleRefreshJob,
       runOrchestrationPipeline,
       restartGameInstance,

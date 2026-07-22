@@ -18,6 +18,8 @@ interface HeaderProps {
   handleLoadWorkspace: (ws: WorkspaceMeta) => Promise<void>;
   onExportWorkspace: () => Promise<void>;
   isExporting: boolean;
+  onExportRelease: () => Promise<void>;
+  isExportingRelease: boolean;
 }
 
 export function Header({
@@ -33,7 +35,9 @@ export function Header({
   activeWorkspace,
   handleLoadWorkspace,
   onExportWorkspace,
-  isExporting
+  isExporting,
+  onExportRelease,
+  isExportingRelease
 }: HeaderProps) {
   return (
     <header className="border-b border-slate-200 dark:border-slate-900 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 px-4 md:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-colors duration-250">
@@ -116,12 +120,22 @@ export function Header({
 
         <button
           onClick={onExportWorkspace}
-          disabled={!activeWorkspace || isExporting}
+          disabled={!activeWorkspace || isExporting || isExportingRelease}
           className="flex items-center gap-1.5 bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-emerald-500/50 text-slate-800 dark:text-slate-300 px-3 py-1.5 rounded transition font-mono text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          title={locale === "zh" ? "导出当前工作区 ZIP" : "Export current workspace ZIP"}
+          title={locale === "zh" ? "导出当前工作区的源码备份 ZIP (未编译)" : "Export current workspace raw source ZIP"}
         >
-          <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          {isExporting ? (locale === "zh" ? "导出中" : "Exporting") : (locale === "zh" ? "导出" : "Export")}
+          <Download className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+          {isExporting ? (locale === "zh" ? "备份中" : "Backing up") : (locale === "zh" ? "备份源码" : "Backup Source")}
+        </button>
+
+        <button
+          onClick={onExportRelease}
+          disabled={!activeWorkspace || isExporting || isExportingRelease}
+          className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3.5 py-1.5 rounded font-display font-bold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow hover:scale-[1.01] transition-transform duration-150"
+          title={locale === "zh" ? "编译并导出独立的 H5 游戏发布包 ZIP (支持直接离线试玩/部署发布)" : "Compile and export standalone H5 release ZIP"}
+        >
+          <Sparkles className={`w-4 h-4 text-slate-950 ${isExportingRelease ? "animate-spin" : ""}`} />
+          {isExportingRelease ? (locale === "zh" ? "构建中…" : "Building…") : (locale === "zh" ? "导出发布包" : "Export Release")}
         </button>
         
         <WorkspaceSelector 

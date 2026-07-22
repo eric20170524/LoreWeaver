@@ -4,10 +4,10 @@ import {
   Play, 
   FileText, 
   Code, 
-  Sliders, 
   Terminal, 
   Eye, 
   Layers,
+  Users,
   Maximize2,
   Minimize2,
   X
@@ -21,7 +21,8 @@ import { GameplayPanel } from "./components/GameplayPanel";
 import { VlmPanel } from "./components/VlmPanel";
 import { Header } from "./components/Header";
 import { EmulatorPanel } from "./components/EmulatorPanel";
-import { AgentChatPanel } from "./components/AgentChatPanel";
+import { DepartmentPrepPanel } from "./components/DepartmentPrepPanel";
+import { PipelinePanel } from "./components/PipelinePanel";
 
 export default function App() {
   const {
@@ -48,6 +49,7 @@ export default function App() {
     auditReport,
     isAuditing,
     isExporting,
+    isExportingRelease,
     isLogPanelOpen,
     setIsLogPanelOpen,
     locale,
@@ -58,6 +60,7 @@ export default function App() {
     addLog,
     handleLoadWorkspace,
     handleExportWorkspace,
+    handleExportRelease,
     handleRefreshJob,
     runOrchestrationPipeline,
     restartGameInstance,
@@ -71,6 +74,7 @@ export default function App() {
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [isEmulatorFullscreen, setIsEmulatorFullscreen] = useState(false);
+  const [pipelineRefreshKey, setPipelineRefreshKey] = useState(0);
 
   // Scroll logs to bottom automatically
   useEffect(() => {
@@ -96,161 +100,92 @@ export default function App() {
         handleLoadWorkspace={handleLoadWorkspace}
         onExportWorkspace={handleExportWorkspace}
         isExporting={isExporting}
+        onExportRelease={handleExportRelease}
+        isExportingRelease={isExportingRelease}
       />
 
       {/* Main Orchestration Dashboard Layout Grid */}
       <main className="flex-1 w-full max-w-[1800px] 2xl:max-w-[95vw] mx-auto px-4 md:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        {/* Left Side: Pipeline overview */}
+        {/* Left Side: stage progress (mapped to departments + cold-start) */}
         <div className="lg:col-span-4 2xl:col-span-3 flex flex-col gap-6">
-          
-          {/* Animated DAG Graph View */}
-          <div className="bg-white/90 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-900/90 flex flex-col gap-4 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-mono font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                {copy.pipelineTitle}
-              </h3>
-              <span className="text-3xs font-mono text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
-                {copy.pipelineBadge}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-2.5 my-0.5 relative">
-              {/* Connected vertical line track */}
-              <div className="absolute left-[9px] top-[12px] bottom-[12px] w-0.5 bg-slate-200 dark:bg-slate-950">
-                {currentJob && (
-                  <motion.div 
-                    initial={{ height: "0%" }}
-                    animate={{ 
-                      height: `${Math.min(100, Math.max(0, (currentJob.stage_index ?? 0) * 16.66))}%` 
-                    }}
-                    className="bg-gradient-to-b from-emerald-500 to-teal-400 w-full"
-                    transition={{ duration: 0.8, ease: "easeInOut" }}
-                  />
-                )}
-              </div>
-
-              {copy.stages.map((stage: any, id: number) => {
-                const node = { ...stage, id };
-                const activeStageIdx = currentJob ? (currentJob.stage_index ?? 0) : null;
-                const isUnderReview = currentJob && currentJob.status === "pending_approval" && node.id === 1;
-                const isActive = (isOrchestrating || (currentJob && currentJob.status === "running")) && activeStageIdx === node.id;
-                const isPassed = currentJob && currentJob.status === 'completed' ? true : (activeStageIdx !== null && activeStageIdx > node.id);
-                
-                let dotClass = "border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-400 dark:text-slate-650";
-                let textTitleClass = "text-slate-550";
-                let descClass = "text-slate-600";
-
-                if (isActive) {
-                  dotClass = "border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 ring-4 ring-emerald-500/15 animate-pulse font-mono";
-                  textTitleClass = "text-emerald-600 dark:text-emerald-400 font-bold";
-                  descClass = "text-slate-700 dark:text-slate-300";
-                } else if (isUnderReview) {
-                  dotClass = "border-amber-500 bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400 ring-4 ring-amber-500/15 font-mono";
-                  textTitleClass = "text-amber-600 dark:text-amber-400 font-bold";
-                  descClass = "text-slate-700 dark:text-slate-300";
-                } else if (isPassed) {
-                  dotClass = "border-emerald-500/60 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-500 font-mono";
-                  textTitleClass = "text-slate-700 dark:text-slate-300 font-semibold";
-                  descClass = "text-slate-500";
-                }
-
-                return (
-                  <div key={node.id} className="flex gap-2.5 px-0.5 items-start group">
-                    <div className={`w-5.5 h-5.5 rounded-full border-2 flex items-center justify-center text-3xs font-bold shrink-0 transition-all duration-300 ${dotClass}`}>
-                      {node.id + 1}
-                    </div>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className={`text-3xs font-display tracking-tight transition-all duration-300 ${textTitleClass} flex items-center justify-between`}>
-                        <span>{node.name}</span>
-                        {isUnderReview && <span className="font-mono text-[9px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1 py-0.2 rounded border border-amber-500/20">{copy.reviewState}</span>}
-                        {isActive && <span className="font-mono text-[9px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.2 rounded border border-emerald-500/20">{copy.runningState}</span>}
-                      </span>
-                      {(isActive || isUnderReview) && (
-                        <span className={`text-[10px] leading-relaxed mt-0.5 font-sans block transition-all duration-300 ${descClass}`}>
-                          {node.desc}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            {/* Live progress indicator footer */}
-            {currentJob && (
-              <div className="border-t border-slate-200 dark:border-slate-900 pt-3 flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-3xs font-mono text-slate-500">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    {copy.progressLabel}: {Math.round(((currentJob?.stage_index ?? 0) + 1) * 14.28)}%
-                  </span>
-                  <span className="text-emerald-500 font-semibold uppercase">{currentJob.status}</span>
-                </div>
-                <div className="text-3xs text-slate-650 dark:text-slate-400 font-sans italic line-clamp-1">{currentJob.progress}</div>
-              </div>
-            )}
-          </div>
-
-          {activeWorkspace && (
-            <div className="2xl:hidden">
-              <AgentChatPanel
-                compact
-                locale={locale}
-                jobId={currentJob?.id}
-                status={currentJob?.status}
-                stageName={currentJob?.stage === 'world_building' ? 'World Builder' : 'QA Audit'}
-                workspaceId={activeWorkspace.id}
-                onRefreshJob={handleRefreshJob}
-                onUpdateSpec={(newSpec) => {
-                  setGameSpec(newSpec);
-                  restartGameInstance(newSpec);
-                }}
-                addLog={addLog}
-              />
-            </div>
-          )}
-
+          <PipelinePanel
+            locale={locale}
+            workspaceId={activeWorkspace?.id || null}
+            currentJob={currentJob}
+            isOrchestrating={isOrchestrating}
+            copy={copy}
+            refreshKey={pipelineRefreshKey}
+            onOpenDepartments={() => {
+              setActiveTab("departments");
+              synth.playClick();
+            }}
+          />
         </div>
 
         {/* Right Side: Primary Viewport Tabs and Display panel */}
-        <div className="lg:col-span-8 2xl:col-span-6 bg-white/70 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-900/80 p-4 md:p-6 overflow-hidden min-h-[70vh] flex flex-col gap-6 transition-colors duration-250">
+        <div className="lg:col-span-8 2xl:col-span-9 bg-white/70 dark:bg-slate-900/30 rounded-xl border border-slate-200 dark:border-slate-900/80 p-4 md:p-6 overflow-hidden min-h-[70vh] flex flex-col gap-6 transition-colors duration-250">
           
-          {/* Workspace Tabs selectors */}
-          <div className="flex border-b border-slate-200 dark:border-slate-900 pb-2 overflow-x-auto gap-1">
-            {[
-              { id: "emulator", label: copy.tabs.emulator, icon: Play },
-              { id: "prd", label: copy.tabs.prd, icon: FileText },
-              { id: "gameplay", label: copy.tabs.gameplay, icon: Layers },
-              { id: "manifest", label: copy.tabs.manifest, icon: Code },
-              { id: "vlm", label: copy.tabs.vlm, icon: Eye }
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isEmulatorTab = tab.id === "emulator";
-              const isActive = isEmulatorTab ? isEmulatorWindowOpen : activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    if (isEmulatorTab) {
-                      setIsEmulatorWindowOpen(true);
-                    } else {
-                      setActiveTab(tab.id as any);
-                    }
-                    synth.playClick();
-                  }}
-                  className={`px-4 py-2 rounded text-xs font-semibold font-display tracking-wide whitespace-nowrap transition flex items-center gap-2 cursor-pointer shrink-0 border-b-2 ${
-                    isActive
-                      ? "border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/5 font-bold"
-                      : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900/30"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </button>
-              );
-            })}
+          {/* Content tabs + dedicated emulator entry (not a tab) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-900 pb-2">
+            <div className="flex overflow-x-auto gap-1 min-w-0 flex-1">
+              {[
+                { id: "departments" as const, label: copy.tabs.departments, icon: Users },
+                { id: "prd" as const, label: copy.tabs.prd, icon: FileText },
+                { id: "gameplay" as const, label: copy.tabs.gameplay, icon: Layers },
+                { id: "manifest" as const, label: copy.tabs.manifest, icon: Code },
+                { id: "vlm" as const, label: copy.tabs.vlm, icon: Eye }
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      synth.playClick();
+                    }}
+                    className={`px-4 py-2 rounded text-xs font-semibold font-display tracking-wide whitespace-nowrap transition flex items-center gap-2 cursor-pointer shrink-0 border-b-2 ${
+                      isActive
+                        ? "border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/5 font-bold"
+                        : "border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-900/30"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsEmulatorWindowOpen(true);
+                synth.playClick();
+                addLog(
+                  locale === "zh"
+                    ? "▶ 已打开 WebGL H5 模拟器窗口"
+                    : "▶ Opened WebGL H5 emulator window"
+                );
+              }}
+              className={`shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold font-display tracking-wide transition cursor-pointer border shadow-sm ${
+                isEmulatorWindowOpen
+                  ? "border-emerald-500/50 bg-emerald-500 text-white shadow-emerald-500/20"
+                  : "border-emerald-500/40 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+              }`}
+              title={copy.emulator.open}
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span className="hidden sm:inline">{copy.emulator.open}</span>
+              <span className="sm:hidden">{copy.emulator.openShort}</span>
+              {isEmulatorWindowOpen && (
+                <span className="hidden md:inline text-[10px] font-mono font-normal opacity-90">
+                  · {copy.emulator.running}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Interactive viewport layers */}
@@ -289,6 +224,30 @@ export default function App() {
                     setPendingPatch={setPendingPatch}
                     onApprovePendingPatch={approvePendingPatch}
                     onQueueGameplayPatch={queueGameplayPatch}
+                  />
+                </motion.div>
+              )}
+
+              {activeTab === "departments" && (
+                <motion.div
+                  key="tab_departments"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  className="w-full"
+                >
+                  <DepartmentPrepPanel
+                    workspaceId={activeWorkspace?.id || null}
+                    locale={locale}
+                    addLog={addLog}
+                    jobId={currentJob?.id}
+                    jobStatus={currentJob?.status}
+                    onRefreshJob={handleRefreshJob}
+                    onUpdateSpec={(newSpec) => {
+                      setGameSpec(newSpec);
+                      restartGameInstance(newSpec);
+                    }}
+                    onDeskChanged={() => setPipelineRefreshKey((k) => k + 1)}
                   />
                 </motion.div>
               )}
@@ -342,7 +301,10 @@ export default function App() {
                     auditReport={auditReport}
                     isAuditing={isAuditing}
                     triggerVisualAudit={triggerVisualAudit}
+                    pendingPatch={pendingPatch}
                     setPendingPatch={setPendingPatch}
+                    onApprovePendingPatch={approvePendingPatch}
+                    onGoToGameplay={() => setActiveTab("gameplay")}
                     addLog={addLog}
                   />
                 </motion.div>
@@ -351,25 +313,6 @@ export default function App() {
 
           </div>
         </div>
-
-        {/* Extra Column for 2xl screens: Static HITL Chat Panel */}
-        {activeWorkspace && (
-          <div className="hidden 2xl:flex 2xl:col-span-3 flex-col gap-6">
-            <AgentChatPanel
-              locale={locale}
-              jobId={currentJob?.id}
-              status={currentJob?.status}
-              stageName={currentJob?.stage === 'world_building' ? 'World Builder' : 'QA Audit'}
-              workspaceId={activeWorkspace.id}
-              onRefreshJob={handleRefreshJob}
-              onUpdateSpec={(newSpec) => {
-                setGameSpec(newSpec);
-                restartGameInstance(newSpec);
-              }}
-              addLog={addLog}
-            />
-          </div>
-        )}
       </main>
 
       <AnimatePresence>
@@ -393,7 +336,7 @@ export default function App() {
                 </div>
                 <div className="min-w-0">
                   <h2 className="truncate text-xs font-bold font-display text-slate-800 dark:text-slate-200">
-                    {copy.tabs.emulator}
+                    {copy.emulator.windowTitle}
                   </h2>
                   <p className="truncate text-3xs font-mono text-slate-500">
                     {copy.emulator.engine}
@@ -449,6 +392,28 @@ export default function App() {
       </AnimatePresence>
 
       <div className="fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 pointer-events-none">
+        {/* Quick open emulator when window is closed */}
+        <AnimatePresence>
+          {!isEmulatorWindowOpen && (
+            <motion.button
+              key="emulator-fab"
+              type="button"
+              initial={{ opacity: 0, y: 12, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.94 }}
+              onClick={() => {
+                setIsEmulatorWindowOpen(true);
+                synth.playClick();
+              }}
+              className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-900/25 hover:bg-emerald-500 transition cursor-pointer"
+              title={copy.emulator.open}
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              {copy.emulator.openShort}
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence>
           {isLogPanelOpen && (
             <motion.div

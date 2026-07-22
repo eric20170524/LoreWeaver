@@ -1,6 +1,4 @@
-// nodes/node6.js
-// Node 6: 药都风云全屏毒雾场景 - 转换为 ES Modules
-
+// nodes/node6.js — 药都：毒雾与解药资源战
 import Node1Scene from './node1.js';
 import UIHelper from '../utils/UIHelper.js';
 import AudioManager from '../utils/AudioManager.js';
@@ -13,127 +11,106 @@ export class Node6Scene extends Node1Scene {
 
     init(data) {
         super.init(data);
-        this.poisonResist = 100;
-        this.bossSpawned = false;
+        this.poison = 0;
+        this.maxPoison = 100;
     }
 
     create() {
         super.create();
-
-        this.fog = this.add.rectangle(0, 0, this.width, this.height, 0x00ff00, 0.15)
-            .setOrigin(0, 0)
-            .setScrollFactor(0)
-            .setDepth(99);
-
-        // HUD
-        this.hudText = this.uiScene.add.text(this.width / 2, 180, '毒素抗性: 100%', {
-            fontSize: '24px', fill: '#00ff00', fontStyle: 'bold'
+        this.fog = this.add.rectangle(0, 0, this.width, this.height, 0x22aa44, 0.12)
+            .setOrigin(0, 0).setScrollFactor(0).setDepth(50);
+        this.hudText = this.uiScene.add.text(this.width / 2, 200, '毒素: 0%', {
+            fontSize: '18px', fill: '#66ff66', fontStyle: 'bold'
         }).setOrigin(0.5);
-
         this.gems = this.physics.add.group();
-        this.physics.add.overlap(this.player, this.gems, this.onPlayerCollectGem, null, this);
+        this.physics.add.overlap(this.player, this.gems, this.onCollectAntidote, null, this);
+        this.safeZones = [
+            this.add.circle(this.width * 1.2, this.height * 1.3, 90, 0x88ffaa, 0.12).setStrokeStyle(2, 0xaaffcc, 0.7),
+            this.add.circle(this.width * 1.8, this.height * 1.7, 90, 0x88ffaa, 0.12).setStrokeStyle(2, 0xaaffcc, 0.7)
+        ];
+        this.bossSpawned = false;
+        this.publishNodeTestState();
+    }
 
-        this.time.addEvent({
-            delay: 15000,
-            callback: this.spawnAntidoteElite,
-            callbackScope: this,
-            loop: true
+    publishNodeTestState(overrides = {}) {
+        super.publishNodeTestState({
+            poison: this.poison || 0,
+            objective: 'manage_poison',
+            ...overrides
         });
+    }
+
+    inSafeZone() {
+        return (this.safeZones || []).some((z) => Phaser.Math.Distance.Between(this.player.x, this.player.y, z.x, z.y) < 90);
+    }
+
+    onCampaignSecond() {
+        if (this.inSafeZone()) {
+            this.poison = Math.max(0, (this.poison || 0) - 4);
+            this.fog.setFillStyle(0x22aa44, 0.08);
+        } else {
+            this.poison = Math.min(this.maxPoison, (this.poison || 0) + 3);
+            this.fog.setFillStyle(0x22aa44, 0.12 + (this.poison / this.maxPoison) * 0.2);
+            if ((this.surviveTime || 0) % 2 === 0) AudioManager.playSfx?.('poison_tick');
+        }
+        this.hudText?.setText(`毒素: ${Math.floor(this.poison)}% · ${this.inSafeZone() ? '安全区' : '毒雾中'}`);
+        if (this.poison >= this.maxPoison) {
+            this.endGame(false, '毒素失控', 'failed');
+        }
+        this.publishNodeTestState();
+    }
+
+    onSecondTick() {
+        super.onSecondTick();
+        // Periodic antidote elite
+        if (this.surviveTime > 0 && this.surviveTime % 18 === 0) {
+            this.spawnAntidoteElite();
+        }
     }
 
     spawnAntidoteElite() {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 300;
-        const x = this.player.x + Math.cos(angle) * dist;
-        const y = this.player.y + Math.sin(angle) * dist;
-
-        this.createRuntimeEnemy('burrow_wyrm', x, y, {
-            hp: 150,
-            speed: 80,
-            exp: 50,
-            scaleMultiplier: 1.1,
-            data: { isAntidoteElite: true }
+        const x = this.player.x + Math.cos(angle) * 360;
+        const y = this.player.y + Math.sin(angle) * 360;
+        const elite = this.createRuntimeEnemy('burrow_wyrm', x, y, {
+            hp: 180,
+            scaleMultiplier: 1.4,
+            data: { elite: true, dropsAntidote: true, archetype: 'charge', role: 'elite' }
         });
-
-        UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "避毒宝兽出现！击杀可得解药！", "#00ff00", 2000);
+        elite.setTint(0x66ff99);
+        UIHelper.showFloatText(this.uiScene, this.width / 2, 230, '解药精英出现！', '#66ff99', 1600);
+        return elite;
     }
 
-    damageEnemy(enemy, dmg) {
-        const ex = enemy.x;
-        const ey = enemy.y;
-        const isElite = enemy.getData('isAntidoteElite');
-
-        super.damageEnemy(enemy, dmg);
-
-        if (!enemy.active && isElite) {
-            this.spawnAntidoteGem(ex, ey);
+    damageEnemy(enemy, dmg, skillData = null) {
+        const result = super.damageEnemy(enemy, dmg, skillData);
+        if (result?.defeated && enemy.getData('dropsAntidote')) {
+            const gem = this.add.circle(enemy.x, enemy.y, 10, 0x66ffaa, 0.95);
+            this.physics.add.existing(gem);
+            this.gems.add(gem);
+            this.time.delayedCall(12000, () => gem.destroy?.());
         }
+        return result;
     }
 
-    spawnAntidoteGem(x, y) {
-        const gem = this.gems.create(x, y, null);
-        gem.setDisplaySize(20, 20);
-        gem.setTint(0x00ff00); 
-
-        this.tweens.add({
-            targets: gem,
-            alpha: 0.4,
-            yoyo: true,
-            repeat: -1,
-            duration: 300
-        });
-    }
-
-    onPlayerCollectGem(player, gem) {
+    onCollectAntidote(player, gem) {
         gem.destroy();
-        this.poisonResist = Math.min(this.poisonResist + 40, 100);
-        this.hudText.setText(`毒素抗性: ${this.poisonResist}%`).setFill('#00ff00');
-        UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "服下解药！毒素抗性恢复", "#00ff00", 1500);
-        AudioManager.playClick();
-    }
-
-    onSecondTick() {
-        if (this.isGameOver || this.isPaused) return;
-        super.onSecondTick();
-
-        this.poisonResist -= 4;
-        if (this.poisonResist <= 0) {
-            this.poisonResist = 0;
-            this.hudText.setText('毒素抗性: 0%').setFill('#ff0000');
-            this.endGame(false);
-            return;
-        }
-
-        if (this.poisonResist < 30) {
-            this.hudText.setText(`警告！毒素抗性: ${this.poisonResist}%`).setFill('#ff0000');
-            this.cameras.main.flash(200, 255, 0, 0, true);
-        } else {
-            this.hudText.setText(`毒素抗性: ${this.poisonResist}%`).setFill('#00ff00');
-        }
-
-        if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.8) && !this.bossSpawned) {
-            this.spawnBoss();
-            this.bossSpawned = true;
-        }
+        this.poison = Math.max(0, (this.poison || 0) - 35);
+        AudioManager.playSfx?.('antidote');
+        UIHelper.showFloatText(this, player.x, player.y - 40, '解毒 -35', '#66ffaa', 900);
+        this.hudText?.setText(`毒素: ${Math.floor(this.poison)}%`);
+        this.publishNodeTestState();
     }
 
     spawnBoss() {
-        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId];
-        this.createRuntimeEnemy(this.nodeConfig.bossId, this.player.x + 300, this.player.y, {
-            hp: enemyData.hp,
-            speed: enemyData.speed,
-            exp: enemyData.exp,
-            lootList: enemyData.lootList,
-            scaleMultiplier: 1.2
-        });
-        
-        const txt = this.add.text(this.player.x, this.player.y - 100, '药谷守护兽降临！速战速决！', { fontSize: '28px', fill: '#00ff00', fontStyle: 'bold' }).setOrigin(0.5);
-        this.tweens.add({
-            targets: txt,
-            y: this.player.y - 150,
-            alpha: 0,
-            duration: 3000,
-            onComplete: () => txt.destroy()
+        return super.spawnBoss({
+            name: ENEMY_REGISTRY[this.nodeConfig.bossId]?.name || '毒域兽王',
+            phases: 3,
+            moves: [
+                { id: 'nova', windup: 95, active: 32, recovery: 110, radius: 180, damageMul: 1.3 },
+                { id: 'slam', windup: 80, active: 28, recovery: 95, radius: 140, damageMul: 1.2 },
+                { id: 'charge', windup: 60, active: 40, recovery: 90, radius: 90, damageMul: 1.1 }
+            ]
         });
     }
 }

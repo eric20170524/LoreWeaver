@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "1.0",
+  "id": "energy_balance",
+  "title": "Energy Balance",
+  "category": "gauge_balance",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "EnergyBalanceAdapter"
+  },
+  "inputs": [
+    "pointer",
+    "drag"
+  ],
+  "objectives": [
+    "stable_duration_met"
+  ],
+  "failure": [
+    "violations_exhausted",
+    "retreated"
+  ],
+  "knobs": {
+    "targetStableSec": {
+      "type": "number",
+      "default": 20,
+      "min": 5,
+      "max": 120,
+      "patchLevel": "L1",
+      "description": "Seconds to hold balance in safe zone."
+    },
+    "safeZoneWidth": {
+      "type": "number",
+      "default": 0.22,
+      "min": 0.05,
+      "max": 0.6,
+      "patchLevel": "L1",
+      "description": "Safe zone width ratio of gauge."
+    },
+    "failViolationLimit": {
+      "type": "integer",
+      "default": 5,
+      "min": 1,
+      "max": 20,
+      "patchLevel": "L1",
+      "description": "Max over-warn violations before fail."
+    },
+    "orbSpawnMinSec": {
+      "type": "number",
+      "default": 0.8,
+      "patchLevel": "L1",
+      "description": "Min orb spawn interval."
+    },
+    "orbSpawnMaxSec": {
+      "type": "number",
+      "default": 1.6,
+      "patchLevel": "L1",
+      "description": "Max orb spawn interval."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "DragDrop",
+    "Gauge",
+    "StabilityTimer",
+    "NodeResult"
+  ],
+  "resultContract": {
+    "successReason": "objective_met",
+    "telemetry": [
+      "stableSec",
+      "violations",
+      "elapsedSec"
+    ]
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "orbs can be dragged to core",
+      "stable time accumulates in safe zone",
+      "violations can fail the node"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node6.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "alchemy balance",
+      "dual cultivation gauge",
+      "attribute equilibrium"
+    ],
+    "poorFor": [
+      "pure action combat"
+    ]
+  },
+  "knownRisks": [
+    "safe zone too narrow feels unfair",
+    "needs clear pointer feedback"
+  ],
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+}

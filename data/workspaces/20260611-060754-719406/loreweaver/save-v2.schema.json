@@ -56,7 +56,11 @@
           "properties": {
             "musicEnabled": { "type": "boolean" },
             "sfxEnabled": { "type": "boolean" },
-            "vibrationEnabled": { "type": "boolean" }
+            "vibrationEnabled": { "type": "boolean" },
+            "reducedMotion": { "type": "boolean" },
+            "screenShake": { "type": "boolean" },
+            "damageNumbers": { "type": "boolean" },
+            "highContrastCues": { "type": "boolean" }
           },
           "additionalProperties": true
         },

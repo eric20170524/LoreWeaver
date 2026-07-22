@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "id": "crystal_collection",
+  "title": "Crystal Collection",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "crystalCount": {
+      "type": "integer",
+      "default": 5,
+      "patchLevel": "L1",
+      "description": "Active crystals on field."
+    },
+    "respawnIntervalMs": {
+      "type": "integer",
+      "default": 3000,
+      "patchLevel": "L1",
+      "description": "Respawn cadence."
+    },
+    "rewardScore": {
+      "type": "integer",
+      "default": 5,
+      "patchLevel": "L1",
+      "description": "Score per crystal."
+    }
+  },
+  "requiredCoreSystems": [
+    "Collectible"
+  ],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node5.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Survivor_horde modifier factory wired."
+}

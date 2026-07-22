@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0",
+  "id": "drag_to_core",
+  "title": "Drag To Core",
+  "category": "microgame",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "DragToCoreAdapter"
+  },
+  "inputs": [
+    "pointer"
+  ],
+  "objectives": [
+    "progress_100"
+  ],
+  "failure": [
+    "retreated",
+    "retreated"
+  ],
+  "knobs": {
+    "fragCount": {
+      "type": "integer",
+      "default": 14,
+      "patchLevel": "L1",
+      "description": "fragCount"
+    },
+    "hazardCount": {
+      "type": "integer",
+      "default": 3,
+      "patchLevel": "L1",
+      "description": "hazardCount"
+    },
+    "hazardPenalty": {
+      "type": "integer",
+      "default": 12,
+      "patchLevel": "L1",
+      "description": "hazardPenalty"
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "DragObject",
+    "CoreZone"
+  ],
+  "resultContract": {
+    "successReason": "objective_met"
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "playable loop",
+      "NodeResult on end"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node12.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "path micro nodes"
+    ],
+    "poorFor": [
+      "long campaigns alone"
+    ]
+  },
+  "knownRisks": [],
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+}

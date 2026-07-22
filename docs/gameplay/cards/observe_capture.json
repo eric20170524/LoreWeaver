@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0",
+  "id": "observe_capture",
+  "title": "Observe Capture",
+  "category": "microgame",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "ObserveCaptureAdapter"
+  },
+  "inputs": [
+    "pointer"
+  ],
+  "objectives": [
+    "progress_met"
+  ],
+  "failure": [
+    "retreated",
+    "retreated"
+  ],
+  "knobs": {
+    "targetProgress": {
+      "type": "integer",
+      "default": 100,
+      "patchLevel": "L1",
+      "description": "targetProgress"
+    },
+    "captureGain": {
+      "type": "integer",
+      "default": 22,
+      "patchLevel": "L1",
+      "description": "captureGain"
+    },
+    "missPenalty": {
+      "type": "integer",
+      "default": 12,
+      "patchLevel": "L1",
+      "description": "missPenalty"
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "TargetMotion",
+    "WindowJudge"
+  ],
+  "resultContract": {
+    "successReason": "objective_met"
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "playable loop",
+      "NodeResult on end"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node10.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "path micro nodes"
+    ],
+    "poorFor": [
+      "long campaigns alone"
+    ]
+  },
+  "knownRisks": [],
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+}

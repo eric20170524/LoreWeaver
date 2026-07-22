@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0",
+  "id": "point_drag_progression",
+  "title": "Point Drag Progression",
+  "category": "drag_progress",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser",
+      "html_canvas"
+    ],
+    "adapter": "PointDragProgressionAdapter"
+  },
+  "inputs": [
+    "pointer",
+    "drag"
+  ],
+  "objectives": [
+    "progress_met"
+  ],
+  "failure": [
+    "instability_max",
+    "retreated"
+  ],
+  "knobs": {
+    "targetProgress": {
+      "type": "integer",
+      "default": 100,
+      "patchLevel": "L1",
+      "description": "Progress to clear."
+    },
+    "instabilityMax": {
+      "type": "integer",
+      "default": 100,
+      "patchLevel": "L1",
+      "description": "Fail when instability reaches this."
+    },
+    "matchProgress": {
+      "type": "number",
+      "default": 14,
+      "patchLevel": "L1",
+      "description": "Progress on element match."
+    },
+    "poolSpawnIntervalSec": {
+      "type": "number",
+      "default": 1.1,
+      "patchLevel": "L1",
+      "description": "Orb spawn interval."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "DragDrop",
+    "PointMap",
+    "ProgressState",
+    "BranchWeights",
+    "NodeResult"
+  ],
+  "resultContract": {
+    "successReason": "objective_met",
+    "telemetry": [
+      "progress",
+      "instability",
+      "stage",
+      "branchWeights"
+    ]
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "drag orb to matching point",
+      "mismatch raises instability",
+      "path smoothness affects gain"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Lingmai_DualCultivation/docs/1_PRD.md",
+    "minigame/Lingmai_DualCultivation/game/logic.py"
+  ],
+  "fit": {
+    "goodFor": [
+      "cultivation points",
+      "attribute injection",
+      "branch-weighted stages"
+    ],
+    "poorFor": [
+      "pure action combat"
+    ]
+  },
+  "knownRisks": [
+    "point config authoring",
+    "smoothness tuning"
+  ],
+  "implementationNotes": "Phaser adapter; de-themed point drag session."
+}

@@ -58,26 +58,52 @@ success "Web packages installed successfully."
 
 # 5. Install Python Dependencies
 info "Installing Python FastAPI & Agent packages..."
-$PYTHON_CMD -m pip install -r backend/requirements.txt
-if [ $? -ne 0 ]; then
-    warn "Direct pip install failed. Attempting with local flags..."
-    pip install -r backend/requirements.txt
+VENV_DIR=".venv"
+if [ ! -x "$VENV_DIR/bin/python" ]; then
+    info "Creating local Python virtual environment at $VENV_DIR ..."
+    $PYTHON_CMD -m venv "$VENV_DIR"
     if [ $? -ne 0 ]; then
-        error "Failed to install Python packages. Please ensure pip is installed."
+        error "Failed to create Python virtual environment. Please ensure python3-venv support is installed."
     fi
 fi
-success "Python FastAPI & Agent packages installed successfully."
 
-# 6. Check GEMINI_API_KEY status
-if grep -q "GEMINI_API_KEY=" .env; then
-    KEY_VAL=$(grep "GEMINI_API_KEY=" .env | cut -d'=' -f2)
-    if [ -z "$KEY_VAL" ]; then
-        warn "⚠️  GEMINI_API_KEY is currently EMPTY in your .env file."
-        warn "⚠️  Please edit the .env file in the root folder to supply a valid Gemini API Key."
-        warn "⚠️  Without this, sub-agent micro-adjustments and generative steps will throw 502/Failed exceptions."
+PYTHON_CMD="$VENV_DIR/bin/python"
+export VIRTUAL_ENV="$PWD/$VENV_DIR"
+export PATH="$VIRTUAL_ENV/bin:$PATH"
+export PIP_CACHE_DIR="$VIRTUAL_ENV/.pip-cache"
+
+$PYTHON_CMD -m ensurepip --upgrade >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    warn "Could not refresh bundled pip inside $VENV_DIR; continuing with existing pip."
+fi
+
+$PYTHON_CMD -m pip install -r backend/requirements.txt
+if [ $? -ne 0 ]; then
+    error "Failed to install Python packages into $VENV_DIR. Please check backend/requirements.txt and network access."
+fi
+success "Python FastAPI & Agent packages installed successfully in $VENV_DIR."
+
+# 6. Check LLM API key status (prefer XAI/Grok, fallback Gemini)
+has_xai=0
+has_gemini=0
+if grep -qE '^(XAI_API_KEY|GROK_API_KEY)=' .env 2>/dev/null; then
+    XAI_VAL=$(grep -E '^(XAI_API_KEY|GROK_API_KEY)=' .env | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    if [ -n "$XAI_VAL" ] && [ "$XAI_VAL" != "xai-..." ]; then
+        has_xai=1
+        success "XAI/Grok API key detected in .env"
     fi
-else
-    warn "⚠️  GEMINI_API_KEY is missing from .env!"
+fi
+if grep -q '^GEMINI_API_KEY=' .env 2>/dev/null; then
+    GEM_VAL=$(grep '^GEMINI_API_KEY=' .env | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    if [ -n "$GEM_VAL" ] && [ "$GEM_VAL" != "MY_GEMINI_API_KEY" ]; then
+        has_gemini=1
+        success "Gemini API key detected in .env"
+    fi
+fi
+if [ "$has_xai" -eq 0 ] && [ "$has_gemini" -eq 0 ]; then
+    warn "⚠️  No LLM API key configured."
+    warn "⚠️  Set XAI_API_KEY (Grok, recommended) or GEMINI_API_KEY in .env"
+    warn "⚠️  Without a key, department prep and generation use procedural fallbacks."
 fi
 
 # 7. Start dev services

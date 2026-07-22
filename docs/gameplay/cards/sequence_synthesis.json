@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "1.0",
+  "id": "sequence_synthesis",
+  "title": "Sequence Synthesis",
+  "category": "crafting_puzzle",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "html_canvas",
+      "phaser"
+    ],
+    "adapter": "SequenceSynthesisAdapter",
+    "container": "node_iframe_microgame"
+  },
+  "inputs": [
+    "pointer",
+    "button"
+  ],
+  "objectives": [
+    "complete_recipe_sequence"
+  ],
+  "failure": [
+    "mistakes_exhausted",
+    "explosion",
+    "retreated"
+  ],
+  "knobs": {
+    "recipeLength": {
+      "type": "integer",
+      "default": 4,
+      "min": 1,
+      "max": 20,
+      "patchLevel": "L1",
+      "description": "Number of ordered ingredients or actions."
+    },
+    "materialPoolSize": {
+      "type": "integer",
+      "default": 6,
+      "min": 2,
+      "max": 30,
+      "patchLevel": "L1",
+      "description": "Number of possible materials shown."
+    },
+    "wrongInputProgressPenalty": {
+      "type": "number",
+      "default": 30,
+      "min": 0,
+      "max": 100,
+      "patchLevel": "L1",
+      "description": "Progress lost after a wrong input."
+    },
+    "explodeOnConsecutiveMistakes": {
+      "type": "integer",
+      "default": 2,
+      "min": 1,
+      "max": 10,
+      "patchLevel": "L1",
+      "description": "Consecutive wrong inputs before hard reset or failure."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "RecipeState",
+    "InputOrderJudge",
+    "ProgressBar",
+    "VFX",
+    "NodeResult"
+  ],
+  "resultContract": {
+    "successReason": "objective_met",
+    "telemetry": [
+      "mistakes",
+      "recipeLength",
+      "elapsedSec"
+    ]
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "correct material advances recipe",
+      "wrong material applies penalty",
+      "complete recipe sends NodeResult"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node11.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "alchemy",
+      "crafting",
+      "ritual order",
+      "lock sequence"
+    ],
+    "poorFor": [
+      "reflex-only action nodes"
+    ]
+  },
+  "knownRisks": [
+    "strict order can feel like rote clicking without meaningful hints",
+    "must expose current required material clearly for accessibility"
+  ],
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+}

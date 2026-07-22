@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "id": "mirror_boss",
+  "title": "Mirror Boss",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {},
+  "requiredCoreSystems": [],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node11.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Survivor modifier factory wired."
+}

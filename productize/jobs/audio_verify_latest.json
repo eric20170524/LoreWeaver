@@ -1,0 +1,238 @@
+{
+  "schemaVersion": "loreweaver.asset-job.v1",
+  "jobId": "audio_verify",
+  "workspace": "data/workspaces/20260611-060754-719406",
+  "createdAt": "2026-07-22T06:39:54.532Z",
+  "kind": "audio_verify",
+  "status": "passed",
+  "assets": [
+    {
+      "path": "assets/audio/bgm/boss_theme.wav",
+      "bytes": 79424,
+      "sha256": "cca2244658fe1ad391477301dcbb0c8105e0e83ab714b54714897c9cbd8ec96b",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/boss_theme_late.wav",
+      "bytes": 79424,
+      "sha256": "616ffdd290eb8447d6b571ce17b6f45b36eedd122f6a060c9edcaf27bf329af4",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/defeat_sting.wav",
+      "bytes": 52964,
+      "sha256": "55443f212c6ac7b6e03c36e615dbb95fd1b777e893e4f2544355dd6ef7d6a41e",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/menu_theme.wav",
+      "bytes": 66194,
+      "sha256": "341056d4ea35ae5ba5b1b507faadbb73c444511f66f1f2be963d3263bbdc81fa",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node10_siege.wav",
+      "bytes": 70604,
+      "sha256": "912f5815e1678b8598940e7bec5d65a7ca82ea43d2a5d42ab74fcf1d401c8a13",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node11_gauntlet.wav",
+      "bytes": 66194,
+      "sha256": "aedaceaf1a7303b2aef12f2f7e6e6292e7a7ebabe8286e2b41d83f1f6247bd83",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node12_finale.wav",
+      "bytes": 79424,
+      "sha256": "a9c2bc6ca069dae47beb5fc5bc478e9fb3c92330ff83e72f66859834ca6a9c41",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node1_battle.wav",
+      "bytes": 66194,
+      "sha256": "a823fc9228ef7b70513c2c72f152321ce0c8444d3d06158e50de6536db49c097",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node2_treasure.wav",
+      "bytes": 66194,
+      "sha256": "6cd97877d91246f5482fca2e314548b642aa704710a4d11e6e51d54c9cb2cad0",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node3_rival.wav",
+      "bytes": 70604,
+      "sha256": "cf4f3f6a100a0375bc00878291e5f680872858b311cc7860ecffe3be927daa9d",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node4_tide.wav",
+      "bytes": 66194,
+      "sha256": "dbeb919c49423dcc7a0c0fb0cf75530b74766b56063b3692b86af012be27dc5f",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node5_defense.wav",
+      "bytes": 66194,
+      "sha256": "1e5b8d12003a29d96ca7b9b68b3fbdf50b042a2891dcd13e56ee6b441b7bc916",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node6_poison.wav",
+      "bytes": 66194,
+      "sha256": "18e403e8cdae28422e758f80c392453fed13168478a25579cbecbb892d16f4b5",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node7_tournament.wav",
+      "bytes": 66194,
+      "sha256": "c9a56b1d98f79203ea11d75c0ef58ef816c763da8f8dd0930c0f8624e4a6ab17",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node8_ruins.wav",
+      "bytes": 66194,
+      "sha256": "0afbfc84d08194e9b154cba48f8d4b2a4d1e0652039d48fd6249673833ad9cbc",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/node9_escort.wav",
+      "bytes": 66194,
+      "sha256": "96e9b9d7e367f2afb7ac60400bb0adaba8f23c95ba5b8847f067e13e4993627b",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/bgm/victory_sting.wav",
+      "bytes": 44144,
+      "sha256": "f452065e53b2c28f5fc3c5cba652b8ddac02085fd5d2b5125913626812dfcae4",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/antidote.wav",
+      "bytes": 8864,
+      "sha256": "b16b15924467845d343fb4bdf943bae9d970bfde80ca57bdf4f223fe07d5c36a",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/ballista.wav",
+      "bytes": 7982,
+      "sha256": "3b2f7fcce0c193b3a77d7d0435dc59da4067e950607b3e58b1d5db3776a494ec",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/break_window.wav",
+      "bytes": 7100,
+      "sha256": "2f156f3e4735651a50c05ee236cf75971460707081851471a5821dc05b3b4c16",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/chest_open.wav",
+      "bytes": 11068,
+      "sha256": "81b8f11103d6fc8ec500ec65a3058d2b9456da157b4e73bcd353728b53bab452",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/core_hit.wav",
+      "bytes": 6658,
+      "sha256": "04951c8ab8949aa9dd8d1c16a88b348f6ac89e9b99f1b6053a9199edd5df898c",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/escort_warn.wav",
+      "bytes": 6658,
+      "sha256": "eff9658ebe1c3f68dcf5e490be53b826d19a2c3e8921c2fbbeef659dc23edb56",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/hit.wav",
+      "bytes": 5336,
+      "sha256": "fd285542c8ccd8c016f83b945333b228bbeba5144d5fc6ea7c19897dc03e0bfd",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/phase_shift.wav",
+      "bytes": 13274,
+      "sha256": "4a3750d5fa43f29f2d13b81dbac65590e95b3acf95e7499ffb4ead3c13acd2eb",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/poison_tick.wav",
+      "bytes": 5336,
+      "sha256": "da47dfa984d9c474fbb7b61f0a352a96d80d5cea7ba6c6cbb2ee6ffd035e70ce",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/portal.wav",
+      "bytes": 12392,
+      "sha256": "926bf3588f0a1482d3bb837c32757cf6a0920cc414161750122861a38d1778d7",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/ui_click.wav",
+      "bytes": 3572,
+      "sha256": "5a6735d1f2fded391d2b83f94a8c68c131c95d11204dee4cdba8a59e565ff89b",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/ui_confirm.wav",
+      "bytes": 5336,
+      "sha256": "30883936f8428bff2af67ed2cfdd27d73250007a4c7f0494db0ab7b78f118661",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/wall_hit.wav",
+      "bytes": 8864,
+      "sha256": "66a927c9e78e350e2fbb2b5093dba0cfc16dd73ddea0e0c5f0a996d01088d2ca",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/wave_clear.wav",
+      "bytes": 15478,
+      "sha256": "2744a1c6ab6ace8f9ed363693dd8b6b03f32406a5242aaea9bb7cdbe129b925b",
+      "license": "original-synth",
+      "provider": "local"
+    },
+    {
+      "path": "assets/audio/sfx/whirl_pull.wav",
+      "bytes": 13274,
+      "sha256": "4e7b86be15e5baf6f7a9d62c6eafe2819826546770a93a5e7dd66274793c9e68",
+      "license": "original-synth",
+      "provider": "local"
+    }
+  ],
+  "provenance": "assets/audio/manifest.json",
+  "secrets": {
+    "leaked": false
+  }
+}

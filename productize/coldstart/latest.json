@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "loreweaver.workspace-compile.v1",
+  "status": "passed",
+  "createdAt": "2026-07-16T10:19:26Z",
+  "workspaceId": "20260716-aurora-forge-001",
+  "path": "data/workspaces/20260716-aurora-forge-001",
+  "theme": "aurora_forge",
+  "title": "Aurora Forge Trial",
+  "gameplayCard": "aurora_forge_campaign",
+  "filesEmitted": [
+    "package.json",
+    "vite.config.js",
+    "index.html",
+    "main.js",
+    "loreweaver/project.json",
+    "loreweaver/gameplay-card.v2.json",
+    "loreweaver/generation-log.json",
+    "meta.json",
+    "README.md"
+  ]
+}

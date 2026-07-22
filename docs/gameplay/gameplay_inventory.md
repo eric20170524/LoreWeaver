@@ -22,7 +22,7 @@
 
 ## 1. Path to Immortality
 
-项目路径：`minigame/Path_to_Immortality`
+项目路径：`/Users/lm/pyProj/doc/GameLib/minigame/Path_to_Immortality`
 
 技术形态：Vanilla HTML/CSS/JS + Canvas + Web Audio + LocalStorage。主界面通过 iframe 打开独立节点页，使用 Base64 JSON query payload 传入状态，并通过 `postMessage({ type: "NODE_RESULT", reward })` 回传奖励。
 
@@ -107,7 +107,7 @@
 
 ## 2. Gals Panic
 
-项目路径：`minigame/gals_panic`
+项目路径：`/Users/lm/pyProj/doc/GameLib/minigame/gals_panic`
 
 技术形态：Ren'Py + Python + `pygame_sdl2` + 自定义 Displayable。当前只抽玩法机制，不直接迁入 Phaser core。
 
@@ -129,7 +129,7 @@
 
 ## 3. Lingmai Dual Cultivation
 
-项目路径：`minigame/Lingmai_DualCultivation`
+项目路径：`/Users/lm/pyProj/doc/GameLib/minigame/Lingmai_DualCultivation`
 
 技术形态：Ren'Py + Python 配置表 + 视觉交互脚本。当前只抽“点位交互、轨迹评分、阶段分支、资源/画廊”机制，不处理题材表现。
 
@@ -151,7 +151,7 @@
 
 ## 4. Xianni
 
-项目路径：`minigame/xianni`
+项目路径：`/Users/lm/pyProj/doc/GameLib/minigame/xianni`
 
 技术形态：Phaser + Vite + `minigame_master/core/lib` 工具引用。`Node1Scene` 是基础割草生存关卡，`node2.js` 到 `node12.js` 基本采用“继承 Node1Scene，再覆盖/追加机制”的方式实现，是当前最适合沉淀 `survivor_horde` adapter 与 modifier 体系的样本。
 
@@ -208,7 +208,7 @@
 
 ## 5. Perfectworld Dahuang
 
-项目路径：`minigame/perfectworld_dahuang`
+项目路径：`/Users/lm/pyProj/doc/GameLib/minigame/perfectworld_dahuang`
 
 技术形态：Phaser + Vite + 主干 Store/IdleEngine/NodeBridge。它比 `xianni` 更像完整 game shell：有境界/洞天成长、挂机收益、被动树、节点入口、Node 结算回写、UI Scene 清理。因此它是 `NodePayload`、`NodeResult`、`SceneLifecycle` 与 Store 边界的关键样本。
 
@@ -262,7 +262,7 @@
 
 ## 6. Three Kingdoms Brawl
 
-项目路径：`minigame/three_kingdoms_brawl`
+项目路径：`/Users/lm/pyProj/doc/GameLib/minigame/three_kingdoms_brawl`
 
 技术形态：Vanilla HTML/CSS/JS + Canvas 主画面 + Pixi/WebGL 特效层 + WebAudio + 静态 H5 启动脚本。它应作为 private case library 与 mechanics extraction 来源，第一阶段只抽机制、参数、验证方法和资产管线，不把具体题材表达或单例运行时代码迁入 LoreWeaver core。
 

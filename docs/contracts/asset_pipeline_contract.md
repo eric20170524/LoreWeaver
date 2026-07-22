@@ -39,6 +39,7 @@ Each generated or imported workspace may store:
   "artAssets": {
     "manifestPath": "assets/imagegen/manifest.json",
     "scriptManifestPath": "assets/imagegen/manifest.js",
+    "imagegenProvider": "antigravity (LOREWEAVER_ENABLE_ANTIGRAVITY_IMAGEGEN=1) | auto | procedural_fallback",
     "groups": ["heroes", "enemies", "items", "props", "setpieces", "decorations"],
     "spriteClips": ["idle", "walk", "attack", "hurt", "death"],
     "runtimeBinding": "atlas first, simple canvas fallback last",
@@ -82,6 +83,37 @@ The exact paths may vary by generated game. The semantic obligations should not.
   `fetch`.
 - Verification should report expected/loaded asset counts, important group keys,
   frame clip coverage, and whether generated art appears in real gameplay.
+
+### 4.1 Core runtime binder
+
+LoreWeaver workbench loads atlas art through:
+
+```text
+minigame_master/core/lib/graphics/RuntimeArtBinder.js
+```
+
+Wiring rules:
+
+1. **Boot**: `RuntimeArtBinder.preload` + `install` on the Phaser Boot scene
+   (see `src/game/GameRunner.ts`). All `manifest.frames` keys are sliced into
+   textures (`lw_enemy_*`, `lw_runtime_player_*`, `lw_art_*`, …).
+2. **Adapters**: Prefer `payload.runtimeArt.resolve(role)` / `enemyKey(id)`
+   before procedural `Graphics` fallbacks. `SurvivorHordeAdapter` reports art
+   sources in `NodeResult.telemetry.art`.
+3. **Status**: Global `__LOREWEAVER_ART_PIPELINE__` exposes `loadedCount`,
+   `groups`, `frameKeys`, and binder identity for VLM / E2E gates.
+4. **Fallback**: Missing workspace imagegen is not a hard fail — adapters must
+   remain playable with primitives/procedural sprites.
+5. **Clips**: `playClip(sprite, role, clip)` registers Phaser animations from
+   multi-frame keys (`player_walk_0/1`) or single-frame enemy clips
+   (`enemy_*_walk` / `_attack` / `_hurt` / `_death`), with idle pairing when
+   only one frame exists.
+6. **Environment**: `createBackground({ nodeId, prefer })` maps nodes to
+   `env_bg_*` frames and optionally layers `env_ground_patch` /
+   `env_landmark_rock`.
+7. **Modifier props**: semantic keys `core`, `escort`, `wall`, `portal`,
+   `chest`, `ballista`, `whirlpool` resolve `core_eye`, `escort_npc`,
+   `wall_segment`, `portal_ring`, etc.
 
 ## 5. Audio Asset Requirements
 

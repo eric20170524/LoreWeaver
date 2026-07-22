@@ -1,5 +1,6 @@
 import AudioManager from '../utils/AudioManager.js';
 import VFX from '../utils/VFX.js';
+import GameFeel from './GameFeel.js';
 import {
     buildSkillExecutionPlan,
     findChainTarget,
@@ -80,6 +81,42 @@ export class SkillExecutionRuntime {
             visuals: this.visuals.size,
             transforms: this.transforms.size
         };
+    }
+
+    executeDirectionalDash(options) {
+        const { distance, invincibleDuration, direction, label } = options;
+        if (this.scene.dashInvulnerable) return false;
+
+        let vx = direction.x;
+        let vy = direction.y;
+        if (vx === 0 && vy === 0) {
+            vy = 1;
+        } else {
+            const len = Math.sqrt(vx * vx + vy * vy);
+            vx /= len;
+            vy /= len;
+        }
+
+        this.scene.dashInvulnerable = true;
+        this.scene.isInvulnerable = true;
+
+        AudioManager.playSfx?.('dash_swoosh');
+        if (this.scene.player) {
+            VFX.play(this.scene, this.scene.player.x, this.scene.player.y, 'dash_trail');
+        }
+
+        const dashSpeed = distance / invincibleDuration;
+        this.scene.player?.body?.setVelocity?.(vx * dashSpeed, vy * dashSpeed);
+
+        this.delay(invincibleDuration * 1000, () => {
+            if (!this.scene.isGameOver && !this.scene.isTornDown) {
+                this.scene.dashInvulnerable = false;
+                this.scene.isInvulnerable = false;
+            }
+        });
+
+        this.scene.announceSkillCast?.({ name: label, id: 'dash' }, 1);
+        return true;
     }
 
     executeChain(skillData, level, target, damage, feedback) {
@@ -386,7 +423,7 @@ export class SkillExecutionRuntime {
         if (!plan.canCast) return false;
 
         const { target, damage, distance } = plan;
-        if (plan.critical) scene.cameras.main.shake(80, 0.004);
+        if (plan.critical) GameFeel.shake(scene, 80, 0.004);
         const feedback = (focus = target) => {
             scene.announceSkillCast(skillData, level);
             AudioManager.playSkillCue(skillData);
@@ -456,7 +493,7 @@ export class SkillExecutionRuntime {
         if (skillData.type === 'screen_clear') {
             feedback(scene.player);
             const flash = this.trackVisual(scene.add.rectangle(scene.player.x, scene.player.y, scene.width * 3, scene.height * 3, 0xffffff, 0.4));
-            scene.cameras.main.shake(200, 0.02);
+            GameFeel.shake(scene, 200, 0.02);
             this.delay(200, () => this.destroyVisual(flash));
             const radius = (skillData.radius || 600) + (level - 1) * scale('radius');
             nearby(scene.player.x, scene.player.y, radius, (enemy) => scene.damageEnemy(enemy, damage * 1.5, skillData));

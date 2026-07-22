@@ -34,7 +34,26 @@
           4,
           6
         ]
-      }
+      },
+      "durationSec": 240,
+      "goalValue": 240,
+      "difficulty": 6,
+      "victoryMode": "survive",
+      "enemyPool": [],
+      "envKey": "env_bg_poison",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node6_poison",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme",
+      "runtimeCardId": "survivor_horde",
+      "shellRetreat": true
     },
     "patchLevel": "L3"
   },
@@ -45,15 +64,15 @@
       "bone_script_mastery",
       "pure_blood_trial"
     ],
+    "rewardUnlocks": [
+      "true_phoenix_art"
+    ],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
       "willow_guard",
       "dual_pupil",
       "kunpeng_art",
-      "true_phoenix_art"
-    ],
-    "rewardUnlocks": [
       "true_phoenix_art"
     ],
     "notes": "药都风云通过纯血洗礼开放真凰宝术，用持续光环回应毒雾和密集怪潮。"

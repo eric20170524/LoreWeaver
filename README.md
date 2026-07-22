@@ -80,23 +80,76 @@ Key parts:
   backlog.
 - `workflow/` - prompt templates, agent notes, scripts, and latest report files.
 
+## Local-First Directory Access Rule
+
+LoreWeaver is a local personal workbench: the browser UI, Express gateway, and
+FastAPI backend are expected to run on the same developer machine. Directory
+selection and project import must preserve that assumption.
+
+When the user clicks "Choose Folder" / "选择目录", the intended flow is:
+
+```text
+Browser UI
+  -> Express gateway `/api/system/select-directory`
+  -> FastAPI opens the native local folder picker
+  -> FastAPI returns the selected absolute local path
+  -> Browser calls `/api/workspaces/import` with that path
+  -> FastAPI copies the local directory into `data/workspaces/`
+```
+
+Do not replace this with a generic web upload flow such as
+`<input webkitdirectory>` plus multipart upload. That approach treats the local
+tool as if the browser and backend were on different machines, unnecessarily
+streams the whole project through the browser, hides the real local path, and
+can create confusing errors such as empty or non-JSON gateway responses.
+
+If the native folder picker is unavailable, keep manual path paste as the
+fallback. The backend should still be the component that reads and copies the
+local project directory.
+
 ## Gameplay Cards
 
 LoreWeaver keeps gameplay choices in reusable cards. A node can select a base
 gameplay card and optional modifiers, allowing local patching without rewriting
 the whole project.
 
-Current catalog examples:
+Current catalog (all wired through `minigame_master` + `GameRunner`):
 
-- `survivor_horde` - Phaser-based survivor horde gameplay.
-- `node_iframe_microgame` - iframe-based single-page microgame container.
-- `turn_based_skill_battle` - design card for turn-based skill battles.
-- `rhythm_timing` - timing and rhythm challenge card.
-- `drag_collect_grid` - collection/grid interaction card.
-- `sequence_synthesis` - memory or ordered synthesis card.
-- `hazard_telegraph`, `defend_core`, `escort_npc`, `boss_phases`,
-  `poison_fog`, `laser_warning` - implemented `survivor_horde` modifiers
-  created through the core modifier factory.
+- `survivor_horde` - Phaser survivor horde adapter + 6 modifiers
+  (`hazard_telegraph`, `defend_core`, `escort_npc`, `boss_phases`,
+  `poison_fog`, `laser_warning`).
+- `rhythm_timing` / `drag_collect_grid` - Phaser tap-reaction and
+  collect-dodge adapters.
+- `turn_based_skill_battle` - Phaser turn-based skill combat.
+- `sequence_synthesis` - Phaser ordered crafting / recipe sequence.
+- `side_scrolling_brawler` - Phaser belt-scroll brawler + 6 modifiers
+  (`locked_screen_wave`, `arcade_timer_pressure`, `arcade_credit_continue`,
+  `elemental_directional_combo`, `local_coop_4p`, `branch_route_chain`).
+- `node_iframe_microgame` - `IframeNodeContainer` for HTML node pages via
+  NodePayload/postMessage.
+- `energy_balance` / `rune_connect_sequence` / `branching_dialogue_check` -
+  Path-style microgames (gauge balance, ordered rune links, favor dialogue).
+- Extra `survivor_horde` modifiers: `crystal_collection`, `horde_intensity`,
+  `resource_pressure`, `defend_line`, `debuff_zone`, `destroy_pillars`.
+- Path action microgames: `pressure_survival`, `reaction_pick`,
+  `observe_capture`, `shooter_duel`, `drag_to_core`, `dodge_counter_boss`.
+- Brawler `score_extend_1up` modifier (score-threshold extra lives).
+- Path remaining: `maze_exploration_choice`, `platform_escape`,
+  `hazard_collect_waves`, `sequence_puzzle_combo`, `rhythm_then_pickup`.
+- More survivor modifiers: `treasure_chest_horde`, `arena_wave_boss`,
+  `random_room_portals`, `mirror_boss`, `self_destruct_enemy`.
+- Cross-engine: `qix_area_capture` (area claim / Qix),
+  `point_drag_progression` (element point drag + branch weights).
+- Multi-agent prep desk (film-style departments): each production link is an
+  independent department agent with ownership, confirm state, QA score, and
+  handoffs — see `docs/workflow/production_department_agents.md` and
+  `docs/workflow/department_agents.registry.json`.
+- Art wiring: `RuntimeArtBinder` installs full imagegen atlas frames at Boot,
+  then adapters resolve player/enemy/projectile/pickup textures atlas-first
+  (procedural fallback). Clip playback (`walk`/`attack`/`hurt`/`death`),
+  `env_bg_*` backgrounds, and modifier props (`core_eye`, `escort_npc`,
+  `portal_ring`, `wall_segment`, …) are wired. See
+  `docs/contracts/asset_pipeline_contract.md` §4.1.
 
 ## Local Development
 
@@ -104,7 +157,9 @@ Prerequisites:
 
 - Node.js
 - Python 3
-- Optional: `GEMINI_API_KEY` for AI generation and refinement
+- Optional LLM key for AI generation, refinement, and department prep:
+  - **Recommended:** `XAI_API_KEY` (Grok / xAI, OpenAI-compatible)
+  - Fallback: `GEMINI_API_KEY` (Google Gemini)
 
 Install dependencies:
 
@@ -119,9 +174,23 @@ Create a local environment file:
 cp .env.example .env
 ```
 
-Then set `GEMINI_API_KEY` in `.env` if you want Gemini-backed generation. Without
-an API key, the backend falls back to procedural presets for generation and mock
-adjustments for some refinement paths.
+Then set an API key in `.env`:
+
+```bash
+# Prefer Grok
+XAI_API_KEY="xai-..."
+LLM_PROVIDER=grok
+# Optional model (default grok-4-1-fast-non-reasoning)
+# XAI_MODEL=grok-4.5
+
+# Or Gemini
+# GEMINI_API_KEY="..."
+# LLM_PROVIDER=gemini
+```
+
+Without a key, the backend falls back to procedural presets for generation and
+mock adjustments for some refinement paths. Check `GET /api/llm/status` after
+startup to confirm the active provider.
 
 Start the workbench:
 
@@ -174,8 +243,8 @@ The backend exposes workspace and pipeline endpoints through `/api`:
 
 Ollama/local-model routing is intentionally deferred for now. If
 `OLLAMA_API_BASE` is present in the environment, the backend logs that the value
-is ignored and continues to use Gemini when `GEMINI_API_KEY` is set, or the
-procedural fallback when it is not.
+is ignored and continues to use Grok when `XAI_API_KEY` is set, Gemini when
+`GEMINI_API_KEY` is set, or the procedural fallback when neither is available.
 
 ## Data and Generated Artifacts
 

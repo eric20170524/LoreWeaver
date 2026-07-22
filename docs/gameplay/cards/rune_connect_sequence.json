@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1.0",
+  "id": "rune_connect_sequence",
+  "title": "Rune Connect Sequence",
+  "category": "path_puzzle",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "RuneConnectSequenceAdapter"
+  },
+  "inputs": [
+    "pointer",
+    "drag"
+  ],
+  "objectives": [
+    "complete_link_sequence"
+  ],
+  "failure": [
+    "mistakes_exhausted",
+    "retreated"
+  ],
+  "knobs": {
+    "runeCount": {
+      "type": "integer",
+      "default": 8,
+      "min": 3,
+      "max": 16,
+      "patchLevel": "L1",
+      "description": "Number of rune nodes."
+    },
+    "snapRadius": {
+      "type": "number",
+      "default": 36,
+      "patchLevel": "L1",
+      "description": "Snap radius in px."
+    },
+    "maxMistakes": {
+      "type": "integer",
+      "default": 6,
+      "patchLevel": "L1",
+      "description": "Wrong links before fail."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "DragPath",
+    "NodeGraph",
+    "SequenceJudge",
+    "NodeResult"
+  ],
+  "resultContract": {
+    "successReason": "objective_met",
+    "telemetry": [
+      "mistakes",
+      "runeCount",
+      "elapsedSec",
+      "links"
+    ]
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "correct sequence links advance",
+      "wrong link counts mistake",
+      "full sequence wins"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node14.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "formation arrays",
+      "circuit puzzles",
+      "sword formations"
+    ],
+    "poorFor": [
+      "real-time horde combat"
+    ]
+  },
+  "knownRisks": [
+    "order memory load",
+    "snap radius accessibility"
+  ],
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+}

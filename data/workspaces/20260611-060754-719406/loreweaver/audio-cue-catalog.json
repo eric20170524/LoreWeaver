@@ -291,5 +291,233 @@
     },
     "mixRole": "finale_transform",
     "description": "万象化影的多层人声式钟响。"
+  },
+  {
+    "id": "chest_open",
+    "runtimeEventId": "chest_open",
+    "mixRole": "objective_feedback",
+    "description": "宝箱开启提示。",
+    "synth": {
+      "frequencies": [
+        400,
+        600,
+        800
+      ],
+      "wave": "triangle",
+      "durationMs": 180,
+      "volume": 0.1
+    }
+  },
+  {
+    "id": "whirl_pull",
+    "runtimeEventId": "whirl_pull",
+    "mixRole": "hazard_feedback",
+    "description": "漩涡牵引。",
+    "synth": {
+      "frequencies": [
+        90,
+        130
+      ],
+      "wave": "sine",
+      "durationMs": 160,
+      "volume": 0.09
+    }
+  },
+  {
+    "id": "core_hit",
+    "runtimeEventId": "core_hit",
+    "mixRole": "objective_feedback",
+    "description": "核心受击。",
+    "synth": {
+      "frequencies": [
+        200,
+        120
+      ],
+      "wave": "square",
+      "durationMs": 140,
+      "volume": 0.1
+    }
+  },
+  {
+    "id": "poison_tick",
+    "runtimeEventId": "poison_tick",
+    "mixRole": "hazard_feedback",
+    "description": "毒雾跳伤。",
+    "synth": {
+      "frequencies": [
+        180,
+        240
+      ],
+      "wave": "sawtooth",
+      "durationMs": 100,
+      "volume": 0.06
+    }
+  },
+  {
+    "id": "antidote",
+    "runtimeEventId": "antidote",
+    "mixRole": "pickup_feedback",
+    "description": "解毒宝石。",
+    "synth": {
+      "frequencies": [
+        500,
+        700,
+        900
+      ],
+      "wave": "sine",
+      "durationMs": 180,
+      "volume": 0.08
+    }
+  },
+  {
+    "id": "portal",
+    "runtimeEventId": "portal",
+    "mixRole": "objective_feedback",
+    "description": "传送门激活。",
+    "synth": {
+      "frequencies": [
+        300,
+        450,
+        600
+      ],
+      "wave": "triangle",
+      "durationMs": 200,
+      "volume": 0.08
+    }
+  },
+  {
+    "id": "ballista",
+    "runtimeEventId": "ballista",
+    "mixRole": "weapon_feedback",
+    "description": "弩炮发射。",
+    "synth": {
+      "frequencies": [
+        250,
+        100
+      ],
+      "wave": "square",
+      "durationMs": 140,
+      "volume": 0.12
+    }
+  },
+  {
+    "id": "wall_hit",
+    "runtimeEventId": "wall_hit",
+    "mixRole": "defense_feedback",
+    "description": "城墙受击。",
+    "synth": {
+      "frequencies": [
+        90,
+        60
+      ],
+      "wave": "square",
+      "durationMs": 160,
+      "volume": 0.14
+    }
+  },
+  {
+    "id": "escort_warn",
+    "runtimeEventId": "escort_warn",
+    "mixRole": "objective_feedback",
+    "description": "护送目标告警。",
+    "synth": {
+      "frequencies": [
+        440,
+        330
+      ],
+      "wave": "triangle",
+      "durationMs": 140,
+      "volume": 0.09
+    }
+  },
+  {
+    "id": "break_window",
+    "runtimeEventId": "break_window",
+    "mixRole": "counterplay_feedback",
+    "description": "破招窗口。",
+    "synth": {
+      "frequencies": [
+        720,
+        960
+      ],
+      "wave": "sine",
+      "durationMs": 120,
+      "volume": 0.09
+    }
+  },
+  {
+    "id": "phase_shift",
+    "runtimeEventId": "phase_shift",
+    "mixRole": "boss_feedback",
+    "description": "Boss 阶段切换。",
+    "synth": {
+      "frequencies": [
+        200,
+        400,
+        600
+      ],
+      "wave": "sawtooth",
+      "durationMs": 220,
+      "volume": 0.08
+    }
+  },
+  {
+    "id": "wave_clear",
+    "runtimeEventId": "wave_clear",
+    "mixRole": "wave_feedback",
+    "description": "波次/精英清除。",
+    "synth": {
+      "frequencies": [
+        392,
+        523,
+        659
+      ],
+      "wave": "sine",
+      "durationMs": 200,
+      "volume": 0.09
+    }
+  },
+  {
+    "id": "hit",
+    "runtimeEventId": "hit",
+    "mixRole": "hit_feedback",
+    "description": "通用命中。",
+    "synth": {
+      "frequencies": [
+        150
+      ],
+      "wave": "square",
+      "durationMs": 100,
+      "volume": 0.18
+    }
+  },
+  {
+    "id": "ui_click",
+    "runtimeEventId": "ui_click",
+    "mixRole": "ui_feedback",
+    "description": "UI 点击。",
+    "synth": {
+      "frequencies": [
+        520
+      ],
+      "wave": "square",
+      "durationMs": 40,
+      "volume": 0.08
+    }
+  },
+  {
+    "id": "ui_confirm",
+    "runtimeEventId": "ui_confirm",
+    "mixRole": "ui_feedback",
+    "description": "UI 确认。",
+    "synth": {
+      "frequencies": [
+        660,
+        880
+      ],
+      "wave": "sine",
+      "durationMs": 90,
+      "volume": 0.09
+    }
   }
 ]

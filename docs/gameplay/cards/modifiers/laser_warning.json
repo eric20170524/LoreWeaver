@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "id": "laser_warning",
+  "title": "Laser Warning",
+  "category": "hazard_telegraph",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde",
+    "hazard_collect_waves"
+  ],
+  "knobs": {
+    "warningMs": {
+      "type": "integer",
+      "default": 1000,
+      "min": 100,
+      "max": 10000,
+      "patchLevel": "L1"
+    },
+    "damage": {
+      "type": "number",
+      "default": 20,
+      "min": 0,
+      "max": 9999,
+      "patchLevel": "L1"
+    },
+    "beamWidth": {
+      "type": "number",
+      "default": 20,
+      "min": 1,
+      "max": 500,
+      "patchLevel": "L1"
+    }
+  },
+  "requiredCoreSystems": [
+    "GameplayModifier",
+    "TelegraphRenderer",
+    "Collision"
+  ],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node3.js",
+    "minigame/Path_to_Immortality/node17.html"
+  ],
+  "knownRisks": [
+    "warning and hitbox must match visually"
+  ],
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+}

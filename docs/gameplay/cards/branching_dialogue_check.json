@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0",
+  "id": "branching_dialogue_check",
+  "title": "Branching Dialogue Check",
+  "category": "narrative_choice",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser",
+      "html_canvas"
+    ],
+    "adapter": "BranchingDialogueCheckAdapter"
+  },
+  "inputs": [
+    "button",
+    "pointer"
+  ],
+  "objectives": [
+    "reach_non_fail_ending"
+  ],
+  "failure": [
+    "fail_ending",
+    "retreated"
+  ],
+  "knobs": {
+    "startFavor": {
+      "type": "integer",
+      "default": 40,
+      "min": 0,
+      "max": 100,
+      "patchLevel": "L1",
+      "description": "Starting favor value."
+    },
+    "dialogueGraph": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L2",
+      "description": "Dialogue nodes with choices and requirements."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "ChoiceGraph",
+    "ConditionCheck",
+    "StoryFlags",
+    "NodeResult"
+  ],
+  "resultContract": {
+    "successReason": "objective_met",
+    "telemetry": [
+      "favor",
+      "path",
+      "ending",
+      "choicesMade"
+    ]
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "choices advance graph",
+      "locked choices need flags/realm",
+      "ending emits NodeResult"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node16.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "story nodes",
+      "favor checks",
+      "relic-gated dialogue"
+    ],
+    "poorFor": [
+      "action-only levels"
+    ]
+  },
+  "knownRisks": [
+    "graph authoring quality",
+    "condition edge cases"
+  ],
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+}

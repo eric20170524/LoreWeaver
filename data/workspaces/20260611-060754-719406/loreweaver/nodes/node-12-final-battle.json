@@ -3,10 +3,10 @@
   "title": "终极血战",
   "intro": "对抗不朽之王投影，割草推进转为多阶段弹幕 Boss 战。击败终极投影后完成大荒终局目标。",
   "taunts": [
-    "金阙君：哪怕身负裂天重城，我仍可踏碎群星！",
+    "金阙君：纵使背负裂天重城，我仍可踏碎群星！",
     "星骁：万象化影，万影归一！破阵！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "turn_based_skill_battle",
   "rewards": "气血精华 +999999，纯血 +100，仙王道果",
   "goalValue": 600,
   "resourceMultiplier": 60,
@@ -27,7 +27,26 @@
           100
         ]
       },
-      "finalTitle": "万象化影"
+      "finalTitle": "万象化影",
+      "durationSec": 600,
+      "goalValue": 600,
+      "difficulty": 12,
+      "victoryMode": "boss_only",
+      "enemyPool": [],
+      "envKey": "env_bg_finale",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": false,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node12_finale",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme_late",
+      "runtimeCardId": "turn_based_skill_battle",
+      "shellRetreat": true
     },
     "patchLevel": "L2"
   },
@@ -38,6 +57,9 @@
       "bone_script_mastery",
       "pure_blood_trial"
     ],
+    "rewardUnlocks": [
+      "he_hua_zizai"
+    ],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
@@ -46,9 +68,6 @@
       "kunpeng_art",
       "true_phoenix_art",
       "supreme_bone",
-      "he_hua_zizai"
-    ],
-    "rewardUnlocks": [
       "he_hua_zizai"
     ],
     "notes": "首通意图: unlock_finale(he_hua_zizai); 终极血战胜利后把终局临时技能记入能力目录，作为通关兑现。"

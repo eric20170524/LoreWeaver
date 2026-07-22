@@ -234,6 +234,11 @@ export interface WorkbenchState {
   artifactStatus: Record<string, "fresh" | "stale" | "failed" | "approved">;
 }
 
+export interface UIConfigSpec {
+  plugin: "default" | "cultivation" | string;
+  [key: string]: any;
+}
+
 export interface GameSpec {
   title: string;
   themeColor: string;
@@ -253,6 +258,7 @@ export interface GameSpec {
   runtimeFeaturePack?: RuntimeFeaturePackSpec;
   gameplayCards?: string[];
   workbench?: WorkbenchState;
+  uiConfig?: UIConfigSpec;
 }
 
 export interface PlayerState {

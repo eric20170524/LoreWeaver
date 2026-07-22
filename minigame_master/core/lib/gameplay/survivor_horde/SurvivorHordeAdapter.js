@@ -76,8 +76,14 @@ const LEGACY_ENEMY_STATS = Object.freeze({
 });
 
 function mergeConfig(base, patch) {
-    if (!patch || typeof patch !== 'object') return { ...base };
-    const output = { ...base };
+    if (!patch || typeof patch !== 'object') patch = {};
+    const output = Object.fromEntries(Object.entries(base || {}).map(([key, value]) => {
+        if (Array.isArray(value)) return [key, value.map((item) => (
+            item && typeof item === 'object' ? mergeConfig(item, {}) : item
+        ))];
+        if (value && typeof value === 'object') return [key, mergeConfig(value, {})];
+        return [key, value];
+    }));
 
     for (const [key, value] of Object.entries(patch)) {
         if (Array.isArray(value)) {
@@ -137,10 +143,10 @@ function normalizeConfig(payload = {}) {
     return merged;
 }
 
-function pickWeighted(items) {
+function pickWeighted(items, random = Math.random) {
     if (!items.length) return null;
     const total = items.reduce((sum, item) => sum + (item.weight || 1), 0);
-    let cursor = Math.random() * total;
+    let cursor = random() * total;
 
     for (const item of items) {
         cursor -= item.weight || 1;
@@ -236,6 +242,12 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         this.targetPoint = null;
         this.enemyTargetSelector = null;
         this.enemyVisualDesigns = new Map();
+        this.runtimeArt = context.runtimeArt || context.art || null;
+        this.random = typeof context.random === 'function' ? context.random : Math.random;
+        this.runtimeEventListeners = new Map();
+        this.runtimeEventHistory = [];
+        this.runtimeEventSequence = 0;
+        this.artStats = { player: 'pending', enemies: {}, projectiles: 'pending', pickups: 'pending' };
         this.state = {
             hp: DEFAULT_CONFIG.player.hp,
             elapsedSeconds: 0,
@@ -251,6 +263,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     init(payload = {}) {
         super.init(payload);
         this.config = normalizeConfig(payload);
+        this.runtimeArt = payload.runtimeArt || payload.art || this.runtimeArt || this.context.runtimeArt || null;
         this.enemyVisualDesigns = new Map(
             (this.config.visuals?.enemyDesignCatalog || [])
                 .map((design) => [getDesignId(design), design])
@@ -266,6 +279,15 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         this.lifecycle = new SceneLifecycle(scene);
         this.lifecycle.start();
 
+        // Rebind art context to this scene (Boot installs textures globally on the game)
+        if (!this.runtimeArt && scene.game?.registry?.get) {
+            const binder = scene.game.registry.get('runtimeArtBinder');
+            if (binder?.createContext) this.runtimeArt = binder.createContext(scene);
+            else this.runtimeArt = scene.game.registry.get('runtimeArt') || null;
+        } else if (this.runtimeArt?.binder && scene) {
+            this.runtimeArt = this.runtimeArt.binder.createContext(scene);
+        }
+
         const width = this.config.world.width || scene.scale.width;
         const height = this.config.world.height || scene.scale.height;
         this.world = { width, height };
@@ -275,8 +297,25 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
             scene.physics.world.setBounds(0, 0, width, height);
         }
 
+        // Environment background (atlas env_bg_* + ground/landmarks)
+        const envKey = this.config.visuals?.envKey
+            || this.config.knobs?.envKey
+            || this.payload?.nodeConfig?.gameplay?.knobs?.envKey
+            || null;
+        const nodeId = this.payload?.nodeId || this.payload?.nodeIndex || this.config.id;
+        this.background = this.runtimeArt?.createBackground?.({
+            width,
+            height,
+            nodeId,
+            prefer: envKey ? [envKey] : null,
+            depth: -20
+        }) || null;
+        this.artStats.env = this.background?.getData?.('envKey') || 'none';
+
         this.player = this.createPlayerAvatar(width / 2, height / 2);
         this.player.body?.setCollideWorldBounds?.(true);
+        this.playerClip = 'idle';
+        this.runtimeArt?.playClip?.(this.player, 'player', 'idle', { repeat: -1, frameRate: 4 });
 
         this.groups.enemies = scene.physics.add.group();
         this.groups.bullets = scene.physics.add.group();
@@ -286,6 +325,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
             Object.values(this.groups).forEach((group) => group?.clear?.(true, true));
             this.playerAura?.destroy?.();
             this.player?.destroy?.();
+            this.background?.destroy?.();
         });
 
         this.bindInput();
@@ -352,6 +392,40 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         return modifier;
     }
 
+    onRuntimeEvent(type, listener) {
+        if (!type || typeof listener !== 'function') return () => {};
+        const listeners = this.runtimeEventListeners.get(type) || new Set();
+        listeners.add(listener);
+        this.runtimeEventListeners.set(type, listeners);
+        return () => {
+            listeners.delete(listener);
+            if (!listeners.size) this.runtimeEventListeners.delete(type);
+        };
+    }
+
+    emitRuntimeEvent(type, payload = {}) {
+        if (!type) return null;
+        const event = {
+            sequence: ++this.runtimeEventSequence,
+            type,
+            atMs: Number.isFinite(this.scene?.time?.now)
+                ? this.scene.time.now
+                : Math.round((this.state.elapsedSeconds || 0) * 1000),
+            ...payload
+        };
+        this.runtimeEventHistory.push(event);
+        if (this.runtimeEventHistory.length > 40) this.runtimeEventHistory.shift();
+
+        const notify = (listeners) => {
+            [...(listeners || [])].forEach((listener) => listener(event));
+        };
+        notify(this.runtimeEventListeners.get(type));
+        notify(this.runtimeEventListeners.get('*'));
+        this.context.onRuntimeEvent?.(event, this);
+        if (type === 'presentation') this.context.onPresentationEvent?.(event, this);
+        return event;
+    }
+
     createRuntimeContext() {
         return {
             adapter: this,
@@ -361,11 +435,17 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
             state: this.state,
             groups: this.groups,
             player: this.player,
+            random: this.random,
+            events: {
+                on: (...args) => this.onRuntimeEvent(...args),
+                emit: (...args) => this.emitRuntimeEvent(...args)
+            },
             helpers: {
                 createCircle: (...args) => this.createCircle(...args),
                 damagePlayer: (...args) => this.damagePlayer(...args),
                 damageEnemy: (...args) => this.damageEnemy(...args),
                 end: (...args) => this.finish(...args),
+                emitPresentation: (payload) => this.emitRuntimeEvent('presentation', payload),
                 publishTestState: () => this.publishTestState()
             }
         };
@@ -393,11 +473,20 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
         if (dist <= 5) {
             this.player.body.setVelocity(0, 0);
+            if (this.playerClip !== 'idle') {
+                this.playerClip = 'idle';
+                this.runtimeArt?.playClip?.(this.player, 'player', 'idle', { repeat: -1, frameRate: 4 });
+            }
             return;
         }
 
         const speed = this.config.player.speed;
         this.player.body.setVelocity((dx / dist) * speed, (dy / dist) * speed);
+        if (this.player.setFlipX) this.player.setFlipX(dx < 0);
+        if (this.playerClip !== 'walk') {
+            this.playerClip = 'walk';
+            this.runtimeArt?.playClip?.(this.player, 'player', 'walk', { repeat: -1, frameRate: 8 });
+        }
     }
 
     updateEnemies() {
@@ -434,8 +523,8 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     }
 
     spawnEnemy(patch = {}) {
-        const enemyConfig = mergeConfig(pickWeighted(this.config.enemies.pool) || {}, patch);
-        const angle = Math.random() * Math.PI * 2;
+        const enemyConfig = mergeConfig(pickWeighted(this.config.enemies.pool, this.random) || {}, patch);
+        const angle = this.random() * Math.PI * 2;
         const radius = Math.max(this.world.width, this.world.height) * this.config.enemies.spawnRadiusRatio;
         const x = this.player.x + Math.cos(angle) * radius;
         const y = this.player.y + Math.sin(angle) * radius;
@@ -473,17 +562,38 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         const target = this.findNearestEnemy();
         if (!target) return;
 
-        const bullet = this.createCircle(
-            this.player.x,
-            this.player.y,
-            this.config.weapon.bulletRadius,
-            this.config.weapon.bulletColor
-        );
+        // Brief attack pose on player when firing
+        this.runtimeArt?.playClip?.(this.player, 'player', 'attack', { repeat: 0, frameRate: 10 });
+        this.lifecycle.trackTimer(this.scene.time.delayedCall(280, () => {
+            if (!this.isRunning() || !this.player) return;
+            const moving = this.player.body && (Math.hypot(this.player.body.velocity.x, this.player.body.velocity.y) > 10);
+            this.playerClip = moving ? 'walk' : 'idle';
+            this.runtimeArt?.playClip?.(this.player, 'player', this.playerClip, { repeat: -1, frameRate: moving ? 8 : 4 });
+        }));
 
+        const bullet = this.createProjectile(this.player.x, this.player.y);
         bullet.setData('damage', this.config.weapon.bulletDamage);
         bullet.setData('createdAt', this.scene.time.now);
         this.groups.bullets.add(bullet);
         this.scene.physics.moveToObject(bullet, target, this.config.weapon.bulletSpeed);
+    }
+
+    createProjectile(x, y) {
+        const radius = this.config.weapon.bulletRadius || 5;
+        const artKey = this.runtimeArt?.resolve?.('projectile')
+            || this.runtimeArt?.projectileKey?.();
+        if (artKey && this.scene.textures.exists(artKey)) {
+            this.artStats.projectiles = artKey;
+            const sprite = this.scene.add.sprite(x, y, artKey);
+            this.scene.physics.add.existing(sprite);
+            sprite.setDisplaySize(radius * 3.2, radius * 3.2);
+            sprite.setDepth(3);
+            sprite.body?.setCircle?.(radius);
+            sprite.setData('artSource', 'atlas');
+            return sprite;
+        }
+        this.artStats.projectiles = this.artStats.projectiles === 'pending' ? 'procedural' : this.artStats.projectiles;
+        return this.createCircle(x, y, radius, this.config.weapon.bulletColor);
     }
 
     findNearestEnemy() {
@@ -510,21 +620,53 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     }
 
     damageEnemy(enemy, damage) {
-        if (!enemy?.active) return;
-        const hp = (enemy.getData('hp') || 0) - damage;
+        if (!enemy?.active || !Number.isFinite(damage) || damage <= 0) return false;
+        const beforeHp = enemy.getData('hp') || 0;
+        const hp = beforeHp - damage;
         enemy.setData('hp', hp);
 
+        const enemyId = enemy.getData('enemyId') || enemy.getData('id') || 'enemy';
+        this.emitRuntimeEvent('enemy-damaged', {
+            enemyId,
+            amount: damage,
+            beforeHp,
+            hp: Math.max(0, hp)
+        });
         if (hp <= 0) {
+            this.runtimeArt?.playClip?.(enemy, 'enemy', 'death', {
+                enemyId,
+                repeat: 0,
+                frameRate: 8
+            });
             const reward = enemy.getData('reward') || {};
             this.state.kills += 1;
+            this.emitRuntimeEvent('enemy-defeated', { enemyId, reward });
             if (this.config.collectibles.enabled) {
                 this.spawnCollectible(enemy.x, enemy.y, reward);
             } else {
                 addRewards(this.state.collectedRewards, reward);
                 this.state.score += reward.score || 1;
             }
-            enemy.destroy();
+            this.lifecycle.trackTimer(this.scene.time.delayedCall(120, () => {
+                if (enemy?.active) enemy.destroy();
+            }));
+        } else {
+            this.runtimeArt?.playClip?.(enemy, 'enemy', 'hurt', {
+                enemyId,
+                repeat: 0,
+                frameRate: 8
+            });
+            this.lifecycle.trackTimer(this.scene.time.delayedCall(180, () => {
+                if (enemy?.active) {
+                    this.runtimeArt?.playClip?.(enemy, 'enemy', 'walk', {
+                        enemyId,
+                        repeat: -1,
+                        frameRate: 6
+                    });
+                }
+            }));
         }
+        return true;
     }
 
     handlePlayerEnemyOverlap(_player, enemy) {
@@ -535,16 +677,39 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     }
 
     damagePlayer(amount, failReason = NODE_RESULT_REASONS.HP_ZERO) {
-        if (!this.isRunning()) return;
-        this.state.hp = Math.max(this.state.hp - amount, 0);
+        if (!this.isRunning() || !Number.isFinite(amount) || amount <= 0) return false;
+        const beforeHp = this.state.hp;
+        this.state.hp = Math.max(beforeHp - amount, 0);
+        this.emitRuntimeEvent('player-damaged', {
+            amount,
+            beforeHp,
+            hp: this.state.hp,
+            reason: failReason
+        });
         if (this.state.hp <= 0) {
             this.finish(false, failReason);
         }
+        return true;
     }
 
     spawnCollectible(x, y, reward = {}) {
         if (!this.config.collectibles.enabled) return null;
-        const collectible = this.createCircle(x, y, this.config.collectibles.radius, this.config.collectibles.color);
+        const radius = this.config.collectibles.radius || 6;
+        const artKey = this.runtimeArt?.resolve?.('pickup')
+            || this.runtimeArt?.pickupKey?.();
+        let collectible;
+        if (artKey && this.scene.textures.exists(artKey)) {
+            this.artStats.pickups = artKey;
+            collectible = this.scene.add.sprite(x, y, artKey);
+            this.scene.physics.add.existing(collectible);
+            collectible.setDisplaySize(radius * 3.5, radius * 3.5);
+            collectible.setDepth(2);
+            collectible.body?.setCircle?.(radius);
+            collectible.setData('artSource', 'atlas');
+        } else {
+            this.artStats.pickups = this.artStats.pickups === 'pending' ? 'procedural' : this.artStats.pickups;
+            collectible = this.createCircle(x, y, radius, this.config.collectibles.color);
+        }
         collectible.setData('reward', reward);
         this.groups.collectibles.add(collectible);
         return collectible;
@@ -632,6 +797,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         const context = this.createRuntimeContext();
         this.modifiers.forEach((modifier) => modifier.uninstall(context));
         this.lifecycle?.destroy();
+        this.runtimeEventListeners.clear();
         super.destroy();
     }
 
@@ -647,10 +813,31 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     }
 
     ensurePlayerTexture() {
+        // Atlas-first: RuntimeArtBinder semantic player keys
+        const artKey = this.runtimeArt?.resolve?.('player')
+            || this.runtimeArt?.playerKey?.();
+        if (artKey && this.scene.textures.exists(artKey)) {
+            this.artStats.player = artKey;
+            return artKey;
+        }
+        for (const candidate of [
+            'lw_runtime_player_shihao',
+            'lw_runtime_player_idle',
+            'lw_runtime_player_avatar',
+            'shihao_young_runtime',
+            'player_idle'
+        ]) {
+            if (this.scene.textures.exists(candidate)) {
+                this.artStats.player = candidate;
+                return candidate;
+            }
+        }
+
         const visual = this.getPlayerVisualDesign();
         const palette = visual?.visualDesign?.palette || [];
         const key = 'lw_runtime_player_avatar';
         if (this.scene.textures.exists(key)) return key;
+        this.artStats.player = 'procedural';
 
         const main = colorToNumber(palette[0], this.config.player.color || 0xf59e0b);
         const glow = colorToNumber(palette[1], 0xfef3c7);
@@ -755,7 +942,29 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
     ensureEnemyTexture(enemyConfig = {}) {
         const visual = this.getEnemyVisual(enemyConfig);
+        const enemyId = enemyConfig.id || enemyConfig.runtimeEnemyId || 'enemy';
+
+        // Atlas-first via RuntimeArtBinder
+        const artKey = this.runtimeArt?.resolve?.('enemy', { enemyId })
+            || this.runtimeArt?.enemyKey?.(enemyId);
+        if (artKey && this.scene.textures.exists(artKey)) {
+            this.artStats.enemies[enemyId] = artKey;
+            return artKey;
+        }
+        for (const candidate of [
+            visual.textureKey,
+            `lw_enemy_${enemyId}`,
+            `enemy_${enemyId}`,
+            `enemy_${enemyId}_idle`
+        ]) {
+            if (candidate && this.scene.textures.exists(candidate)) {
+                this.artStats.enemies[enemyId] = candidate;
+                return candidate;
+            }
+        }
+
         if (this.scene.textures.exists(visual.textureKey)) return visual.textureKey;
+        this.artStats.enemies[enemyId] = 'procedural';
 
         const g = this.scene.make.graphics({ x: 0, y: 0, add: false });
         const body = visual.bodyColor;
@@ -874,6 +1083,13 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         sprite.body?.setSize?.(radius * 2, radius * 2);
         sprite.body?.setOffset?.(32 - radius, 32 - radius);
         sprite.setData('visualName', visual.displayName);
+        sprite.setData('enemyId', enemyConfig.id || 'enemy');
+        // Start walk clip when atlas multi/single frames exist
+        this.runtimeArt?.playClip?.(sprite, 'enemy', 'walk', {
+            enemyId: enemyConfig.id || 'enemy',
+            repeat: -1,
+            frameRate: 6
+        });
         return sprite;
     }
 
@@ -885,6 +1101,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
     getTelemetry() {
         return {
+            art: { ...this.artStats, pipeline: this.runtimeArt?.status?.() || null },
             elapsedSeconds: this.state.elapsedSeconds,
             timeRemaining: this.state.timeRemaining,
             kills: this.state.kills,
@@ -902,6 +1119,10 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
             hp: this.state.hp,
             timer: this.state.timeRemaining,
             score: this.state.score,
+            runtimeEvents: this.runtimeEventHistory.slice(-12),
+            modifiers: this.modifiers.map((modifier) => (
+                modifier.getTestState?.() || { modifier: modifier.constructor.name }
+            )),
             lastResult: this.result
         });
     }
@@ -914,6 +1135,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
             timer: this.state.timeRemaining,
             kills: this.state.kills,
             score: this.state.score,
+            runtimeEvents: this.runtimeEventHistory.slice(-12),
             modifiers: this.modifiers.map((modifier) => modifier.getTestState?.() || { modifier: modifier.constructor.name })
         };
     }

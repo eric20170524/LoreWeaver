@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0",
+  "id": "shooter_duel",
+  "title": "Shooter Duel",
+  "category": "microgame",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "ShooterDuelAdapter"
+  },
+  "inputs": [
+    "pointer"
+  ],
+  "objectives": [
+    "boss_defeated"
+  ],
+  "failure": [
+    "hp_zero",
+    "retreated"
+  ],
+  "knobs": {
+    "playerHp": {
+      "type": "integer",
+      "default": 100,
+      "patchLevel": "L1",
+      "description": "playerHp"
+    },
+    "bossHp": {
+      "type": "integer",
+      "default": 300,
+      "patchLevel": "L1",
+      "description": "bossHp"
+    },
+    "timeLimitSec": {
+      "type": "integer",
+      "default": 60,
+      "patchLevel": "L1",
+      "description": "timeLimitSec"
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "Shooter",
+    "Collision"
+  ],
+  "resultContract": {
+    "successReason": "objective_met"
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "playable loop",
+      "NodeResult on end"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node4.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "path micro nodes"
+    ],
+    "poorFor": [
+      "long campaigns alone"
+    ]
+  },
+  "knownRisks": [],
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+}

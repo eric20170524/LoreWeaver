@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "id": "horde_intensity",
+  "title": "Horde Intensity",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "spawnMultiplier": {
+      "type": "integer",
+      "default": 3,
+      "patchLevel": "L1",
+      "description": "How many times base spawnWave is invoked."
+    },
+    "eliteChance": {
+      "type": "number",
+      "default": 0.15,
+      "patchLevel": "L1",
+      "description": "Chance to spawn elite brute."
+    }
+  },
+  "requiredCoreSystems": [
+    "Spawner"
+  ],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node7.js",
+    "minigame/perfectworld_dahuang/nodes/node3.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Survivor_horde modifier factory wired."
+}

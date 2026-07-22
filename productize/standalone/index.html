@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='27' fill='%23020617' stroke='%23e8b84a' stroke-width='4'/%3E%3Cpath d='M18 34h28M32 18v28' stroke='%23e8b84a' stroke-width='4'/%3E%3C/svg%3E" />
+    <title>LoreWeaver Standalone</title>
+  </head>
+  <body>
+    <main id="standalone-shell" aria-busy="true">
+      <div id="game-container" aria-label="LoreWeaver game canvas"></div>
+      <div id="boot-status" role="status">正在解析运行时规格…</div>
+      <div id="runtime-error" role="alert" hidden></div>
+      <nav id="host-controls" aria-label="独立运行控制">
+        <button id="pause-button" type="button">暂停</button>
+        <button id="mute-button" type="button">静音</button>
+        <button id="retry-button" type="button">重试</button>
+        <button id="fullscreen-button" type="button">全屏</button>
+        <button id="reset-save-button" type="button">重置存档</button>
+      </nav>
+      <output id="runtime-test-state" hidden aria-hidden="true"></output>
+    </main>
+    <script id="loreweaver-runtime-spec" type="application/json">__LOREWEAVER_RUNTIME_SPEC_JSON__</script>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

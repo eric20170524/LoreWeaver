@@ -38,7 +38,13 @@
       "powerCurve": "low_base_high_frequency",
       "counterplay": "需要持续走位贴近敌群获取经验"
     },
-    "description": "局内初始技能，保证任何节点都有稳定的基础输出。"
+    "description": "局内初始技能，保证任何节点都有稳定的基础输出。",
+    "gameplayTags": [
+      "starter",
+      "output",
+      "bone_script"
+    ],
+    "affectedNodeIds": []
   },
   {
     "id": "suan_ni_baoshu",
@@ -82,7 +88,14 @@
       "powerCurve": "area_scaling",
       "counterplay": "冷却较明显，面对高速精英需要搭配控制或身法"
     },
-    "description": "从范围怒啸成长到裂雷指，是早中期清怪和连锁爆发主轴。"
+    "description": "从范围怒啸成长到裂雷指，是早中期清怪和连锁爆发主轴。",
+    "gameplayTags": [
+      "output",
+      "aoe",
+      "thunder",
+      "beast_bone"
+    ],
+    "affectedNodeIds": []
   },
   {
     "id": "willow_guard",
@@ -128,7 +141,14 @@
       "powerCurve": "survival_consistency",
       "counterplay": "输出低于纯攻击宝术，依赖玩家保持节奏"
     },
-    "description": "把回复、护盾和缠绕纳入候选池，承接长时生存节点。"
+    "description": "把回复、护盾和缠绕纳入候选池，承接长时生存节点。",
+    "gameplayTags": [
+      "recovery",
+      "defense",
+      "control",
+      "support"
+    ],
+    "affectedNodeIds": []
   },
   {
     "id": "green_eagle_art",
@@ -170,7 +190,14 @@
       "powerCurve": "single_target_burst",
       "counterplay": "AOE 半径小，面对大群敌人效率低"
     },
-    "description": "提供定点爆发，补足早期对精英怪的处理能力。"
+    "description": "提供定点爆发，补足早期对精英怪的处理能力。",
+    "gameplayTags": [
+      "summon",
+      "targeted",
+      "burst",
+      "beast_bone"
+    ],
+    "affectedNodeIds": []
   },
   {
     "id": "kunpeng_art",
@@ -214,7 +241,14 @@
       "powerCurve": "mobility_plus_burst",
       "counterplay": "操作收益高，自动释放时需要通过冷却保持克制"
     },
-    "description": "把位移、无敌帧与扇形斩击引入中后期海战和守城节点。"
+    "description": "把位移、无敌帧与扇形斩击引入中后期海战和守城节点。",
+    "gameplayTags": [
+      "mobility",
+      "dodge",
+      "slash",
+      "control"
+    ],
+    "affectedNodeIds": []
   },
   {
     "id": "true_phoenix_art",
@@ -256,7 +290,14 @@
       "powerCurve": "close_range_sustain",
       "counterplay": "需要贴近敌群，受到走位和护盾能力制约"
     },
-    "description": "持续灼烧光环，服务毒雾求生、竞技场和高密度战场。"
+    "description": "持续灼烧光环，服务毒雾求生、竞技场和高密度战场。",
+    "gameplayTags": [
+      "aura",
+      "fire",
+      "sustain",
+      "pure_blood"
+    ],
+    "affectedNodeIds": []
   },
   {
     "id": "dual_pupil",
@@ -298,7 +339,14 @@
       "powerCurve": "line_damage",
       "counterplay": "方向性强，面对四面包围需搭配 AOE"
     },
-    "description": "高阶光束技能，强化 Boss 战与直线压制。"
+    "description": "高阶光束技能，强化 Boss 战与直线压制。",
+    "gameplayTags": [
+      "laser",
+      "boss",
+      "control",
+      "rival"
+    ],
+    "affectedNodeIds": []
   },
   {
     "id": "supreme_bone",
@@ -342,7 +390,14 @@
       "powerCurve": "long_cooldown_catharsis",
       "counterplay": "CD 长，失误时仍可能被精英潮压垮"
     },
-    "description": "后期终局宝术，提供变身爆发与清屏能力。"
+    "description": "后期终局宝术，提供变身爆发与清屏能力。",
+    "gameplayTags": [
+      "ultimate",
+      "burst",
+      "transform",
+      "destiny"
+    ],
+    "affectedNodeIds": []
   },
   {
     "id": "he_hua_zizai",
@@ -384,6 +439,13 @@
       "powerCurve": "scripted_power_spike",
       "counterplay": "仅终局阶段开放，作为 Boss 机制答案而非常规刷图技能"
     },
-    "description": "终极名场面技能，用未来身投影承担最后节点的爆发、减压与情绪兑现。"
+    "description": "终极名场面技能，用未来身投影承担最后节点的爆发、减压与情绪兑现。",
+    "gameplayTags": [
+      "finale",
+      "projection",
+      "transform",
+      "boss_answer"
+    ],
+    "affectedNodeIds": []
   }
 ]

@@ -32,8 +32,24 @@ export default class DefendCoreModifier extends GameplayModifier {
         const x = resolvePosition(this.config.x, context.adapter.world.width);
         const y = resolvePosition(this.config.y, context.adapter.world.height);
 
-        this.core = context.scene.add.circle(x, y, this.config.radius, this.config.color, this.config.alpha);
-        this.core.setStrokeStyle?.(3, this.config.color, 0.9);
+        const art = context.adapter.runtimeArt;
+        const artKey = art?.propKey?.('core_eye')
+            || art?.resolve?.('core')
+            || (context.scene.textures.exists('lw_art_core_eye') ? 'lw_art_core_eye' : null)
+            || (context.scene.textures.exists('core_eye') ? 'core_eye' : null);
+        if (artKey && context.scene.textures.exists(artKey)) {
+            this.core = context.scene.add.sprite(x, y, artKey);
+            this.core.setDisplaySize(this.config.radius * 2.4, this.config.radius * 2.4);
+            this.core.setAlpha(0.95);
+            this.core.setData?.('artSource', 'atlas');
+        } else {
+            this.core = context.scene.add.circle(x, y, this.config.radius, this.config.color, this.config.alpha);
+            this.core.setStrokeStyle?.(3, this.config.color, 0.9);
+            this.core.setData?.('artSource', 'primitive');
+        }
+        // expose x/y for targeting (sprite and circle both have them)
+        this.core.x = x;
+        this.core.y = y;
 
         if (this.config.aggro) {
             this.previousTargetSelector = context.adapter.enemyTargetSelector;

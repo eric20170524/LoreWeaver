@@ -78,7 +78,11 @@ export function createSaveV2Defaults(nowIso = new Date().toISOString()) {
         settings: {
             musicEnabled: true,
             sfxEnabled: true,
-            vibrationEnabled: true
+            vibrationEnabled: true,
+            reducedMotion: false,
+            screenShake: true,
+            damageNumbers: true,
+            highContrastCues: false
         },
         appliedResultIds: {},
         appliedAttemptIds: {},

@@ -3,7 +3,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DB_DIR = os.path.join(os.getcwd(), "data")
+# Always pin SQLite under LoreWeaver/data (same root as workspaces in main.py).
+# Do not use os.getcwd() — launching from monorepo root would create a second DB.
+LORE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DB_DIR = os.path.join(LORE_ROOT, "data")
 os.makedirs(DB_DIR, exist_ok=True)
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{os.path.join(DB_DIR, 'loreweaver.db')}"

@@ -1,6 +1,4 @@
-// nodes/node10.js
-// Node 10: 边荒帝关城墙防守场景 - 转换为 ES Modules
-
+// nodes/node10.js — 帝关：城墙与弩炮主动防守
 import Node1Scene from './node1.js';
 import UIHelper from '../utils/UIHelper.js';
 import AudioManager from '../utils/AudioManager.js';
@@ -14,130 +12,124 @@ export class Node10Scene extends Node1Scene {
     init(data) {
         super.init(data);
         this.wallHp = 100;
-        this.bossSpawned = false;
-        this.lastBallistaFire = 0;
+        this.ballistaAmmo = 12;
+        this.selectedLane = 1;
     }
 
     create() {
         super.create();
-
-        this.wallX = 600;
-
-        this.player.x = this.wallX + 150;
+        this.wallX = 700;
+        this.player.x = this.wallX + 140;
         this.player.y = this.height * 1.5;
 
-        const wallHeight = this.height * 3;
-        this.wallGraphics = this.add.graphics();
-        this.wallGraphics.fillStyle(0x555555, 0.9);
-        this.wallGraphics.fillRect(this.wallX - 20, 0, 40, wallHeight);
-        this.wallGraphics.lineStyle(4, 0x8b0000);
-        this.wallGraphics.strokeRect(this.wallX - 20, 0, 40, wallHeight);
+        this.wall = this.add.rectangle(this.wallX, this.height * 1.5, 36, this.height * 2.6, 0x555555, 0.95);
+        this.physics.add.existing(this.wall);
+        this.wall.body.setImmovable(true);
 
-        this.ballistas = [
-            { x: this.wallX, y: this.height * 1.0, active: false, label: null },
-            { x: this.wallX, y: this.height * 1.5, active: false, label: null },
-            { x: this.wallX, y: this.height * 2.0, active: false, label: null }
-        ];
-
-        this.ballistas.forEach((b, index) => {
-            const circle = this.add.circle(b.x, b.y, 25, 0xffd700, 0.8);
-            this.physics.add.existing(circle);
-            b.circle = circle;
-            b.label = this.add.text(b.x - 40, b.y - 45, `床弩 ${index+1}`, { fontSize: '16px', fill: '#ffd700' });
+        this.lanes = [this.height * 1.05, this.height * 1.5, this.height * 1.95];
+        this.ballistas = this.lanes.map((ly, i) => {
+            const b = this.add.rectangle(this.wallX + 10, ly, 28, 18, 0x888866).setStrokeStyle(2, 0xffee88);
+            b.setData('lane', i);
+            b.setData('cooldownUntil', 0);
+            return b;
         });
 
-        // HUD
-        this.hudText = this.uiScene.add.text(this.width / 2, 180, '城防程度: 100%', {
-            fontSize: '24px', fill: '#00ff00', fontStyle: 'bold'
+        this.hudText = this.uiScene.add.text(this.width / 2, 200, '城墙 100% · 弩箭 12 · 车道 2', {
+            fontSize: '15px', fill: '#ffd700', fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        this.arrows = this.physics.add.group();
-        this.physics.add.overlap(this.arrows, this.enemies, this.onArrowHitEnemy, null, this);
+        this.physics.add.overlap(this.enemies, this.wall, this.onEnemyHitWall, null, this);
+        this.input.keyboard?.on?.('keydown-ONE', () => { this.selectedLane = 0; });
+        this.input.keyboard?.on?.('keydown-TWO', () => { this.selectedLane = 1; });
+        this.input.keyboard?.on?.('keydown-THREE', () => { this.selectedLane = 2; });
+        this.input.keyboard?.on?.('keydown-F', () => this.fireBallista());
+        // Touch: tap ballista to fire that lane
+        this.ballistas.forEach((b) => {
+            b.setInteractive({ useHandCursor: true });
+            b.on('pointerdown', () => {
+                this.selectedLane = b.getData('lane');
+                this.fireBallista();
+            });
+        });
+        this.bossSpawned = false;
+        this.publishNodeTestState();
+    }
+
+    publishNodeTestState(overrides = {}) {
+        super.publishNodeTestState({
+            wallHp: this.wallHp || 0,
+            ballistaAmmo: this.ballistaAmmo || 0,
+            selectedLane: this.selectedLane || 0,
+            objective: 'hold_wall',
+            ...overrides
+        });
+    }
+
+    fireBallista() {
+        if (this.isGameOver || this.isPaused) return;
+        if ((this.ballistaAmmo || 0) <= 0) {
+            UIHelper.showFloatText(this, this.player.x, this.player.y - 40, '弩箭耗尽', '#ff8888', 700);
+            return;
+        }
+        const lane = this.selectedLane || 0;
+        const b = this.ballistas[lane];
+        if (!b) return;
+        if (this.time.now < (b.getData('cooldownUntil') || 0)) return;
+        b.setData('cooldownUntil', this.time.now + 700);
+        this.ballistaAmmo -= 1;
+        AudioManager.playSfx?.('ballista');
+        const bolt = this.add.rectangle(b.x + 20, b.y, 24, 6, 0xffee88);
+        this.physics.add.existing(bolt);
+        bolt.body.setVelocityX(520);
+        this.time.delayedCall(1600, () => bolt.destroy?.());
+        this.physics.add.overlap(bolt, this.enemies, (bt, enemy) => {
+            if (!enemy.active) return;
+            this.damageEnemy(enemy, Math.max(18, Math.floor((this.playerStats?.baseAtk || 15) * 1.8)));
+            bt.destroy?.();
+        });
+        this.hudText?.setText(`城墙 ${Math.floor(this.wallHp)}% · 弩箭 ${this.ballistaAmmo} · 车道 ${lane + 1} (1/2/3+F)`);
+        this.publishNodeTestState();
+    }
+
+    onEnemyHitWall(enemy, wall) {
+        if (!enemy.active) return;
+        const now = this.time.now;
+        if (now - (wall.getData('lastHit') || 0) < 500) return;
+        wall.setData('lastHit', now);
+        this.wallHp = Math.max(0, this.wallHp - 3);
+        AudioManager.playSfx?.('wall_hit');
+        enemy.setData('hp', (enemy.getData('hp') || 1) - 8);
+        if (enemy.getData('hp') <= 0) enemy.destroy();
+        this.hudText?.setText(`城墙 ${Math.floor(this.wallHp)}% · 弩箭 ${this.ballistaAmmo} · 车道 ${(this.selectedLane || 0) + 1}`);
+        if (this.wallHp <= 0) this.endGame(false, '城墙失守', 'failed');
+        this.publishNodeTestState();
     }
 
     update(time, delta) {
-        if (this.isGameOver || this.isPaused) return;
-
         super.update(time, delta);
-
-        this.enemies.getChildren().forEach(enemy => {
-            enemy.body.setVelocity(-enemy.getData('speed'), 0);
-
-            if (enemy.x <= this.wallX) {
-                enemy.destroy();
-                this.wallHp -= 5;
-                this.hudText.setText(`城防程度: ${Math.max(this.wallHp, 0)}%`);
-                UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "城防受损！防御度-5%", "#ff0000", 1500);
-                this.cameras.main.shake(100, 0.01);
-                AudioManager.playHit();
-                
-                if (this.wallHp <= 0) {
-                    this.endGame(false);
-                }
+        // Siege enemies prefer rushing the wall x.
+        (this.enemies?.getChildren?.() || []).forEach((e) => {
+            if (!e.active || e.getData('isBoss')) return;
+            if (e.x > this.wallX + 40) {
+                e.setData('targeting', 'wall');
+                this.physics.moveTo(e, this.wallX, e.y, e.getData('speed') || 70);
             }
-        });
-
-        if (time - this.lastBallistaFire >= 1500) {
-            let fired = false;
-            this.ballistas.forEach(b => {
-                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, b.x, b.y);
-                if (dist < 100) {
-                    this.fireBallista(b);
-                    fired = true;
-                }
-            });
-            if (fired) {
-                this.lastBallistaFire = time;
-            }
-        }
-    }
-
-    fireBallista(b) {
-        const arrow = this.add.rectangle(b.x + 30, b.y, 80, 16, 0xffa500);
-        this.physics.add.existing(arrow);
-        arrow.body.setVelocity(500, 0); 
-        this.arrows.add(arrow);
-
-        UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "床弩发射！破甲巨箭！", "#ffa500", 1000);
-        AudioManager.playClick();
-
-        this.time.delayedCall(2000, () => {
-            if (arrow.active) arrow.destroy();
         });
     }
 
-    onArrowHitEnemy(arrow, enemy) {
-        const dmg = 80 * (this.playerStats.baseAtk / 10);
-        this.damageEnemy(enemy, dmg);
+    onCampaignSecond(t) {
+        if (t > 0 && t % 25 === 0) this.ballistaAmmo = Math.min(20, this.ballistaAmmo + 3);
     }
 
     onSecondTick() {
-        if (this.isGameOver || this.isPaused) return;
         super.onSecondTick();
-
-        if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.8) && !this.bossSpawned) {
-            this.spawnBoss();
-            this.bossSpawned = true;
-        }
     }
 
     spawnBoss() {
-        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId];
-        this.createRuntimeEnemy(this.nodeConfig.bossId, this.wallX + 800, this.height * 1.5, {
-            hp: enemyData.hp * 1.5,
-            speed: enemyData.speed,
-            exp: enemyData.exp,
-            lootList: enemyData.lootList,
-            scaleMultiplier: 1.25
-        });
-        
-        const txt = this.add.text(this.player.x, this.player.y - 100, '敌军统领带队冲击帝关！死守！', { fontSize: '28px', fill: '#ff0000', fontStyle: 'bold' }).setOrigin(0.5);
-        this.tweens.add({
-            targets: txt,
-            y: this.player.y - 150,
-            alpha: 0,
-            duration: 3000,
-            onComplete: () => txt.destroy()
+        return super.spawnBoss({
+            name: ENEMY_REGISTRY[this.nodeConfig.bossId]?.name || '攻城统领',
+            phases: 3,
+            scaleMultiplier: 2.3
         });
     }
 }

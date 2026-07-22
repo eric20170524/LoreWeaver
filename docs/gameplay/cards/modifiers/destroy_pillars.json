@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1.0",
+  "id": "destroy_pillars",
+  "title": "Destroy Pillars",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "pillarCount": {
+      "type": "integer",
+      "default": 4,
+      "patchLevel": "L1",
+      "description": "Number of pillars."
+    },
+    "pillarHp": {
+      "type": "integer",
+      "default": 10,
+      "patchLevel": "L1",
+      "description": "HP per pillar."
+    }
+  },
+  "requiredCoreSystems": [
+    "ObjectiveHp"
+  ],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node8.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Survivor_horde modifier factory wired."
+}

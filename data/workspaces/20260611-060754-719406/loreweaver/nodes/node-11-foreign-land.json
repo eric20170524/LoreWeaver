@@ -6,7 +6,7 @@
     "异域至尊：狂妄的后生，这里是异域！",
     "星骁：异域又如何？照样杀穿！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "sequence_synthesis",
   "rewards": "气血精华 +500000，纯血 +30~50，不朽物质",
   "goalValue": 300,
   "resourceMultiplier": 38,
@@ -26,7 +26,26 @@
           30,
           50
         ]
-      }
+      },
+      "durationSec": 300,
+      "goalValue": 300,
+      "difficulty": 11,
+      "victoryMode": "objective",
+      "enemyPool": [],
+      "envKey": "env_bg_void",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node11_gauntlet",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme_late",
+      "runtimeCardId": "sequence_synthesis",
+      "shellRetreat": true
     },
     "patchLevel": "L2"
   },
@@ -37,6 +56,7 @@
       "bone_script_mastery",
       "pure_blood_trial"
     ],
+    "rewardUnlocks": [],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
@@ -46,7 +66,6 @@
       "true_phoenix_art",
       "supreme_bone"
     ],
-    "rewardUnlocks": [],
     "notes": "首通意图: reinforce_existing(dual_pupil,true_phoenix_art,supreme_bone); 裂隙边境大战为终局前综合压测，读取全部已解锁宝术与主干被动。"
   }
 }

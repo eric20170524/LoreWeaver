@@ -1,0 +1,418 @@
+{
+  "schemaVersion": "loreweaver.department-agents.v1",
+  "title": "LoreWeaver Production Department Agents",
+  "description": "Film-prep style departments for game production. Each department is an independent agent with artifact ownership and handoff rules.",
+  "stages": [
+    {
+      "id": "import_source",
+      "title": "导入题材",
+      "titleEn": "Import Source"
+    },
+    {
+      "id": "production_prep",
+      "title": "制作筹备",
+      "titleEn": "Production Prep"
+    },
+    {
+      "id": "asset_confirm",
+      "title": "资产确认",
+      "titleEn": "Asset Confirm"
+    },
+    {
+      "id": "runtime_stage",
+      "title": "运行就绪",
+      "titleEn": "Runtime Ready"
+    }
+  ],
+  "departments": [
+    {
+      "id": "director",
+      "title": "导演组",
+      "titleEn": "Director / Orchestrator",
+      "avatar": "🎬",
+      "group": "orchestration",
+      "legacyAgentIds": [],
+      "owns": [
+        "loreweaver/departments/state.json",
+        "pipeline stage progress"
+      ],
+      "defaultPatchLevels": [],
+      "dependsOn": [],
+      "systemPromptRole": "Schedule departments, aggregate confirmations, never author design content.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "world_builder"
+    },
+    {
+      "id": "world",
+      "title": "世界观组",
+      "titleEn": "World",
+      "avatar": "🧬",
+      "group": "design",
+      "legacyAgentIds": [
+        "world_builder"
+      ],
+      "pipelineSteps": [
+        "1.1"
+      ],
+      "owns": [
+        "title",
+        "themeColor",
+        "economy",
+        "progressionSystems",
+        "pipeline_dna"
+      ],
+      "defaultPatchLevels": [
+        "L0",
+        "L1",
+        "L2"
+      ],
+      "dependsOn": [],
+      "systemPromptRole": "Extract IP DNA, economy, realms, visual/audio style seeds.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "world_builder"
+    },
+    {
+      "id": "narrative",
+      "title": "叙事组",
+      "titleEn": "Narrative",
+      "avatar": "📜",
+      "group": "design",
+      "legacyAgentIds": [
+        "narrative"
+      ],
+      "pipelineSteps": [
+        "1.2"
+      ],
+      "owns": [
+        "nodes[].title",
+        "nodes[].intro",
+        "nodes[].taunts",
+        "nodes[].planning.notes"
+      ],
+      "defaultPatchLevels": [
+        "L0",
+        "L1"
+      ],
+      "dependsOn": [
+        "world"
+      ],
+      "systemPromptRole": "Author N-node chronology, stakes, boss lines without rewriting gameplay contracts.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "narrative"
+    },
+    {
+      "id": "gameplay",
+      "title": "玩法组",
+      "titleEn": "Gameplay",
+      "avatar": "🃏",
+      "group": "design",
+      "legacyAgentIds": [
+        "narrative"
+      ],
+      "chatAgentId": "narrative",
+      "pipelineSteps": [
+        "1.2",
+        "2.3",
+        "3.1"
+      ],
+      "owns": [
+        "docs/gameplay_cards",
+        "nodes[].gameplay",
+        "gameplay knobs/modifiers"
+      ],
+      "defaultPatchLevels": [
+        "L0",
+        "L1",
+        "L2"
+      ],
+      "dependsOn": [
+        "world",
+        "narrative"
+      ],
+      "systemPromptRole": "Assign gameplay cards and modifiers; patch knobs within card schema.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ]
+    },
+    {
+      "id": "ability",
+      "title": "能力组",
+      "titleEn": "Ability Runtime",
+      "avatar": "✨",
+      "group": "design",
+      "legacyAgentIds": [],
+      "pipelineSteps": [
+        "1.1",
+        "2.3",
+        "3.1"
+      ],
+      "owns": [
+        "abilityCatalog",
+        "passiveCatalog",
+        "runtimeSkillIds",
+        "ability VFX/voice bindings"
+      ],
+      "defaultPatchLevels": [
+        "L0",
+        "L1",
+        "L2"
+      ],
+      "dependsOn": [
+        "world",
+        "gameplay"
+      ],
+      "systemPromptRole": "Define abilities/passives and runtime skill ids aligned to nodes.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "world_builder"
+    },
+    {
+      "id": "architecture",
+      "title": "架构组",
+      "titleEn": "Architecture",
+      "avatar": "🛠️",
+      "group": "engineering",
+      "legacyAgentIds": [
+        "sandbox"
+      ],
+      "pipelineSteps": [
+        "2.1",
+        "2.2",
+        "2.3"
+      ],
+      "owns": [
+        "shell contracts",
+        "registry shapes",
+        "runtime feature pack lists"
+      ],
+      "defaultPatchLevels": [
+        "L0",
+        "L1"
+      ],
+      "dependsOn": [
+        "gameplay",
+        "ability"
+      ],
+      "systemPromptRole": "Keep host shell, state, and RFP contracts coherent; no content invention.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "sandbox"
+    },
+    {
+      "id": "art",
+      "title": "美术组",
+      "titleEn": "Art",
+      "avatar": "🎨",
+      "group": "assets",
+      "legacyAgentIds": [],
+      "pipelineSteps": [
+        "2.3",
+        "3.2"
+      ],
+      "owns": [
+        "asset-pipeline.artAssets",
+        "imagegen plans",
+        "RuntimeArtBinder bindings"
+      ],
+      "defaultPatchLevels": [
+        "L0",
+        "L1",
+        "L2"
+      ],
+      "dependsOn": [
+        "world",
+        "gameplay",
+        "ability"
+      ],
+      "systemPromptRole": "Plan and verify atlas keys, env/prop bindings, art coverage gates.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "code_foundry"
+    },
+    {
+      "id": "audio",
+      "title": "音频组",
+      "titleEn": "Audio",
+      "avatar": "🔊",
+      "group": "assets",
+      "legacyAgentIds": [],
+      "pipelineSteps": [
+        "2.3",
+        "3.2"
+      ],
+      "owns": [
+        "asset-pipeline.audioAssets",
+        "audio cues",
+        "credits"
+      ],
+      "defaultPatchLevels": [
+        "L0",
+        "L1",
+        "L2"
+      ],
+      "dependsOn": [
+        "world",
+        "gameplay",
+        "ability"
+      ],
+      "systemPromptRole": "Plan BGM/SFX/voice manifests and channel coverage matrix.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "code_foundry"
+    },
+    {
+      "id": "code",
+      "title": "代码组",
+      "titleEn": "Code Foundry",
+      "avatar": "⚙️",
+      "group": "engineering",
+      "legacyAgentIds": [
+        "code_foundry"
+      ],
+      "pipelineSteps": [
+        "3.1",
+        "3.2"
+      ],
+      "owns": [
+        "adapter wiring",
+        "node implementation patches",
+        "juice hooks"
+      ],
+      "defaultPatchLevels": [
+        "L1",
+        "L2"
+      ],
+      "dependsOn": [
+        "architecture",
+        "gameplay",
+        "art",
+        "audio",
+        "ability"
+      ],
+      "systemPromptRole": "Implement local runtime wiring within L1-L2; escalate L3 adapters.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "code_foundry"
+    },
+    {
+      "id": "qa",
+      "title": "质检组",
+      "titleEn": "QA / Auditor",
+      "avatar": "👁️",
+      "group": "verification",
+      "legacyAgentIds": [
+        "auditor"
+      ],
+      "pipelineSteps": [
+        "3.3"
+      ],
+      "owns": [
+        "build/e2e/VLM/scene_hygiene/art coverage reports"
+      ],
+      "defaultPatchLevels": [],
+      "dependsOn": [
+        "code",
+        "art",
+        "audio",
+        "gameplay"
+      ],
+      "systemPromptRole": "Run gates, score departments, open reject handoffs; do not lower pass bars.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "auditor"
+    },
+    {
+      "id": "compliance",
+      "title": "合规组",
+      "titleEn": "Compliance",
+      "avatar": "⚖️",
+      "group": "verification",
+      "legacyAgentIds": [
+        "auditor"
+      ],
+      "pipelineSteps": [
+        "3.3",
+        "export"
+      ],
+      "owns": [
+        "content safety scan",
+        "export checklist",
+        "de-theme review"
+      ],
+      "defaultPatchLevels": [
+        "L0",
+        "L1"
+      ],
+      "dependsOn": [
+        "narrative",
+        "art",
+        "audio",
+        "qa"
+      ],
+      "systemPromptRole": "Block public export on copyright/sensitive content; own export sign-off.",
+      "uiTabs": [
+        "prepNotes",
+        "qaReport",
+        "handoffs"
+      ],
+      "chatAgentId": "auditor"
+    }
+  ],
+  "handoffTypes": [
+    "request",
+    "ack",
+    "reject",
+    "escalate"
+  ],
+  "departmentStatuses": [
+    "idle",
+    "drafting",
+    "ready_for_review",
+    "confirmed",
+    "blocked",
+    "stale"
+  ],
+  "unitTypes": [
+    "campaign",
+    "node",
+    "card",
+    "export"
+  ],
+  "autoPrepPolicy": {
+    "defaultStopAt": "ready_for_review",
+    "requireHumanConfirm": true,
+    "minQaScoreToReady": 70
+  }
+}

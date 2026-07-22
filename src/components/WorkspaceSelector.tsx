@@ -25,14 +25,16 @@ const WORKSPACE_COPY = {
     theme: "主题",
     modifiedAt: "修改于",
     importTitle: "导入已有项目目录",
-    importPathPlaceholder: "粘贴包含 manifest.json 的本地目录路径",
+    importFromWorkspaces: "从 data/workspaces 选择",
+    importPathPlaceholder: "默认从 LoreWeaver/data/workspaces 选择；也可粘贴其他路径",
     importNamePlaceholder: "显示名（可选）",
-    importHelp: "导入会复制到隔离工作区，不会修改原目录。",
-    chooseFolder: "选择目录",
+    importHelp: "默认从 LoreWeaver/data/workspaces 下已有项目目录选择并打开；若选该目录内项目则原地注册不复制。外部目录才会复制进隔离工作区。",
+    chooseFolder: "浏览目录",
     choosingFolder: "选择中",
-    chooseFolderFailed: "无法打开本地目录选择器，请手动粘贴路径。",
-    importAction: "导入并继续",
-    importing: "导入中",
+    chooseFolderFailed: "无法打开本地目录选择器，请从列表选择或手动粘贴路径。",
+    importAction: "导入 / 打开",
+    importing: "处理中",
+    noCandidates: "data/workspaces 下暂无项目",
     createTitle: "新建隔离工作区",
     namePlaceholder: "工作区标识 (e.g. 遮天同人)",
     themePlaceholder: "设定主轴 (e.g. 九龙拉棺，星空古路)",
@@ -46,14 +48,16 @@ const WORKSPACE_COPY = {
     theme: "Theme",
     modifiedAt: "Modified",
     importTitle: "Import Existing Project Folder",
-    importPathPlaceholder: "Paste a local folder path containing manifest.json",
+    importFromWorkspaces: "Pick from data/workspaces",
+    importPathPlaceholder: "Defaults to LoreWeaver/data/workspaces; or paste another path",
     importNamePlaceholder: "Display name (optional)",
-    importHelp: "Import copies it into an isolated workspace and leaves the original folder unchanged.",
-    chooseFolder: "Choose Folder",
+    importHelp: "By default pick an existing project under LoreWeaver/data/workspaces (open in place). External folders are copied into an isolated workspace.",
+    chooseFolder: "Browse",
     choosingFolder: "Choosing",
-    chooseFolderFailed: "Could not open the local folder picker. Paste the path manually.",
-    importAction: "Import and Continue",
-    importing: "Importing",
+    chooseFolderFailed: "Could not open the folder picker. Pick from the list or paste a path.",
+    importAction: "Import / Open",
+    importing: "Working",
+    noCandidates: "No projects under data/workspaces yet",
     createTitle: "Create Isolated Workspace",
     namePlaceholder: "Workspace name (e.g. Star Archive)",
     themePlaceholder: "Theme axis (e.g. academy, trial, relics)",
@@ -61,6 +65,16 @@ const WORKSPACE_COPY = {
     requestFailed: "Request failed"
   }
 } as const;
+
+type ImportCandidate = {
+  id: string;
+  name: string;
+  theme: string;
+  path: string;
+  relativePath?: string;
+  hasManifest?: boolean;
+  lastModifiedAt?: string;
+};
 
 type WorkspaceApiMeta = WorkspaceMeta & {
   created_at?: string;
@@ -77,6 +91,18 @@ function normalizeWorkspace(ws: WorkspaceApiMeta): WorkspaceMeta {
   };
 }
 
+async function readJsonResponse(res: Response) {
+  const text = await res.text();
+  if (!text.trim()) {
+    throw new Error(`Empty response from server (${res.status})`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`Invalid JSON response from server (${res.status}): ${text.slice(0, 160)}`);
+  }
+}
+
 export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale = "zh" }: WorkspaceSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceMeta[]>([]);
@@ -88,9 +114,65 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
   const [importPath, setImportPath] = useState('');
   const [importName, setImportName] = useState('');
   const [importError, setImportError] = useState('');
+  const [importCandidates, setImportCandidates] = useState<ImportCandidate[]>([]);
+  const [selectedCandidateId, setSelectedCandidateId] = useState('');
+  const [workspacesRoot, setWorkspacesRoot] = useState('data/workspaces');
   const copy = WORKSPACE_COPY[locale];
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId);
+
+  const applyCandidateList = (list: ImportCandidate[], rootLabel = 'data/workspaces') => {
+    setImportCandidates(list);
+    setWorkspacesRoot(rootLabel);
+    if (list.length > 0) {
+      setSelectedCandidateId((prev) => {
+        if (prev && list.some((c) => c.id === prev)) return prev;
+        return list[0].id;
+      });
+      setImportPath((prev) => prev || list[0].path || list[0].id);
+      setImportName((prev) => prev || list[0].name || '');
+    }
+  };
+
+  const loadImportCandidates = async (lobbyFallback: WorkspaceMeta[] = []) => {
+    setImportError('');
+    try {
+      const res = await fetch('/api/workspaces/import-candidates');
+      // Vite without proxy may return HTML — treat as failure and fall back.
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        throw new Error(`import-candidates unavailable (${res.status})`);
+      }
+      const json = await readJsonResponse(res);
+      if (json.success && json.data) {
+        const list: ImportCandidate[] = json.data.candidates || [];
+        if (list.length > 0) {
+          applyCandidateList(list, json.data.relativeRoot || json.data.root || 'data/workspaces');
+          return;
+        }
+      }
+      throw new Error('empty candidates');
+    } catch (e) {
+      console.warn('import-candidates failed, falling back to lobby list', e);
+      // Fallback: reuse lobby workspaces (same folders under data/workspaces once registered).
+      const fallback: ImportCandidate[] = (lobbyFallback.length ? lobbyFallback : workspaces)
+        .filter((w) => w.id && w.id !== 'static-export')
+        .map((w) => ({
+          id: w.id,
+          name: w.name,
+          theme: w.theme,
+          path: w.id, // import via workspaceId
+          relativePath: `data/workspaces/${w.id}`,
+          hasManifest: true,
+          lastModifiedAt: w.lastModifiedAt
+        }));
+      if (fallback.length > 0) {
+        applyCandidateList(fallback, 'data/workspaces');
+      } else {
+        setImportCandidates([]);
+      }
+    }
+  };
 
   const loadWorkspaces = async () => {
     if (typeof window !== "undefined" && (window as any).__LOREWEAVER_EMBEDDED_SPEC__) {
@@ -108,10 +190,14 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
       const res = await fetch('/api/workspaces');
       const json = await res.json();
       if (json.success) {
-        setWorkspaces(json.data.map(normalizeWorkspace));
+        const list = json.data.map(normalizeWorkspace);
+        setWorkspaces(list);
+        // Keep import dropdown in sync even if dedicated candidates API is down.
+        await loadImportCandidates(list);
       }
     } catch (e) {
       console.error('Failed to load workspaces', e);
+      await loadImportCandidates([]);
     }
   };
 
@@ -144,14 +230,16 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
   };
 
   const handleChooseDirectory = async () => {
-    setIsChoosingDirectory(true);
     setImportError('');
+    setIsChoosingDirectory(true);
     try {
+      // Default picker root: LoreWeaver/data/workspaces
       const res = await fetch('/api/system/select-directory', {
         method: 'POST',
-        headers: { 'Content-type': 'application/json' }
+        headers: { 'Content-type': 'application/json' },
+        body: JSON.stringify({ defaultPath: workspacesRoot.includes('/') && !workspacesRoot.startsWith('data/') ? workspacesRoot : undefined })
       });
-      const json = await res.json().catch(() => ({}));
+      const json = await readJsonResponse(res);
       if (!res.ok) {
         throw new Error(json.detail || json.error || copy.chooseFolderFailed);
       }
@@ -163,6 +251,9 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
         throw new Error(copy.chooseFolderFailed);
       }
       setImportPath(selectedPath);
+      // Sync dropdown if the chosen path matches a known candidate
+      const match = importCandidates.find((c) => c.path === selectedPath || selectedPath.endsWith(`/${c.id}`) || selectedPath.endsWith(`\\${c.id}`));
+      setSelectedCandidateId(match?.id || '');
     } catch (e: any) {
       setImportError(e.message || copy.chooseFolderFailed);
       console.error('Choose directory error', e);
@@ -171,21 +262,44 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
     }
   };
 
+  const handleSelectCandidate = (candidateId: string) => {
+    setSelectedCandidateId(candidateId);
+    const found = importCandidates.find((c) => c.id === candidateId);
+    if (found) {
+      setImportPath(found.path);
+      if (!importName.trim()) setImportName(found.name);
+    }
+  };
+
   const handleImport = async () => {
     const sourcePath = importPath.trim();
-    if (!sourcePath) return;
+    const candidate = importCandidates.find((c) => c.id === selectedCandidateId);
+    // Prefer workspaceId when picking from data/workspaces list (most reliable).
+    const workspaceId = candidate?.id
+      || (selectedCandidateId || (sourcePath && !sourcePath.includes('/') && !sourcePath.includes('\\') ? sourcePath : ''));
+    if (!sourcePath && !workspaceId) return;
     setIsImporting(true);
     setImportError('');
     try {
+      const body: Record<string, string> = {
+        name: importName.trim() || candidate?.name || undefined as any
+      };
+      if (workspaceId && candidate) {
+        body.workspaceId = workspaceId;
+      } else if (workspaceId && !sourcePath.includes('/') && !sourcePath.includes('\\') && !sourcePath.startsWith('.')) {
+        body.workspaceId = workspaceId;
+      } else {
+        body.sourcePath = sourcePath;
+      }
+      // Clean undefined name
+      if (!body.name) delete body.name;
+
       const res = await fetch('/api/workspaces/import', {
         method: 'POST',
         headers: { 'Content-type': 'application/json' },
-        body: JSON.stringify({
-          sourcePath,
-          name: importName.trim() || undefined
-        })
+        body: JSON.stringify(body)
       });
-      const json = await res.json();
+      const json = await readJsonResponse(res);
       if (!res.ok || !json.success) {
         throw new Error(json.detail || json.error || copy.requestFailed);
       }
@@ -260,10 +374,32 @@ export function WorkspaceSelector({ activeWorkspaceId, onSelectWorkspace, locale
                 <FolderOpen className="w-3.5 h-3.5" />
                 {copy.importTitle}
               </span>
+              <label className="text-3xs text-slate-500">{copy.importFromWorkspaces}</label>
+              {importCandidates.length === 0 ? (
+                <p className="text-3xs text-slate-500 py-1">
+                  {copy.noCandidates}
+                  {workspaces.length > 0 ? ` · lobby ${workspaces.length}` : ''}
+                </p>
+              ) : (
+                <select
+                  value={selectedCandidateId}
+                  onChange={(e) => handleSelectCandidate(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-cyan-500"
+                >
+                  {importCandidates.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} — {c.id}
+                    </option>
+                  ))}
+                </select>
+              )}
               <div className="flex gap-2">
                 <input
                   value={importPath}
-                  onChange={e => setImportPath(e.target.value)}
+                  onChange={e => {
+                    setImportPath(e.target.value);
+                    setSelectedCandidateId('');
+                  }}
                   placeholder={copy.importPathPlaceholder}
                   className="min-w-0 flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded px-2 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-cyan-500"
                 />

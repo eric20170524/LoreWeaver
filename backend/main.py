@@ -24,13 +24,15 @@ from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from .database import engine, Base, get_db
-from .models import Workspace, Job
+from .models import Workspace, Job, DepartmentChatMessage
 from .schemas import (
     WorkspaceCreate, WorkspaceImport, WorkspaceResponse, WorkspaceListResponse,
-    JobResponse, FeedbackRequest, ApproveRequest, JobModel
+    JobResponse, FeedbackRequest, ApproveRequest, JobModel, SelectDirectoryRequest
 )
 from .theme_presets import get_procedural_preset
 from .agents import WorldBuilderAgent
+from .llm_client import llm_status, imagegen_status
+from .visual_audit import run_visual_critic, vlm_probe, find_codex_cli
 
 # Initialize database schema
 Base.metadata.create_all(bind=engine)
@@ -51,10 +53,78 @@ REPO_ROOT = os.path.abspath(os.path.join(LORE_ROOT, ".."))
 MINIGAME_CORE_ROOT = os.path.join(LORE_ROOT, "minigame_master", "core")
 if not os.path.exists(MINIGAME_CORE_ROOT):
     MINIGAME_CORE_ROOT = os.path.join(REPO_ROOT, "minigame_master", "core")
-REPORTS_DIR = os.path.join(LORE_ROOT, "workflow", "reports")
+REPORTS_DIR = os.path.join(LORE_ROOT, "capabilities", "reports")
 DATA_DIR = os.path.join(LORE_ROOT, "data")
 WORKSPACES_DIR = os.path.join(DATA_DIR, "workspaces")
+NODE_SMOKE_SCRIPT = os.path.join(LORE_ROOT, "capabilities", "verification", "run_node_smoke.mjs")
 os.makedirs(WORKSPACES_DIR, exist_ok=True)
+
+
+def run_node_smoke(ws_id: str, wall_ms: int = 3000, simulated_sec: int = 10) -> dict:
+    """
+    QA-owned per-node smoke (enter / spawnOrProgress / retreat).
+    Writes workflow/reports/node_smoke_latest.json.
+    Ownership: gate=qa, runtime=code, contract=gameplay.
+    """
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+    out_path = os.path.join(REPORTS_DIR, "node_smoke_latest.json")
+    if not os.path.isfile(NODE_SMOKE_SCRIPT):
+        report = {
+            "schemaVersion": "loreweaver.node-smoke.v1",
+            "status": "failed",
+            "score": 0,
+            "error": f"missing script {NODE_SMOKE_SCRIPT}",
+            "owners": {"gate": "qa", "runtime": "code", "contract": "gameplay"},
+        }
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        return report
+
+    cmd = [
+        "node",
+        NODE_SMOKE_SCRIPT,
+        f"--workspace={ws_id}",
+        f"--wall-ms={int(wall_ms)}",
+        f"--simulated-sec={int(simulated_sec)}",
+        f"--out={out_path}",
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=LORE_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=max(60, int(wall_ms) * 14 // 1000 + 30),
+        )
+        if os.path.isfile(out_path):
+            with open(out_path, "r", encoding="utf-8") as f:
+                report = json.load(f)
+            report["exitCode"] = proc.returncode
+            if proc.stderr:
+                report["stderr"] = (proc.stderr or "")[-1500:]
+            return report
+        return {
+            "status": "failed",
+            "score": 0,
+            "error": "node_smoke produced no report",
+            "stdout": (proc.stdout or "")[-800:],
+            "stderr": (proc.stderr or "")[-800:],
+            "exitCode": proc.returncode,
+        }
+    except Exception as exc:
+        report = {
+            "schemaVersion": "loreweaver.node-smoke.v1",
+            "status": "failed",
+            "score": 0,
+            "error": str(exc),
+            "owners": {"gate": "qa", "runtime": "code", "contract": "gameplay"},
+        }
+        try:
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(report, f, ensure_ascii=False, indent=2)
+        except OSError:
+            pass
+        return report
 
 # Helper: physical workspace directory path
 def get_ws_path(ws_id: str) -> str:
@@ -72,7 +142,7 @@ def resolve_existing_ws_path(ws_id: str) -> str:
     return path
 
 def safe_export_name(value: str, fallback: str = "loreweaver-export") -> str:
-    cleaned = "".join(ch if (ch.isascii() and ch.isalnum()) or ch in ("-", "_") else "-" for ch in value.strip())
+    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in value.strip())
     cleaned = "-".join(part for part in cleaned.split("-") if part)
     return cleaned[:80] or fallback
 
@@ -112,12 +182,6 @@ def read_optional_workspace_meta(source_path: str) -> dict:
     except Exception:
         return {}
 
-def infer_imported_workspace_fields(payload: WorkspaceImport, source_path: str, manifest: dict) -> tuple[str, str]:
-    meta = read_optional_workspace_meta(source_path)
-    name = (payload.name or meta.get("name") or manifest.get("title") or os.path.basename(source_path)).strip()
-    theme = (payload.theme or meta.get("theme") or manifest.get("title") or "Imported LoreWeaver project").strip()
-    return name or "Imported LoreWeaver project", theme or "Imported LoreWeaver project"
-
 def workspace_copy_ignore(directory: str, names: list[str]) -> set[str]:
     skip_names = {"node_modules", "__pycache__", ".git", "dist", ".DS_Store"}
     ignored = set()
@@ -129,6 +193,192 @@ def workspace_copy_ignore(directory: str, names: list[str]) -> set[str]:
             ignored.add(name)
     return ignored
 
+def is_workspace_project_dir(source_path: str) -> bool:
+    """A project dir under data/workspaces needs one of the known entry markers."""
+    markers = ("manifest.json", "package.json", "index.html", "meta.json", "loreweaver/project.json")
+    return any(os.path.exists(os.path.join(source_path, marker)) for marker in markers)
+
+def validate_workspace_manifest(source_path: str, *, require_manifest: bool = True) -> dict:
+    manifest_path = os.path.join(source_path, "manifest.json")
+    if not os.path.isfile(manifest_path):
+        if require_manifest:
+            raise HTTPException(status_code=422, detail="Selected directory must contain manifest.json")
+        # Soft project: still importable when already under data/workspaces
+        return {}
+
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+        if not isinstance(manifest, dict):
+            raise ValueError("manifest.json must contain a JSON object")
+        return manifest
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid manifest.json: {exc}") from exc
+
+def path_is_under_workspaces(source_path: str) -> bool:
+    root = os.path.abspath(WORKSPACES_DIR)
+    candidate = os.path.abspath(source_path)
+    try:
+        return os.path.commonpath([root, candidate]) == root and candidate != root
+    except ValueError:
+        return False
+
+def workspace_id_if_local_project(source_path: str) -> Optional[str]:
+    """If source is a direct child of data/workspaces, return that folder name as id."""
+    if not path_is_under_workspaces(source_path):
+        return None
+    root = os.path.abspath(WORKSPACES_DIR)
+    candidate = os.path.abspath(source_path)
+    rel = os.path.relpath(candidate, root)
+    if os.sep in rel or rel in (".", ".."):
+        return None
+    return rel
+
+def list_workspace_import_candidates() -> list[dict]:
+    """Scan LoreWeaver/data/workspaces for existing project directories (default import pool)."""
+    os.makedirs(WORKSPACES_DIR, exist_ok=True)
+    candidates: list[dict] = []
+    for entry in os.listdir(WORKSPACES_DIR):
+        full = os.path.join(WORKSPACES_DIR, entry)
+        if not os.path.isdir(full) or entry.startswith("."):
+            continue
+        if not is_workspace_project_dir(full):
+            continue
+        meta = read_optional_workspace_meta(full)
+        manifest: dict = {}
+        manifest_path = os.path.join(full, "manifest.json")
+        if os.path.isfile(manifest_path):
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as mf:
+                    loaded = json.load(mf)
+                    if isinstance(loaded, dict):
+                        manifest = loaded
+            except Exception:
+                manifest = {}
+        name = (meta.get("name") or manifest.get("title") or entry)
+        theme = (meta.get("theme") or manifest.get("subtitle") or manifest.get("title") or "local workspace")
+        try:
+            mtime = os.path.getmtime(full)
+            last_modified = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(mtime))
+        except OSError:
+            last_modified = utc_now_string()
+        candidates.append({
+            "id": entry,
+            "name": str(name),
+            "theme": str(theme),
+            "path": full,
+            "relativePath": f"data/workspaces/{entry}",
+            "hasManifest": os.path.isfile(manifest_path),
+            "lastModifiedAt": meta.get("lastModifiedAt") or last_modified
+        })
+    candidates.sort(key=lambda row: row.get("lastModifiedAt") or "", reverse=True)
+    return candidates
+
+def infer_workspace_fields(source_path: str, manifest: dict, name: Optional[str] = None, theme: Optional[str] = None) -> tuple[str, str]:
+    meta = read_optional_workspace_meta(source_path)
+    workspace_name = (name or meta.get("name") or manifest.get("title") or os.path.basename(source_path)).strip()
+    workspace_theme = (theme or meta.get("theme") or manifest.get("title") or "Imported LoreWeaver project").strip()
+    return workspace_name or "Imported LoreWeaver project", workspace_theme or "Imported LoreWeaver project"
+
+def ensure_workspace_db_row(
+    db: Session,
+    ws_id: str,
+    workspace_name: str,
+    workspace_theme: str,
+    created_at: Optional[str] = None,
+    last_modified_at: Optional[str] = None
+) -> Workspace:
+    now_str = utc_now_string()
+    existing = db.query(Workspace).filter(Workspace.id == ws_id).first()
+    if existing:
+        existing.name = workspace_name
+        existing.theme = workspace_theme
+        existing.last_modified_at = last_modified_at or now_str
+        db.commit()
+        db.refresh(existing)
+        return existing
+    workspace = Workspace(
+        id=ws_id,
+        name=workspace_name,
+        theme=workspace_theme,
+        created_at=created_at or now_str,
+        last_modified_at=last_modified_at or now_str
+    )
+    db.add(workspace)
+    db.commit()
+    db.refresh(workspace)
+    return workspace
+
+def import_workspace_directory(
+    source_path: str,
+    db: Session,
+    name: Optional[str] = None,
+    theme: Optional[str] = None,
+    source_label: Optional[str] = None
+) -> Workspace:
+    source_path = os.path.abspath(os.path.expanduser(source_path.strip()))
+    if not os.path.isdir(source_path):
+        raise HTTPException(status_code=404, detail="Source directory not found")
+
+    # Default import pool: already under data/workspaces — open/register in place (no re-copy).
+    local_id = workspace_id_if_local_project(source_path)
+    if local_id:
+        if not is_workspace_project_dir(source_path):
+            raise HTTPException(status_code=422, detail="Selected folder is not a recognizable LoreWeaver project")
+        manifest = validate_workspace_manifest(source_path, require_manifest=False)
+        workspace_name, workspace_theme = infer_workspace_fields(source_path, manifest, name, theme)
+        meta = read_optional_workspace_meta(source_path)
+        now_str = utc_now_string()
+        meta_path = os.path.join(source_path, "meta.json")
+        meta_payload = {
+            "id": local_id,
+            "name": workspace_name,
+            "theme": workspace_theme,
+            "sourcePath": source_label or source_path,
+            "createdAt": meta.get("createdAt") or now_str,
+            "lastModifiedAt": now_str
+        }
+        try:
+            with open(meta_path, "w", encoding="utf-8") as meta_file:
+                json.dump(meta_payload, meta_file, ensure_ascii=False, indent=2)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to update workspace meta: {exc}") from exc
+        return ensure_workspace_db_row(
+            db,
+            local_id,
+            workspace_name,
+            workspace_theme,
+            created_at=meta_payload["createdAt"],
+            last_modified_at=now_str
+        )
+
+    # External path: copy into a new isolated workspace under data/workspaces.
+    manifest = validate_workspace_manifest(source_path, require_manifest=True)
+    now_str = utc_now_string()
+    ws_id = allocate_workspace_id(db, now_str)
+    ws_dir = os.path.join(WORKSPACES_DIR, ws_id)
+    workspace_name, workspace_theme = infer_workspace_fields(source_path, manifest, name, theme)
+
+    try:
+        shutil.copytree(source_path, ws_dir, ignore=workspace_copy_ignore)
+        with open(os.path.join(ws_dir, "meta.json"), "w", encoding="utf-8") as meta_file:
+            json.dump({
+                "id": ws_id,
+                "name": workspace_name,
+                "theme": workspace_theme,
+                "sourcePath": source_label or source_path,
+                "createdAt": now_str,
+                "lastModifiedAt": now_str
+            }, meta_file, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        if os.path.exists(ws_dir):
+            shutil.rmtree(ws_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=f"Failed to import workspace: {exc}") from exc
+
+    return ensure_workspace_db_row(db, ws_id, workspace_name, workspace_theme, created_at=now_str, last_modified_at=now_str)
+
 def run_directory_picker_command(command: list[str], timeout: int = 120) -> str:
     result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
     if result.returncode == 0:
@@ -139,22 +389,40 @@ def run_directory_picker_command(command: list[str], timeout: int = 120) -> str:
         return ""
     raise RuntimeError(stderr or "Directory picker failed")
 
-def select_local_directory() -> str:
-    title = "Select a LoreWeaver project folder containing manifest.json"
+def select_local_directory(default_path: Optional[str] = None) -> str:
+    """Open native folder picker. Defaults to LoreWeaver/data/workspaces."""
+    title = "选择项目目录（默认 data/workspaces 下的已有项目）"
+    start_dir = os.path.abspath(default_path or WORKSPACES_DIR)
+    if not os.path.isdir(start_dir):
+        os.makedirs(start_dir, exist_ok=True)
     system = platform.system()
 
     if system == "Darwin":
-        script = f'POSIX path of (choose folder with prompt "{title}")'
-        selected_path = run_directory_picker_command(["osascript", "-e", script])
+        prompt = title.replace("\\", "\\\\").replace('"', '\\"')
+        start_escaped = start_dir.replace("\\", "\\\\").replace('"', '\\"')
+        selected_path = run_directory_picker_command([
+            "osascript",
+            "-e", 'tell application "Finder" to activate',
+            "-e", (
+                f'try\n'
+                f'  set defaultFolder to POSIX file "{start_escaped}" as alias\n'
+                f'on error\n'
+                f'  set defaultFolder to (path to home folder)\n'
+                f'end try\n'
+                f'POSIX path of (choose folder with prompt "{prompt}" default location defaultFolder)'
+            )
+        ])
         return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
 
     if system == "Windows":
         powershell = shutil.which("powershell") or shutil.which("pwsh")
         if powershell:
+            start_ps = start_dir.replace("'", "''")
             command = (
                 "Add-Type -AssemblyName System.Windows.Forms; "
                 "$dialog = New-Object System.Windows.Forms.FolderBrowserDialog; "
                 f"$dialog.Description = '{title}'; "
+                f"$dialog.SelectedPath = '{start_ps}'; "
                 "$dialog.ShowNewFolderButton = $false; "
                 "if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) "
                 "{ [Console]::Write($dialog.SelectedPath) }"
@@ -168,7 +436,9 @@ def select_local_directory() -> str:
             "--file-selection",
             "--directory",
             "--title",
-            title
+            title,
+            "--filename",
+            start_dir + os.sep
         ])
         return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
 
@@ -176,7 +446,7 @@ def select_local_directory() -> str:
         selected_path = run_directory_picker_command([
             "kdialog",
             "--getexistingdirectory",
-            os.path.expanduser("~")
+            start_dir
         ])
         return os.path.abspath(os.path.expanduser(selected_path)) if selected_path else ""
 
@@ -186,7 +456,7 @@ def select_local_directory() -> str:
         "root = tk.Tk()\n"
         "root.withdraw()\n"
         "root.attributes('-topmost', True)\n"
-        f"path = filedialog.askdirectory(title={title!r})\n"
+        f"path = filedialog.askdirectory(title={title!r}, initialdir={start_dir!r})\n"
         "print(path or '')\n"
         "root.destroy()\n"
     )
@@ -624,9 +894,16 @@ async def run_async_feedback(job_id: str, db_session_maker, message: str, agent_
 
 # 📂 Workspace API Routing
 @app.post("/api/system/select-directory")
-def api_select_directory():
+def api_select_directory(payload: Optional[SelectDirectoryRequest] = None):
+    """Native folder picker. Defaults to LoreWeaver/data/workspaces."""
+    default_path = WORKSPACES_DIR
+    requested = payload.default_path if payload else None
+    if isinstance(requested, str) and requested.strip():
+        candidate = os.path.abspath(os.path.expanduser(requested.strip()))
+        if os.path.isdir(candidate):
+            default_path = candidate
     try:
-        selected_path = select_local_directory()
+        selected_path = select_local_directory(default_path=default_path)
     except subprocess.TimeoutExpired as exc:
         raise HTTPException(status_code=504, detail="Directory picker timed out") from exc
     except Exception as exc:
@@ -638,7 +915,28 @@ def api_select_directory():
     if not os.path.isdir(selected_path):
         raise HTTPException(status_code=404, detail="Selected directory not found")
 
-    return {"success": True, "cancelled": False, "data": {"path": selected_path}}
+    return {
+        "success": True,
+        "cancelled": False,
+        "data": {
+            "path": selected_path,
+            "defaultPath": default_path,
+            "underWorkspaces": path_is_under_workspaces(selected_path)
+        }
+    }
+
+@app.get("/api/workspaces/import-candidates")
+def api_list_import_candidates():
+    """List existing project dirs under LoreWeaver/data/workspaces (default import source)."""
+    candidates = list_workspace_import_candidates()
+    return {
+        "success": True,
+        "data": {
+            "root": WORKSPACES_DIR,
+            "relativeRoot": "data/workspaces",
+            "candidates": candidates
+        }
+    }
 
 @app.post("/api/workspaces", response_model=WorkspaceResponse)
 def api_create_workspace(payload: WorkspaceCreate, db: Session = Depends(get_db)):
@@ -671,58 +969,39 @@ def api_create_workspace(payload: WorkspaceCreate, db: Session = Depends(get_db)
 
 @app.post("/api/workspaces/import", response_model=WorkspaceResponse)
 def api_import_workspace(payload: WorkspaceImport, db: Session = Depends(get_db)):
-    source_path = os.path.abspath(os.path.expanduser(payload.source_path.strip()))
-    if not os.path.isdir(source_path):
-        raise HTTPException(status_code=404, detail="Source directory not found")
-
-    manifest_path = os.path.join(source_path, "manifest.json")
-    if not os.path.isfile(manifest_path):
-        raise HTTPException(status_code=422, detail="Selected directory must contain manifest.json")
-
-    try:
-        with open(manifest_path, "r", encoding="utf-8") as manifest_file:
-            manifest = json.load(manifest_file)
-        if not isinstance(manifest, dict):
-            raise ValueError("manifest.json must contain a JSON object")
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"Invalid manifest.json: {exc}") from exc
-
-    now_str = utc_now_string()
-    ws_id = allocate_workspace_id(db, now_str)
-    ws_dir = os.path.join(WORKSPACES_DIR, ws_id)
-    name, theme = infer_imported_workspace_fields(payload, source_path, manifest)
-
-    try:
-        shutil.copytree(source_path, ws_dir, ignore=workspace_copy_ignore)
-        with open(os.path.join(ws_dir, "meta.json"), "w", encoding="utf-8") as meta_file:
-            json.dump({
-                "id": ws_id,
-                "name": name,
-                "theme": theme,
-                "sourcePath": source_path,
-                "createdAt": now_str,
-                "lastModifiedAt": now_str
-            }, meta_file, ensure_ascii=False, indent=2)
-    except Exception as exc:
-        if os.path.exists(ws_dir):
-            shutil.rmtree(ws_dir, ignore_errors=True)
-        raise HTTPException(status_code=500, detail=f"Failed to import workspace: {exc}") from exc
-
-    workspace = Workspace(
-        id=ws_id,
-        name=name,
-        theme=theme,
-        created_at=now_str,
-        last_modified_at=now_str
+    source_path = (payload.source_path or "").strip() if payload.source_path else ""
+    workspace_id = (payload.workspace_id or "").strip() if payload.workspace_id else ""
+    if workspace_id:
+        # Prefer explicit id under data/workspaces (default import pool).
+        if any(sep in workspace_id for sep in ("/", "\\", "..")):
+            raise HTTPException(status_code=400, detail="Invalid workspaceId")
+        source_path = os.path.join(WORKSPACES_DIR, workspace_id)
+    if not source_path:
+        raise HTTPException(status_code=422, detail="sourcePath or workspaceId is required")
+    workspace = import_workspace_directory(
+        source_path,
+        db,
+        name=payload.name,
+        theme=payload.theme
     )
-    db.add(workspace)
-    db.commit()
-    db.refresh(workspace)
-
     return {"success": True, "data": workspace}
 
 @app.get("/api/workspaces", response_model=WorkspaceListResponse)
 def api_list_workspaces(db: Session = Depends(get_db)):
+    """List DB workspaces and auto-register any project dirs found under data/workspaces."""
+    # Ensure on-disk projects under data/workspaces appear in the lobby.
+    for candidate in list_workspace_import_candidates():
+        existing = db.query(Workspace).filter(Workspace.id == candidate["id"]).first()
+        if existing:
+            continue
+        ensure_workspace_db_row(
+            db,
+            candidate["id"],
+            candidate["name"],
+            candidate["theme"],
+            last_modified_at=candidate.get("lastModifiedAt")
+        )
+
     workspaces = db.query(Workspace).all()
     # Sort by last modified
     workspaces.sort(key=lambda x: x.last_modified_at, reverse=True)
@@ -846,6 +1125,7 @@ def api_save_workspace_file(ws_id: str, filename: str, payload: dict):
 
 @app.get("/api/workspaces/{ws_id}/export")
 def api_export_workspace(ws_id: str):
+    ws_path = resolve_existing_ws_path(ws_id)
     try:
         manifest = load_assembled_manifest(ws_id)
     except Exception as exc:
@@ -903,6 +1183,55 @@ window.__LOREWEAVER_EMBEDDED_SPEC__ = {json.dumps(manifest, ensure_ascii=False)}
         "Content-Disposition": f'attachment; filename="{quoted_filename}"; filename*=UTF-8\'\'{quoted_filename}'
     }
     return StreamingResponse(zip_buffer, media_type="application/zip", headers=headers)
+
+@app.get("/api/workspaces/{ws_id}/export-release")
+def api_export_release_workspace(ws_id: str):
+    ws_path = resolve_existing_ws_path(ws_id)
+    import subprocess
+    import json
+    import io
+    
+    script_path = os.path.join(LORE_ROOT, "productize", "export-standalone.mjs")
+    workspace_arg = f"--workspace=data/workspaces/{ws_id}"
+    
+    try:
+        # Run node productize/export-standalone.mjs --workspace=data/workspaces/{ws_id}
+        result = subprocess.run(
+            ["node", script_path, workspace_arg],
+            capture_output=True,
+            text=True,
+            cwd=LORE_ROOT,
+            check=True
+        )
+        
+        # Parse output JSON to find the artifact path
+        output_data = json.loads(result.stdout.strip())
+        artifact_rel_path = output_data.get("artifact")
+        if not artifact_rel_path:
+            raise Exception("Export script did not return artifact path in stdout JSON.")
+            
+        artifact_path = os.path.join(LORE_ROOT, artifact_rel_path)
+        if not os.path.exists(artifact_path):
+            raise Exception(f"Exported artifact file not found at: {artifact_path}")
+            
+        # Read the generated ZIP file
+        with open(artifact_path, "rb") as f:
+            zip_content = f.read()
+            
+        filename = os.path.basename(artifact_path)
+        import urllib.parse
+        quoted_filename = urllib.parse.quote(filename)
+        headers = {
+            "Content-Disposition": f'attachment; filename="{quoted_filename}"; filename*=UTF-8\'\'{quoted_filename}'
+        }
+        
+        return StreamingResponse(io.BytesIO(zip_content), media_type="application/zip", headers=headers)
+        
+    except subprocess.CalledProcessError as exc:
+        err_msg = exc.stderr or exc.stdout or str(exc)
+        raise HTTPException(status_code=500, detail=f"Vite compilation / packaging failed: {err_msg}")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Export release package failed: {exc}")
 
 # 🎨 Presets API
 @app.get("/api/presets")
@@ -1102,8 +1431,49 @@ async def api_refine_workspace(workspace_id: str, payload: FeedbackRequest, db: 
         except:
             pass
 
+    ROLE_TO_DEPT = {
+        "world_builder": "world",
+        "narrative": "narrative",
+        "sandbox": "architecture",
+        "code_foundry": "code",
+        "auditor": "qa",
+    }
+    dept_id = payload.department_id or ROLE_TO_DEPT.get(payload.agent_role or "", "gameplay")
+
+    time_str = time.strftime("%H:%M")
+    now_ts = time.time()
+
+    # Record user message in SQLite
+    user_chat = DepartmentChatMessage(
+        workspace_id=workspace_id,
+        department_id=dept_id,
+        agent_role=payload.agent_role or "narrative",
+        sender="user",
+        text=payload.message,
+        timestamp=time_str,
+        created_at=now_ts,
+    )
+    db.add(user_chat)
+    db.commit()
+
     # Direct agent invocation
-    new_gdd = await WorldBuilderAgent.adjust_gdd(current_gdd, payload.message, payload.agent_role)
+    reply_text = f"已根据「{payload.message}」完成微调。请在筹备意见中核对，满意后点「确认部门」。"
+    try:
+        new_gdd = await WorldBuilderAgent.adjust_gdd(current_gdd, payload.message, payload.agent_role)
+    except Exception as exc:
+        reply_text = f"微调服务报错: {str(exc)}"
+        agent_chat = DepartmentChatMessage(
+            workspace_id=workspace_id,
+            department_id=dept_id,
+            agent_role=payload.agent_role or "narrative",
+            sender="agent",
+            text=reply_text,
+            timestamp=time_str,
+            created_at=time.time(),
+        )
+        db.add(agent_chat)
+        db.commit()
+        raise HTTPException(status_code=500, detail=str(exc))
     
     # Save optimized manifest
     with open(manifest_path, "w", encoding="utf-8") as f:
@@ -1111,9 +1481,22 @@ async def api_refine_workspace(workspace_id: str, payload: FeedbackRequest, db: 
         
     if active_job:
         active_job.result_json = json.dumps(new_gdd, ensure_ascii=False)
-        db.commit()
+
+    # Record agent response in SQLite
+    agent_chat = DepartmentChatMessage(
+        workspace_id=workspace_id,
+        department_id=dept_id,
+        agent_role=payload.agent_role or "narrative",
+        sender="agent",
+        text=reply_text,
+        timestamp=time_str,
+        created_at=time.time(),
+    )
+    db.add(agent_chat)
+    db.commit()
 
     return {"success": True, "data": new_gdd}
+
 
 def decode_png_data_url(data_url: str) -> bytes:
     if not data_url:
@@ -1257,99 +1640,9 @@ def make_audit_check(check_id: str, name: str, status: str, remarks: str) -> dic
         "remarks": remarks
     }
 
-def find_codex_cli() -> Optional[str]:
-    candidates = [
-        os.environ.get("CODEX_CLI"),
-        shutil.which("codex"),
-        "/Applications/Codex.app/Contents/Resources/codex"
-    ]
-    for candidate in candidates:
-        if candidate and os.path.exists(candidate):
-            return candidate
-    return None
-
 def run_optional_codex_visual_critic(screenshot_bytes: bytes, payload_summary: dict) -> dict:
-    cli = find_codex_cli()
-    if not cli:
-        return {"status": "unavailable", "enabled": False, "cli": None}
-
-    enabled = os.environ.get("LOREWEAVER_ENABLE_CODEX_AUDIT") == "1"
-    if not enabled:
-        return {"status": "available_disabled", "enabled": False, "cli": cli}
-
-    prompt = (
-        "You are a concise visual QA critic for a Phaser game workbench. "
-        "Inspect the attached screenshot for HUD occlusion (components blocking controls), "
-        "button overlap (interactive buttons touching/overlapping), text overflow (labels wrapping incorrectly "
-        "or cut off), and readability / touch safe area concerns (legibility, click target spacing). "
-        "Return compact JSON only with the following structure:\n"
-        "{\n"
-        "  \"status\": \"passed\" | \"failed\",\n"
-        "  \"checks\": {\n"
-        "    \"vlm_hud_occlusion\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
-        "    \"vlm_button_overlap\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
-        "    \"vlm_text_overflow\": \"PASS\" | \"FAIL\" | \"WARNING\",\n"
-        "    \"vlm_touch_readability\": \"PASS\" | \"FAIL\" | \"WARNING\"\n"
-        "  },\n"
-        "  \"feedback\": \"Detailed visual critique review remarks.\",\n"
-        "  \"prompt_reflow_diff\": \"Textual suggestions for themeColor, goalValue, or knobs settings.\",\n"
-        "  \"proposed_patches\": [\n"
-        "    {\n"
-        "      \"target\": \"themeColor\" | \"nodes.<nodeId>.goalValue\" | \"nodes.<nodeId>.gameplay.knobs.<knob>\",\n"
-        "      \"operation\": \"replace\",\n"
-        "      \"after\": \"<new_suggested_value>\",\n"
-        "      \"reason\": \"Brief explanation of this suggestion.\",\n"
-        "      \"patchLevel\": \"L1\" | \"L2\" | \"L3\" | \"L4\"\n"
-        "    }\n"
-        "  ]\n"
-        "}\n"
-        "Context: "
-        + json.dumps(payload_summary, ensure_ascii=False)
-    )
-
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as image_file:
-        image_file.write(screenshot_bytes)
-        image_path = image_file.name
-
-    try:
-        proc = subprocess.run(
-            [
-                cli,
-                "exec",
-                "--sandbox",
-                "read-only",
-                "--image",
-                image_path,
-                prompt
-            ],
-            capture_output=True,
-            text=True,
-            timeout=45
-        )
-        output = (proc.stdout or "").strip()
-        parsed = None
-        if "{" in output and "}" in output:
-            candidate = output[output.find("{"):output.rfind("}") + 1]
-            try:
-                parsed = json.loads(candidate)
-            except json.JSONDecodeError:
-                parsed = None
-        return {
-            "status": "completed" if proc.returncode == 0 else "failed",
-            "enabled": True,
-            "cli": cli,
-            "exitCode": proc.returncode,
-            "stdout": output[-2000:],
-            "stderr": (proc.stderr or "").strip()[-2000:],
-            "result": parsed
-        }
-    except Exception as exc:
-        return {"status": "failed", "enabled": True, "cli": cli, "error": str(exc)}
-    finally:
-        try:
-            os.remove(image_path)
-        except OSError:
-            pass
+    """Back-compat wrapper name; dispatches multi-provider visual critic (Grok / ChatGPT Codex)."""
+    return run_visual_critic(screenshot_bytes, payload_summary)
 
 @app.post("/api/audit")
 def api_post_audit(payload: dict):
@@ -1425,11 +1718,21 @@ def api_post_audit(payload: dict):
         )
     ]
 
-    # 2. VLM Checks (depending on codex status/enabled/results)
+    # 2. VLM Checks (Grok vision API and/or ChatGPT.app Codex CLI)
     codex_enabled = codex_status.get("enabled")
+    vlm_provider = codex_status.get("provider") or "none"
     if not codex_enabled:
         vlm_status = "WARNING"
-        vlm_remarks = "VLM audit is disabled. Set LOREWEAVER_ENABLE_CODEX_AUDIT=1 to enable." if codex_status.get("status") == "available_disabled" else "Codex CLI is not available."
+        if codex_status.get("status") == "available_disabled":
+            vlm_remarks = (
+                "VLM audit disabled. Set LOREWEAVER_ENABLE_VLM_AUDIT=1 "
+                "(or LOREWEAVER_ENABLE_CODEX_AUDIT=1), or set LOREWEAVER_VLM_PROVIDER=grok|codex."
+            )
+        else:
+            vlm_remarks = (
+                "No VLM provider. Prefer XAI_API_KEY (Grok vision) or ChatGPT.app codex CLI "
+                f"({find_codex_cli() or 'not found'})."
+            )
         vlm_checks = [
             make_audit_check("vlm_hud_occlusion", "VLM HUD Occlusion", vlm_status, vlm_remarks),
             make_audit_check("vlm_button_overlap", "VLM Button Overlap", vlm_status, vlm_remarks),
@@ -1437,12 +1740,12 @@ def api_post_audit(payload: dict):
             make_audit_check("vlm_touch_readability", "VLM Touch & Readability", vlm_status, vlm_remarks)
         ]
     elif codex_status.get("status") == "failed":
-        err_msg = codex_status.get("error") or codex_status.get("stderr") or "Codex CLI execution failed."
+        err_msg = codex_status.get("error") or codex_status.get("stderr") or "VLM provider failed."
         vlm_checks = [
-            make_audit_check("vlm_hud_occlusion", "VLM HUD Occlusion", "FAIL", f"VLM run failed: {err_msg}"),
-            make_audit_check("vlm_button_overlap", "VLM Button Overlap", "FAIL", f"VLM run failed: {err_msg}"),
-            make_audit_check("vlm_text_overflow", "VLM Text Overflow", "FAIL", f"VLM run failed: {err_msg}"),
-            make_audit_check("vlm_touch_readability", "VLM Touch & Readability", "FAIL", f"VLM run failed: {err_msg}")
+            make_audit_check("vlm_hud_occlusion", "VLM HUD Occlusion", "FAIL", f"VLM({vlm_provider}) failed: {err_msg}"),
+            make_audit_check("vlm_button_overlap", "VLM Button Overlap", "FAIL", f"VLM({vlm_provider}) failed: {err_msg}"),
+            make_audit_check("vlm_text_overflow", "VLM Text Overflow", "FAIL", f"VLM({vlm_provider}) failed: {err_msg}"),
+            make_audit_check("vlm_touch_readability", "VLM Touch & Readability", "FAIL", f"VLM({vlm_provider}) failed: {err_msg}")
         ]
     else:
         codex_checks = codex_result.get("checks") or {}
@@ -1451,25 +1754,25 @@ def api_post_audit(payload: dict):
                 "vlm_hud_occlusion",
                 "VLM HUD Occlusion",
                 codex_checks.get("vlm_hud_occlusion") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
-                "VLM HUD occlusion check completed."
+                f"VLM({vlm_provider}) HUD occlusion check completed."
             ),
             make_audit_check(
                 "vlm_button_overlap",
                 "VLM Button Overlap",
                 codex_checks.get("vlm_button_overlap") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
-                "VLM Button overlap check completed."
+                f"VLM({vlm_provider}) button overlap check completed."
             ),
             make_audit_check(
                 "vlm_text_overflow",
                 "VLM Text Overflow",
                 codex_checks.get("vlm_text_overflow") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
-                "VLM Text overflow check completed."
+                f"VLM({vlm_provider}) text overflow check completed."
             ),
             make_audit_check(
                 "vlm_touch_readability",
                 "VLM Touch & Readability",
                 codex_checks.get("vlm_touch_readability") or ("PASS" if codex_result.get("status") == "passed" else "FAIL"),
-                "VLM Touch & Readability check completed."
+                f"VLM({vlm_provider}) touch & readability check completed."
             )
         ]
 
@@ -1480,9 +1783,10 @@ def api_post_audit(payload: dict):
         vlm_feedback = codex_result["feedback"]
     else:
         vlm_feedback = (
-            "Codex/Antigravity local visual audit path consumed a real Phaser screenshot. "
-            f"Deterministic pixel gate is {'clean' if image_analysis.get('hasMeaningfulPixels') else 'blocked'}; "
-            f"Codex CLI status: {codex_status.get('status')}."
+            f"Visual audit used provider={vlm_provider}, status={codex_status.get('status')}. "
+            f"Deterministic pixel gate is {'clean' if image_analysis.get('hasMeaningfulPixels') else 'blocked'}. "
+            "Automated VLM: Grok API or ChatGPT/Codex CLI. "
+            "Antigravity / Grok Build TUI are interactive coding agents, not headless audit backends."
         )
 
     prompt_reflow_diff = codex_result.get("prompt_reflow_diff") or (
@@ -1519,3 +1823,731 @@ def api_post_audit(payload: dict):
         }, f, ensure_ascii=False, indent=2)
 
     return {"success": True, "method": "codex_antigravity_local_visual_audit", "data": audit}
+
+
+# ── Department prep desk (film-style multi-agent collaboration) ──────────────
+
+DEPARTMENT_REGISTRY_PATH = os.path.join(LORE_ROOT, "docs", "guides", "department_agents.registry.json")
+
+
+def load_department_registry() -> dict:
+    if not os.path.isfile(DEPARTMENT_REGISTRY_PATH):
+        raise HTTPException(status_code=500, detail="department_agents.registry.json missing")
+    with open(DEPARTMENT_REGISTRY_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def departments_dir(ws_id: str) -> str:
+    path = os.path.join(get_ws_path(ws_id), "loreweaver", "departments")
+    os.makedirs(path, exist_ok=True)
+    os.makedirs(os.path.join(path, "handoffs"), exist_ok=True)
+    os.makedirs(os.path.join(path, "prep"), exist_ok=True)
+    os.makedirs(os.path.join(path, "qa"), exist_ok=True)
+    return path
+
+
+def default_department_state(unit_id: str = "campaign_12", stage_id: str = "production_prep") -> dict:
+    registry = load_department_registry()
+    departments = {}
+    for dept in registry.get("departments", []):
+        departments[dept["id"]] = {
+            "id": dept["id"],
+            "status": "idle",
+            "version": 0,
+            "qaScore": None,
+            "prepNotes": "",
+            "artifacts": [],
+            "openHandoffCount": 0,
+            "updatedAt": None,
+            "confirmedAt": None,
+        }
+    required = [d["id"] for d in registry.get("departments", []) if d["id"] != "director"]
+    return {
+        "schemaVersion": "loreweaver.department-state.v1",
+        "unitId": unit_id,
+        "unitType": "campaign",
+        "stageId": stage_id,
+        "departments": departments,
+        "requiredDepartmentIds": required,
+        "confirmedCount": 0,
+        "requiredCount": len(required),
+        "updatedAt": utc_now_string(),
+    }
+
+
+def recompute_department_counts(state: dict) -> dict:
+    required = state.get("requiredDepartmentIds") or [
+        d_id for d_id in state.get("departments", {}).keys() if d_id != "director"
+    ]
+    confirmed = 0
+    for d_id in required:
+        dept = state.get("departments", {}).get(d_id) or {}
+        if dept.get("status") == "confirmed":
+            confirmed += 1
+    state["requiredDepartmentIds"] = required
+    state["requiredCount"] = len(required)
+    state["confirmedCount"] = confirmed
+    state["updatedAt"] = utc_now_string()
+    return state
+
+
+def load_department_state(ws_id: str) -> dict:
+    path = os.path.join(departments_dir(ws_id), "state.json")
+    if not os.path.isfile(path):
+        state = default_department_state()
+        save_department_state(ws_id, state)
+        return state
+    with open(path, "r", encoding="utf-8") as f:
+        state = json.load(f)
+    return recompute_department_counts(state)
+
+
+def save_department_state(ws_id: str, state: dict) -> dict:
+    state = recompute_department_counts(state)
+    path = os.path.join(departments_dir(ws_id), "state.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
+    return state
+
+
+def list_handoffs(ws_id: str) -> list:
+    hdir = os.path.join(departments_dir(ws_id), "handoffs")
+    items = []
+    for name in sorted(os.listdir(hdir)):
+        if not name.endswith(".json"):
+            continue
+        with open(os.path.join(hdir, name), "r", encoding="utf-8") as f:
+            items.append(json.load(f))
+    items.sort(key=lambda x: x.get("createdAt") or "", reverse=True)
+    return items
+
+
+def refresh_open_handoff_counts(ws_id: str, state: dict) -> dict:
+    handoffs = list_handoffs(ws_id)
+    counts = {d_id: 0 for d_id in state.get("departments", {})}
+    for ho in handoffs:
+        if ho.get("status") != "open":
+            continue
+        to_id = ho.get("to")
+        if to_id in counts:
+            counts[to_id] += 1
+        from_id = ho.get("from")
+        # also surface on from for visibility
+        if from_id in counts and from_id != to_id:
+            pass
+    for d_id, dept in state.get("departments", {}).items():
+        dept["openHandoffCount"] = counts.get(d_id, 0)
+    return state
+
+
+@app.get("/api/llm/status")
+def get_llm_status():
+    """Report which LLM provider is active (no secrets), plus VLM probe."""
+    status = llm_status()
+    status["vlm"] = vlm_probe()
+    return status
+
+
+@app.get("/api/imagegen/status")
+def get_imagegen_status():
+    """Report imagegen provider status and Antigravity tool support status."""
+    return {"success": True, "data": imagegen_status()}
+
+
+
+@app.get("/api/department-registry")
+def api_department_registry():
+    return {"success": True, "data": load_department_registry()}
+
+
+@app.get("/api/workspaces/{ws_id}/departments/{dept_id}/chat")
+def api_get_department_chat(ws_id: str, dept_id: str, db: Session = Depends(get_db)):
+    resolve_existing_ws_path(ws_id)
+    messages = (
+        db.query(DepartmentChatMessage)
+        .filter(
+            DepartmentChatMessage.workspace_id == ws_id,
+            DepartmentChatMessage.department_id == dept_id,
+        )
+        .order_by(DepartmentChatMessage.created_at.asc(), DepartmentChatMessage.id.asc())
+        .all()
+    )
+    return {
+        "success": True,
+        "data": [
+            {
+                "id": m.id,
+                "sender": m.sender,
+                "text": m.text,
+                "timestamp": m.timestamp,
+                "agentRole": m.agent_role,
+                "departmentId": m.department_id,
+            }
+            for m in messages
+        ],
+    }
+
+
+@app.get("/api/workspaces/{ws_id}/departments")
+def api_get_departments(ws_id: str):
+
+    resolve_existing_ws_path(ws_id)
+    state = load_department_state(ws_id)
+    state = refresh_open_handoff_counts(ws_id, state)
+    save_department_state(ws_id, state)
+    return {
+        "success": True,
+        "data": {
+            "registry": load_department_registry(),
+            "state": state,
+            "handoffs": list_handoffs(ws_id),
+        },
+    }
+
+
+@app.put("/api/workspaces/{ws_id}/departments")
+def api_put_departments(ws_id: str, payload: dict):
+    resolve_existing_ws_path(ws_id)
+    state = payload.get("state") or payload
+    if not isinstance(state, dict) or "departments" not in state:
+        raise HTTPException(status_code=400, detail="Invalid department state payload")
+    saved = save_department_state(ws_id, state)
+    return {"success": True, "data": saved}
+
+
+@app.post("/api/workspaces/{ws_id}/departments/{dept_id}/confirm")
+async def api_confirm_department(ws_id: str, dept_id: str, payload: dict = None):
+    resolve_existing_ws_path(ws_id)
+    payload = payload or {}
+    from .department_agents import mark_downstream_stale, run_auto_prep_pipeline, topological_departments
+    registry = load_department_registry()
+    state = load_department_state(ws_id)
+    dept = state.get("departments", {}).get(dept_id)
+    if not dept:
+        raise HTTPException(status_code=404, detail=f"Unknown department: {dept_id}")
+    # hard block confirm if blocked
+    if dept.get("status") == "blocked" and not payload.get("force"):
+        raise HTTPException(status_code=409, detail=f"Department {dept_id} is blocked")
+    if payload.get("prepNotes") is not None:
+        dept["prepNotes"] = str(payload.get("prepNotes") or "")
+    if payload.get("qaScore") is not None:
+        try:
+            dept["qaScore"] = int(payload.get("qaScore"))
+        except (TypeError, ValueError):
+            pass
+    dept["status"] = "confirmed"
+    dept["version"] = int(dept.get("version") or 0) + 1
+    dept["confirmedAt"] = utc_now_string()
+    dept["updatedAt"] = dept["confirmedAt"]
+    dept.pop("staleReason", None)
+    state["departments"][dept_id] = dept
+    # Phase D: cascade stale to downstream
+    stale_ids = mark_downstream_stale(state, registry, dept_id, reason="upstream_confirmed")
+
+    reprep_log = []
+    reprep_patches = []
+    patches_saved = False
+    # Default: auto re-prep stale downstream so they get fresh drafts
+    reprep = payload.get("reprepDownstream", True)
+    if reprep and stale_ids:
+        # preserve topo order among stale set
+        ordered = [d["id"] for d in topological_departments(registry.get("departments") or [])]
+        only = [d for d in ordered if d in set(stale_ids)]
+        gdd = {}
+        try:
+            gdd = load_assembled_manifest(ws_id)
+        except Exception:
+            pass
+        state, reprep_log, _hos, new_gdd, applied = await run_auto_prep_pipeline(
+            registry=registry,
+            state=state,
+            gdd=gdd or {},
+            reports_dir=REPORTS_DIR,
+            force=True,
+            only=only,
+            apply_patches=bool(payload.get("applyPatches", True)),
+        )
+        reprep_patches = applied
+        if applied and new_gdd:
+            try:
+                save_split_manifest(ws_id, new_gdd)
+                patches_saved = True
+            except Exception:
+                try:
+                    with open(os.path.join(get_ws_path(ws_id), "manifest.json"), "w", encoding="utf-8") as f:
+                        json.dump(new_gdd, f, ensure_ascii=False, indent=2)
+                    patches_saved = True
+                except Exception:
+                    pass
+
+    state = refresh_open_handoff_counts(ws_id, state)
+    saved = save_department_state(ws_id, state)
+    return {
+        "success": True,
+        "data": saved,
+        "staleDownstream": stale_ids,
+        "reprepLog": reprep_log,
+        "reprepPatches": reprep_patches,
+        "patchesSaved": patches_saved,
+    }
+
+
+@app.post("/api/workspaces/{ws_id}/departments/{dept_id}/status")
+def api_set_department_status(ws_id: str, dept_id: str, payload: dict):
+    resolve_existing_ws_path(ws_id)
+    state = load_department_state(ws_id)
+    dept = state.get("departments", {}).get(dept_id)
+    if not dept:
+        raise HTTPException(status_code=404, detail=f"Unknown department: {dept_id}")
+    status = payload.get("status")
+    allowed = {"idle", "drafting", "ready_for_review", "confirmed", "blocked", "stale"}
+    if status not in allowed:
+        raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+    from .department_agents import mark_downstream_stale
+    registry = load_department_registry()
+    stale_ids = []
+    # demote confirmed without version bump when stale/blocked
+    if status == "confirmed" and dept.get("status") != "confirmed":
+        dept["version"] = int(dept.get("version") or 0) + 1
+        dept["confirmedAt"] = utc_now_string()
+        dept.pop("staleReason", None)
+    dept["status"] = status
+    if payload.get("prepNotes") is not None:
+        dept["prepNotes"] = str(payload.get("prepNotes") or "")
+    if payload.get("qaScore") is not None:
+        try:
+            dept["qaScore"] = int(payload.get("qaScore"))
+        except (TypeError, ValueError):
+            pass
+    dept["updatedAt"] = utc_now_string()
+    state["departments"][dept_id] = dept
+    if status == "confirmed":
+        stale_ids = mark_downstream_stale(state, registry, dept_id, reason="upstream_confirmed")
+    saved = save_department_state(ws_id, state)
+    return {"success": True, "data": saved, "staleDownstream": stale_ids}
+
+
+@app.get("/api/workspaces/{ws_id}/departments/handoffs")
+def api_list_handoffs(ws_id: str):
+    resolve_existing_ws_path(ws_id)
+    return {"success": True, "data": list_handoffs(ws_id)}
+
+
+@app.post("/api/workspaces/{ws_id}/departments/handoffs")
+def api_create_handoff(ws_id: str, payload: dict):
+    resolve_existing_ws_path(ws_id)
+    registry = load_department_registry()
+    ids = {d["id"] for d in registry.get("departments", [])}
+    from_id = payload.get("from")
+    to_id = payload.get("to")
+    if from_id not in ids or to_id not in ids:
+        raise HTTPException(status_code=400, detail="from/to must be valid department ids")
+    ho_type = payload.get("type") or "request"
+    if ho_type not in ("request", "ack", "reject", "escalate"):
+        raise HTTPException(status_code=400, detail="Invalid handoff type")
+    ho_id = payload.get("id") or f"ho_{int(time.time())}_{secrets.token_hex(3)}"
+    handoff = {
+        "id": ho_id,
+        "from": from_id,
+        "to": to_id,
+        "unitId": payload.get("unitId") or load_department_state(ws_id).get("unitId"),
+        "type": ho_type,
+        "summary": str(payload.get("summary") or "").strip() or "(no summary)",
+        "payloadRef": payload.get("payloadRef") or "",
+        "needs": payload.get("needs") or [],
+        "blockers": payload.get("blockers") or [],
+        "patchLevelMax": payload.get("patchLevelMax") or "L2",
+        "createdAt": utc_now_string(),
+        "status": payload.get("status") or "open",
+    }
+    path = os.path.join(departments_dir(ws_id), "handoffs", f"{ho_id}.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(handoff, f, ensure_ascii=False, indent=2)
+    state = load_department_state(ws_id)
+    state = refresh_open_handoff_counts(ws_id, state)
+    save_department_state(ws_id, state)
+    return {"success": True, "data": handoff}
+
+
+@app.post("/api/workspaces/{ws_id}/departments/handoffs/{handoff_id}/resolve")
+def api_resolve_handoff(ws_id: str, handoff_id: str, payload: dict = None):
+    resolve_existing_ws_path(ws_id)
+    payload = payload or {}
+    path = os.path.join(departments_dir(ws_id), "handoffs", f"{handoff_id}.json")
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Handoff not found")
+    with open(path, "r", encoding="utf-8") as f:
+        handoff = json.load(f)
+    handoff["status"] = payload.get("status") or "resolved"
+    handoff["resolvedAt"] = utc_now_string()
+    if payload.get("note"):
+        handoff["resolveNote"] = str(payload.get("note"))
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(handoff, f, ensure_ascii=False, indent=2)
+    state = load_department_state(ws_id)
+    state = refresh_open_handoff_counts(ws_id, state)
+    save_department_state(ws_id, state)
+    return {"success": True, "data": handoff}
+
+
+@app.post("/api/workspaces/{ws_id}/departments/auto-prep")
+async def api_auto_prep_departments(ws_id: str, payload: dict = None):
+    """Director-scheduled department prep in dependsOn order.
+    Writes prepNotes + qaScore, status=ready_for_review. Never auto-confirms.
+    """
+    resolve_existing_ws_path(ws_id)
+    payload = payload or {}
+    from .department_agents import run_auto_prep_pipeline
+
+    registry = load_department_registry()
+    state = load_department_state(ws_id)
+    if payload.get("unitId"):
+        state["unitId"] = str(payload["unitId"])
+    if payload.get("stageId"):
+        state["stageId"] = str(payload["stageId"])
+
+    # Load GDD / manifest if present
+    gdd = {}
+    try:
+        gdd = load_assembled_manifest(ws_id)
+    except Exception:
+        manifest_path = os.path.join(get_ws_path(ws_id), "manifest.json")
+        if os.path.isfile(manifest_path):
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as f:
+                    gdd = json.load(f)
+            except Exception:
+                gdd = {}
+
+    only = payload.get("only")
+    if isinstance(only, str):
+        only = [only]
+    force = bool(payload.get("force"))
+
+    apply_patches = payload.get("applyPatches", True)
+    state, run_log, suggested, new_gdd, applied_patches = await run_auto_prep_pipeline(
+        registry=registry,
+        state=state,
+        gdd=gdd or {},
+        reports_dir=REPORTS_DIR,
+        force=force,
+        only=only,
+        apply_patches=bool(apply_patches),
+    )
+
+    # Persist controlled GDD patches
+    patches_saved = False
+    if apply_patches and applied_patches and new_gdd:
+        try:
+            save_split_manifest(ws_id, new_gdd)
+            patches_saved = True
+        except Exception as exc:
+            # fallback raw manifest
+            try:
+                with open(os.path.join(get_ws_path(ws_id), "manifest.json"), "w", encoding="utf-8") as f:
+                    json.dump(new_gdd, f, ensure_ascii=False, indent=2)
+                patches_saved = True
+            except Exception as exc2:
+                print(f"[departments] failed to save patches: {exc} / {exc2}")
+
+    # Materialize suggested handoffs (open)
+    created_handoffs = []
+    existing = {(h.get("from"), h.get("to"), h.get("summary")) for h in list_handoffs(ws_id) if h.get("status") == "open"}
+    for ho in suggested:
+        key = (ho.get("from"), ho.get("to"), ho.get("summary"))
+        if key in existing:
+            continue
+        # validate department ids
+        ids = {d["id"] for d in registry.get("departments", [])}
+        if ho.get("from") not in ids or ho.get("to") not in ids:
+            continue
+        ho_id = f"ho_{int(time.time())}_{secrets.token_hex(2)}"
+        handoff = {
+            "id": ho_id,
+            "from": ho["from"],
+            "to": ho["to"],
+            "unitId": state.get("unitId"),
+            "type": ho.get("type") or "request",
+            "summary": ho.get("summary") or "",
+            "payloadRef": "",
+            "needs": [],
+            "blockers": [],
+            "patchLevelMax": "L2",
+            "createdAt": utc_now_string(),
+            "status": "open",
+            "source": "auto_prep",
+        }
+        path = os.path.join(departments_dir(ws_id), "handoffs", f"{ho_id}.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(handoff, f, ensure_ascii=False, indent=2)
+        created_handoffs.append(handoff)
+        existing.add(key)
+
+    state = refresh_open_handoff_counts(ws_id, state)
+    saved = save_department_state(ws_id, state)
+
+    # QA-owned node smoke after patches are on disk (director schedules via auto-prep)
+    smoke_report = None
+    if payload.get("runNodeSmoke", True):
+        smoke_report = run_node_smoke(ws_id)
+        # Materialize suggested qa→code / qa→gameplay handoffs
+        for ho in (smoke_report or {}).get("suggestedHandoffs") or []:
+            key = (ho.get("from"), ho.get("to"), ho.get("summary"))
+            if key in existing:
+                continue
+            ids = {d["id"] for d in registry.get("departments", [])}
+            if ho.get("from") not in ids or ho.get("to") not in ids:
+                continue
+            ho_id = f"ho_smoke_{int(time.time())}_{secrets.token_hex(2)}"
+            handoff = {
+                "id": ho_id,
+                "from": ho["from"],
+                "to": ho["to"],
+                "unitId": saved.get("unitId"),
+                "type": ho.get("type") or "reject",
+                "summary": ho.get("summary") or "node smoke failure",
+                "payloadRef": "workflow/reports/node_smoke_latest.json",
+                "needs": [],
+                "blockers": [],
+                "patchLevelMax": "L3",
+                "createdAt": utc_now_string(),
+                "status": "open",
+                "source": "node_smoke",
+            }
+            path = os.path.join(departments_dir(ws_id), "handoffs", f"{ho_id}.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(handoff, f, ensure_ascii=False, indent=2)
+            created_handoffs.append(handoff)
+            existing.add(key)
+        saved = refresh_open_handoff_counts(ws_id, saved)
+        saved = save_department_state(ws_id, saved)
+
+    from .department_agents import evaluate_advance_gate, collect_report_signals
+    gate = evaluate_advance_gate(saved, registry, collect_report_signals(REPORTS_DIR))
+
+    # Persist run log
+    log_path = os.path.join(departments_dir(ws_id), "qa", "auto_prep_latest.json")
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "createdAt": utc_now_string(),
+            "unitId": saved.get("unitId"),
+            "runLog": run_log,
+            "createdHandoffs": [h["id"] for h in created_handoffs],
+            "patchesApplied": applied_patches,
+            "patchesSaved": patches_saved,
+            "nodeSmoke": {
+                "status": (smoke_report or {}).get("status"),
+                "score": (smoke_report or {}).get("score"),
+                "summary": (smoke_report or {}).get("summary"),
+            } if smoke_report else None,
+            "gate": gate,
+        }, f, ensure_ascii=False, indent=2)
+
+    return {
+        "success": True,
+        "data": {
+            "state": saved,
+            "updatedDepartments": [x["id"] for x in run_log if not x.get("skipped")],
+            "runLog": run_log,
+            "createdHandoffs": created_handoffs,
+            "patchesApplied": applied_patches,
+            "patchesSaved": patches_saved,
+            "nodeSmoke": smoke_report,
+            "gate": gate,
+        },
+    }
+
+
+@app.post("/api/workspaces/{ws_id}/departments/{dept_id}/run-prep")
+async def api_run_single_department_prep(ws_id: str, dept_id: str, payload: dict = None):
+    """Run prep for one department (still no auto-confirm)."""
+    resolve_existing_ws_path(ws_id)
+    payload = payload or {}
+    from .department_agents import run_auto_prep_pipeline
+    registry = load_department_registry()
+    meta = next((d for d in registry.get("departments", []) if d["id"] == dept_id), None)
+    if not meta:
+        raise HTTPException(status_code=404, detail=f"Unknown department: {dept_id}")
+    state = load_department_state(ws_id)
+    gdd = {}
+    try:
+        gdd = load_assembled_manifest(ws_id)
+    except Exception:
+        pass
+    state, run_log, suggested, new_gdd, applied_patches = await run_auto_prep_pipeline(
+        registry=registry,
+        state=state,
+        gdd=gdd or {},
+        reports_dir=REPORTS_DIR,
+        force=bool(payload.get("force", True)),
+        only=[dept_id] if dept_id != "director" else None,
+        apply_patches=bool(payload.get("applyPatches", True)),
+    )
+    patches_saved = False
+    if applied_patches and new_gdd:
+        try:
+            save_split_manifest(ws_id, new_gdd)
+            patches_saved = True
+        except Exception:
+            try:
+                with open(os.path.join(get_ws_path(ws_id), "manifest.json"), "w", encoding="utf-8") as f:
+                    json.dump(new_gdd, f, ensure_ascii=False, indent=2)
+                patches_saved = True
+            except Exception:
+                pass
+    state = refresh_open_handoff_counts(ws_id, state)
+    saved = save_department_state(ws_id, state)
+    return {
+        "success": True,
+        "data": {
+            "state": saved,
+            "runLog": run_log,
+            "suggestedHandoffs": suggested,
+            "patchesApplied": applied_patches,
+            "patchesSaved": patches_saved,
+        },
+    }
+
+
+@app.post("/api/workspaces/{ws_id}/departments/node-smoke")
+def api_run_node_smoke(ws_id: str, payload: dict = None):
+    """QA-owned per-node smoke (enter/spawn/retreat). Writes node_smoke_latest.json."""
+    resolve_existing_ws_path(ws_id)
+    payload = payload or {}
+    report = run_node_smoke(
+        ws_id,
+        wall_ms=int(payload.get("wallMs") or 3000),
+        simulated_sec=int(payload.get("simulatedSec") or 10),
+    )
+    from .department_agents import evaluate_advance_gate, collect_report_signals
+    registry = load_department_registry()
+    state = load_department_state(ws_id)
+    gate = evaluate_advance_gate(state, registry, collect_report_signals(REPORTS_DIR))
+    return {"success": True, "data": {"report": report, "gate": gate}}
+
+
+@app.get("/api/workspaces/{ws_id}/departments/gate")
+def api_department_gate(ws_id: str, run_smoke: bool = Query(False)):
+    """Multi-stage gate snapshot: asset_confirm / runtime_stage.
+    Pass run_smoke=1 to refresh node smoke before evaluating.
+    """
+    resolve_existing_ws_path(ws_id)
+    if run_smoke:
+        run_node_smoke(ws_id)
+    from .department_agents import evaluate_all_stage_gates, collect_report_signals
+    registry = load_department_registry()
+    state = load_department_state(ws_id)
+    rejects = [h for h in list_handoffs(ws_id) if h.get("status") == "open" and h.get("type") == "reject"]
+    reject_ids = [h.get("id") for h in rejects if h.get("id")]
+    signals = collect_report_signals(REPORTS_DIR)
+    gdd = None
+    try:
+        gdd = load_assembled_manifest(ws_id)
+    except Exception:
+        gdd = None
+    gate = evaluate_all_stage_gates(
+        state,
+        registry,
+        signals,
+        gdd=gdd,
+        open_reject_ids=reject_ids,
+    )
+    return {"success": True, "data": gate}
+
+
+@app.post("/api/workspaces/{ws_id}/departments/advance-stage")
+def api_advance_department_stage(ws_id: str, payload: dict = None):
+    """Advance stage one step if that transition's gate passes.
+
+    Body:
+      stageId: asset_confirm | runtime_stage (default = next stage)
+      force: skip gate
+      runNodeSmoke: default true only for asset_confirm
+    Note: beat_board was removed; playability checks live on runtime_stage.
+    """
+    resolve_existing_ws_path(ws_id)
+    payload = payload or {}
+    from .department_agents import (
+        evaluate_all_stage_gates,
+        evaluate_transition_gate,
+        collect_report_signals,
+        next_stage_id,
+        normalize_stage_id,
+        stage_index,
+    )
+    registry = load_department_registry()
+    state = load_department_state(ws_id)
+    current = normalize_stage_id(state.get("stageId"))
+    target = normalize_stage_id(payload.get("stageId") or next_stage_id(current) or current)
+
+    smoke_report = None
+    # Refresh smoke when entering asset_confirm (or when explicitly requested)
+    want_smoke = payload.get("runNodeSmoke")
+    if want_smoke is None:
+        want_smoke = target == "asset_confirm"
+    if want_smoke and not payload.get("force"):
+        smoke_report = run_node_smoke(ws_id)
+
+    rejects = [h for h in list_handoffs(ws_id) if h.get("status") == "open" and h.get("type") == "reject"]
+    reject_ids = [h.get("id") for h in rejects if h.get("id")]
+    signals = collect_report_signals(REPORTS_DIR)
+    gdd = None
+    try:
+        gdd = load_assembled_manifest(ws_id)
+    except Exception:
+        gdd = None
+
+    # Idempotent: already at or past target
+    if stage_index(current) >= stage_index(target) and not payload.get("force"):
+        snap = evaluate_all_stage_gates(
+            state, registry, signals, gdd=gdd, open_reject_ids=reject_ids
+        )
+        return {
+            "success": True,
+            "data": {
+                "state": state,
+                "gate": {**snap, "alreadyAtTarget": True, "stageId": current},
+                "nodeSmoke": smoke_report,
+                "message": f"already_at_stage:{current}",
+            },
+        }
+
+    gate = evaluate_transition_gate(
+        state,
+        registry,
+        signals,
+        target_stage=target,
+        gdd=gdd,
+        open_reject_ids=reject_ids,
+    )
+    if not gate.get("allowed") and not payload.get("force"):
+        raise HTTPException(
+            status_code=409,
+            detail={"message": "gate_blocked", "gate": gate, "nodeSmoke": smoke_report},
+        )
+
+    state["stageId"] = target
+    state["stageAdvancedAt"] = utc_now_string()
+    hist = list(state.get("stageHistory") or [])
+    hist.append(
+        {
+            "from": current,
+            "to": target,
+            "at": state["stageAdvancedAt"],
+            "forced": bool(payload.get("force")),
+        }
+    )
+    state["stageHistory"] = hist[-20:]
+    saved = save_department_state(ws_id, state)
+    snap = evaluate_all_stage_gates(
+        saved, registry, signals, gdd=gdd, open_reject_ids=reject_ids
+    )
+    return {
+        "success": True,
+        "data": {
+            "state": saved,
+            "gate": snap,
+            "transition": gate,
+            "nodeSmoke": smoke_report,
+        },
+    }

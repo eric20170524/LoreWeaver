@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0",
+  "id": "defend_core",
+  "title": "Defend Core",
+  "category": "defense_objective",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "coreHp": {
+      "type": "integer",
+      "default": 100,
+      "min": 1,
+      "max": 999999,
+      "patchLevel": "L1"
+    },
+    "enemyTargetPriority": {
+      "type": "enum",
+      "values": [
+        "player",
+        "core",
+        "nearest"
+      ],
+      "default": "core",
+      "patchLevel": "L2"
+    },
+    "coreRadius": {
+      "type": "number",
+      "default": 36,
+      "min": 1,
+      "max": 500,
+      "patchLevel": "L1"
+    }
+  },
+  "requiredCoreSystems": [
+    "GameplayModifier",
+    "ObjectiveHp",
+    "EnemyTargeting"
+  ],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node4.js",
+    "minigame/perfectworld_dahuang/docs/01_PRD.md"
+  ],
+  "knownRisks": [
+    "needs clear core damage feedback and failure messaging"
+  ],
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17)."
+}

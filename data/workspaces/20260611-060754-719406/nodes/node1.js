@@ -10,13 +10,14 @@ import {
     createAtlasFrameTexture,
     getRuntimeArtStatus,
     preloadImagegenAtlas,
+    preloadNodeArtKeys,
+    getNodeEnvBackgroundKey,
     recordProceduralFallback
 } from '../utils/RuntimeSprites.js';
 import { SKILL_POOL_REGISTRY, ENEMY_REGISTRY } from '../js/data.js';
 import TouchInputController from '../runtime/TouchInputController.js';
 import { projectNodeResultInput } from '../runtime/run-metrics.js';
-import { createRuntimeEnemy as createRuntimeEnemyFactory, updateEnemyState } from '../runtime/EnemyRuntime.js';
-import { RunDirector } from '../runtime/RunDirector.js';
+import { createRuntimeEnemy as createRuntimeEnemyFactory } from '../runtime/EnemyRuntime.js';
 import {
     buildSkillExecutionPlan,
     calculateSkillDamage,
@@ -27,8 +28,13 @@ import {
 } from '../runtime/SkillRuntime.js';
 import { Node1UI } from '../runtime/NodeCombatHud.js';
 import { CombatRuntime } from '../runtime/CombatRuntime.js';
+import GameFeel from '../runtime/GameFeel.js';
 import { SkillExecutionRuntime } from '../runtime/SkillExecutionRuntime.js';
 import PlayerActionController from '../runtime/PlayerActionController.js';
+import { EnemyArchetypeRuntime } from '../runtime/EnemyArchetypeRuntime.js';
+import { RunDirector, NODE1_LEVEL_CONTRACT } from '../runtime/RunDirector.js';
+import { getLevelContract } from '../runtime/LevelContracts.js';
+import { BossPhaseController } from '../runtime/BossPhaseController.js';
 export { Node1UI } from '../runtime/NodeCombatHud.js';
 
 export class Node1Scene extends Phaser.Scene {
@@ -58,6 +64,14 @@ export class Node1Scene extends Phaser.Scene {
         this.combatRuntime = new CombatRuntime(this);
         this.skillExecutionRuntime = new SkillExecutionRuntime(this);
         this.playerActionController = new PlayerActionController(this);
+        this.enemyArchetypeRuntime = new EnemyArchetypeRuntime(this);
+        this.levelContract = getLevelContract(this.nodeConfig?.id) || (this.nodeConfig?.id === 1 ? NODE1_LEVEL_CONTRACT : null);
+        // All nodes with a LevelContract get a RunDirector (Node1-12 campaign spine).
+        this.runDirector = this.levelContract
+            ? new RunDirector(this, this.levelContract)
+            : null;
+        this.campaignObjectiveComplete = false;
+        this.bossPhaseController = null;
         this.dashInvulnerable = false;
         this.touchMoveState = this.createEmptyTouchMoveState();
         this.joystickConfig = null;
@@ -105,7 +119,13 @@ export class Node1Scene extends Phaser.Scene {
 
     createCombatTextures() {
         this.createPlayerTexture();
-        Object.keys(ENEMY_REGISTRY).forEach(enemyType => this.createEnemyTexture(enemyType));
+        // Campaign art matrix: preload this node's expected production keys from atlas.
+        preloadNodeArtKeys(this, this.nodeConfig?.id || 1);
+        const envKey = getNodeEnvBackgroundKey(this.nodeConfig?.id || 1);
+        createAtlasFrameTexture(this, envKey, envKey);
+        const activeEnemies = [...(this.nodeConfig.enemyPool || [])];
+        if (this.nodeConfig.bossId) activeEnemies.push(this.nodeConfig.bossId);
+        activeEnemies.forEach((enemyType) => this.createEnemyTexture(enemyType));
         this.createSkillProjectileTexture();
         this.createPickupTexture();
         createAtlasFrameTexture(this, 'pickup_blood_essence', 'pickup_particle');
@@ -298,7 +318,7 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     preload() {
-        preloadImagegenAtlas(this);
+        preloadImagegenAtlas(this, this.nodeConfig?.id || 1);
     }
 
     create() {
@@ -306,8 +326,58 @@ export class Node1Scene extends Phaser.Scene {
         this.height = 1280;
         this.createCombatTextures();
 
-        // 背景
-        this.add.grid(0, 0, this.width * 3, this.height * 3, 64, 64, 0x222222).setOrigin(0, 0);
+        // Scene Background Implementation — chapter env atlas first, procedural dirt fallback.
+        const bgWidth = this.sys.game.config.width * 2;
+        const bgHeight = this.sys.game.config.height * 2;
+        const envKey = getNodeEnvBackgroundKey(this.nodeConfig?.id || 1);
+        createAtlasFrameTexture(this, envKey, envKey);
+        createAtlasFrameTexture(this, 'env_ground_patch', 'env_ground_patch');
+        createAtlasFrameTexture(this, 'env_landmark_rock', 'env_landmark_rock');
+
+        if (this.textures.exists(envKey)) {
+            this.add.tileSprite(this.width * 1.5, this.height * 1.5, bgWidth * 2, bgHeight * 2, envKey)
+                .setDepth(-100)
+                .setAlpha(0.92)
+                .setTileScale(4, 4);
+        } else {
+            const bgGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+            bgGraphics.fillStyle(0x3e2723, 1);
+            bgGraphics.fillRect(0, 0, 1024, 1024);
+            bgGraphics.lineStyle(2, 0x4e342e, 1);
+            for (let i = 0; i < 1024; i += 128) {
+                bgGraphics.moveTo(i, 0);
+                bgGraphics.lineTo(i, 1024);
+                bgGraphics.moveTo(0, i);
+                bgGraphics.lineTo(1024, i);
+            }
+            bgGraphics.strokePath();
+            bgGraphics.generateTexture('bg_dirt', 1024, 1024);
+            bgGraphics.destroy();
+            this.add.tileSprite(0, 0, bgWidth * 2, bgHeight * 2, 'bg_dirt').setDepth(-100).setAlpha(0.6);
+        }
+
+        // Landmarks / ground patches from atlas when available.
+        for (let i = 0; i < 20; i++) {
+            const lx = Phaser.Math.Between(80, this.width * 3 - 80);
+            const ly = Phaser.Math.Between(80, this.height * 3 - 80);
+            const landmarkKey = this.textures.exists('env_landmark_rock')
+                ? 'env_landmark_rock'
+                : (this.textures.exists('env_ground_patch') ? 'env_ground_patch' : null);
+            if (landmarkKey) {
+                const rock = this.add.image(lx, ly, landmarkKey)
+                    .setDepth(-99)
+                    .setAlpha(0.55)
+                    .setDisplaySize(Phaser.Math.Between(28, 72), Phaser.Math.Between(28, 72));
+                rock.setTint(i % 2 === 0 ? 0xffffff : 0xccbb99);
+            } else {
+                const rock = this.add.graphics();
+                rock.fillStyle(0x2e1b15, 0.8);
+                rock.fillCircle(lx, ly, Phaser.Math.Between(20, 60));
+                rock.setDepth(-99);
+            }
+        }
+
+        this.add.grid(0, 0, this.width * 3, this.height * 3, 64, 64, 0x222222, 0.15).setOrigin(0, 0);
         this.physics.world.setBounds(0, 0, this.width * 3, this.height * 3);
 
         // 玩家
@@ -331,29 +401,18 @@ export class Node1Scene extends Phaser.Scene {
         });
 
         // 敌人组
-        this.enemies = this.physics.add.group({
-            maxSize: 60,
-            runChildUpdate: false
-        });
+        this.enemies = this.physics.add.group();
         
         // 敌方弹幕组
-        this.enemyProjectiles = this.physics.add.group({
-            maxSize: 40,
-            runChildUpdate: false
-        });
+        this.enemyProjectiles = this.physics.add.group();
         
         // 碰撞
         this.physics.add.overlap(this.player, this.enemies, this.onPlayerHit, null, this);
         this.physics.add.overlap(this.player, this.enemyProjectiles, this.onPlayerHitByProjectile, null, this);
 
         // 掉落组与拾取碰撞
-        this.pickups = this.physics.add.group({
-            maxSize: 100,
-            runChildUpdate: false
-        });
+        this.pickups = this.physics.add.group();
         this.physics.add.overlap(this.player, this.pickups, this.onPickupCollect, null, this);
-
-        this.runDirector = new RunDirector(this, this.nodeConfig);
 
         // 输入
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -365,17 +424,24 @@ export class Node1Scene extends Phaser.Scene {
         });
         this.setupTouchMovement();
         this.playerActionController.setup();
+        this.runDirector?.setup?.();
         this.registerNodeLifecycleHooks();
+        // Campaign audio: per-node BGM bed; Boss switches to boss theme on spawn.
+        GameFeel.applyAudioChannels();
+        GameFeel.publishStatus();
+        AudioManager.playNodeBgm?.(this.nodeConfig?.id || 1);
 
         // UI
         this.uiSceneKey = 'Node1UI';
-        // 检查是否已经存在该 UI 场景，避免重复添加报错
+        // 清理可能遗留的关停 UI 场景，确保每次启动均重新实例化挂载 HUD 与撤退按钮
         if (this.scene.get(this.uiSceneKey)) {
-            this.scene.launch(this.uiSceneKey, { parent: this });
-            this.uiScene = this.scene.get(this.uiSceneKey);
-        } else {
-            this.uiScene = this.scene.add(this.uiSceneKey, Node1UI, true, { parent: this });
+            try {
+                this.scene.remove(this.uiSceneKey);
+            } catch (_) {
+                /* resilience */
+            }
         }
+        this.uiScene = this.scene.add(this.uiSceneKey, Node1UI, true, { parent: this });
         this.time.delayedCall(0, () => {
             this.uiScene?.updateSkills?.(this.activeSkills);
             this.uiScene?.updateActionBar?.(this.playerActionController.getHudSnapshot());
@@ -416,16 +482,22 @@ export class Node1Scene extends Phaser.Scene {
         const existingState = typeof window !== 'undefined' ? window.__DAHUANG_NODE_TEST_STATE__ : null;
         if (existingState?.sceneKey === this.sys?.settings?.key && existingState?.inactiveReason) {
             this.teardownTouchMovementListeners();
-            this.playerActionController?.teardown();
-            this.skillExecutionRuntime?.teardown();
-            this.combatRuntime?.teardown();
+            this.playerActionController?.teardown?.();
+            this.enemyArchetypeRuntime?.teardown?.();
+            this.runDirector?.teardown?.();
+            this.skillExecutionRuntime?.teardown?.();
+            this.combatRuntime?.teardown?.();
             return;
         }
+        // Tear down group-dependent runtimes before publishing inactive state so
+        // debug/test hooks do not call Phaser getChildren() on a destroyed group.
+        this.enemyArchetypeRuntime?.teardown?.();
+        this.runDirector?.teardown?.();
         this.markNodeTestStateInactive(reason);
         this.teardownTouchMovementListeners();
-        this.playerActionController?.teardown();
-        this.skillExecutionRuntime?.teardown();
-        this.combatRuntime?.teardown();
+        this.playerActionController?.teardown?.();
+        this.skillExecutionRuntime?.teardown?.();
+        this.combatRuntime?.teardown?.();
     }
 
     getPointerId(pointer) {
@@ -535,7 +607,6 @@ export class Node1Scene extends Phaser.Scene {
         const pointer = this.getPointerTestState();
         const state = {
             version: 1,
-            runDirector: this.runDirector?.getTestState(),
             nodeId: this.nodeConfig?.id ?? null,
             currentNodeId: this.nodeConfig?.id ?? null,
             sceneKey,
@@ -575,6 +646,14 @@ export class Node1Scene extends Phaser.Scene {
             lastAcceptedAction: this.playerActionController?.getTestState?.()?.lastAcceptedAction ?? null,
             lastRejectedAction: this.playerActionController?.getTestState?.()?.lastRejectedAction ?? null,
             lastRejectReason: this.playerActionController?.getTestState?.()?.lastRejectReason ?? null,
+            enemyArchetypes: (() => {
+                try { return this.enemyArchetypeRuntime?.getDebugState?.() || null; }
+                catch (_) { return { tornDown: true }; }
+            })(),
+            runDirector: (() => {
+                try { return this.runDirector?.getTestState?.() || null; }
+                catch (_) { return { tornDown: true }; }
+            })(),
             firstNodeGrowth: this.getFirstNodeGrowthTestSummary(),
             ...overrides
         };
@@ -599,6 +678,12 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     update(time, delta) {
+        if (this.bossPhaseController) {
+            this.bossPhaseController.update(time, delta);
+        } else if (this.activeBoss && this.bossHpBar) {
+            // Only the Node1 hand-rolled HUD path uses updateBoss.
+            this.updateBoss(this.activeBoss, time, delta);
+        }
         if (!this.canAcceptMovementInput()) {
             this.movementMode = this.isGameOver || this.isTransitioning ? 'inactive' : 'locked';
             this.releaseTouchMovement(this.getInputLockReason() || 'input_locked');
@@ -613,20 +698,19 @@ export class Node1Scene extends Phaser.Scene {
         const vy = movement.y;
         this.movementMode = movement.mode;
 
-        const speed = this.playerStats.baseSpeed;
-        this.player.body.setVelocity(vx * speed, vy * speed);
+        if (!this.dashInvulnerable) {
+            const speed = this.playerStats.baseSpeed;
+            this.player.body.setVelocity(vx * speed, vy * speed);
+        }
+
         if (this.playerAura) {
             this.playerAura.setPosition(this.player.x, this.player.y);
         }
-        if (this.activeBoss) {
-            this.updateBoss(this.activeBoss);
-        }
         this.publishNodeTestState();
 
-        // 敌人追踪与碧落精射击
-        this.enemies.getChildren().forEach(enemy => {
-            updateEnemyState(enemy, this.player, time, this);
-        });
+        // LW-020: archetype state machines own movement + telegraphed attacks.
+        // Boss keeps dedicated updateBoss path below via activeBoss.
+        this.enemyArchetypeRuntime?.update?.(time, delta);
 
         // Manual agency actions (dash / active technique / charged burst).
         this.playerActionController?.update?.(time);
@@ -667,7 +751,7 @@ export class Node1Scene extends Phaser.Scene {
 
     getSkillDamage(skillData, level) {
         const { damage, critical } = calculateSkillDamage(this, skillData, level);
-        if (critical) this.cameras.main.shake(80, 0.004);
+        if (critical) GameFeel.shake(this, 80, 0.004);
         return damage;
     }
 
@@ -694,60 +778,95 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     onSecondTick() {
-        if (this.runDirector) {
-            this.runDirector.onSecondTick(this.time.now, this.nodeConfig);
-            this.surviveTime = this.runDirector.surviveTime;
+        if (this.isGameOver || this.isPaused) return;
+        this.surviveTime++;
+        const duration = this.levelContract?.durationSeconds
+            || (this.nodeConfig.id === 1 ? 90 : this.nodeConfig.duration);
+        this.uiScene?.updateTime?.(this.surviveTime, duration);
 
-            // Trigger tutorial float texts for Node 1
-            if (this.nodeConfig.id === 1) {
-                if (this.surviveTime === 2) {
-                    this.showWorldFloatText(this.player.x, this.player.y - 120, '拖动摇杆移动', "#80ffea", 3000);
-                } else if (this.surviveTime === 10) {
-                    this.showWorldFloatText(this.player.x, this.player.y - 120, '拾取气血精华升级', "#80ffea", 3000);
-                } else if (this.surviveTime === 20) {
-                    this.showWorldFloatText(this.player.x, this.player.y - 120, '点击图标闪避攻击', "#80ffea", 3000);
-                } else if (this.surviveTime === 35) {
-                    this.showWorldFloatText(this.player.x, this.player.y - 120, '主动施放术法！', "#ffd700", 3000);
-                } else if (this.surviveTime === 50) {
-                    this.showWorldFloatText(this.player.x, this.player.y - 120, '精英凶禽来袭！', "#ff4444", 3000);
-                }
+        if (this.runDirector) {
+            // Campaign spine: authored LevelContract beats (Node1-12).
+            const tick = this.runDirector.onSecond(this.surviveTime);
+            this.onCampaignSecond?.(this.surviveTime, tick);
+            if (tick?.endRun) {
+                this.endGame(
+                    Boolean(tick.success),
+                    tick.success ? null : (tick.reason || 'timeout'),
+                    tick.success
+                        ? (NodeBridge.RESULT_REASONS?.COMPLETED || 'completed')
+                        : (NodeBridge.RESULT_REASONS?.FAILED || 'failed')
+                );
             }
-        }
+            if (this.nodeConfig.id === 1 && this.surviveTime === 50 && !this._legacyEliteSpawned) {
+                this._legacyEliteSpawned = true;
+                this.spawnEliteSilverWingedEagle?.();
+            }
+        } else {
+            // Legacy fallback for nodes without a contract.
+            const spawnCount = 1 + Math.floor(this.surviveTime / 30);
+            for (let i = 0; i < spawnCount; i++) this.spawnEnemy({});
+            if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.9) && !this.bossSpawned) {
+                this.spawnBoss();
+                this.bossSpawned = true;
+            }
+            if (this.surviveTime >= this.nodeConfig.duration) this.endGame(true);
         }
     }
 
-    spawnBoss() {
-        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId];
-        const boss = this.createRuntimeEnemy(this.nodeConfig.bossId, this.player.x, this.player.y - 300, {
-            hp: enemyData.hp * 5, // make sure it takes time
-            speed: enemyData.speed * 0.8,
-            exp: enemyData.exp * 5,
-            lootList: enemyData.lootList,
-            scaleMultiplier: 2.0
-        });
-        
-        boss.setData('isBoss', true);
-        boss.setData('maxHp', enemyData.hp * 5);
-        boss.setData('phase', 1);
-        boss.setData('state', 'idle'); // idle, windup, active, recovery, break
-        boss.setData('stateTimer', 0);
+    /** Optional subclass hook each second after director tick. */
+    onCampaignSecond(_surviveTime, _tick) {}
 
-        const txt = this.add.text(this.player.x, this.player.y - 100, '穷奇幼崽降临！', { fontSize: '32px', fill: '#ff0000', fontStyle: 'bold' }).setOrigin(0.5);
+    spawnBoss(options = {}) {
+        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId] || ENEMY_REGISTRY.qiongqi_cub;
+        const boss = this.createRuntimeEnemy(this.nodeConfig.bossId, this.player.x, this.player.y - 300, {
+            hp: enemyData.hp,
+            speed: (enemyData.speed || 40) * 0.8,
+            exp: (enemyData.exp || 100) * 5,
+            lootList: enemyData.lootList,
+            scaleMultiplier: options.scaleMultiplier || 2.0,
+            data: { role: 'boss', isBoss: true, ...(options.data || {}) }
+        });
+
+        boss.setData('isBoss', true);
+        boss.setData('maxHp', enemyData.hp);
+        this.activeBoss = boss;
+        this.bossSpawned = true;
+        AudioManager.playNodeBgm?.(this.nodeConfig?.id || 1, { boss: true });
+        AudioManager.playSfx?.('phase_shift');
+
+        const bossName = options.name || enemyData.name || '首领';
+        AudioManager.playCallout?.(bossName);
+
+        // Node1 keeps its original updateBoss path for vertical-slice parity;
+        // Node2-12 can opt into BossPhaseController via options.usePhaseController.
+        if (options.usePhaseController || this.nodeConfig.id !== 1) {
+            this.bossPhaseController = new BossPhaseController(this, boss, {
+                name: bossName,
+                phases: options.phases || 3,
+                moves: options.moves || null
+            });
+        } else {
+            boss.setData('phase', 1);
+            boss.setData('state', 'idle');
+            boss.setData('stateTimer', 0);
+            boss.setData('moveId', 'ground_slam');
+            boss.setData('interruptible', true);
+            this.bossHpBarBg = this.add.graphics().setScrollFactor(0).setDepth(200);
+            this.bossHpBarBg.fillStyle(0x222222, 0.8).fillRect(this.width / 2 - 150, 60, 300, 16);
+            this.bossHpBar = this.add.graphics().setScrollFactor(0).setDepth(200);
+            this.bossNameText = this.add.text(this.width / 2, 40, `${bossName} (Phase 1)`, {
+                fontSize: '18px', fill: '#ff4444', fontStyle: 'bold'
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+        }
+
+        const txt = this.add.text(this.player.x, this.player.y - 100, `${bossName}降临！`, {
+            fontSize: '28px', fill: '#ff0000', fontStyle: 'bold'
+        }).setOrigin(0.5);
         this.tweens.add({
-            targets: txt,
-            y: this.player.y - 150,
-            alpha: 0,
-            duration: 2000,
+            targets: txt, y: this.player.y - 150, alpha: 0, duration: 2000,
             onComplete: () => txt.destroy()
         });
-
-        this.activeBoss = boss;
-
-        // Add boss health bar
-        this.bossHpBarBg = this.add.graphics().setScrollFactor(0).setDepth(200);
-        this.bossHpBarBg.fillStyle(0x222222, 0.8).fillRect(this.width / 2 - 150, 60, 300, 16);
-        this.bossHpBar = this.add.graphics().setScrollFactor(0).setDepth(200);
-        this.bossNameText = this.add.text(this.width / 2, 40, '穷奇幼崽 (Phase 1)', { fontSize: '18px', fill: '#ff4444', fontStyle: 'bold' }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+        return boss;
     }
 
     updateBoss(boss) {
@@ -873,7 +992,13 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     createRuntimeEnemy(enemyType, x, y, options = {}) {
-        return createRuntimeEnemyFactory(this, enemyType, x, y, options);
+        const enemy = createRuntimeEnemyFactory(this, enemyType, x, y, options);
+        this.enemyArchetypeRuntime?.attach?.(enemy, {
+            enemyType,
+            archetype: options.archetype || options.data?.archetype,
+            role: options.data?.role || (options.data?.isBoss || options.isBoss ? 'boss' : 'normal')
+        });
+        return enemy;
     }
 
     randomTriangleType() {
@@ -881,17 +1006,21 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     damageEnemy(enemy, dmg, skillData = null) {
-        if (enemy.getData('isBoss') && skillData && skillData.castMode === 'manual') {
-            const state = enemy.getData('state');
-            if (state === 'windup' || state === 'recovery') {
-                enemy.setData('state', 'break');
-                enemy.setData('stateTimer', 0);
-                enemy.setData('speed', 0);
-                if (enemy.telegraph) {
-                    enemy.telegraph.destroy();
-                    enemy.telegraph = null;
+        if (enemy.getData('isBoss')) {
+            if (this.bossPhaseController) {
+                this.bossPhaseController.tryBreak(skillData);
+            } else if (skillData && skillData.castMode === 'manual') {
+                const state = enemy.getData('state');
+                if (state === 'windup' || state === 'recovery') {
+                    enemy.setData('state', 'break');
+                    enemy.setData('stateTimer', 0);
+                    enemy.setData('speed', 0);
+                    if (enemy.telegraph) {
+                        enemy.telegraph.destroy();
+                        enemy.telegraph = null;
+                    }
+                    this.showWorldFloatText(enemy.x, enemy.y - 80, '破招！', '#00ffff', 2000);
                 }
-                this.showWorldFloatText(enemy.x, enemy.y - 80, '破招！', '#00ffff', 2000);
             }
         }
         return this.combatRuntime.damageEnemy(enemy, dmg, skillData);
@@ -899,9 +1028,7 @@ export class Node1Scene extends Phaser.Scene {
 
     spawnPickup(x, y, exp, loot) {
         if (!this.pickups) return;
-        const pickup = this.pickups.get(x, y, 'pickup_blood_essence');
-        if (!pickup) return; // Pool limit reached
-        pickup.setActive(true).setVisible(true);
+        const pickup = this.pickups.create(x, y, 'pickup_blood_essence');
         pickup.setDisplaySize(20, 20);
         pickup.setDepth(1);
         pickup.setData('exp', exp);
@@ -958,8 +1085,7 @@ export class Node1Scene extends Phaser.Scene {
             });
         }
 
-        pickup.setActive(false).setVisible(false);
-        pickup.setPosition(-1000, -1000);
+        pickup.destroy();
     }
 
     gainExp(amount) {
@@ -1008,7 +1134,7 @@ export class Node1Scene extends Phaser.Scene {
         UIHelper.showFloatText(this.uiScene, this.width / 2, 430, `${sourceText}: ${skillData.name}`, '#ffd700', 1600);
         AudioManager.playSkillCue(skillData);
         VFX.playSkillEffect(this, skillData, this.player.x, this.player.y, { target: this.player, level: 1 });
-        this.cameras.main.flash(180, 255, 215, 80);
+        GameFeel.flash(this, 180, 255, 215, 80);
         return true;
     }
 
@@ -1030,7 +1156,7 @@ export class Node1Scene extends Phaser.Scene {
         UIHelper.showFloatText(this.uiScene, this.width / 2, 430, `${sourceText}: ${skillData.name} Lv.${existing.level}`, '#80ffea', 1600);
         AudioManager.playSkillCue(skillData);
         VFX.playSkillEffect(this, skillData, this.player.x, this.player.y, { target: this.player, level: existing.level });
-        this.cameras.main.flash(180, 128, 255, 234);
+        GameFeel.flash(this, 180, 128, 255, 234);
         return {
             skillId,
             beforeLevel,
@@ -1135,6 +1261,11 @@ export class Node1Scene extends Phaser.Scene {
     }
 
     onPlayerHit(player, enemy) {
+        // LW-020: non-Boss enemies may only deal damage during their active attack frame.
+        if (enemy?.getData && !enemy.getData('isBoss')) {
+            const phase = enemy.getData('movePhase') || enemy.getData('state');
+            if (phase && phase !== 'active') return;
+        }
         return this.combatRuntime.onPlayerHit(player, enemy);
     }
 
@@ -1148,6 +1279,16 @@ export class Node1Scene extends Phaser.Scene {
         
         this.isGameOver = true;
         this.physics.pause();
+        this.playerActionController?.teardown?.();
+        this.enemyArchetypeRuntime?.teardown?.();
+        this.runDirector?.teardown?.();
+        this.combatRuntime?.teardown?.();
+        if (success) {
+            AudioManager.playBgm?.('victory_sting', { force: true });
+            AudioManager.playSfx?.('wave_clear');
+        } else {
+            AudioManager.playBgm?.('defeat_sting', { force: true });
+        }
         this.scene.stop(this.uiSceneKey);
         
         // 结算奖励
@@ -1257,25 +1398,16 @@ export class Node1Scene extends Phaser.Scene {
             g.destroy();
         }
 
-        const proj = this.enemyProjectiles.get(enemy.x, enemy.y, 'enemy_projectile');
-        if (!proj) return; // Pool limit reached
-        proj.setActive(true).setVisible(true);
+        const proj = this.enemyProjectiles.create(enemy.x, enemy.y, 'enemy_projectile');
         proj.setDisplaySize(14, 14);
         proj.setTint(0x44ff44);
         const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, this.player.x, this.player.y);
         proj.body.setVelocity(Math.cos(angle) * 160, Math.sin(angle) * 160);
-        this.time.delayedCall(2200, () => {
-            if (proj.active) {
-                proj.setActive(false).setVisible(false);
-                proj.setPosition(-1000, -1000);
-            }
-        });
+        this.time.delayedCall(2200, () => { if (proj.active) proj.destroy(); });
     }
 
     onPlayerHitByProjectile(player, proj) {
-        if (!proj.active) return;
-        proj.setActive(false).setVisible(false);
-        proj.setPosition(-1000, -1000);
+        proj.destroy();
         this.onPlayerHit(player, { getData: (key) => key === 'atk' ? 8 : null });
     }
 }

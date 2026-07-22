@@ -97,12 +97,18 @@ export class GameOverScene extends Phaser.Scene {
             });
         }
 
-        const backBtn = this.add.text(width / 2, height - 100, '返回大荒', {
+        const btnY = Math.max(Math.min(height - 110, y + 60), 920);
+        const backBtn = this.add.text(width / 2, btnY, '返回大荒', {
             fontSize: '32px',
-            fill: '#ffffff',
-            backgroundColor: '#44',
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5).setInteractive();
+            fontStyle: 'bold',
+            color: '#ffffff',
+            backgroundColor: '#1e293b',
+            padding: { x: 32, y: 14 }
+        })
+            .setOrigin(0.5)
+            .setDepth(1000)
+            .setScrollFactor(0)
+            .setInteractive({ useHandCursor: true });
 
         backBtn.on('pointerdown', () => {
             backBtn.disableInteractive();

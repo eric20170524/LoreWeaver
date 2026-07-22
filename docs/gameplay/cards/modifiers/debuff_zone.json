@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "id": "debuff_zone",
+  "title": "Debuff Zone",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {
+    "zoneRadius": {
+      "type": "number",
+      "default": 100,
+      "patchLevel": "L1",
+      "description": "Debuff zone radius."
+    },
+    "speedCap": {
+      "type": "number",
+      "default": 50,
+      "patchLevel": "L1",
+      "description": "Player speed inside zone."
+    },
+    "moveIntervalMs": {
+      "type": "integer",
+      "default": 5000,
+      "patchLevel": "L1",
+      "description": "Zone relocate interval."
+    }
+  },
+  "requiredCoreSystems": [
+    "Zone"
+  ],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node10.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Survivor_horde modifier factory wired."
+}

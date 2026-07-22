@@ -34,7 +34,26 @@
           20,
           30
         ]
-      }
+      },
+      "durationSec": 300,
+      "goalValue": 300,
+      "difficulty": 10,
+      "victoryMode": "survive",
+      "enemyPool": [],
+      "envKey": "env_bg_wall",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node10_siege",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme_late",
+      "runtimeCardId": "survivor_horde",
+      "shellRetreat": true
     },
     "patchLevel": "L3"
   },
@@ -45,6 +64,7 @@
       "bone_script_mastery",
       "pure_blood_trial"
     ],
+    "rewardUnlocks": [],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
@@ -54,7 +74,6 @@
       "true_phoenix_art",
       "supreme_bone"
     ],
-    "rewardUnlocks": [],
     "notes": "首通意图: reinforce_existing(kunpeng_art,true_phoenix_art,supreme_bone); 边境星关需要高阶宝术应对同屏大军，planning 明确允许清屏、光环和机动方案。"
   }
 }

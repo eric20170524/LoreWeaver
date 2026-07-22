@@ -481,11 +481,6 @@ export function PrdPanel({ gameSpec, locale, onSaveSpec, addLog }: PrdPanelProps
         </h4>
         <div className="space-y-3">
           {prdSpec.nodes.map((node) => {
-            const mechanicsLabels: { [key: string]: string } = {
-              tap_reaction: `⚡ ${copy.mechanics.tap_reaction}`,
-              collect_dodge: `🍃 ${copy.mechanics.collect_dodge}`,
-              memory_sequence: `🔮 ${copy.mechanics.memory_sequence}`
-            };
             const planning = node.planning || { mainlineHooks: [], rewardUnlocks: [], runSkillPool: [] };
             const abilityNameById = new Map((prdSpec.abilityCatalog || []).map((ability) => [ability.id, ability.name]));
             const formatAbilityList = (ids: string[]) => (
@@ -497,34 +492,17 @@ export function PrdPanel({ gameSpec, locale, onSaveSpec, addLog }: PrdPanelProps
               <div key={node.id} className="bg-white/90 dark:bg-slate-950/80 p-4 rounded-lg border border-slate-200 dark:border-slate-900 text-xs flex flex-col gap-4">
                 {isPrdEditing ? (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3">
-                      <label className="block text-3xs text-slate-500 font-mono uppercase">
-                        {copy.prd.nodeTitle}
-                        <input
-                          value={node.title}
-                          onChange={(event) => updatePrdDraft((draft) => {
-                            const target = draft.nodes.find((item) => item.id === node.id);
-                            if (target) target.title = event.target.value;
-                          })}
-                          className={`${formInputClass} mt-1`}
-                        />
-                      </label>
-                      <label className="block text-3xs text-slate-500 font-mono uppercase">
-                        {copy.prd.mechanics}
-                        <select
-                          value={node.mechanics}
-                          onChange={(event) => updatePrdDraft((draft) => {
-                            const target = draft.nodes.find((item) => item.id === node.id);
-                            if (target) target.mechanics = event.target.value as any;
-                          })}
-                          className={`${formInputClass} mt-1`}
-                        >
-                          <option value="tap_reaction">{copy.mechanics.tap_reaction}</option>
-                          <option value="collect_dodge">{copy.mechanics.collect_dodge}</option>
-                          <option value="memory_sequence">{copy.mechanics.memory_sequence}</option>
-                        </select>
-                      </label>
-                    </div>
+                    <label className="block text-3xs text-slate-500 font-mono uppercase">
+                      {copy.prd.nodeTitle}
+                      <input
+                        value={node.title}
+                        onChange={(event) => updatePrdDraft((draft) => {
+                          const target = draft.nodes.find((item) => item.id === node.id);
+                          if (target) target.title = event.target.value;
+                        })}
+                        className={`${formInputClass} mt-1`}
+                      />
+                    </label>
                     <label className="block text-3xs text-slate-500 font-mono uppercase">
                       {copy.prd.intro}
                       <textarea
@@ -536,31 +514,55 @@ export function PrdPanel({ gameSpec, locale, onSaveSpec, addLog }: PrdPanelProps
                         className={`${formTextareaClass} mt-1`}
                       />
                     </label>
-                    <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-3">
-                      <label className="block text-3xs text-slate-500 font-mono uppercase">
-                        {copy.prd.goal}
-                        <input
-                          type="number"
-                          min={1}
-                          value={node.goalValue}
-                          onChange={(event) => updatePrdDraft((draft) => {
-                            const target = draft.nodes.find((item) => item.id === node.id);
-                            if (target) target.goalValue = Number(event.target.value) || 1;
-                          })}
-                          className={`${formInputClass} mt-1`}
-                        />
-                      </label>
-                      <label className="block text-3xs text-slate-500 font-mono uppercase">
-                        {copy.prd.reward}
-                        <input
-                          value={node.rewards}
-                          onChange={(event) => updatePrdDraft((draft) => {
-                            const target = draft.nodes.find((item) => item.id === node.id);
-                            if (target) target.rewards = event.target.value;
-                          })}
-                          className={`${formInputClass} mt-1`}
-                        />
-                      </label>
+                    <label className="block text-3xs text-slate-500 font-mono uppercase">
+                      {copy.prd.reward}
+                      <input
+                        value={node.rewards}
+                        onChange={(event) => updatePrdDraft((draft) => {
+                          const target = draft.nodes.find((item) => item.id === node.id);
+                          if (target) target.rewards = event.target.value;
+                        })}
+                        className={`${formInputClass} mt-1`}
+                      />
+                      <span className="block mt-1 text-[10px] text-slate-400 normal-case font-sans font-normal">
+                        {copy.prd.rewardHint}
+                      </span>
+                    </label>
+                    {/* Runtime play params: read-only in design brief */}
+                    <div className="rounded border border-dashed border-cyan-500/30 bg-cyan-50/40 dark:bg-cyan-950/20 p-3 space-y-2">
+                      <div className="text-3xs text-cyan-700 dark:text-cyan-400 font-mono uppercase font-bold">
+                        {copy.prd.playContract}
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-relaxed">{copy.prd.playContractHint}</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                        <div>
+                          <span className="text-slate-500">{copy.prd.mechanics}</span>
+                          <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+                            {node.gameplay?.cardId || node.mechanics}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">{copy.prd.goal}</span>
+                          <div className="font-mono text-slate-800 dark:text-slate-200">{node.goalValue}</div>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">时长</span>
+                          <div className="font-mono text-slate-800 dark:text-slate-200">{node.durationLimit}s</div>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">难度</span>
+                          <div className="font-mono text-slate-800 dark:text-slate-200">{node.difficulty}</div>
+                        </div>
+                      </div>
+                      {node.gameplay && (
+                        <div className="text-[10px] text-slate-500 font-mono break-all">
+                          mods: {(node.gameplay.modifiers || []).map((m) => m.id).join(", ") || "—"}
+                          {node.gameplay.knobs?.bossId ? ` · boss=${node.gameplay.knobs.bossId}` : ""}
+                          {Array.isArray(node.gameplay.knobs?.enemyPool) && node.gameplay.knobs.enemyPool.length
+                            ? ` · pool=${node.gameplay.knobs.enemyPool.join("/")}`
+                            : ""}
+                        </div>
+                      )}
                     </div>
                     <div className="rounded border border-slate-200 dark:border-slate-850 p-3 space-y-2">
                       <div className="text-3xs text-slate-500 font-mono uppercase">{planningCopy.nodePlanning}</div>
@@ -629,12 +631,12 @@ export function PrdPanel({ gameSpec, locale, onSaveSpec, addLog }: PrdPanelProps
                         <p className="text-slate-600 dark:text-slate-400 pr-4 leading-relaxed">{node.intro}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-1 shrink-0 text-left md:text-right border-t md:border-t-0 border-slate-200 dark:border-slate-900 pt-2 md:pt-0 max-w-xs w-full md:w-auto">
-                        <span className="text-slate-500">{copy.prd.mechanics}:</span>
-                        <span className="text-emerald-400 font-semibold">{mechanicsLabels[node.mechanics] || node.mechanics}</span>
-                        <span className="text-slate-500">{copy.prd.goal}:</span>
-                        <span className="text-slate-900 dark:text-slate-200">{node.goalValue}</span>
                         <span className="text-slate-500">{copy.prd.reward}:</span>
                         <span className="text-amber-500 font-medium">{node.rewards}</span>
+                        <span className="text-slate-500">{copy.prd.playContract}:</span>
+                        <span className="text-emerald-500 font-mono text-[10px]">
+                          {node.gameplay?.cardId || node.mechanics} · {node.durationLimit}s · d{node.difficulty}
+                        </span>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2 rounded border border-slate-200 dark:border-slate-900 bg-slate-50/70 dark:bg-slate-950/40 p-3">

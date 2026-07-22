@@ -65,7 +65,14 @@ export class NodeBridge {
         const attemptId = nodeScene.attemptId || this.createAttemptId(nodeConfig.id);
         const activeSkills = (nodeScene.activeSkills || []).map(skill => ({ id: skill.id, level: skill.level }));
         const duration = nodeScene.surviveTime || 0;
-        const stars = success ? Math.min(3, 1 + (duration <= (nodeConfig.duration || duration) ? 1 : 0) + ((nodeScene.kills || 0) >= 25 ? 1 : 0)) : 0;
+        // Star rubric (LW-044): clear + pace under 90% of contract duration + health/kill quality.
+        const durationCap = Math.max(1, nodeConfig.duration || duration || 1);
+        const paceStar = duration > 0 && duration <= durationCap * 0.9 ? 1 : 0;
+        const hpRatio = (nodeScene.playerMaxHp > 0)
+            ? (nodeScene.playerHp || 0) / nodeScene.playerMaxHp
+            : 0;
+        const qualityStar = (hpRatio >= 0.45 || (nodeScene.kills || 0) >= 28) ? 1 : 0;
+        const stars = success ? Math.min(3, 1 + paceStar + qualityStar) : 0;
         return normalizeNodeResult({
             resultId: attemptId,
             attemptId,

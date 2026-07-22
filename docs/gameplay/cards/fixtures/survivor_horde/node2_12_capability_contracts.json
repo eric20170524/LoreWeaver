@@ -1,0 +1,598 @@
+{
+  "schemaVersion": "loreweaver.survivor-horde-capability-suite.v1",
+  "fixtureSuiteId": "survivor_horde.node2_12.migration",
+  "sourceWorkspace": "data/workspaces/20260611-060754-719406",
+  "deterministicPolicy": {
+    "seedPerFixture": true,
+    "fixedDeltaMs": 16.666667,
+    "randomSource": "injected",
+    "compare": "business_state_and_semantic_events"
+  },
+  "knownDefects": [
+    {
+      "id": "node5.frame_random_retarget",
+      "nodes": [5],
+      "legacySymptom": "Target selection is sampled from Math.random inside update, so pathing changes with frame rate.",
+      "migrationRule": "Choose a target only on a seeded director decision beat or an explicit state transition."
+    },
+    {
+      "id": "node8.undefined_combat_difficulty",
+      "nodes": [8],
+      "legacySymptom": "The combat route omits diff and assigns undefined to the active difficulty multiplier.",
+      "migrationRule": "Every route variant must pass schema validation with an explicit finite difficulty multiplier."
+    },
+    {
+      "id": "node8.duplicate_reward_field",
+      "nodes": [8],
+      "legacySymptom": "The combat route object declares reward twice.",
+      "migrationRule": "Reject duplicate JSON or source keys during catalog compilation; store one explicit reward multiplier."
+    },
+    {
+      "id": "node9.frame_random_retarget",
+      "nodes": [9],
+      "legacySymptom": "Escort targeting is sampled every update, producing frame-rate-dependent enemy intent.",
+      "migrationRule": "Use seeded threat selection at spawn, reacquire, or a fixed decision cadence."
+    },
+    {
+      "id": "shared.hardcoded_world_geometry",
+      "nodes": [2, 4, 5, 8, 9, 10, 12],
+      "legacySymptom": "World positions and distances are embedded as scene pixel constants.",
+      "migrationRule": "Store normalized anchors and typed gameplay knobs; resolve pixels through the host viewport."
+    },
+    {
+      "id": "shared.unregistered_lifecycle_handles",
+      "nodes": [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      "legacySymptom": "Timers, overlaps, input handlers, and transient objects are not uniformly registered with one lifecycle owner.",
+      "migrationRule": "All timers, tweens, listeners, colliders, projectiles, and delayed callbacks must be owned and destroyed by the adapter lifecycle."
+    },
+    {
+      "id": "node12.untelegraphed_pattern_bullets",
+      "nodes": [12],
+      "legacySymptom": "Phase bullets can spawn directly from a timer without a matching semantic windup event.",
+      "migrationRule": "Every damaging pattern requires accepted windup, telegraph, active, recovery, and hit policy states."
+    }
+  ],
+  "nodes": [
+    {
+      "nodeId": 2,
+      "fixtureId": "survivor_horde.node2.risk_treasure",
+      "seed": "node2-risk-treasure-001",
+      "objective": "Channel a required number of risk-tier objectives while surviving guard pressure, then resolve the climax encounter.",
+      "playerDecisions": [
+        "Choose safe, medium, or high risk objectives.",
+        "Commit to position long enough to finish the channel or disengage before damage pressure compounds."
+      ],
+      "risks": [
+        "Higher tiers require longer channel time.",
+        "Accepted player damage regresses progress.",
+        "High-risk progress triggers a one-time guard response."
+      ],
+      "counters": [
+        "Clear or control nearby threats before committing.",
+        "Leave and re-enter intentionally when continued channeling is unsafe."
+      ],
+      "victory": { "mode": "objective_then_boss", "requiredOpened": 3, "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero"] },
+      "rewardImpact": { "riskMultipliers": { "safe": 1, "mid": 2, "high": 3 }, "awardExactlyOnce": true },
+      "encounter": { "bossPhases": 3, "highRiskGuardThreshold": 0.25, "highRiskGuardCount": 3 },
+      "presentation": {
+        "vfxKinds": ["channel_progress", "guard_alert", "objective_complete"],
+        "sfxKinds": ["channel_interrupt", "guard_alert", "objective_complete"],
+        "calloutKinds": ["risk_tier", "channel_interrupted", "objective_progress"]
+      },
+      "testHooks": ["channel.state", "channel.progress_ms", "opened_count", "high_risk_opened", "guards_spawned", "total_reward"],
+      "lifecycleResources": ["channel_system", "progress_graphic", "objective_group", "guard_entities", "damage_subscription"],
+      "migrationClassification": [
+        {
+          "capability": "proximity_channel",
+          "destination": "core_primitive",
+          "targetId": "channel_interaction_system",
+          "rationale": "Channel, leave, damage, pause, completion, and idempotence are reusable beyond treasure."
+        },
+        {
+          "capability": "risk_tier_treasure",
+          "destination": "existing_modifier_enhancement",
+          "targetId": "treasure_chest_horde",
+          "rationale": "Enhance the registered modifier rather than introducing a competing treasure implementation."
+        },
+        {
+          "capability": "risk_sequence_and_rewards",
+          "destination": "node_instance_config",
+          "targetId": "node_gameplay_knobs",
+          "rationale": "Tier order, count, durations, and rewards are authored per node."
+        }
+      ],
+      "sourceAnchors": ["this.chestsTotal", "Taking damage interrupts channel"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "enter_high_risk_objective", "args": {} },
+        { "atMs": 900, "action": "accept_player_damage", "args": { "amount": 5 } },
+        { "atMs": 1500, "action": "leave_objective_range", "args": {} },
+        { "atMs": 2000, "action": "enter_high_risk_objective", "args": {} },
+        { "atMs": 5400, "action": "resolve_channel", "args": {} }
+      ],
+      "checkpoints": [
+        { "atMs": 1000, "id": "damage_regresses", "expected": { "lastInterruptReason": "damage", "progressRegressed": true } },
+        { "atMs": 3000, "id": "guards_once", "expected": { "guardsSpawned": 3, "duplicateSpawns": 0 } },
+        { "atMs": 5500, "id": "reward_once", "expected": { "openedCount": 1, "rewardMultiplier": 3, "presentationCount": 1 } }
+      ],
+      "excludedLegacyBehavior": ["shared.hardcoded_world_geometry", "shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 3,
+      "fixtureId": "survivor_horde.node3.pressure_break",
+      "seed": "node3-pressure-break-001",
+      "objective": "Manage a rising pressure meter by landing successful attacks and breaking readable boss moves.",
+      "playerDecisions": [
+        "Trade aggression against a rising failure meter.",
+        "Reserve burst or interrupt tools for explicit break windows."
+      ],
+      "risks": ["Pressure rises passively.", "Taking damage spikes pressure.", "Maximum pressure fails the node."],
+      "counters": ["Successful damage reduces pressure.", "Accepted break actions create a larger pressure recovery."],
+      "victory": { "mode": "boss_defeat", "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero", "pressure_max"] },
+      "rewardImpact": { "breakPerformanceTracked": true },
+      "encounter": { "bossPhases": 3, "requiresBreakWindow": true, "rangedPressureFromPhase": 2 },
+      "presentation": {
+        "vfxKinds": ["pressure_meter", "enemy_windup", "boss_break"],
+        "sfxKinds": ["pressure_warning", "enemy_windup", "boss_break"],
+        "calloutKinds": ["pressure_critical", "break_window", "boss_move"]
+      },
+      "testHooks": ["pressure", "boss_state", "boss_phase", "last_break_result", "damage_taken"],
+      "lifecycleResources": ["pressure_meter", "pressure_tick", "boss_projectiles", "boss_phase_controller"],
+      "migrationClassification": [
+        {
+          "capability": "pressure_meter",
+          "destination": "existing_modifier_enhancement",
+          "targetId": "pressure_meter",
+          "rationale": "The existing pressure modifier should receive damage, hit, and break events through public context APIs."
+        },
+        {
+          "capability": "boss_break_window",
+          "destination": "core_primitive",
+          "targetId": "enemy_ability_state_machine",
+          "rationale": "Breakability belongs to accepted enemy move state, not a node-specific timer."
+        }
+      ],
+      "sourceAnchors": ["Successful hits and breaks reduce pressure", "this.endGame(false, '威压爆表'"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "set_pressure", "args": { "value": 60 } },
+        { "atMs": 500, "action": "accept_player_damage", "args": { "amount": 10 } },
+        { "atMs": 1500, "action": "start_enemy_move", "args": { "moveId": "boss_charge" } },
+        { "atMs": 1800, "action": "interrupt_boss", "args": { "during": "break_window" } }
+      ],
+      "checkpoints": [
+        { "atMs": 600, "id": "damage_spikes_pressure", "expected": { "pressureGreaterThan": 60 } },
+        { "atMs": 1900, "id": "break_reduces_pressure", "expected": { "lastBreakAccepted": true, "pressureReduced": true } }
+      ],
+      "excludedLegacyBehavior": ["shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 4,
+      "fixtureId": "survivor_horde.node4.displacement_hazard",
+      "seed": "node4-displacement-hazard-001",
+      "objective": "Survive persistent displacement hazards while preserving safe positioning for combat.",
+      "playerDecisions": ["Read the warning area before committing to an attack line.", "Use safe lanes to recover after forced displacement."],
+      "risks": ["Hazards pull the player off the chosen route.", "Remaining inside the active area causes chip damage."],
+      "counters": ["Move during the warning phase.", "Recover in space clear of active hazards."],
+      "victory": { "mode": "survive_then_boss", "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero"] },
+      "rewardImpact": { "safeLaneRecoveryTracked": true },
+      "encounter": { "hazardStates": ["warning", "active", "expired"], "bossPhases": 3 },
+      "presentation": {
+        "vfxKinds": ["hazard_warning", "hazard_active", "forced_displacement"],
+        "sfxKinds": ["hazard_warning", "hazard_pull", "player_hit"],
+        "calloutKinds": ["hazard_incoming", "safe_lane"]
+      },
+      "testHooks": ["active_hazards", "last_displacement", "hazard_damage_total", "safe_lane_recovery"],
+      "lifecycleResources": ["hazard_scheduler", "warning_graphics", "hazard_group", "overlap_collider"],
+      "migrationClassification": [
+        {
+          "capability": "telegraphed_displacement_hazard",
+          "destination": "existing_modifier_enhancement",
+          "targetId": "hazard_telegraph",
+          "rationale": "The registered hazard modifier should support pull vectors and persistent active zones."
+        },
+        {
+          "capability": "safe_lane_recovery",
+          "destination": "node_instance_config",
+          "targetId": "hazard_recovery_policy",
+          "rationale": "Recovery amount and safe-space definition are authored per node."
+        }
+      ],
+      "sourceAnchors": ["Displacement, not free damage", "Safe-lane pulse"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "spawn_hazard_warning", "args": { "normalizedX": 0.5, "normalizedY": 0.5 } },
+        { "atMs": 600, "action": "hold_position", "args": { "durationMs": 500 } },
+        { "atMs": 1300, "action": "move_to_safe_lane", "args": {} }
+      ],
+      "checkpoints": [
+        { "atMs": 500, "id": "warning_no_damage", "expected": { "damage": 0, "hazardState": "warning" } },
+        { "atMs": 1200, "id": "active_pull", "expected": { "displacementApplied": true, "hitCount": 1 } },
+        { "atMs": 2000, "id": "safe_recovery", "expected": { "safeLaneRecovery": true } }
+      ],
+      "excludedLegacyBehavior": ["shared.hardcoded_world_geometry", "shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 5,
+      "fixtureId": "survivor_horde.node5.multi_core_defense",
+      "seed": "node5-multi-core-defense-001",
+      "objective": "Keep all defense cores alive while spending limited repairs on the most threatened lane.",
+      "playerDecisions": ["Prioritize enemies attacking the lowest-health core.", "Spend a limited repair charge now or reserve it for a later lane."],
+      "risks": ["Enemies can pressure different lanes.", "Loss of any core fails the node.", "Repair charges are finite."],
+      "counters": ["Redirect damage toward the lowest-health lane.", "Repair the nearest damaged core with an explicit input."],
+      "victory": { "mode": "defend_then_boss", "allCoresMustSurvive": true, "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero", "any_core_zero"] },
+      "rewardImpact": { "remainingCoreHealthTracked": true, "unusedRepairsTracked": true },
+      "encounter": { "coreCount": 3, "startingRepairCharges": 3, "retargetPolicy": "seeded_decision_beat" },
+      "presentation": {
+        "vfxKinds": ["core_hit", "core_critical", "core_repaired"],
+        "sfxKinds": ["core_hit", "core_critical", "core_repaired"],
+        "calloutKinds": ["lane_under_attack", "repair_depleted", "core_failure"]
+      },
+      "testHooks": ["cores", "repair_charges", "enemy_lane_targets", "last_repair", "failed_core_id"],
+      "lifecycleResources": ["core_entities", "core_colliders", "repair_input", "lane_target_scheduler"],
+      "migrationClassification": [
+        {
+          "capability": "multi_core_defense",
+          "destination": "existing_modifier_enhancement",
+          "targetId": "defend_core",
+          "rationale": "Enhance the existing defense modifier for multiple independently failing objectives."
+        },
+        {
+          "capability": "limited_repair_action",
+          "destination": "core_primitive",
+          "targetId": "objective_repair_action",
+          "rationale": "Repair is a reusable accepted interaction with range, cost, and idempotence rules."
+        },
+        {
+          "capability": "frame_random_targeting",
+          "destination": "reject_migration",
+          "targetId": "node5.frame_random_retarget",
+          "rationale": "Frame-rate-dependent random pathing is a legacy defect, not desired behavior."
+        }
+      ],
+      "sourceAnchors": ["Three cores / lanes for prioritization", "Math.random() < 0.4"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "set_core_hp", "args": { "coreId": "core_2", "hp": 40 } },
+        { "atMs": 500, "action": "spawn_lane_attacker", "args": { "enemyId": "attacker_1" } },
+        { "atMs": 1200, "action": "repair_nearest_core", "args": { "coreId": "core_2" } }
+      ],
+      "checkpoints": [
+        { "atMs": 800, "id": "seeded_lowest_hp_target", "expected": { "targetCoreId": "core_2", "decisionCount": 1 } },
+        { "atMs": 1300, "id": "repair_spent", "expected": { "core2HpIncreased": true, "repairCharges": 2 } }
+      ],
+      "excludedLegacyBehavior": ["node5.frame_random_retarget", "shared.hardcoded_world_geometry", "shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 6,
+      "fixtureId": "survivor_horde.node6.poison_antidote",
+      "seed": "node6-poison-antidote-001",
+      "objective": "Balance time in a damaging environment against safe-zone recovery and antidote-elite hunts.",
+      "playerDecisions": ["Leave the safe zone for combat rewards before poison becomes critical.", "Prioritize the antidote elite and collect its drop."],
+      "risks": ["Poison rises outside the safe zone.", "Maximum poison fails the node."],
+      "counters": ["Return to the safe zone to reduce poison.", "Defeat an authored elite and collect its antidote drop."],
+      "victory": { "mode": "survive_then_boss", "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero", "poison_max"] },
+      "rewardImpact": { "antidoteEliteKillsTracked": true },
+      "encounter": { "antidoteReduction": 35, "bossPhases": 3, "eliteRole": "antidote_carrier" },
+      "presentation": {
+        "vfxKinds": ["poison_exposure", "safe_zone", "antidote_drop"],
+        "sfxKinds": ["poison_tick", "safe_zone", "antidote_collect"],
+        "calloutKinds": ["poison_critical", "antidote_elite", "antidote_collected"]
+      },
+      "testHooks": ["poison", "inside_safe_zone", "antidote_elites", "antidotes_collected", "poison_failure"],
+      "lifecycleResources": ["poison_tick", "safe_zone_entity", "elite_scheduler", "antidote_drops", "drop_collider"],
+      "migrationClassification": [
+        {
+          "capability": "poison_meter",
+          "destination": "existing_modifier_enhancement",
+          "targetId": "poison_fog",
+          "rationale": "The existing modifier should own exposure, recovery, failure, and public state."
+        },
+        {
+          "capability": "conditional_antidote_drop",
+          "destination": "core_primitive",
+          "targetId": "authored_drop_rule",
+          "rationale": "Drops conditioned on enemy role are reusable across objectives."
+        }
+      ],
+      "sourceAnchors": ["Periodic antidote elite", "this.poison = Math.max(0, (this.poison || 0) - 35)"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "set_poison", "args": { "value": 70 } },
+        { "atMs": 500, "action": "spawn_antidote_elite", "args": {} },
+        { "atMs": 1200, "action": "defeat_enemy", "args": { "role": "antidote_carrier" } },
+        { "atMs": 1500, "action": "collect_antidote", "args": {} }
+      ],
+      "checkpoints": [
+        { "atMs": 1000, "id": "elite_authored", "expected": { "antidoteEliteCount": 1 } },
+        { "atMs": 1600, "id": "antidote_reduces_poison", "expected": { "poison": 35, "antidotesCollected": 1 } }
+      ],
+      "excludedLegacyBehavior": ["shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 7,
+      "fixtureId": "survivor_horde.node7.tournament_waves",
+      "seed": "node7-tournament-waves-001",
+      "objective": "Defeat a finite roster of elite waves with explicit intermissions and a final climax boss.",
+      "playerDecisions": ["Adapt ability timing to the current elite move set.", "Use intermission recovery and charge to prepare for the next wave."],
+      "risks": ["Each wave is a focused elite encounter.", "The final wave has an expanded move pool and phase count."],
+      "counters": ["Learn readable windups per wave.", "Exploit the fixed intermission instead of ambient filler."],
+      "victory": { "mode": "clear_all_waves", "waveCount": 5 },
+      "failure": { "conditions": ["player_hp_zero"] },
+      "rewardImpact": { "waveClearCountTracked": true, "intermissionBonus": { "healPercent": 20, "charge": 40 } },
+      "encounter": { "ambientFiller": false, "finalWaveBoss": true, "finalBossPhases": 3 },
+      "presentation": {
+        "vfxKinds": ["wave_intro", "wave_clear", "final_wave_intro"],
+        "sfxKinds": ["wave_intro", "wave_clear", "boss_intro"],
+        "calloutKinds": ["wave_number", "intermission", "final_wave"]
+      },
+      "testHooks": ["current_wave", "total_waves", "between_waves", "wave_boss", "intermission_reward"],
+      "lifecycleResources": ["wave_scheduler", "wave_boss", "boss_phase_controller", "intermission_timer"],
+      "migrationClassification": [
+        {
+          "capability": "finite_wave_director",
+          "destination": "core_primitive",
+          "targetId": "run_director_wave_sequence",
+          "rationale": "Finite wave sequencing and intermissions are reusable director behavior."
+        },
+        {
+          "capability": "wave_roster",
+          "destination": "node_instance_config",
+          "targetId": "encounter_wave_roster",
+          "rationale": "Roster, phase count, and intermission rewards are authored data."
+        }
+      ],
+      "sourceAnchors": ["Tournament: no ambient director filler", "Brief recovery choice: heal or charge"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "start_wave", "args": { "wave": 1 } },
+        { "atMs": 1000, "action": "defeat_wave_boss", "args": { "wave": 1 } },
+        { "atMs": 2500, "action": "advance_intermission", "args": {} }
+      ],
+      "checkpoints": [
+        { "atMs": 1200, "id": "intermission_started", "expected": { "betweenWaves": true, "ambientEnemies": 0 } },
+        { "atMs": 2600, "id": "next_wave_with_bonus", "expected": { "currentWave": 2, "healApplied": true, "chargeAdded": 40 } }
+      ],
+      "excludedLegacyBehavior": ["shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 8,
+      "fixtureId": "survivor_horde.node8.route_choice",
+      "seed": "node8-route-choice-001",
+      "objective": "Choose between explicit combat, risk, recovery, and treasure routes that change difficulty and reward state.",
+      "playerDecisions": ["Select a route based on current health and desired reward multiplier.", "Accept higher combat pressure for better rewards or recover before the climax."],
+      "risks": ["Risk routes increase local encounter difficulty.", "Route choice persists into the climax multiplier state."],
+      "counters": ["Recovery routes trade reward for health.", "The route preview exposes finite difficulty and reward values before entry."],
+      "victory": { "mode": "route_sequence_then_boss", "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero"] },
+      "rewardImpact": { "routeRewardMultiplierAppliedOnce": true, "routeLogRequired": true },
+      "encounter": { "routeKinds": ["combat", "risk", "recovery", "treasure"], "choicesShown": 3, "bossPhases": 3 },
+      "presentation": {
+        "vfxKinds": ["route_portal", "route_selected", "room_effect"],
+        "sfxKinds": ["route_reveal", "route_selected", "room_complete"],
+        "calloutKinds": ["route_preview", "difficulty_multiplier", "reward_multiplier"]
+      },
+      "testHooks": ["route_log", "rooms_cleared", "difficulty_multiplier", "reward_multiplier", "active_route"],
+      "lifecycleResources": ["route_portals", "portal_collider", "route_refresh_timer", "local_wave_entities"],
+      "migrationClassification": [
+        {
+          "capability": "route_choice",
+          "destination": "core_primitive",
+          "targetId": "branch_choice_system",
+          "rationale": "Validated option presentation, choice locking, and route history are reusable."
+        },
+        {
+          "capability": "route_catalog",
+          "destination": "node_instance_config",
+          "targetId": "route_option_catalog",
+          "rationale": "Difficulty, reward, and room effects must be explicit validated data."
+        },
+        {
+          "capability": "undefined_or_duplicate_route_fields",
+          "destination": "reject_migration",
+          "targetId": "node8.undefined_combat_difficulty",
+          "rationale": "Invalid route data must fail compilation instead of becoming a golden expectation."
+        }
+      ],
+      "sourceAnchors": ["reward: 1.0, reward: 1.0", "this.difficultyMultiplier = kind.diff"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "present_routes", "args": { "count": 3 } },
+        { "atMs": 500, "action": "choose_route", "args": { "routeId": "risk" } },
+        { "atMs": 1200, "action": "complete_route_room", "args": {} }
+      ],
+      "checkpoints": [
+        { "atMs": 100, "id": "routes_are_valid", "expected": { "allDifficultyFinite": true, "allRewardFinite": true } },
+        { "atMs": 600, "id": "route_state_applied", "expected": { "routeLog": ["risk"], "difficultyMultiplier": 1.35, "rewardMultiplier": 1.6 } }
+      ],
+      "excludedLegacyBehavior": ["node8.undefined_combat_difficulty", "node8.duplicate_reward_field", "shared.hardcoded_world_geometry", "shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 9,
+      "fixtureId": "survivor_horde.node9.escort_command",
+      "seed": "node9-escort-command-001",
+      "objective": "Escort a vulnerable objective to its destination while switching between follow and hold commands.",
+      "playerDecisions": ["Choose follow for progress or hold to keep the objective out of a dangerous lane.", "Intercept enemies that have acquired escort threat."],
+      "risks": ["Escort health can reach zero.", "Following exposes the objective while progressing."],
+      "counters": ["Toggle hold during ambushes.", "Use deterministic threat reacquisition to identify attackers."],
+      "victory": { "mode": "escort_destination_then_boss", "destinationRequired": true, "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero", "escort_hp_zero"] },
+      "rewardImpact": { "escortHealthRemainingTracked": true },
+      "encounter": { "commands": ["follow", "hold"], "escortHitCooldownMs": 600, "retargetPolicy": "seeded_decision_beat" },
+      "presentation": {
+        "vfxKinds": ["escort_command", "escort_hit", "escort_destination"],
+        "sfxKinds": ["escort_command", "escort_warning", "escort_destination"],
+        "calloutKinds": ["escort_follow", "escort_hold", "escort_critical"]
+      },
+      "testHooks": ["escort_mode", "escort_hp", "escort_progress", "enemy_targets", "destination_reached"],
+      "lifecycleResources": ["escort_entity", "escort_collider", "command_input", "threat_scheduler"],
+      "migrationClassification": [
+        {
+          "capability": "escort_follow_hold",
+          "destination": "existing_modifier_enhancement",
+          "targetId": "escort_npc",
+          "rationale": "The registered escort modifier should support explicit commands and destination progress."
+        },
+        {
+          "capability": "frame_random_escort_targeting",
+          "destination": "reject_migration",
+          "targetId": "node9.frame_random_retarget",
+          "rationale": "Frame-rate-dependent targeting is replaced by seeded threat decisions."
+        }
+      ],
+      "sourceAnchors": ["keydown-H", "Math.random() < 0.35"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "set_escort_command", "args": { "command": "follow" } },
+        { "atMs": 800, "action": "set_escort_command", "args": { "command": "hold" } },
+        { "atMs": 1000, "action": "spawn_escort_threat", "args": { "enemyId": "escort_threat_1" } }
+      ],
+      "checkpoints": [
+        { "atMs": 900, "id": "hold_stops_progress", "expected": { "escortMode": "hold", "velocity": 0 } },
+        { "atMs": 1200, "id": "seeded_threat_target", "expected": { "target": "escort", "decisionCount": 1 } }
+      ],
+      "excludedLegacyBehavior": ["node9.frame_random_retarget", "shared.hardcoded_world_geometry", "shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 10,
+      "fixtureId": "survivor_horde.node10.active_ballista",
+      "seed": "node10-active-ballista-001",
+      "objective": "Defend a multi-lane wall by actively selecting and firing a limited-ammo siege tool.",
+      "playerDecisions": ["Select the lane with the highest breakthrough risk.", "Spend ammunition now or wait for a denser target line and resupply beat."],
+      "risks": ["Wall health can reach zero.", "Ammunition is limited between resupply beats."],
+      "counters": ["Fire into a chosen lane using keyboard or touch input.", "Use timed resupply and lane prioritization."],
+      "victory": { "mode": "hold_wall_then_boss", "wallMustSurvive": true, "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero", "wall_hp_zero"] },
+      "rewardImpact": { "wallHealthRemainingTracked": true, "ammoEfficiencyTracked": true },
+      "encounter": { "laneCount": 3, "startingAmmo": 12, "maxAmmo": 20, "resupplyAmount": 3 },
+      "presentation": {
+        "vfxKinds": ["lane_selected", "ballista_bolt", "wall_hit"],
+        "sfxKinds": ["lane_selected", "ballista_fire", "wall_hit"],
+        "calloutKinds": ["ammo_empty", "wall_critical", "resupply"]
+      },
+      "testHooks": ["wall_hp", "ballista_ammo", "selected_lane", "shots_fired", "resupply_count"],
+      "lifecycleResources": ["wall_entity", "wall_collider", "ballista_entities", "keyboard_inputs", "touch_inputs", "bolt_projectiles"],
+      "migrationClassification": [
+        {
+          "capability": "active_lane_weapon",
+          "destination": "existing_modifier_enhancement",
+          "targetId": "hold_wall",
+          "rationale": "The existing wall-defense modifier must add accepted player-controlled firing instead of auto-only behavior."
+        },
+        {
+          "capability": "lane_and_ammo_config",
+          "destination": "node_instance_config",
+          "targetId": "siege_tool_config",
+          "rationale": "Lane count, ammunition, damage, and resupply cadence are node data."
+        }
+      ],
+      "sourceAnchors": ["keydown-F", "this.ballistaAmmo -= 1"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "select_lane", "args": { "lane": 2, "input": "touch" } },
+        { "atMs": 200, "action": "fire_siege_tool", "args": {} },
+        { "atMs": 1000, "action": "advance_resupply_beat", "args": {} }
+      ],
+      "checkpoints": [
+        { "atMs": 300, "id": "active_shot_consumes_ammo", "expected": { "selectedLane": 2, "ammo": 11, "shotsFired": 1 } },
+        { "atMs": 1100, "id": "resupply_bounded", "expected": { "ammo": 14, "ammoAtMost": 20 } }
+      ],
+      "excludedLegacyBehavior": ["shared.hardcoded_world_geometry", "shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 11,
+      "fixtureId": "survivor_horde.node11.erosion_elites",
+      "seed": "node11-erosion-elites-001",
+      "objective": "Endure a rising erosion meter and defeat complementary elite roles to buy back pressure and ability charge.",
+      "playerDecisions": ["Prioritize the ranged or zone-control elite based on current space pressure.", "Use elite kills to reduce erosion before high-erosion chip damage dominates."],
+      "risks": ["Erosion rises with run progress.", "High erosion adds periodic chip damage.", "Elite roles overlap pressure patterns."],
+      "counters": ["Defeat authored elite pairs.", "Elite clears reduce erosion and add active-ability charge."],
+      "victory": { "mode": "survive_elites_then_boss", "bossRequired": true },
+      "failure": { "conditions": ["player_hp_zero"] },
+      "rewardImpact": { "eliteClearsTracked": true, "erosionAtClearTracked": true },
+      "encounter": { "eliteRoles": ["zone_control", "ranged_pressure"], "eliteClearErosionReduction": 8, "eliteClearCharge": 15 },
+      "presentation": {
+        "vfxKinds": ["erosion_meter", "elite_intro", "erosion_reduced"],
+        "sfxKinds": ["erosion_warning", "elite_intro", "elite_clear"],
+        "calloutKinds": ["erosion_high", "elite_pair", "erosion_reduced"]
+      },
+      "testHooks": ["erosion", "elite_clears", "active_elite_roles", "chip_damage_total", "charge_from_elites"],
+      "lifecycleResources": ["erosion_tick", "elite_scheduler", "elite_entities", "chip_damage_timer"],
+      "migrationClassification": [
+        {
+          "capability": "erosion_meter",
+          "destination": "core_primitive",
+          "targetId": "pressure_resource_system",
+          "rationale": "A bounded time-based pressure resource with event reductions is reusable."
+        },
+        {
+          "capability": "elite_pair_composition",
+          "destination": "node_instance_config",
+          "targetId": "elite_encounter_roster",
+          "rationale": "Elite roles, spawn beat, and reduction rewards are authored encounter data."
+        }
+      ],
+      "sourceAnchors": ["archetype: 'zone_control'", "this.erosion = Math.max(0, this.erosion - 8)"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "set_erosion", "args": { "value": 84 } },
+        { "atMs": 500, "action": "spawn_elite_pair", "args": {} },
+        { "atMs": 1000, "action": "defeat_enemy", "args": { "role": "zone_control" } }
+      ],
+      "checkpoints": [
+        { "atMs": 400, "id": "high_erosion_pressure", "expected": { "erosion": 84, "chipDamageEnabled": true } },
+        { "atMs": 1100, "id": "elite_clear_relief", "expected": { "erosion": 76, "eliteClears": 1, "chargeAdded": 15 } }
+      ],
+      "excludedLegacyBehavior": ["shared.unregistered_lifecycle_handles"]
+    },
+    {
+      "nodeId": 12,
+      "fixtureId": "survivor_horde.node12.finale_boss",
+      "seed": "node12-finale-boss-001",
+      "objective": "Defeat a three-phase finale boss; elapsed duration alone can never produce victory.",
+      "playerDecisions": ["Read the current move telegraph and reposition before the active frame.", "Use break windows and burst resources differently across three phases."],
+      "risks": ["Later phases shorten cadence and combine denser patterns.", "Boss projectiles use the normal damage path."],
+      "counters": ["Every damaging pattern exposes semantic windup and active events.", "Break or evade during explicitly configured windows."],
+      "victory": { "mode": "boss_only", "bossPhases": 3, "durationCanWin": false },
+      "failure": { "conditions": ["player_hp_zero"] },
+      "rewardImpact": { "phaseReachedTracked": true, "bossDefeatRequiredForReward": true },
+      "encounter": { "bossPhases": 3, "moveStateMachine": ["windup", "active", "recovery", "cooldown"], "hitPolicy": "hit_once_per_projectile" },
+      "presentation": {
+        "vfxKinds": ["boss_windup", "boss_pattern", "boss_phase_transition"],
+        "sfxKinds": ["boss_windup", "boss_pattern", "boss_phase_transition"],
+        "calloutKinds": ["boss_move", "boss_phase", "break_window"]
+      },
+      "testHooks": ["boss_phase", "boss_hp", "active_move", "telegraph_state", "projectile_hit_count", "victory_mode"],
+      "lifecycleResources": ["boss_entity", "boss_phase_controller", "pattern_scheduler", "boss_projectiles", "projectile_collider"],
+      "migrationClassification": [
+        {
+          "capability": "boss_only_victory",
+          "destination": "existing_modifier_enhancement",
+          "targetId": "boss_phases",
+          "rationale": "The registered boss modifier must own phase and victory policy without duration fallthrough."
+        },
+        {
+          "capability": "boss_pattern_executor",
+          "destination": "core_primitive",
+          "targetId": "enemy_pattern_executor",
+          "rationale": "Pattern scheduling, telegraph, projectiles, and hit policy are reusable enemy combat behavior."
+        },
+        {
+          "capability": "direct_pattern_spawn_without_windup",
+          "destination": "reject_migration",
+          "targetId": "node12.untelegraphed_pattern_bullets",
+          "rationale": "Untold damage is a legacy defect and cannot be preserved as expected output."
+        }
+      ],
+      "sourceAnchors": ["victoryMode: 'boss_only'", "firePhasePattern(phase)"],
+      "inputTimeline": [
+        { "atMs": 0, "action": "spawn_boss", "args": { "phase": 1 } },
+        { "atMs": 1000, "action": "advance_duration_limit", "args": {} },
+        { "atMs": 1500, "action": "start_enemy_move", "args": { "moveId": "radial_pattern" } },
+        { "atMs": 2500, "action": "set_boss_hp_ratio", "args": { "ratio": 0.3 } },
+        { "atMs": 3500, "action": "defeat_boss", "args": {} }
+      ],
+      "checkpoints": [
+        { "atMs": 1100, "id": "duration_cannot_win", "expected": { "victory": false, "bossActive": true } },
+        { "atMs": 1800, "id": "pattern_is_telegraphed", "expected": { "windupEventCount": 1, "activeBeforeWindup": false } },
+        { "atMs": 3600, "id": "boss_defeat_wins", "expected": { "victory": true, "reason": "completed", "phaseReached": 3 } }
+      ],
+      "excludedLegacyBehavior": ["node12.untelegraphed_pattern_bullets", "shared.hardcoded_world_geometry", "shared.unregistered_lifecycle_handles"]
+    }
+  ]
+}

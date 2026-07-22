@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "id": "self_destruct_enemy",
+  "title": "Self Destruct Enemy",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {},
+  "requiredCoreSystems": [],
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node2.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Survivor modifier factory wired."
+}

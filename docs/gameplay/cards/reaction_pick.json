@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "1.0",
+  "id": "reaction_pick",
+  "title": "Reaction Pick",
+  "category": "microgame",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "ReactionPickAdapter"
+  },
+  "inputs": [
+    "pointer"
+  ],
+  "objectives": [
+    "complete_rounds"
+  ],
+  "failure": [
+    "lives_empty",
+    "retreated"
+  ],
+  "knobs": {
+    "targetRounds": {
+      "type": "integer",
+      "default": 6,
+      "patchLevel": "L1",
+      "description": "targetRounds"
+    },
+    "lives": {
+      "type": "integer",
+      "default": 3,
+      "patchLevel": "L1",
+      "description": "lives"
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "Prompt",
+    "ClickJudge"
+  ],
+  "resultContract": {
+    "successReason": "objective_met"
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "playable loop",
+      "NodeResult on end"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node7.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "path micro nodes"
+    ],
+    "poorFor": [
+      "long campaigns alone"
+    ]
+  },
+  "knownRisks": [],
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+}

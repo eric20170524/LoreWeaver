@@ -50,7 +50,8 @@ export class TouchInputController {
             radius: 92,
             deadZone: 14,
             defaultX: 132,
-            defaultY: scene.height - 150,
+            // Lift above home-indicator / safe-bottom for thumb reachability.
+            defaultY: scene.height - 168,
             minStartY: Math.floor(scene.height * 0.34)
         };
         scene.touchJoystickBase = scene.add.graphics().setScrollFactor(0).setDepth(40);

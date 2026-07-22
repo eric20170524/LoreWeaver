@@ -6,12 +6,12 @@
     "千崖兽王：此地机缘，尽归吾所有！",
     "星骁：你的宝骨，我看上了！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "drag_collect_grid",
   "rewards": "气血精华 +500，较高概率获得纯血",
-  "goalValue": 150,
+  "goalValue": 18,
   "resourceMultiplier": 1.6,
   "difficulty": 2,
-  "durationLimit": 150,
+  "durationLimit": 90,
   "gameplay": {
     "adapter": "phaser",
     "cardId": "drag_collect_grid",
@@ -32,7 +32,31 @@
           0,
           1
         ]
-      }
+      },
+      "durationSec": 90,
+      "goalValue": 18,
+      "difficulty": 2,
+      "victoryMode": "objective",
+      "envKey": "env_bg_cliff",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node2_treasure",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme",
+      "runtimeCardId": "drag_collect_grid",
+      "shellRetreat": true,
+      "collectGoal": 18,
+      "spawnIntervalMs": 700,
+      "itemSpeed": 260,
+      "hazardRate": 0.35,
+      "timeLimitSec": 90,
+      "needAmount": 18
     },
     "patchLevel": "L2"
   },
@@ -42,13 +66,13 @@
       "cave_opening",
       "bone_script_mastery"
     ],
+    "rewardUnlocks": [
+      "green_eagle_art"
+    ],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
       "willow_guard",
-      "green_eagle_art"
-    ],
-    "rewardUnlocks": [
       "green_eagle_art"
     ],
     "notes": "千崖秘径承接宝箱夺宝，通关后补青鳞鹰宝术，强化定点爆发。"

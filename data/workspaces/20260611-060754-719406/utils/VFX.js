@@ -2,10 +2,11 @@
 // 特效控制器 - 继承自 @core/juice/VFX.js
 
 import CoreVFX from '../../../../minigame_master/core/lib/juice/VFX.js';
+import GameFeel from '../runtime/GameFeel.js';
 
 export class VFX extends CoreVFX {
     /**
-     * 石昊战斗特有：蛮兽受击/溅血粒子反馈
+     * 星渊试炼战斗特有：蛮兽受击/溅血粒子反馈
      */
     static playHitEffect(scene, x, y) {
         if (!scene.textures.exists('particle')) {
@@ -20,7 +21,7 @@ export class VFX extends CoreVFX {
             scale: { start: 1, end: 0 },
             tint: [ 0xff0000, 0xffaa00, 0xffff00 ],
             lifespan: 300,
-            quantity: 10,
+            quantity: GameFeel.particleQuantity(10),
             emitting: false
         });
         
@@ -73,7 +74,7 @@ export class VFX extends CoreVFX {
                 scale: { start: 1, end: 0 },
                 tint,
                 lifespan: 360,
-                quantity,
+                quantity: GameFeel.particleQuantity(quantity),
                 emitting: false
             });
             p.explode();
@@ -87,7 +88,7 @@ export class VFX extends CoreVFX {
                 break;
             case 'golden_roar_ring':
                 ring(x, y, skillData.radius || 150, 0xfacc15, 0.18, 300);
-                scene.cameras.main.shake(80, 0.004);
+                GameFeel.shake(scene, 80, 0.004);
                 break;
             case 'willow_leaf_heal':
             case 'willow_leaf_field':
@@ -98,7 +99,7 @@ export class VFX extends CoreVFX {
                 line(targetX - 70, targetY - 120, targetX, targetY, 0x34d399, 5, 180);
                 line(targetX + 70, targetY - 120, targetX, targetY, 0x34d399, 5, 180);
                 ring(targetX, targetY, 70, 0x34d399, 0.22, 220);
-                scene.cameras.main.shake(70, 0.003);
+                GameFeel.shake(scene, 70, 0.003);
                 break;
             case 'pale_bone_barrier':
                 ring(x, y, 62, 0x67e8f9, 0.22, 320);
@@ -111,7 +112,7 @@ export class VFX extends CoreVFX {
             case 'thunder_bone_ring':
                 ring(x, y, skillData.radius || 200, 0x93c5fd, 0.18, 280);
                 ring(x, y, Math.max((skillData.radius || 200) * 0.65, 80), 0xfde047, 0.14, 220);
-                scene.cameras.main.shake(120, 0.006);
+                GameFeel.shake(scene, 120, 0.006);
                 break;
             case 'black_blue_wing_dash':
                 ring(x, y, 46, 0x38bdf8, 0.16, 180);
@@ -128,7 +129,7 @@ export class VFX extends CoreVFX {
             case 'void_blue_arc':
                 line(x, y, targetX, targetY, 0x38bdf8, 8, 130);
                 particles(targetX, targetY, [0x38bdf8, 0x0f172a, 0xe0f2fe], 8, 120);
-                scene.cameras.main.shake(90, 0.004);
+                GameFeel.shake(scene, 90, 0.004);
                 break;
             case 'black_tide_root':
                 ring(targetX, targetY, skillData.radius || 200, 0x0284c7, 0.16, 360);
@@ -138,17 +139,17 @@ export class VFX extends CoreVFX {
             case 'ten_cave_rings':
                 ring(x, y, skillData.radius || 540, 0xfde047, 0.14, 360);
                 ring(x, y, Math.max((skillData.radius || 540) * 0.5, 180), 0xffffff, 0.1, 300);
-                scene.cameras.main.shake(180, 0.01);
+                GameFeel.shake(scene, 180, 0.01);
                 break;
             case 'purple_white_beam':
                 line(x, y, targetX, targetY, 0xc084fc, skillData.beamWidth || 12, 180);
                 particles(targetX, targetY, [0xc084fc, 0xf0abfc, 0xffffff], 10, 130);
-                scene.cameras.main.shake(80, 0.004);
+                GameFeel.shake(scene, 80, 0.004);
                 break;
             case 'supreme_bone_core':
                 ring(x, y, 92, 0xfde047, 0.2, 360);
                 particles(x, y, [0xffffff, 0xfde047, 0xfef3c7], 18, 120);
-                scene.cameras.main.shake(160, 0.007);
+                GameFeel.shake(scene, 160, 0.007);
                 break;
             case 'willow_domain':
                 ring(x, y, skillData.radius || 150, 0x22c55e, 0.16, 360);
@@ -168,7 +169,7 @@ export class VFX extends CoreVFX {
                     });
                 }
                 ring(x, y, 130, 0xa78bfa, 0.16, 360);
-                scene.cameras.main.shake(200, 0.011);
+                GameFeel.shake(scene, 200, 0.011);
                 break;
             default:
                 ring(x, y, 60, 0xffffff, 0.12, 180);

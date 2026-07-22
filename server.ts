@@ -46,17 +46,23 @@ function getPythonCommand(): string {
     if (fs.existsSync(envPython3)) return envPython3;
   }
 
-  const parentVenv = path.join(process.cwd(), "..", "venv");
-  const parentPython = path.join(parentVenv, binDir, pythonExe);
-  if (fs.existsSync(parentPython)) return parentPython;
-  const parentPython3 = path.join(parentVenv, binDir, python3Exe);
-  if (fs.existsSync(parentPython3)) return parentPython3;
+  const localDotVenv = path.join(process.cwd(), ".venv");
+  const localDotVenvPython = path.join(localDotVenv, binDir, pythonExe);
+  if (fs.existsSync(localDotVenvPython)) return localDotVenvPython;
+  const localDotVenvPython3 = path.join(localDotVenv, binDir, python3Exe);
+  if (fs.existsSync(localDotVenvPython3)) return localDotVenvPython3;
 
   const localVenv = path.join(process.cwd(), "venv");
   const localPython = path.join(localVenv, binDir, pythonExe);
   if (fs.existsSync(localPython)) return localPython;
   const localPython3 = path.join(localVenv, binDir, python3Exe);
   if (fs.existsSync(localPython3)) return localPython3;
+
+  const parentVenv = path.join(process.cwd(), "..", "venv");
+  const parentPython = path.join(parentVenv, binDir, pythonExe);
+  if (fs.existsSync(parentPython)) return parentPython;
+  const parentPython3 = path.join(parentVenv, binDir, python3Exe);
+  if (fs.existsSync(parentPython3)) return parentPython3;
 
   return isWindows ? "python" : "python3";
 }
@@ -164,8 +170,19 @@ app.use("/api", async (req, res) => {
       headers,
     };
 
-    if (req.method !== "GET" && req.method !== "HEAD" && req.body) {
-      options.body = JSON.stringify(req.body);
+    const contentType = headers["content-type"] || "";
+    const contentLength = Number.parseInt(String(req.headers["content-length"] || "0"), 10);
+    const hasReadableBody = Boolean(req.headers["transfer-encoding"]) || contentLength > 0;
+
+    if (req.method !== "GET" && req.method !== "HEAD" && hasReadableBody) {
+      if (contentType.includes("application/json") && req.body !== undefined) {
+        delete headers["content-length"];
+        options.headers = headers;
+        options.body = JSON.stringify(req.body);
+      } else {
+        options.body = req;
+        options.duplex = "half";
+      }
     }
 
     const proxyRes = await fetch(targetUrl, options);

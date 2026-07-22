@@ -1,9 +1,9 @@
-// nodes/node12.js
-// Node 12: 终极血战金阙 Boss场景 - 转换为 ES Modules
-
+// nodes/node12.js — 终局三阶段 Boss（禁止计时通关）
 import Node1Scene from './node1.js';
 import UIHelper from '../utils/UIHelper.js';
 import { ENEMY_REGISTRY } from '../js/data.js';
+import { BossPhaseController } from '../runtime/BossPhaseController.js';
+import NodeBridge from '../systems/NodeBridge.js';
 
 export class Node12Scene extends Node1Scene {
     constructor() {
@@ -12,146 +12,153 @@ export class Node12Scene extends Node1Scene {
 
     init(data) {
         super.init(data);
-        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId];
+        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId] || ENEMY_REGISTRY.shi_yi_phantom;
         this.bossHp = enemyData.hp;
         this.maxBossHp = enemyData.hp;
         this.bossPhase = 1;
         this.bossInstance = null;
         this.lastBossAttack = 0;
+        // Finale must not be won by survival timer.
+        if (this.levelContract) {
+            this.levelContract = { ...this.levelContract, victoryMode: 'boss_only' };
+        }
+        if (this.runDirector?.contract) {
+            this.runDirector.contract = { ...this.runDirector.contract, victoryMode: 'boss_only' };
+        }
     }
 
     create() {
         super.create();
-
-        // HUD
-        this.hudText = this.uiScene.add.text(this.width / 2, 180, '金阙君 - 阶段 1 (HP: 100%)', {
-            fontSize: '22px', fill: '#ff3333', fontStyle: 'bold'
+        this.hudText = this.uiScene.add.text(this.width / 2, 230, '金阙君 · 阶段 1', {
+            fontSize: '20px', fill: '#ff3333', fontStyle: 'bold'
         }).setOrigin(0.5);
-
         this.bossBullets = this.physics.add.group();
         this.physics.add.overlap(this.player, this.bossBullets, this.onPlayerHitBullet, null, this);
-
-        this.spawnAnlan();
+        this.time.delayedCall(600, () => {
+            if (!this.bossInstance?.active) this.spawnFinaleBoss();
+        });
+        this.publishNodeTestState();
     }
 
-    spawnAnlan() {
-        const x = this.width * 1.5;
-        const y = this.height * 1.5 - 200;
-
-        const boss = this.createRuntimeEnemy('shi_yi_phantom', x, y, {
-            hp: this.bossHp,
-            speed: 40,
-            scaleMultiplier: 1.75,
-            data: { isAnlan: true }
+    publishNodeTestState(overrides = {}) {
+        super.publishNodeTestState({
+            bossPhase: this.bossPhase || 1,
+            bossHp: this.bossHp || 0,
+            objective: 'defeat_finale_boss',
+            victoryMode: 'boss_only',
+            ...overrides
         });
+    }
 
+    spawnFinaleBoss() {
+        if (this.bossInstance?.active) return this.bossInstance;
+        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId] || ENEMY_REGISTRY.shi_yi_phantom;
+        const boss = this.createRuntimeEnemy(this.nodeConfig.bossId, this.width * 1.5, this.height * 1.5 - 200, {
+            hp: enemyData.hp,
+            speed: (enemyData.speed || 40) * 0.75,
+            scaleMultiplier: 2.0,
+            data: { isBoss: true, role: 'boss', isFinale: true }
+        });
+        boss.setData('isBoss', true);
+        boss.setData('maxHp', enemyData.hp);
         this.bossInstance = boss;
-
-        UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "金阙君降临！", "#ff3333", 3000);
-        
-        this.time.delayedCall(1500, () => {
-            UIHelper.showFloatText(this.uiScene, this.width / 2, 100, "“哪怕身负裂天重城，我仍可踏碎群星！”", "#ff0000", 3000);
+        this.activeBoss = boss;
+        this.bossSpawned = true;
+        this.bossPhaseController = new BossPhaseController(this, boss, {
+            name: enemyData.name || '金阙君',
+            phases: 3,
+            moves: [
+                { id: 'beam', windup: 75, active: 22, recovery: 95, radius: 120, damageMul: 1.15 },
+                { id: 'nova', windup: 100, active: 34, recovery: 115, radius: 190, damageMul: 1.35 },
+                { id: 'charge', windup: 55, active: 44, recovery: 85, radius: 90, damageMul: 1.2 }
+            ]
         });
+        UIHelper.showFloatText(this.uiScene, this.width / 2, 340, '金阙君降临！三阶段终局！', '#ff3333', 2500);
+        return boss;
+    }
+
+    spawnBoss() {
+        // Director climax may call this; reuse finale instance.
+        if (this.bossInstance?.active) return this.bossInstance;
+        return this.spawnFinaleBoss();
     }
 
     update(time, delta) {
         if (this.isGameOver || this.isPaused) return;
-
         super.update(time, delta);
 
-        if (this.bossInstance && this.bossInstance.active) {
-            this.physics.moveToObject(this.bossInstance, this.player, this.bossInstance.getData('speed'));
-            this.handleBossAttack(time);
+        if (this.bossInstance?.active) {
+            this.bossHp = this.bossInstance.getData('hp');
+            const maxHp = this.bossInstance.getData('maxHp') || this.maxBossHp;
+            const pct = Math.max(0, Math.floor((this.bossHp / maxHp) * 100));
+            const phase = this.bossInstance.getData('phase') || 1;
+            if (phase !== this.bossPhase) {
+                this.bossPhase = phase;
+                UIHelper.showFloatText(this.uiScene, this.width / 2, 340, `终局阶段 ${phase}`, '#ff8800', 1800);
+            }
+            this.hudText?.setText(`金阙君 · 阶段 ${phase} · HP ${pct}%`);
+            // Phase-specific bullet patterns layered on the phase controller.
+            if (time - this.lastBossAttack > (phase === 1 ? 1800 : phase === 2 ? 1400 : 1000)) {
+                this.lastBossAttack = time;
+                this.firePhasePattern(phase);
+            }
+        } else if (this.bossSpawned && !this.isGameOver) {
+            // Boss defeated
+            this.time.delayedCall(400, () => {
+                if (!this.isGameOver) this.endGame(true, null, NodeBridge.RESULT_REASONS.COMPLETED);
+            });
         }
+        this.publishNodeTestState();
     }
 
-    handleBossAttack(time) {
-        if (time - this.lastBossAttack < (this.bossPhase === 1 ? 1500 : this.bossPhase === 2 ? 2000 : 1200)) return;
-        this.lastBossAttack = time;
-
-        const bx = this.bossInstance.x;
-        const by = this.bossInstance.y;
-
-        if (this.bossPhase === 1) {
-            this.fireBullet(bx, by, this.player.x, this.player.y, 250);
-        } 
-        else if (this.bossPhase === 2) {
-            for (let i = 0; i < 8; i++) {
-                const angle = (i * Math.PI) / 4;
-                this.fireBulletWithAngle(bx, by, angle, 200);
-            }
-        } 
-        else if (this.bossPhase === 3) {
-            for (let i = 0; i < 12; i++) {
-                const angle = (i * Math.PI) / 6;
-                this.fireBulletWithAngle(bx, by, angle, 220);
-            }
-
-            const line = this.add.line(0, 0, bx, by, this.player.x, this.player.y, 0xff0000, 0.5).setOrigin(0);
-            this.time.delayedCall(400, () => {
-                line.destroy();
-                if (this.bossInstance && this.bossInstance.active) {
-                    this.physics.moveToObject(this.bossInstance, this.player, 250);
-                }
-            });
+    firePhasePattern(phase) {
+        const b = this.bossInstance;
+        if (!b?.active) return;
+        if (phase === 1) {
+            this.fireBullet(b.x, b.y, this.player.x, this.player.y, 260);
+        } else if (phase === 2) {
+            for (let i = 0; i < 8; i++) this.fireBulletWithAngle(b.x, b.y, (i * Math.PI) / 4, 210);
+        } else {
+            for (let i = 0; i < 12; i++) this.fireBulletWithAngle(b.x, b.y, (i * Math.PI) / 6, 230);
         }
     }
 
     fireBullet(fromX, fromY, toX, toY, speed) {
-        const bullet = this.add.circle(fromX, fromY, 12, 0xff3333);
+        const bullet = this.add.circle(fromX, fromY, 11, 0xff3333);
         this.physics.add.existing(bullet);
         this.physics.moveTo(bullet, toX, toY, speed);
+        bullet.setData('atk', Math.max(10, Math.round((this.bossInstance?.getData('atk') || 20) * 0.6)));
         this.bossBullets.add(bullet);
-        this.time.delayedCall(3000, () => { if (bullet.active) bullet.destroy(); });
+        this.time.delayedCall(3000, () => bullet.destroy?.());
     }
 
     fireBulletWithAngle(fromX, fromY, angle, speed) {
-        const bullet = this.add.circle(fromX, fromY, 10, 0xff3333);
+        const bullet = this.add.circle(fromX, fromY, 9, 0xff5555);
         this.physics.add.existing(bullet);
         bullet.body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+        bullet.setData('atk', Math.max(8, Math.round((this.bossInstance?.getData('atk') || 20) * 0.5)));
         this.bossBullets.add(bullet);
-        this.time.delayedCall(3000, () => { if (bullet.active) bullet.destroy(); });
+        this.time.delayedCall(3000, () => bullet.destroy?.());
     }
 
     onPlayerHitBullet(player, bullet) {
+        const atk = bullet.getData('atk') || 12;
         bullet.destroy();
-        this.onPlayerHit(player, { getData: (key) => key === 'atk' ? this.bossInstance?.getData('atk') || 20 : null });
+        // No unexplained instant kill — use normal damage path.
+        this.combatRuntime?.onPlayerHit?.(player, { getData: (k) => (k === 'atk' ? atk : null) });
     }
 
-    damageEnemy(enemy, dmg) {
-        const isAnlan = enemy.getData('isAnlan');
-        super.damageEnemy(enemy, dmg);
+    onSecondTick() {
+        // Use director but ignore duration success (boss_only).
+        super.onSecondTick();
+    }
 
-        if (isAnlan) {
-            this.bossHp = enemy.getData('hp');
-            const pct = Math.max(Math.floor((this.bossHp / this.maxBossHp) * 100), 0);
-            
-            if (pct > 70) {
-                this.bossPhase = 1;
-            } else if (pct > 30) {
-                if (this.bossPhase === 1) {
-                    this.bossPhase = 2;
-                    UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "金阙君：赤锋矛，玄铁盾，斩尽来敌！", "#ff0000", 3000);
-                }
-            } else if (pct > 0) {
-                if (this.bossPhase === 2) {
-                    this.bossPhase = 3;
-                    UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "金阙君暴怒：万象化影也休想破局！", "#ff0000", 3000);
-                    enemy.setData('speed', 65);
-                }
-            }
-
-            this.hudText.setText(`金阙君 - 阶段 ${this.bossPhase} (HP: ${pct}%)`);
-
-            if (!enemy.active || this.bossHp <= 0) {
-                this.bossInstance = null;
-                this.isGameOver = true;
-                UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "金阙君败退！终局破晓！", "#ffd700", 3000);
-                this.time.delayedCall(1500, () => {
-                    this.endGame(true);
-                });
-            }
+    endGame(success, failureReason = null, resultReason = null) {
+        // Reject accidental duration victories.
+        if (success && failureReason === null && resultReason === 'duration_complete') {
+            return super.endGame(false, '终局须击败金阙君', 'failed');
         }
+        return super.endGame(success, failureReason, resultReason);
     }
 }
 

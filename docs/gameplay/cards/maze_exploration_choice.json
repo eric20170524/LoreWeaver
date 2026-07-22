@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0",
+  "id": "maze_exploration_choice",
+  "title": "Maze Exploration Choice",
+  "category": "microgame",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "MazeExplorationChoiceAdapter"
+  },
+  "inputs": [
+    "pointer",
+    "keyboard"
+  ],
+  "objectives": [
+    "objective_met"
+  ],
+  "failure": [
+    "failed",
+    "retreated"
+  ],
+  "knobs": {},
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "NodeResult"
+  ],
+  "resultContract": {
+    "successReason": "objective_met"
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "playable",
+      "NodeResult"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node5.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "path nodes"
+    ],
+    "poorFor": []
+  },
+  "knownRisks": [],
+  "implementationNotes": "Core adapter wired."
+}

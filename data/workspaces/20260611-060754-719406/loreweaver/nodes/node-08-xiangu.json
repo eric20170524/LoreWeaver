@@ -6,7 +6,7 @@
     "仙古原住民：外来者，死！",
     "星骁：这里的造化，我全都要！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "node_iframe_microgame",
   "rewards": "气血精华 +50000，纯血 +10~15，仙道法则",
   "goalValue": 300,
   "resourceMultiplier": 12.5,
@@ -26,7 +26,26 @@
           10,
           15
         ]
-      }
+      },
+      "durationSec": 300,
+      "goalValue": 300,
+      "difficulty": 8,
+      "victoryMode": "objective",
+      "enemyPool": [],
+      "envKey": "env_bg_ruins",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node8_ruins",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme",
+      "runtimeCardId": "node_iframe_microgame",
+      "shellRetreat": true
     },
     "patchLevel": "L2"
   },
@@ -37,6 +56,9 @@
       "bone_script_mastery",
       "pure_blood_trial"
     ],
+    "rewardUnlocks": [
+      "supreme_bone"
+    ],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
@@ -44,9 +66,6 @@
       "dual_pupil",
       "kunpeng_art",
       "true_phoenix_art",
-      "supreme_bone"
-    ],
-    "rewardUnlocks": [
       "supreme_bone"
     ],
     "notes": "仙古遗地开放星骨终局分支，后续节点允许变身与清屏宝术进入局内池。"

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "loreweaver.source-patch.v1",
+  "id": "lw050-campaign-core-extract",
+  "title": "Extract campaign LevelContract + GameFeelCore into minigame_master",
+  "patchLevel": "L4",
+  "ownership": {
+    "owner": "LoreWeaver-core",
+    "files": [
+      "minigame_master/core/lib/gameplay/campaign/LevelContract.js",
+      "minigame_master/core/lib/gameplay/campaign/GameFeelCore.js",
+      "minigame_master/core/lib/gameplay/campaign/index.js",
+      "minigame_master/core/lib/gameplay/campaign/README.md"
+    ]
+  },
+  "files": [
+    {
+      "path": "minigame_master/core/lib/gameplay/campaign/LevelContract.js",
+      "action": "create",
+      "beforeHash": null,
+      "afterHash": null
+    },
+    {
+      "path": "minigame_master/core/lib/gameplay/campaign/GameFeelCore.js",
+      "action": "create",
+      "beforeHash": null,
+      "afterHash": null
+    }
+  ],
+  "invalidates": ["gate:core-contract", "gate:runtime-e2e", "gate:target-regression"],
+  "rollback": {
+    "snapshotPath": "productize/patches/snapshots/lw050-campaign-core-extract",
+    "createdAt": "2026-07-16T00:00:00Z"
+  },
+  "evidence": {
+    "commands": ["node productize/jobs/check-campaign-core.mjs"],
+    "reports": ["capabilities/reports/campaign_core_check_latest.json"]
+  },
+  "secretsPolicy": {
+    "forbidsCredentialsInManifests": true
+  }
+}

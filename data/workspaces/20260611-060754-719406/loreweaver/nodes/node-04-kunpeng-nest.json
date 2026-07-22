@@ -34,7 +34,26 @@
           2,
           4
         ]
-      }
+      },
+      "durationSec": 180,
+      "goalValue": 180,
+      "difficulty": 4,
+      "victoryMode": "survive",
+      "enemyPool": [],
+      "envKey": "env_bg_tide",
+      "playable": true,
+      "allowQuit": true,
+      "allowPause": true,
+      "failOnTimeout": true,
+      "clearable": true,
+      "retreatReturnsToShell": true,
+      "artAtlasFirst": true,
+      "bgmKey": "node4_tide",
+      "sfxVictory": "victory_sting",
+      "sfxDefeat": "defeat_sting",
+      "bossBgmKey": "boss_theme",
+      "runtimeCardId": "survivor_horde",
+      "shellRetreat": true
     },
     "patchLevel": "L3"
   },
@@ -45,15 +64,15 @@
       "bone_script_mastery",
       "pure_blood_trial"
     ],
+    "rewardUnlocks": [
+      "kunpeng_art"
+    ],
     "runSkillPool": [
       "primordial_true_record",
       "suan_ni_baoshu",
       "willow_guard",
       "green_eagle_art",
       "dual_pupil",
-      "kunpeng_art"
-    ],
-    "rewardUnlocks": [
       "kunpeng_art"
     ],
     "notes": "天潮巢把机动和无敌帧正式转入主干，后续海战、守城和终局节点都能读取。"

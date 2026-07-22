@@ -1,19 +1,22 @@
 {
   "schemaVersion": "1.0",
   "mode": "generated_bitmap_atlas",
-  "generationStatus": "generated_with_builtin_imagegen",
+  "generationStatus": "generated_campaign_node1_12_bitmap_slice",
   "provenancePath": "assets/imagegen/provenance.json",
   "sourceImages": [
     "assets/imagegen/source/generated-sprite-atlas-20260628.png",
     "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png"
   ],
   "runtimeEntryPoints": [
-    "utils/RuntimeSprites.js:preloadImagegenAtlas",
-    "utils/RuntimeSprites.js:createAtlasFrameTexture",
     "nodes/node1.js:createCombatTextures",
-    "nodes/node1.js:createPlayerTexture",
     "nodes/node1.js:createEnemyTexture",
+    "nodes/node1.js:createPlayerTexture",
     "nodes/node1.js:createSkillProjectileTexture",
+    "utils/AudioManager.js:playNodeBgm",
+    "utils/RuntimeSprites.js:createAtlasFrameTexture",
+    "utils/RuntimeSprites.js:getNodeEnvBackgroundKey",
+    "utils/RuntimeSprites.js:preloadImagegenAtlas",
+    "utils/RuntimeSprites.js:preloadNodeArtKeys",
     "utils/VFX.js:playSkillEffect"
   ],
   "groups": {
@@ -58,9 +61,19 @@
       "pureBlood"
     ],
     "props": [
-      "skill_fist_projectile",
+      "antidote_gem",
+      "ballista_bolt",
+      "boss_projectile",
+      "chest_gold",
+      "core_eye",
+      "escort_npc",
+      "objective_totem",
       "particle",
-      "skill_particle"
+      "portal_ring",
+      "skill_fist_projectile",
+      "skill_particle",
+      "wall_segment",
+      "whirlpool"
     ],
     "setpieces": [
       "runtime combat arena",
@@ -71,6 +84,22 @@
       "line beams",
       "particle bursts",
       "screen flash"
+    ],
+    "environments": [
+      "env_bg_desert",
+      "env_bg_cliff",
+      "env_bg_arena",
+      "env_bg_tide",
+      "env_bg_city",
+      "env_bg_poison",
+      "env_bg_tournament",
+      "env_bg_ruins",
+      "env_bg_escort",
+      "env_bg_wall",
+      "env_bg_void",
+      "env_bg_finale",
+      "env_landmark_rock",
+      "env_ground_patch"
     ]
   },
   "spriteClips": [
@@ -111,5 +140,13 @@
       "exportSurvivorHordeUsesAtlasPlayerTexture",
       "exportSurvivorHordeUsesAtlasEnemyTexture"
     ]
+  },
+  "campaignCoverage": {
+    "nodes": 12,
+    "envBackgrounds": 12,
+    "enemyKinds": 13,
+    "playerClips": 7,
+    "atlasFrames": 116,
+    "runtimeEntry": "utils/RuntimeSprites.js:preloadNodeArtKeys"
   }
 }

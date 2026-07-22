@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/schemas/survivor_horde_capability_fixture.schema.json",
+  "title": "Survivor Horde Node Capability Contract Suite",
+  "description": "Theme-neutral migration contracts for legacy node mechanics. These describe business behavior, not scene inheritance or pixel output.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "fixtureSuiteId",
+    "sourceWorkspace",
+    "deterministicPolicy",
+    "knownDefects",
+    "nodes"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "loreweaver.survivor-horde-capability-suite.v1"
+    },
+    "fixtureSuiteId": {
+      "$ref": "#/$defs/id"
+    },
+    "sourceWorkspace": {
+      "type": "string",
+      "minLength": 1
+    },
+    "deterministicPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seedPerFixture", "fixedDeltaMs", "randomSource", "compare"],
+      "properties": {
+        "seedPerFixture": { "type": "boolean", "const": true },
+        "fixedDeltaMs": { "type": "number", "exclusiveMinimum": 0 },
+        "randomSource": { "const": "injected" },
+        "compare": { "const": "business_state_and_semantic_events" }
+      }
+    },
+    "knownDefects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/knownDefect"
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {
+        "$ref": "#/$defs/nodeContract"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]*$"
+    },
+    "stringList": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "knownDefect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "nodes", "legacySymptom", "migrationRule"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "integer", "minimum": 2, "maximum": 12 },
+          "uniqueItems": true
+        },
+        "legacySymptom": { "type": "string", "minLength": 1 },
+        "migrationRule": { "type": "string", "minLength": 1 }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "destination", "targetId", "rationale"],
+      "properties": {
+        "capability": { "$ref": "#/$defs/id" },
+        "destination": {
+          "type": "string",
+          "enum": [
+            "core_primitive",
+            "existing_modifier_enhancement",
+            "node_instance_config",
+            "reject_migration"
+          ]
+        },
+        "targetId": { "$ref": "#/$defs/id" },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atMs", "action"],
+      "properties": {
+        "atMs": { "type": "integer", "minimum": 0 },
+        "action": { "$ref": "#/$defs/id" },
+        "args": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atMs", "id", "expected"],
+      "properties": {
+        "atMs": { "type": "integer", "minimum": 0 },
+        "id": { "$ref": "#/$defs/id" },
+        "expected": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "nodeContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodeId",
+        "fixtureId",
+        "seed",
+        "objective",
+        "playerDecisions",
+        "risks",
+        "counters",
+        "victory",
+        "failure",
+        "rewardImpact",
+        "encounter",
+        "presentation",
+        "testHooks",
+        "lifecycleResources",
+        "migrationClassification",
+        "sourceAnchors",
+        "inputTimeline",
+        "checkpoints",
+        "excludedLegacyBehavior"
+      ],
+      "properties": {
+        "nodeId": { "type": "integer", "minimum": 2, "maximum": 12 },
+        "fixtureId": { "$ref": "#/$defs/id" },
+        "seed": { "type": "string", "minLength": 1 },
+        "objective": { "type": "string", "minLength": 1 },
+        "playerDecisions": { "$ref": "#/$defs/stringList" },
+        "risks": { "$ref": "#/$defs/stringList" },
+        "counters": { "$ref": "#/$defs/stringList" },
+        "victory": { "type": "object", "additionalProperties": true },
+        "failure": { "type": "object", "additionalProperties": true },
+        "rewardImpact": { "type": "object", "additionalProperties": true },
+        "encounter": { "type": "object", "additionalProperties": true },
+        "presentation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vfxKinds", "sfxKinds", "calloutKinds"],
+          "properties": {
+            "vfxKinds": { "$ref": "#/$defs/stringList" },
+            "sfxKinds": { "$ref": "#/$defs/stringList" },
+            "calloutKinds": { "$ref": "#/$defs/stringList" }
+          }
+        },
+        "testHooks": { "$ref": "#/$defs/stringList" },
+        "lifecycleResources": { "$ref": "#/$defs/stringList" },
+        "migrationClassification": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/classification" }
+        },
+        "sourceAnchors": { "$ref": "#/$defs/stringList" },
+        "inputTimeline": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/input" }
+        },
+        "checkpoints": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/checkpoint" }
+        },
+        "excludedLegacyBehavior": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

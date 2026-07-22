@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "id": "arena_wave_boss",
+  "title": "Arena Wave Boss",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "survivor_horde"
+  ],
+  "knobs": {},
+  "requiredCoreSystems": [],
+  "sourceProvenance": [
+    "minigame/perfectworld_dahuang/nodes/node7.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Survivor modifier factory wired."
+}

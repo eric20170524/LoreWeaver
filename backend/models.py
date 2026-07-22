@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Text
+from sqlalchemy import Column, String, Float, Text, Integer
 from .database import Base
 
 class Workspace(Base):
@@ -22,3 +22,16 @@ class Job(Base):
     result_json = Column(Text, nullable=True)   # Json serialized string
     message = Column(Text, nullable=True)
     created_at = Column(Float, nullable=False)
+
+class DepartmentChatMessage(Base):
+    __tablename__ = "department_chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    workspace_id = Column(String, index=True, nullable=False)
+    department_id = Column(String, index=True, nullable=False)
+    agent_role = Column(String, index=True, nullable=False)
+    sender = Column(String, nullable=False)  # "user" or "agent"
+    text = Column(Text, nullable=False)
+    timestamp = Column(String, nullable=False)
+    created_at = Column(Float, nullable=False)
+

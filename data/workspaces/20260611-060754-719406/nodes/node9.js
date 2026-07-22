@@ -1,10 +1,7 @@
-// nodes/node9.js
-// Node 9: 天神书院护送同道场景 - 转换为 ES Modules
-
+// nodes/node9.js — 星脉书院：护送
 import Node1Scene from './node1.js';
 import UIHelper from '../utils/UIHelper.js';
 import AudioManager from '../utils/AudioManager.js';
-import VFX from '../utils/VFX.js';
 import { ENEMY_REGISTRY } from '../js/data.js';
 
 export class Node9Scene extends Node1Scene {
@@ -15,106 +12,106 @@ export class Node9Scene extends Node1Scene {
     init(data) {
         super.init(data);
         this.npcHp = 100;
-        this.bossSpawned = false;
-        this.reachedDest = false;
+        this.escortMode = 'follow'; // follow | hold
     }
 
     create() {
         super.create();
-
-        const startX = this.width * 1.2;
+        const startX = this.width * 1.15;
         const startY = this.height * 1.5;
-        this.destX = this.width * 2.2;
+        this.destX = this.width * 2.25;
         this.destY = this.height * 1.5;
-
         this.player.x = startX;
-        this.player.y = startY - 100;
+        this.player.y = startY - 90;
 
-        this.elder = this.add.rectangle(startX, startY, 32, 32, 0x00ff00);
-        this.physics.add.existing(this.elder);
-        
-        this.destSign = this.add.circle(this.destX, this.destY, 30, 0xffd700, 0.4);
-        this.physics.add.existing(this.destSign);
-        this.add.text(this.destX, this.destY - 50, '终点', { fontSize: '18px', fill: '#ffd700' }).setOrigin(0.5);
+        this.escort = this.add.rectangle(startX, startY, 28, 36, 0x55ff88);
+        this.physics.add.existing(this.escort);
+        this.escort.body.setImmovable(false);
+        this.dest = this.add.circle(this.destX, this.destY, 36, 0xffd700, 0.35).setStrokeStyle(2, 0xffee88);
+        this.add.text(this.destX, this.destY - 48, '终点', { fontSize: '16px', fill: '#ffd700' }).setOrigin(0.5);
 
-        // HUD
-        this.hudText = this.uiScene.add.text(this.width / 2, 180, '长老生命: 100%', {
-            fontSize: '24px', fill: '#00ff00', fontStyle: 'bold'
+        this.hudText = this.uiScene.add.text(this.width / 2, 200, '护送 HP 100% · 模式:跟随', {
+            fontSize: '16px', fill: '#88ffaa', fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        this.physics.add.overlap(this.enemies, this.elder, this.onEnemyHitElder, null, this);
+        this.physics.add.overlap(this.enemies, this.escort, this.onEnemyHitEscort, null, this);
+        this.input.keyboard?.on?.('keydown-H', () => {
+            this.escortMode = this.escortMode === 'follow' ? 'hold' : 'follow';
+            UIHelper.showFloatText(this, this.escort.x, this.escort.y - 40,
+                this.escortMode === 'hold' ? '护送达待命' : '护送跟随', '#80ffea', 900);
+        });
+        this.bossSpawned = false;
+        this.publishNodeTestState();
+    }
+
+    publishNodeTestState(overrides = {}) {
+        super.publishNodeTestState({
+            npcHp: this.npcHp || 0,
+            escortMode: this.escortMode,
+            objective: 'escort_npc',
+            ...overrides
+        });
     }
 
     update(time, delta) {
-        if (this.isGameOver || this.isPaused) return;
-
         super.update(time, delta);
+        if (this.isGameOver || this.isPaused || !this.escort) return;
 
-        const distToDest = Phaser.Math.Distance.Between(this.elder.x, this.elder.y, this.destX, this.destY);
-        if (distToDest > 20) {
-            this.physics.moveTo(this.elder, this.destX, this.destY, 35); 
+        if (this.escortMode === 'follow') {
+            const dist = Phaser.Math.Distance.Between(this.escort.x, this.escort.y, this.player.x, this.player.y);
+            if (dist > 70) this.physics.moveToObject(this.escort, this.player, 140);
+            else this.escort.body.setVelocity(0, 0);
         } else {
-            this.elder.body.setVelocity(0, 0);
-            if (!this.reachedDest) {
-                this.reachedDest = true;
-                UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "顺利护送长老抵达终点！", "#00ff00", 2000);
-                this.time.delayedCall(1500, () => {
-                    this.endGame(true);
-                });
+            this.escort.body.setVelocity(0, 0);
+        }
+
+        // Progress toward destination when near escort and mode follow.
+        if (this.escortMode === 'follow') {
+            const toDest = Phaser.Math.Distance.Between(this.escort.x, this.escort.y, this.destX, this.destY);
+            if (toDest > 40) {
+                // Bias escort slightly toward destination while following player corridor.
+                this.escort.x += (this.destX - this.escort.x) * 0.004;
+            } else {
+                this.campaignObjectiveComplete = true;
+                UIHelper.showFloatText(this.uiScene, this.width / 2, 240, '护送抵达！', '#ffd700', 2000);
             }
         }
 
-        this.enemies.getChildren().forEach(enemy => {
-            this.physics.moveToObject(enemy, this.elder, enemy.getData('speed'));
+        // Enemies may prefer escort as target.
+        (this.enemies?.getChildren?.() || []).forEach((e) => {
+            if (!e.active || e.getData('isBoss')) return;
+            if (Math.random() < 0.35) {
+                e.setData('targeting', 'escort');
+                this.physics.moveToObject(e, this.escort, e.getData('speed') || 60);
+            } else {
+                e.setData('targeting', 'player');
+            }
         });
+
+        this.hudText?.setText(`护送 HP ${Math.floor(this.npcHp)}% · 模式:${this.escortMode === 'hold' ? '待命' : '跟随'} (H切换)`);
+        this.publishNodeTestState();
     }
 
-    onEnemyHitElder(elder, enemy) {
-        enemy.destroy();
-        this.npcHp -= 10;
-        this.hudText.setText(`长老生命: ${Math.max(this.npcHp, 0)}%`);
-
-        this.elder.setFillStyle(0xff0000);
-        this.time.delayedCall(200, () => {
-            if (this.elder.active) this.elder.setFillStyle(0x00ff00);
-        });
-
-        UIHelper.showFloatText(this.uiScene, this.width / 2, 220, "长老受到攻击！生命-10%", "#ff0000", 1500);
-        AudioManager.playHit();
-        VFX.playHitEffect(this, enemy.x, enemy.y);
-
-        if (this.npcHp <= 0) {
-            this.endGame(false);
-        }
+    onEnemyHitEscort(enemy, escort) {
+        if (!enemy.active) return;
+        const now = this.time.now;
+        if (now - (escort.getData('lastHit') || 0) < 600) return;
+        escort.setData('lastHit', now);
+        this.npcHp = Math.max(0, this.npcHp - 6);
+        AudioManager.playSfx?.('escort_warn');
+        UIHelper.showFloatText(this, escort.x, escort.y - 30, '-6', '#ff6666', 600);
+        if (this.npcHp <= 0) this.endGame(false, '护送目标倒下', 'failed');
     }
 
     onSecondTick() {
-        if (this.isGameOver || this.isPaused) return;
         super.onSecondTick();
-
-        if (this.surviveTime === Math.floor(this.nodeConfig.duration * 0.8) && !this.bossSpawned) {
-            this.spawnBoss();
-            this.bossSpawned = true;
-        }
     }
 
     spawnBoss() {
-        const enemyData = ENEMY_REGISTRY[this.nodeConfig.bossId];
-        this.createRuntimeEnemy(this.nodeConfig.bossId, this.elder.x + 250, this.elder.y, {
-            hp: enemyData.hp,
-            speed: enemyData.speed,
-            exp: enemyData.exp,
-            lootList: enemyData.lootList,
-            scaleMultiplier: 1.2
-        });
-        
-        const txt = this.add.text(this.player.x, this.player.y - 100, '异域天骄现身拦路！速去支援！', { fontSize: '28px', fill: '#ff3333', fontStyle: 'bold' }).setOrigin(0.5);
-        this.tweens.add({
-            targets: txt,
-            y: this.player.y - 150,
-            alpha: 0,
-            duration: 3000,
-            onComplete: () => txt.destroy()
+        return super.spawnBoss({
+            name: ENEMY_REGISTRY[this.nodeConfig.bossId]?.name || '截道首领',
+            phases: 3,
+            data: { prefersEscort: true }
         });
     }
 }

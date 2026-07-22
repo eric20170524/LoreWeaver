@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "1.0",
+  "id": "pressure_survival",
+  "title": "Pressure Survival",
+  "category": "microgame",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "PressureSurvivalAdapter"
+  },
+  "inputs": [
+    "pointer"
+  ],
+  "objectives": [
+    "pressure_not_full"
+  ],
+  "failure": [
+    "pressure_full",
+    "retreated"
+  ],
+  "knobs": {
+    "durationSec": {
+      "type": "integer",
+      "default": 30,
+      "patchLevel": "L1",
+      "description": "durationSec"
+    },
+    "pressureGrowthPerSec": {
+      "type": "integer",
+      "default": 8,
+      "patchLevel": "L1",
+      "description": "pressureGrowthPerSec"
+    },
+    "clickRelief": {
+      "type": "integer",
+      "default": 6,
+      "patchLevel": "L1",
+      "description": "clickRelief"
+    },
+    "skillCooldownSec": {
+      "type": "integer",
+      "default": 5,
+      "patchLevel": "L1",
+      "description": "skillCooldownSec"
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "requiredCoreSystems": [
+    "Timer",
+    "PressureBar"
+  ],
+  "resultContract": {
+    "successReason": "objective_met"
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": null,
+    "assertions": [
+      "playable loop",
+      "NodeResult on end"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/Path_to_Immortality/node3.html"
+  ],
+  "fit": {
+    "goodFor": [
+      "path micro nodes"
+    ],
+    "poorFor": [
+      "long campaigns alone"
+    ]
+  },
+  "knownRisks": [],
+  "implementationNotes": "Core adapter wired in minigame_master + GameRunner."
+}

@@ -1,0 +1,244 @@
+{
+  "schemaVersion": "loreweaver.runtime-parity-fixture.v1",
+  "fixtureId": "survivor_horde.node1.canonical",
+  "nodeId": 1,
+  "gameplayCardId": "survivor_horde",
+  "sourceRevision": "workspace-20260611-060754-719406:baseline-20260718",
+  "specHash": "unmaterialized:compile-runtime-spec-pending",
+  "appliedPatchIds": [],
+  "determinism": {
+    "seed": "survivor-horde-node1-baseline-001",
+    "clock": {
+      "mode": "fixed_step",
+      "fixedDeltaMs": 16.666667
+    },
+    "randomSource": "injected"
+  },
+  "runtimeSpecInput": {
+    "runtimeVersion": "shared-kernel-v2-pending",
+    "cardId": "survivor_horde",
+    "nodeId": 1,
+    "objective": "defeat_climax_boss",
+    "durationMs": 90000,
+    "playerCombat": {
+      "autoSlots": 1,
+      "activeSlots": 2,
+      "startingHp": 100,
+      "startingShield": 0
+    },
+    "runProgression": {
+      "firstDraftAtXp": 12,
+      "pauseDuringDraft": true,
+      "choiceCount": 3
+    },
+    "enemyCombat": {
+      "requiredArchetypes": [
+        "chase_melee",
+        "charge",
+        "ranged_pressure"
+      ]
+    },
+    "bossCombat": {
+      "phaseCount": 2,
+      "requiresBreakWindow": true
+    }
+  },
+  "initialState": {
+    "lifecycle": "ready",
+    "player": {
+      "hp": 100,
+      "maxHp": 100,
+      "shield": 0,
+      "position": { "x": 0, "y": 0 },
+      "activeAbilities": ["active_dash", "active_burst"],
+      "autoAbilities": ["auto_projectile"]
+    },
+    "run": {
+      "xp": 0,
+      "level": 1,
+      "upgradeHistory": [],
+      "pausedForDraft": false
+    },
+    "world": {
+      "elapsedMs": 0,
+      "enemies": [],
+      "projectiles": [],
+      "drops": [],
+      "boss": null
+    }
+  },
+  "inputTimeline": [
+    {
+      "atMs": 0,
+      "action": "start",
+      "args": { "hostKind": "parity_harness" }
+    },
+    {
+      "atMs": 1000,
+      "action": "move_vector",
+      "args": { "x": 1, "y": 0, "durationMs": 1500 }
+    },
+    {
+      "atMs": 5000,
+      "action": "spawn_enemy",
+      "args": { "archetype": "chase_melee", "fixtureEntityId": "enemy_melee_1" }
+    },
+    {
+      "atMs": 9000,
+      "action": "cast_active",
+      "args": { "abilityId": "active_dash", "direction": { "x": 0, "y": -1 } }
+    },
+    {
+      "atMs": 14000,
+      "action": "spawn_enemy",
+      "args": { "archetype": "charge", "fixtureEntityId": "enemy_charge_1" }
+    },
+    {
+      "atMs": 19000,
+      "action": "spawn_enemy",
+      "args": { "archetype": "ranged_pressure", "fixtureEntityId": "enemy_ranged_1" }
+    },
+    {
+      "atMs": 26000,
+      "action": "grant_xp",
+      "args": { "amount": 12 }
+    },
+    {
+      "atMs": 26100,
+      "action": "select_upgrade",
+      "args": { "choiceIndex": 1, "expectedMutation": "auto_projectile.level+1" }
+    },
+    {
+      "atMs": 42000,
+      "action": "cast_active",
+      "args": { "abilityId": "active_burst", "target": { "x": 120, "y": 80 } }
+    },
+    {
+      "atMs": 55000,
+      "action": "spawn_boss",
+      "args": { "fixtureEntityId": "boss_1", "phaseCount": 2 }
+    },
+    {
+      "atMs": 66000,
+      "action": "interrupt_boss",
+      "args": { "moveId": "boss_charge", "during": "break_window" }
+    },
+    {
+      "atMs": 82000,
+      "action": "apply_fixture_damage",
+      "args": { "target": "boss_1", "amount": 99999 }
+    },
+    {
+      "atMs": 83000,
+      "action": "collect_all_drops",
+      "args": {}
+    },
+    {
+      "atMs": 85000,
+      "action": "shutdown",
+      "args": { "reason": "result_acknowledged" }
+    }
+  ],
+  "checkpoints": [
+    {
+      "atMs": 10000,
+      "id": "active_input_accepted",
+      "expectedState": {
+        "lifecycle": "running",
+        "player": { "lastAcceptedAbility": "active_dash" },
+        "combat": { "autoProjectileCastsMin": 1 }
+      },
+      "requiredEvents": ["ability_accepted", "ability_vfx", "ability_sfx", "ability_callout"]
+    },
+    {
+      "atMs": 27000,
+      "id": "upgrade_changes_combat",
+      "expectedState": {
+        "run": {
+          "level": 2,
+          "pausedForDraft": false,
+          "upgradeHistoryCount": 1
+        },
+        "abilities": {
+          "autoProjectileLevel": 2,
+          "observableDamageIncreased": true
+        }
+      },
+      "requiredEvents": ["upgrade_draft_opened", "upgrade_selected", "upgrade_applied"]
+    },
+    {
+      "atMs": 68000,
+      "id": "enemy_and_boss_counterplay",
+      "expectedState": {
+        "enemyCoverage": ["chase_melee", "charge", "ranged_pressure"],
+        "boss": { "phase": 2, "lastBreakAccepted": true },
+        "player": { "hpGreaterThan": 0 }
+      },
+      "requiredEvents": ["enemy_windup", "enemy_active", "boss_phase_changed", "boss_break_accepted"]
+    },
+    {
+      "atMs": 84000,
+      "id": "canonical_node_result",
+      "expectedState": {
+        "lifecycle": "ended",
+        "nodeResult": { "success": true, "reason": "completed" },
+        "rewards": { "appliedExactlyOnce": true }
+      },
+      "requiredEvents": ["boss_defeated", "node_completed", "node_result"]
+    },
+    {
+      "atMs": 86000,
+      "id": "shutdown_cleanup",
+      "expectedState": {
+        "lifecycle": "destroyed",
+        "objects": { "timers": 0, "tweens": 0, "listeners": 0, "projectiles": 0 }
+      },
+      "requiredEvents": ["runtime_destroyed"]
+    }
+  ],
+  "tolerances": {
+    "numericAbsolute": 0.000001,
+    "positionPx": 0.5,
+    "timeMs": 1,
+    "unorderedCollections": [
+      "world.enemies",
+      "world.drops",
+      "presentation.coveredEffectKinds"
+    ]
+  },
+  "expectedInvariants": [
+    {
+      "id": "same_resolved_spec",
+      "assertion": "Simulator and standalone must expose the same production specHash before a state-trace comparison is valid."
+    },
+    {
+      "id": "accepted_then_present",
+      "assertion": "Gameplay acceptance and state mutation happen before success VFX, SFX, or callout events."
+    },
+    {
+      "id": "fixed_seed_and_clock",
+      "assertion": "All random choices and time progression use injected ports; wall-clock and Math.random are forbidden in the parity path."
+    },
+    {
+      "id": "hit_once_policy",
+      "assertion": "Enemy attacks cannot deal extra damage because one host produced more overlap frames."
+    },
+    {
+      "id": "result_idempotence",
+      "assertion": "The same NodeResult identity is applied to the save host at most once."
+    },
+    {
+      "id": "cleanup_is_observable",
+      "assertion": "Shutdown leaves no tracked timer, tween, input listener, projectile, or pending callback."
+    }
+  ],
+  "excludedObservations": [
+    "theme_text",
+    "protected_names",
+    "asset_paths",
+    "pixel_output",
+    "procedural_fallback_geometry",
+    "wall_clock_timestamps",
+    "object_ids"
+  ]
+}

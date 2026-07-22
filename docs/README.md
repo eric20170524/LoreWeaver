@@ -30,7 +30,7 @@ flowchart TD
 - If the user says they tested a **LoreWeaver target workspace**, inspect and patch `LoreWeaver/data/workspaces/[workspace-id]` first.
 - If the user says the **Workbench emulator** still renders wrong, inspect `LoreWeaver/src/game/GameRunner.ts` and the relevant adapter under `minigame_master/core/lib`.
 - If the task is about **Workbench panels, tabs, controls, or app chrome**, edit `LoreWeaver/src/components` and related Workbench CSS.
-- If the task is about **manifest schemas, gameplay cards, runtime feature packs, gates, or docs**, edit `LoreWeaver/docs`, `LoreWeaver/workflow`, and associated schema/check scripts.
+- If the task is about **manifest schemas, gameplay cards, runtime feature packs, gates, or docs**, edit `LoreWeaver/docs`, `LoreWeaver/templates`, `LoreWeaver/capabilities`, `LoreWeaver/skills`, and associated schema/check scripts.
 - Treat `minigame/xianni` and `minigame/perfectworld_dahuang` as legacy references by default. They can inform adapters, manifests, catalogs, and tests, but they are not the active target workspace unless the user explicitly says so.
 - When a reusable runtime change is made, also check whether any named target workspace must be synced or regenerated. A passing core build does not prove a git-ignored workspace artifact changed.
 - If a request can plausibly refer to more than one surface, ask one clarifying question before editing. Do not guess between Workbench UI, engine runtime, target workspace artifact, and legacy reference project.
@@ -75,14 +75,15 @@ These files describe the current planning, contracts, schemas, gates, and operat
 | `contracts/runtime_feature_pack.schema.json` | Machine-readable Runtime Feature Pack schema |
 | `contracts/asset_pipeline_contract.md` | Ability VFX/voice, generated bitmap art, audio manifest, runtime wiring, and verification contract |
 
-### Workflow And Gates
+### Workflow Guides And Roles
 
 | File | Purpose |
 | --- | --- |
-| `workflow/precise_pipeline_1_1_to_3_3.md` | Cross-cutting generation pipeline from world DNA to QA |
-| `workflow/patch_revision_workflow.md` | Patch/revision workflow and patch level policy |
-| `workflow/visual_audit_and_vlm_backlog.md` | Visual audit and VLM gate backlog |
-| `workflow/agent_roles_artifact_ownership.md` | Agent roles organized by artifact ownership |
+| `guides/precise_pipeline_1_1_to_3_3.md` | Cross-cutting generation pipeline from world DNA to QA |
+| `guides/patch_revision_workflow.md` | Patch/revision workflow and patch level policy |
+| `guides/visual_audit_and_vlm_backlog.md` | Visual audit and VLM gate backlog |
+| `guides/agent_roles_artifact_ownership.md` | Agent roles organized by artifact ownership |
+| `guides/production_department_agents.md` | Department agents & workflow responsibility guide |
 
 ### Policy
 
@@ -94,8 +95,8 @@ These files describe the current planning, contracts, schemas, gates, and operat
 
 | Path | Purpose |
 | --- | --- |
-| `gameplay_cards/` | Gameplay Card JSON files used by the workbench and planning flow |
-| `gameplay_cards/modifiers/` | Modifier card JSON files |
+| `gameplay/cards/` | Gameplay Card JSON files used by the workbench and planning flow |
+| `gameplay/cards/modifiers/` | Modifier card JSON files |
 | `contracts/runtime_feature_pack.schema.json` | Machine-readable schema for reusable runtime ability/passive/character/enemy/VFX/SFX feature packs, including optional asset pipeline metadata |
 
 ## Archive

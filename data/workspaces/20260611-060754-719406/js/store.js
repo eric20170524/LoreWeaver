@@ -195,6 +195,38 @@ export class GameStore {
         return this.state.perks?.unlocked || [];
     }
 
+    /** LW-047: accessibility / feel settings persisted in Save v2. */
+    getSettings() {
+        const defaults = {
+            musicEnabled: true,
+            sfxEnabled: true,
+            vibrationEnabled: true,
+            reducedMotion: false,
+            screenShake: true,
+            damageNumbers: true,
+            highContrastCues: false
+        };
+        const current = this.state?.saveVersion2?.settings || {};
+        return { ...defaults, ...current };
+    }
+
+    setSetting(key, value) {
+        if (!this.state.saveVersion2) this.state.saveVersion2 = createSaveV2Defaults();
+        if (!this.state.saveVersion2.settings) this.state.saveVersion2.settings = this.getSettings();
+        this.state.saveVersion2.settings[key] = Boolean(value);
+        Store.save();
+        return this.getSettings();
+    }
+
+    patchSettings(partial = {}) {
+        if (!this.state.saveVersion2) this.state.saveVersion2 = createSaveV2Defaults();
+        const next = { ...this.getSettings(), ...partial };
+        for (const key of Object.keys(next)) next[key] = Boolean(next[key]);
+        this.state.saveVersion2.settings = next;
+        Store.save();
+        return this.getSettings();
+    }
+
     getUnlockedAbilities() {
         this.ensureAbilitySchema(false);
         return this.state.abilities.unlocked;

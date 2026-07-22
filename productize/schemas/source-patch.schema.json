@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "loreweaver.source-patch.v1",
+  "title": "Source Patch Declaration",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "id",
+    "patchLevel",
+    "ownership",
+    "files",
+    "invalidates",
+    "rollback",
+    "evidence"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "loreweaver.source-patch.v1" },
+    "id": { "type": "string" },
+    "title": { "type": "string" },
+    "patchLevel": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
+    "ownership": {
+      "type": "object",
+      "required": ["owner", "files"],
+      "properties": {
+        "owner": { "type": "string" },
+        "files": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "action"],
+        "properties": {
+          "path": { "type": "string" },
+          "action": { "enum": ["create", "modify", "delete"] },
+          "beforeHash": { "type": ["string", "null"] },
+          "afterHash": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "invalidates": { "type": "array", "items": { "type": "string" } },
+    "rollback": {
+      "type": "object",
+      "required": ["snapshotPath"],
+      "properties": {
+        "snapshotPath": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["commands"],
+      "properties": {
+        "commands": { "type": "array", "items": { "type": "string" } },
+        "reports": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "secretsPolicy": {
+      "type": "object",
+      "properties": {
+        "forbidsCredentialsInManifests": { "const": true }
+      }
+    }
+  }
+}

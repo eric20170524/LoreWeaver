@@ -1,0 +1,236 @@
+{
+  "schemaVersion": "1.0",
+  "id": "survivor_horde",
+  "title": "Survivor Horde",
+  "category": "action_survival",
+  "status": "validated",
+  "runtime": {
+    "engineTargets": [
+      "phaser"
+    ],
+    "adapter": "SurvivorHordeAdapter",
+    "container": "phaser_scene"
+  },
+  "inputs": [
+    "pointer_move",
+    "keyboard_move"
+  ],
+  "objectives": [
+    "survive_duration",
+    "kill_count",
+    "boss_defeat"
+  ],
+  "failure": [
+    "player_hp_zero",
+    "escort_dead",
+    "timer_expired",
+    "retreated"
+  ],
+  "knobs": {
+    "durationSec": {
+      "type": "number",
+      "default": 120,
+      "min": 10,
+      "max": 600,
+      "patchLevel": "L1",
+      "description": "Run duration."
+    },
+    "enemySpawnRateSec": {
+      "type": "number",
+      "default": 1,
+      "min": 0.05,
+      "max": 20,
+      "patchLevel": "L1",
+      "description": "Enemy spawn cadence."
+    },
+    "enemyPool": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L1",
+      "description": "Enemy definitions or texture ids."
+    },
+    "boss": {
+      "type": "object",
+      "default": null,
+      "patchLevel": "L1",
+      "description": "Optional boss configuration."
+    },
+    "modifiers": {
+      "type": "array",
+      "default": [],
+      "patchLevel": "L2",
+      "description": "Modifier ids attached to the run."
+    },
+    "rewardTable": {
+      "type": "object",
+      "default": {},
+      "patchLevel": "L1",
+      "description": "Rewards returned in NodeResult."
+    }
+  },
+  "patchPolicy": {
+    "defaultAllowedLevels": [
+      "L0",
+      "L1",
+      "L2"
+    ],
+    "requiresReview": [
+      "L3",
+      "L4"
+    ]
+  },
+  "architectureContract": {
+    "runtimeAuthority": "minigame_master/core",
+    "executionPath": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> adapter registry -> host ports",
+    "hostRule": "IDE simulator and standalone export consume the same resolved runtime spec and adapter implementation; hosts may only differ in persistence, logging, asset location and container ports.",
+    "prohibited": [
+      "copying legacy NodeScene executable code into this card",
+      "theme-specific skill or enemy branches in the adapter",
+      "Workbench-only runtime patches that bypass canonical spec compilation",
+      "standalone gameplay dispatch copied from the IDE host"
+    ],
+    "parityEvidence": [
+      "schemaVersion",
+      "sourceRevision",
+      "specHash",
+      "appliedPatchIds",
+      "seed",
+      "input timeline",
+      "state trace",
+      "NodeResult"
+    ]
+  },
+  "capabilityContracts": {
+    "channelInteraction": {
+      "status": "implemented",
+      "owner": "ChannelInteractionSystem + objective modifier",
+      "contract": [
+        "idle/channeling/interrupted/completed/cancelled",
+        "range, damage, pause and lifecycle policies",
+        "idempotent completion",
+        "accepted gameplay event precedes presentation event"
+      ]
+    },
+    "playerAbilities": {
+      "status": "planned_migration",
+      "owner": "core ability runtime",
+      "contract": [
+        "cooldown, cost and target checks",
+        "gameplay effect",
+        "upgrade transformation",
+        "VFX/SFX/callout emitted only after accepted use",
+        "theme content supplied by ability catalog"
+      ]
+    },
+    "runUpgrades": {
+      "status": "planned_migration",
+      "owner": "core progression runtime",
+      "contract": [
+        "deterministic offer generation from seed",
+        "stacking and replacement rules",
+        "before/after stat trace",
+        "no theme-specific labels in executable core"
+      ]
+    },
+    "enemyAbilities": {
+      "status": "planned_migration",
+      "owner": "enemy action state machine",
+      "contract": [
+        "windup/active/recovery/cooldown",
+        "explicit telegraph and hit window",
+        "interrupt and phase transition rules",
+        "damage accepted before hit VFX/SFX",
+        "move data supplied by enemy catalog"
+      ]
+    },
+    "bossPhases": {
+      "status": "planned_migration",
+      "owner": "boss phase modifier + enemy action state machine",
+      "contract": [
+        "health/time phase predicates",
+        "one-shot transition events",
+        "phase-specific move pools",
+        "deterministic test state"
+      ]
+    },
+    "presentation": {
+      "status": "partial",
+      "owner": "semantic presentation events + host resolver",
+      "contract": [
+        "event includes source, action, accepted outcome, cue id, callout and VFX intent",
+        "voice is optional; visual callout is required fallback",
+        "runtime never grants rewards from presentation callbacks"
+      ]
+    }
+  },
+  "requiredCoreSystems": [
+    "NodePayload",
+    "NodeResult",
+    "GameplayAdapter",
+    "GameplayModifier",
+    "SceneLifecycle",
+    "RuntimeEventBus",
+    "ChannelInteractionSystem",
+    "Store",
+    "VFX",
+    "WebAudioSynth",
+    "ButtonBuilder",
+    "ModalManager",
+    "TestHooks"
+  ],
+  "resultContract": {
+    "successReason": "completed",
+    "failureReason": "hp_zero",
+    "telemetry": [
+      "kills",
+      "durationSec",
+      "damageTaken",
+      "soulsCollected"
+    ]
+  },
+  "testFixture": {
+    "type": "e2e",
+    "path": "productize/jobs/check-survivor-channel-interaction.mjs",
+    "assertions": [
+      "scene starts from NodePayload",
+      "player can move",
+      "enemy spawns",
+      "timer updates",
+      "retreat returns NodeResult",
+      "no console error during 10 second smoke run",
+      "accepted player damage emits one gameplay event",
+      "channel completion is idempotent",
+      "reward is applied before success presentation",
+      "injected random source produces a stable state trace"
+    ]
+  },
+  "sourceProvenance": [
+    "minigame/xianni/nodes/node1.js",
+    "minigame/xianni/js/data.js",
+    "minigame/perfectworld_dahuang/nodes/node1.js",
+    "minigame/perfectworld_dahuang/js/data.js",
+    "data/workspaces/20260611-060754-719406/nodes/node1.js",
+    "data/workspaces/20260611-060754-719406/nodes/node2.js"
+  ],
+  "fit": {
+    "goodFor": [
+      "cultivation trials",
+      "monster waves",
+      "survival validation",
+      "power fantasy combat"
+    ],
+    "poorFor": [
+      "quiet puzzle scenes",
+      "dialogue-only branches",
+      "precision platforming"
+    ]
+  },
+  "knownRisks": [
+    "scene cleanup and timer cleanup are historically fragile",
+    "too many one-off subclasses can undermine modifier composition",
+    "deterministic random injection exists in the adapter but full seed/spec parity remains pending",
+    "planned_migration capability contracts are not implementation claims",
+    "semantic presentation events still require the shared host resolver for real audio and voice playback"
+  ],
+  "implementationNotes": "Card stores contracts and configuration only. Executable behavior belongs to the shared core; legacy node scenes remain provenance and parity fixtures, never a second production runtime. Channel interaction slice implemented 2026-07-18; ability/upgrades/enemy action parity remains tracked work."
+}

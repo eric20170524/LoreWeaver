@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "id": "score_extend_1up",
+  "title": "Score Extend 1UP",
+  "category": "modifier",
+  "status": "validated",
+  "modifierFor": [
+    "side_scrolling_brawler"
+  ],
+  "knobs": {
+    "thresholds": {
+      "type": "array",
+      "default": [
+        5000,
+        12000,
+        24000,
+        42000,
+        65000
+      ],
+      "patchLevel": "L1",
+      "description": "Score thresholds."
+    },
+    "maxLives": {
+      "type": "integer",
+      "default": 6,
+      "patchLevel": "L1",
+      "description": "Max lives cap."
+    }
+  },
+  "requiredCoreSystems": [
+    "ScoreSystem",
+    "LifeStock"
+  ],
+  "sourceProvenance": [
+    "minigame/three_kingdoms_brawl/js/score-awards.js"
+  ],
+  "knownRisks": [],
+  "implementationNotes": "Brawler modifier factory wired."
+}
