@@ -60,20 +60,24 @@ These files describe the current planning, contracts, schemas, gates, and operat
 | `roadmap/0_TASKLIST.md` | Current roadmap and execution backlog |
 | `roadmap/LoreWeaver_Workbench_Gameplay_Core_Roadmap.md` | Current product and gameplay-core direction |
 
-### Gameplay Library
+### Engine Gameplay Library (`minigame_master/gameplay/`)
 
-| File | Purpose |
+| File / Path | Purpose |
 | --- | --- |
-| `gameplay/gameplay_inventory.md` | Active evidence inventory for gameplay cards and runtime planning |
-| `gameplay/gameplay_card_schema.md` | Gameplay Card schema and review gate |
+| `minigame_master/gameplay/gameplay_inventory.md` | Active evidence inventory for gameplay cards and runtime planning |
+| `minigame_master/gameplay/gameplay_card_schema.md` | Gameplay Card schema and review gate |
+| `minigame_master/gameplay/cards/` | Gameplay Card JSON database used by the workbench and planning flow |
+| `minigame_master/gameplay/cards/modifiers/` | Modifier card JSON files |
 
-### Contracts
+### Engine Contracts & Schemas (`minigame_master/contracts/`)
 
-| File | Purpose |
+| File / Path | Purpose |
 | --- | --- |
-| `contracts/runtime_feature_pack_contract.md` | Reusable MVP feature-pack contract for abilities, passives, character/enemy design, VFX/SFX, first-node skill loops, and simulator preview status |
-| `contracts/runtime_feature_pack.schema.json` | Machine-readable Runtime Feature Pack schema |
-| `contracts/asset_pipeline_contract.md` | Ability VFX/voice, generated bitmap art, audio manifest, runtime wiring, and verification contract |
+| `minigame_master/contracts/runtime_feature_pack_contract.md` | Reusable MVP feature-pack contract for abilities, passives, character/enemy design, VFX/SFX, first-node skill loops, and simulator preview status |
+| `minigame_master/contracts/runtime_feature_pack.schema.json` | Machine-readable Runtime Feature Pack schema |
+| `minigame_master/contracts/asset_pipeline_contract.md` | Ability VFX/voice, generated bitmap art, audio manifest, runtime wiring, and verification contract |
+| `minigame_master/contracts/runtime_parity_fixture.schema.json` | Machine-readable schema for runtime parity verification |
+| `minigame_master/contracts/survivor_horde_capability_fixture.schema.json` | Machine-readable schema for survivor horde capability fixtures |
 
 ### Workflow Guides And Roles
 
@@ -90,14 +94,6 @@ These files describe the current planning, contracts, schemas, gates, and operat
 | File | Purpose |
 | --- | --- |
 | `policy/copyright_and_fanwork_deferred_policy.md` | Current fanwork and export cleanup policy |
-
-## Machine-Readable Assets
-
-| Path | Purpose |
-| --- | --- |
-| `gameplay/cards/` | Gameplay Card JSON files used by the workbench and planning flow |
-| `gameplay/cards/modifiers/` | Modifier card JSON files |
-| `contracts/runtime_feature_pack.schema.json` | Machine-readable schema for reusable runtime ability/passive/character/enemy/VFX/SFX feature packs, including optional asset pipeline metadata |
 
 ## Archive
 

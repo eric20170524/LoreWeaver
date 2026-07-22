@@ -25,8 +25,8 @@ const files = {
     legacyEnemy: 'data/workspaces/20260611-060754-719406/runtime/EnemyArchetypeRuntime.js',
     legacyBoss: 'data/workspaces/20260611-060754-719406/runtime/BossPhaseController.js',
     adapter: 'minigame_master/core/lib/gameplay/survivor_horde/SurvivorHordeAdapter.js',
-    fixture: 'docs/gameplay_cards/fixtures/survivor_horde/node1_runtime_parity.json',
-    fixtureSchema: 'docs/contracts/runtime_parity_fixture.schema.json'
+    fixture: 'minigame_master/gameplay/cards/fixtures/survivor_horde/node1_runtime_parity.json',
+    fixtureSchema: 'minigame_master/contracts/runtime_parity_fixture.schema.json'
 };
 
 const sourceCache = new Map();

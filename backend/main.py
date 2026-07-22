@@ -1827,7 +1827,7 @@ def api_post_audit(payload: dict):
 
 # ── Department prep desk (film-style multi-agent collaboration) ──────────────
 
-DEPARTMENT_REGISTRY_PATH = os.path.join(LORE_ROOT, "docs", "guides", "department_agents.registry.json")
+DEPARTMENT_REGISTRY_PATH = os.path.join(LORE_ROOT, "minigame_master", "skills", "department_agents.registry.json")
 
 
 def load_department_registry() -> dict:
