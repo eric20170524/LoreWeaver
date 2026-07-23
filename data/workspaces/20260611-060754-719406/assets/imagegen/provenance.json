@@ -2,7 +2,7 @@
   "schemaVersion": "loreweaver.art-provenance.v1",
   "generatedAt": "2026-07-16",
   "license": "original-project-work",
-  "provider": "local-procedural-PIL",
+  "provider": "local-procedural-PIL-rebuild",
   "source": "scripts/generate-campaign-atlas.py (session)",
   "notes": "Original pixel-style campaign frames for Node1-12; not third-party IP art.",
   "frames": {
@@ -470,5 +470,7 @@
       "purpose": "campaign_production",
       "license": "original"
     }
-  }
+  },
+  "rebuiltAt": "2026-07-23",
+  "rebuildReason": "critical frames empty/incomplete; regenerated full-body cells"
 }

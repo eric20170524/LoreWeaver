@@ -1,10 +1,8 @@
 export default {
-  "generatedAtlasStatus": "present",
-  "generationStatus": "generated_campaign_node1_12_bitmap_slice",
+  "generatedAtlasStatus": "rebuilt_full_sprites_v2",
+  "generationStatus": "local_procedural_rebuild",
   "atlasImage": "assets/imagegen/atlas.png",
   "provenancePath": "assets/imagegen/provenance.json",
-  "sourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628.png",
-  "transparentSourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
   "atlasSize": {
     "w": 768,
     "h": 768
@@ -1437,5 +1435,8 @@ export default {
     "envBackgrounds": 12,
     "propKeys": 18,
     "totalFrames": 116
-  }
+  },
+  "sourceImage": "assets/imagegen/atlas.png",
+  "transparentSourceImage": "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
+  "notes": "Rebuilt 2026-07-23: full-body 64x64 sprites for empty/incomplete cells; complete figure in frame."
 };

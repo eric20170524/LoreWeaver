@@ -891,10 +891,19 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
         const sprite = this.scene.add.sprite(x, y, textureKey);
         this.scene.physics.add.existing(sprite);
-        sprite.setDisplaySize((this.config.player.radius || 14) * 4, (this.config.player.radius || 14) * 4);
+        sprite.setOrigin?.(0.5, 0.5);
+        // Keep full frame visible: size from texture aspect, not a crop.
+        const radius = this.config.player.radius || 14;
+        const display = radius * 4;
+        sprite.setDisplaySize(display, display);
         sprite.setDepth(2);
-        sprite.body?.setSize?.((this.config.player.radius || 14) * 2, (this.config.player.radius || 14) * 2.4);
-        sprite.body?.setOffset?.(40 - (this.config.player.radius || 14), 40 - (this.config.player.radius || 14));
+        // Body size/offset in source texture pixels (atlas cells are 64x64; procedural fallback 80x80)
+        const srcW = sprite.frame?.width || sprite.width || 64;
+        const srcH = sprite.frame?.height || sprite.height || 64;
+        const bodyW = Math.max(12, srcW * 0.45);
+        const bodyH = Math.max(16, srcH * 0.55);
+        sprite.body?.setSize?.(bodyW, bodyH);
+        sprite.body?.setOffset?.((srcW - bodyW) / 2, (srcH - bodyH) / 2 + srcH * 0.08);
         this.renderPlayerAura(0, sprite);
         return sprite;
     }
@@ -1078,10 +1087,15 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         const displaySize = Math.max(radius * 2.8 * visual.scale, 28);
         const sprite = this.scene.add.sprite(x, y, textureKey);
         this.scene.physics.add.existing(sprite);
+        sprite.setOrigin?.(0.5, 0.5);
         sprite.setDisplaySize(displaySize, displaySize);
         sprite.setDepth(1);
-        sprite.body?.setSize?.(radius * 2, radius * 2);
-        sprite.body?.setOffset?.(32 - radius, 32 - radius);
+        const srcW = sprite.frame?.width || sprite.width || 64;
+        const srcH = sprite.frame?.height || sprite.height || 64;
+        const bodyW = Math.max(10, srcW * 0.5);
+        const bodyH = Math.max(10, srcH * 0.5);
+        sprite.body?.setSize?.(bodyW, bodyH);
+        sprite.body?.setOffset?.((srcW - bodyW) / 2, (srcH - bodyH) / 2);
         sprite.setData('visualName', visual.displayName);
         sprite.setData('enemyId', enemyConfig.id || 'enemy');
         // Start walk clip when atlas multi/single frames exist

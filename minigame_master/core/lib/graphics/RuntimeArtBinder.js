@@ -552,10 +552,28 @@ export default class RuntimeArtBinder {
             if (scene.textures.exists(textureKey)) {
                 scene.textures.remove(textureKey);
             }
+            // Copy full cell; do not trim. Incomplete figures were caused by empty
+            // atlas cells / bad source packing, not by runtime crop.
             const canvasTexture = scene.textures.createCanvas(textureKey, frame.w, frame.h);
             const ctx = canvasTexture.getContext();
             ctx.clearRect(0, 0, frame.w, frame.h);
-            ctx.drawImage(sourceImage, frame.x, frame.y, frame.w, frame.h, 0, 0, frame.w, frame.h);
+            // Clamp source rect to atlas image bounds (avoid partial edge slices)
+            const atlasW = sourceImage.width || sourceImage.naturalWidth || 0;
+            const atlasH = sourceImage.height || sourceImage.naturalHeight || 0;
+            let sx = frame.x;
+            let sy = frame.y;
+            let sw = frame.w;
+            let sh = frame.h;
+            if (atlasW > 0 && atlasH > 0) {
+                if (sx + sw > atlasW) sw = Math.max(1, atlasW - sx);
+                if (sy + sh > atlasH) sh = Math.max(1, atlasH - sy);
+                sx = Math.max(0, Math.min(sx, Math.max(0, atlasW - 1)));
+                sy = Math.max(0, Math.min(sy, Math.max(0, atlasH - 1)));
+            }
+            // Draw centered into full cell so smaller source rects stay complete
+            const dx = Math.floor((frame.w - sw) / 2);
+            const dy = Math.floor((frame.h - sh) / 2);
+            ctx.drawImage(sourceImage, sx, sy, sw, sh, dx, dy, sw, sh);
             canvasTexture.refresh();
             return true;
         } catch (error) {
