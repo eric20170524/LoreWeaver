@@ -125,11 +125,12 @@
 #### C4. 真实浏览器 E2E（先一张卡）
 
 - [x] Playwright：Chrome Desktop(1280×800) + Mobile(720×1280) — **core demo**（`npm run check:survivor-e2e`）
-- [x] `survivor_horde` demo：进关 + 撤退 + force 胜利；**自然失败 / 工作台路径仍待**
-- [x] 报告含 `specHash` / `runtimeVersion` / cardId / modifiers / `releaseEligible:false`（`runtime_e2e_survivor_horde_latest.json`）
+- [x] `survivor_horde` demo：进关 + 撤退 + force 胜利 + **自然 `hp_zero` 失败** + **pause/resume**
+- [x] 报告含 `specHash` / `runtimeVersion` / cardId / modifiers / `releaseEligible:false`
 - [x] demo 路径 console/page error 为空（本机最新跑次）
-- [ ] 工作台 IDE / standalone export 路径同等 E2E
-- [ ] 自然死亡失败流 + 暂停恢复
+- [x] **standalone export** 路径 E2E（真 atlas + 启动 survivor + 失败）（`npm run check:standalone-survivor-e2e`）
+- [ ] 工作台 IDE 完整 UI 进关路径 E2E
+- [ ] 暂停恢复在 standalone 主机按钮路径的完整断言
 
 #### C5. 性能与 soak（先动作卡）
 
