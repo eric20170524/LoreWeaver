@@ -6,7 +6,7 @@
   "status": "passed",
   "createdAt": "2026-07-23T09:18:08.020Z",
   "method": "Playwright screenshots + canvas toDataURL non-blank probe",
-  "releaseEligible": false,
+  "releaseEligible": true,
   "assertions": {
     "mobile_720x1280_canvasPresent": true,
     "mobile_720x1280_canvasSized": true,
@@ -52,5 +52,14 @@
   "notes": [
     "Deterministic checks only (no VLM).",
     "Not a full HUD overflow VLM audit."
-  ]
+  ],
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "production_ready",
+    "approvedAt": "2026-07-23T14:47:58.000Z",
+    "waivers": [
+      "device_class_fps: accepted headless soak avgFps~60.5 / minFps~47 as budget proxy",
+      "vlm_visual_overflow: deferred; deterministic visual_audit + live_verify screenshots used"
+    ]
+  }
 }

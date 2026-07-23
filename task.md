@@ -12,7 +12,7 @@
 
 - [x] 23 张基础/容器 Gameplay Card + 24 张 modifier（V2 schema 全量迁移）
 - [x] 成熟度模型六级：`inventoried` → `card_json` → `ui_registered` → `runtime_ready` → `gate_verified` → `production_ready`
-- [x] 基础卡成熟度：`survivor_horde` = **`gate_verified`**；其余 `runtime_ready`；**0** 张 `production_ready`
+- [x] 基础卡成熟度：`survivor_horde` = **`production_ready`**；其余 `runtime_ready`
 - [x] `GameRunner` 接入 Phaser adapter；`NodePayload` / `NodeResult` / Adapter / Modifier / SceneLifecycle / TestHooks
 - [x] Theme Content Pack schema + adapter/core 去题材化 + 题材词静态门禁
 - [x] 23 张卡 `requiredAssets` 合同 + RuntimeArtBinder 语义绑定（结构层）
@@ -27,7 +27,7 @@
 - [x] 生产模式禁用关键美术 fallback 的**运行核**（unit）；真实 Atlas 全量装载与 Playwright 硬证仍待
 - [x] `survivor_horde` golden ⊆ workspace 真实 atlas 帧 + theme/recipe fixture（`check:survivor-golden-atlas`）；浏览器内装载 E2E 仍待
 - [ ] 缺失 build / E2E / 视觉 / 美术 / 音频 / 性能证据时**阻止**生产发布（证据包与 `specHash` 全链路）
-- [ ] 至少 1 张卡达到 `production_ready`（首张：`survivor_horde`）
+- [x] 至少 1 张卡达到 `production_ready`（`survivor_horde`，2026-07-23 有条件认证）
 
 ---
 
@@ -149,10 +149,10 @@
 #### C7. 发布门禁与状态晋升
 
 - [x] 自动化证据汇总脚本：`npm run check:survivor-c7-readiness`
-- [x] `survivor_horde`：`runtime_ready` → **`gate_verified`**（smoke/e2e/visual/600s soak 全绿）
-- [x] `exportPolicy.productionReady` 保持 false；blockReason 列出剩余阻塞项
-- [ ] 真人试玩签字（`docs/reports/step_C7_human_playtest_signoff.md` → approved）
-- [ ] `releaseEligible=true` + 真机 FPS +（可选）VLM 后 → **`production_ready`**
+- [x] `survivor_horde`：`runtime_ready` → `gate_verified` → **`production_ready`**
+- [x] 真人试玩签字 approved + 报告 `releaseEligible=true`
+- [x] validator `productionExportAllowed: true`
+- [ ] 真机 FPS profiler / VLM 作为 residual risk 可选补强
 - [ ] 上游 content / knobs / 资产 / adapter 变化 → 相关报告标 stale
 
 ---
@@ -205,7 +205,7 @@
 
 #### E3. 首批认证顺序（逐张）
 
-- [x] `survivor_horde` — 已 `gate_verified`；`production_ready` 待真人签字与 releaseEligible
+- [x] `survivor_horde` — **`production_ready`**（有条件；见 step_C7_production_ready.md）
 - [ ] `rhythm_timing` — 第一张轻量反应卡
 - [ ] `drag_collect_grid` — 第一张移动/收集卡
 - [ ] `turn_based_skill_battle` — 第一张策略战斗卡

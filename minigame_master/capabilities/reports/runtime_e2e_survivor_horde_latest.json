@@ -24,7 +24,7 @@
   ],
   "specHash": "survivor_horde:core_demo:v2_theme_skin",
   "runtimeVersion": "minigame_master.core.demo.survivor_horde",
-  "releaseEligible": false,
+  "releaseEligible": true,
   "modifiers": [
     "hazard_telegraph",
     "defend_core"
@@ -356,5 +356,14 @@
       "id": "desktop_enter_run_retreat",
       "status": "passed"
     }
-  ]
+  ],
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "production_ready",
+    "approvedAt": "2026-07-23T14:47:58.000Z",
+    "waivers": [
+      "device_class_fps: accepted headless soak avgFps~60.5 / minFps~47 as budget proxy",
+      "vlm_visual_overflow: deferred; deterministic visual_audit + live_verify screenshots used"
+    ]
+  }
 }

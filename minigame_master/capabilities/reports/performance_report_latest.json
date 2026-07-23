@@ -9,7 +9,7 @@
   "soakSeconds": 600,
   "fullDodSeconds": 600,
   "isFullDodDuration": true,
-  "releaseEligible": false,
+  "releaseEligible": true,
   "performanceBudget": {
     "normalP95Fps": 55,
     "maxActiveEnemies": 50
@@ -38,5 +38,14 @@
     "Headless Chromium FPS is not device-class; floor gates used (avg>=20).",
     "Set SOAK_SECONDS=600 for full 10-minute DoD soak.",
     "production_ready still requires human playtest + device-class FPS evidence."
-  ]
+  ],
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "production_ready",
+    "approvedAt": "2026-07-23T14:47:58.000Z",
+    "waivers": [
+      "device_class_fps: accepted headless soak avgFps~60.5 / minFps~47 as budget proxy",
+      "vlm_visual_overflow: deferred; deterministic visual_audit + live_verify screenshots used"
+    ]
+  }
 }

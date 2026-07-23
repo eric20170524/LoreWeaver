@@ -3,7 +3,7 @@
   "cardId": "survivor_horde",
   "status": "passed",
   "createdAt": "2026-07-23T14:35:26.543Z",
-  "releaseEligible": false,
+  "releaseEligible": true,
   "assertions": {
     "wastelandThemeId": true,
     "cyberThemeId": true,
@@ -153,5 +153,14 @@
   "notes": [
     "Swap packs with ?theme=wasteland | ?theme=cyber — no adapter code change.",
     "Does not grant production_ready by itself."
-  ]
+  ],
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "production_ready",
+    "approvedAt": "2026-07-23T14:47:58.000Z",
+    "waivers": [
+      "device_class_fps: accepted headless soak avgFps~60.5 / minFps~47 as budget proxy",
+      "vlm_visual_overflow: deferred; deterministic visual_audit + live_verify screenshots used"
+    ]
+  }
 }

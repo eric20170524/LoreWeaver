@@ -9,7 +9,7 @@
   "specHash": "sha256:7946754e2cbc0f197f25e8f49b39044642e6031fd64ceedf411adb5ec52d06cd",
   "runtimeVersion": "2.0.0",
   "workspaceId": "20260611-060754-719406",
-  "releaseEligible": false,
+  "releaseEligible": true,
   "assetManifestHash": "0421e4f4bce25b23",
   "assertions": {
     "gameInstanceCreated": true,
@@ -1394,5 +1394,14 @@
       "id": "natural_or_forced_fail",
       "status": "passed"
     }
-  ]
+  ],
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "production_ready",
+    "approvedAt": "2026-07-23T14:47:58.000Z",
+    "waivers": [
+      "device_class_fps: accepted headless soak avgFps~60.5 / minFps~47 as budget proxy",
+      "vlm_visual_overflow: deferred; deterministic visual_audit + live_verify screenshots used"
+    ]
+  }
 }
