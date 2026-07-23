@@ -37,7 +37,7 @@
     "productionMode": {
       "allowProceduralFallback": false,
       "onMissingAsset": "throw_hard_error",
-      "releaseEligible": true
+      "releaseEligible": false
     },
     "prototypeMode": {
       "allowProceduralFallback": true,

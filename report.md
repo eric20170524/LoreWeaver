@@ -15,11 +15,12 @@
 
 | 评审意见项 | 修正与对齐措施 |
 | --- | --- |
-| **[P1] 23/23 覆盖卡片统计纠偏** | **节点1:1映射重构**: 重构 `loreweaver/nodes/` 1 至 23 号节点契约，确保 23 个节点 1:1 映射全部 22 张基础 Gameplay Cards 与 1 张微型容器卡 (`node_iframe_microgame`)。Node Smoke 实际测试结果为 **23/23 节点实例通过，23/23 唯一 Card ID 覆盖通过**。 |
-| **[P1] A1 生产 Fallback 拦截验证范围说明** | **结论客观化调整**: 明确标注“结构合同与 Golden Fixture 静态校验通过；运行时生产模式缺失资产时的抛错拦截逻辑（Throw/Block）尚未在真实渲染/Playwright 框架中完成验证”。 |
-| **[P2] 验证项名称规范化** | **消除过度解读**: 将 `check-audio-asset-resolver.js` 明确标注为“单元测试 (Audio Resolver Unit Check)”，将 `check-text-visual-layout.js` 明确标注为“启发式字数槽位静态检查 (Text Layout Heuristic Check)”。 |
-| **[P2] 阶段标识与成熟度状态统一** | **规范阶段术语**: 阶段标识统一为 `task.md` 定义的 `Phase C (竖切推进)`；明确指出 `survivor_horde` 当前为 `runtime_ready`，尚无 `gate_verified` 或 `production_ready` 认证。 |
-| **[P2] 报告链接可移植化** | **相对路径替换**: 将所有报告文档链接替换为项目内可移植相对路径（如 `docs/reports/step_S0_survivor_horde_spec.md`）。 |
+| **[P0] S0 DoD 12 项勾选修正 (文档硬伤)** | **明确定义界限**: 将 `step_S0_survivor_horde_spec.md` 中的 12 项 DoD 判定从 `[x]` 全部纠正为 `[ ]`，并将章节定位修正为“判定标准定义”，严禁将待验收的标准误写为已完成。 |
+| **[P0] Golden Fixture `releaseEligible` 契约噪音消除** | **纠正标志位**: 将 `golden_asset_fixture.json` 中的 `releaseEligible` 从 `true` 改为 `false`，认证前禁止暴露生产可发布标记。 |
+| **[P1] C1 Smoke 深度与软通过透明化** | **披露测试深度**: 在 `step_C1_node_smoke_coverage.md` 与主报告中透明披露 8 张 UI/交互卡片依赖 `ui_progress` 软通过的细节，以及 11 个骨架节点 (13–23) 缺失 `envKey`/`bgmKey` Warning 汇总。 |
+| **[P1] 节点 23 文件名与 Card ID 纠偏** | **重命名节点文件**: 将 `node-23-iframe-microgame.json` 重命名为 `node-23-turn-based-skill-battle.json`，解决文件名与实际 `cardId` 不符的问题。 |
+| **[P1] A1 生产 Fallback 拦截验证范围说明** | **结论客观化调整**: 明确标注“静态子集完成 (Static subset passed)，Golden Fixture JSON `releaseEligible: false`；运行时生产模式缺失资产时的抛错拦截逻辑（Throw/Block）将在 Phase A1 运行核与 Playwright 框架中完成验证”。 |
+| **[P2] 验证项名称与任务清单同步** | **消除过度解读 & 同步缺口**: 将 `check-audio-asset-resolver.js` 标为单元测试，`check-text-visual-layout.js` 标为启发式静态检查；同步 `task.md` §0.2 / Phase C1 Smoke 扩面勾选项。 |
 
 ---
 
@@ -27,9 +28,9 @@
 
 | 步骤 | 报告文档路径 | 核心产出与验证结论 |
 | --- | --- | --- |
-| **Step S0** | [step_S0_survivor_horde_spec.md](docs/reports/step_S0_survivor_horde_spec.md) | 冻结 `survivor_horde` 首张竖切卡规格、主题包/资产/音频契约与 DoD 12 项硬判定检查表。 |
-| **Step C1** | [step_C1_node_smoke_coverage.md](docs/reports/step_C1_node_smoke_coverage.md) | 重构节点映射，节点 Smoke 测试覆盖 **23/23 节点实例 & 23/23 唯一 Card ID (100% 通过)**。 |
-| **Step A1** | [step_A1_art_binder_fallback_rules.md](docs/reports/step_A1_art_binder_fallback_rules.md) | 建立 `survivor_horde` Golden Asset Fixture，完成结构与策略静态校验（运行时生产抛错拦截待 Playwright 验证）。 |
+| **Step S0** | [step_S0_survivor_horde_spec.md](docs/reports/step_S0_survivor_horde_spec.md) | 冻结 `survivor_horde` 首张竖切卡规格、Schema Key 映射表与 DoD 12 项硬判定标准 (全 `[ ]` 待验收)。 |
+| **Step C1** | [step_C1_node_smoke_coverage.md](docs/reports/step_C1_node_smoke_coverage.md) | 重构节点映射与文件名，节点 Smoke 测试覆盖 **23/23 节点实例 & 23/23 唯一 Card ID (100% Headless 通过)**；披露 8 张软通过与 11 节点 Warning。 |
+| **Step A1** | [step_A1_art_binder_fallback_rules.md](docs/reports/step_A1_art_binder_fallback_rules.md) | 建立 `survivor_horde` Golden Asset Fixture (`releaseEligible: false`)，完成结构与策略静态校验（运行时生产抛错拦截待 Playwright 验证）。 |
 
 ---
 
@@ -39,6 +40,7 @@
 # 1. 节点与全卡 Headless Smoke 测试 (23 节点 1:1 覆盖 23 唯一卡)
 node minigame_master/capabilities/verification/run_node_smoke.mjs
 # 结果: Passed (status: "passed", score: 100, passed: 23, failed: 0, total: 23)
+# 软通过透明化: 8/23 卡 (dodge_counter_boss, drag_to_core, observe_capture, maze_exploration_choice, rhythm_then_pickup, qix_area_capture, branching_dialogue_check, turn_based_skill_battle) 在 Headless 环境触发 spawnOrProgress=true 判定进阶；11 个骨架节点 (13–23) 存在 no_envKey / no_bgmKey warning.
 
 # 2. V2 Schema 结构门禁校验 (23 基础卡 + 24 修饰卡)
 node productize/validate-gameplay-card.mjs --all
@@ -50,7 +52,7 @@ node productize/jobs/check-theme-decoupling.js
 
 # 4. 资产绑定契约与 Golden Fixture 静态校验
 node productize/jobs/check-runtime-art-binder.js
-# 结果: Passed (23/23 requiredAssets contracts + survivor_horde golden fixture valid)
+# 结果: Passed (23/23 requiredAssets contracts + survivor_horde golden fixture valid, releaseEligible: false)
 
 # 5. 音频解析器单元测试 (Unit Check)
 node productize/jobs/check-audio-asset-resolver.js

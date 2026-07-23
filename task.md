@@ -17,12 +17,12 @@
 - [x] Theme Content Pack schema + adapter/core 去题材化 + 题材词静态门禁
 - [x] 23 张卡 `requiredAssets` 合同 + RuntimeArtBinder 语义绑定（结构层）
 - [x] AudioAssetResolver 接入 + synth 原型降级
-- [x] Mock smoke 12/12；V2 结构校验 47/47；文本启发式 / art binder 合同 / audio unit 检查通过
+- [x] Mock smoke 12/12 → 全卡 23/23 唯一卡 Headless 覆盖；V2 结构校验 47/47；文本启发式 / art binder 合同 / audio unit 检查通过
 - [x] P0 成熟度 UI 与 gate 语义改造；P1 文案数据化（除真实浏览器 VLM）；P3.1 音频解析器
 
 ### 0.2 未完成基线缺口
 
-- [ ] 通用 Mock adapter smoke 从 12/12 扩到全基础卡覆盖（目标约 22–23/23，容器卡按合同单独计）
+- [x] 通用 Mock adapter smoke 从 12/12 扩到全基础卡覆盖 (23/23 唯一 Card ID 覆盖，Step C1 已完成 Headless 契约校验)
 - [ ] 23 张卡全部具备独立、可执行的 E2E / Soak 浏览器测试路径
 - [ ] 真实 Atlas 美术 + 真实音频完整装载（生产禁用关键 fallback）
 - [ ] 缺失 build / E2E / 视觉 / 美术 / 音频 / 性能证据时**阻止**生产发布（证据包与 `specHash` 全链路）
@@ -67,7 +67,7 @@
 - [ ] 生成资产进入 atlas、manifest、provenance、license/credits 流程
 - [ ] 校验切片边界、透明背景、朝向、缩放、锚点、碰撞体与动画帧顺序
 - [ ] 自动检查重要语义组是否在**真实 gameplay** 中可见（不只检查文件存在）
-- [ ] 为每张卡至少一套 golden asset fixture（**先做 `survivor_horde`**）
+- [ ] 为每张卡至少一套 golden asset fixture（**已完成静态规范草稿 `survivor_horde`**）
 - [ ] 对真实主题资产跑 VLM：角色一致性、敌我可辨识度、前景遮挡、动作可读性
 
 #### A2. 文案真实视觉溢出
@@ -107,7 +107,7 @@
 
 #### C1. Mock / 通用 smoke 扩面
 
-- [ ] 通用 adapter smoke 从 12/12 扩到覆盖全部已实现基础卡（含关键生命周期断言）
+- [x] 通用 adapter smoke 从 12/12 扩到覆盖全部已实现基础卡 (Step C1 完成 23/23 唯一 Card Headless Smoke)
 - [ ] CI 持续运行；失败阻断合并到生产路径
 
 #### C2. `survivor_horde` 专项 fixture
