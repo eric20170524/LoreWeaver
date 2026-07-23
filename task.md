@@ -26,7 +26,7 @@
 - [x] `survivor_horde` core demo 具备 Playwright E2E（进/撤/胜）；全 23 卡 + Soak 仍待
 - [x] 生产模式禁用关键美术 fallback 的**运行核**（unit）；真实 Atlas 全量装载与 Playwright 硬证仍待
 - [x] `survivor_horde` golden ⊆ workspace 真实 atlas 帧 + theme/recipe fixture（`check:survivor-golden-atlas`）；浏览器内装载 E2E 仍待
-- [ ] 缺失 build / E2E / 视觉 / 美术 / 音频 / 性能证据时**阻止**生产发布（证据包与 `specHash` 全链路）
+- [x] 缺失 build / E2E / 视觉 / 美术 / 音频 / 性能证据时**阻止**生产发布（证据包与 `specHash`/cardId/stale 全链路；`evaluateProductionExportGate` + `productize:card` hard-block；音频矩阵/VLM 细项仍见 Phase A residual）
 - [x] 至少 1 张卡达到 `production_ready`（`survivor_horde`，2026-07-23 有条件认证）
 
 ---
@@ -153,7 +153,7 @@
 - [x] 真人试玩签字 approved + 报告 `releaseEligible=true`
 - [x] validator `productionExportAllowed: true`
 - [ ] 真机 FPS profiler / VLM 作为 residual risk 可选补强
-- [ ] 上游 content / knobs / 资产 / adapter 变化 → 相关报告标 stale
+- [x] 上游 content / knobs / 资产 / recipe 变化 → 相关报告标 stale（`markGateReportsStale`；apply recipe 写节点后联动；publish hard-gate 拒绝 stale）
 
 ---
 
@@ -167,8 +167,8 @@
 - [x] 编译器校验 card 成熟度 / content / atlas / audio / modifier / `recipeHash`（`npm run check:level-recipe`）
 - [x] golden production recipes：荒域 + 霓虹（只换 content pack）
 - [x] CLI 应用 Recipe 到工作区节点（`npm run recipe:apply`）
-- [ ] IDE UI 一键应用 Recipe 按钮
-- [ ] Recipe 变化精确失效对应测试与资产报告（stale 联动）
+- [x] IDE UI 一键应用 Recipe 按钮（GameplayPanel + `POST /api/workspaces/{id}/level-recipe/apply`，与 CLI 共用 `apply-level-recipe-core`）
+- [x] Recipe 变化精确失效对应测试与资产报告（stale 联动；`check:production-export-gate`）
 
 #### D2. 编排器玩法选择
 

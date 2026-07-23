@@ -2,6 +2,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  evaluateProductionExportGate,
+  parseJsonFileSafe
+} from "./lib/production-export-gate.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "..");
@@ -15,18 +19,6 @@ const VALID_STATUSES = [
   "gate_verified",
   "production_ready"
 ];
-
-function parseJsonFileSafe(filePath) {
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    const stat = fs.statSync(filePath);
-    if (stat.size === 0) return null;
-    const content = fs.readFileSync(filePath, "utf8");
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Validates Base Card or Modifier Card against V2 Schema structural rules
@@ -131,44 +123,39 @@ function validateCardAgainstV2Schema(card, filePath, isModifier = false) {
     reasons.push(`exportPolicy.productionReady cannot be true when status is '${card.status}' (must be 'production_ready')`);
   }
 
-  // Hard Gate Evidence check for production_ready (parses specHash, runtimeVersion, passed status)
+  // Hard Gate Evidence check for production_ready — fail-closed shared policy
+  // (missing / failed / stale / identity-mismatched reports block export)
   if (card.status === "production_ready" || card.exportPolicy?.productionReady === true) {
-    // 1. E2E Smoke Report check (handles both top-level and summary.passed)
-    const e2eReport = parseJsonFileSafe(path.join(REPORTS_DIR, "node_smoke_latest.json"));
-    const e2ePassed = e2eReport?.passed ?? e2eReport?.summary?.passed;
-    const e2eFailed = e2eReport?.failed ?? e2eReport?.summary?.failed ?? 0;
-
-    if (!e2eReport || e2eReport.status !== "passed" || !e2ePassed || e2eFailed > 0) {
-      reasons.push("Hard Gate Blocker: E2E smoke report missing, empty, or failed (node_smoke_latest.json)");
+    const expectedIdentity = { cardId: card.id };
+    // Prefer latest recipe apply / compile identity when present
+    const applyReport = parseJsonFileSafe(path.join(REPORTS_DIR, "level_recipe_apply_latest.json"));
+    const compileReport = parseJsonFileSafe(path.join(REPORTS_DIR, "level_recipe_compile_latest.json"));
+    if (applyReport?.recipeHash) expectedIdentity.recipeHash = applyReport.recipeHash;
+    if (applyReport?.contentHashFull) expectedIdentity.contentHash = applyReport.contentHashFull;
+    else if (applyReport?.contentHash && String(applyReport.contentHash).length === 64) {
+      expectedIdentity.contentHash = applyReport.contentHash;
+    }
+    if (compileReport?.recipeHash && !expectedIdentity.recipeHash) {
+      expectedIdentity.recipeHash = compileReport.recipeHash;
+    }
+    if (Array.isArray(compileReport?.results) && !expectedIdentity.recipeHash) {
+      const hit = compileReport.results.find((r) => r.cardId === card.id && r.status === "passed");
+      if (hit?.recipeHash) expectedIdentity.recipeHash = hit.recipeHash;
+      if (hit?.contentHash) expectedIdentity.contentHash = hit.contentHash;
+      if (hit?.atlasHash) expectedIdentity.atlasHash = hit.atlasHash;
     }
 
-    // 2. Standalone Browser E2E Report check
-    const standaloneReport = parseJsonFileSafe(path.join(REPORTS_DIR, "standalone_browser_report.json"));
-    const standaloneCardOk =
-      standaloneReport?.cardId === card.id ||
-      standaloneReport?.specHash === card.id ||
-      (typeof standaloneReport?.specHash === "string" && standaloneReport.specHash.length > 0);
-    if (
-      !standaloneReport ||
-      standaloneReport.status !== "passed" ||
-      standaloneReport.releaseEligible !== true ||
-      !standaloneCardOk
-    ) {
-      reasons.push(
-        "Hard Gate Blocker: Standalone browser report missing, empty, failed, releaseEligible!=true, or card/spec identity missing (standalone_browser_report.json)"
-      );
-    }
-
-    // 3. Visual/VLM Audit Report check
-    const visualReport = parseJsonFileSafe(path.join(REPORTS_DIR, "visual_audit_latest.json"));
-    if (!visualReport || visualReport.status !== "passed" || visualReport.cardId !== card.id) {
-      reasons.push("Hard Gate Blocker: Visual/VLM audit report missing, empty, failed, or cardId mismatch (visual_audit_latest.json)");
-    }
-
-    // 4. Performance & Soak Report check
-    const perfReport = parseJsonFileSafe(path.join(REPORTS_DIR, "performance_report_latest.json"));
-    if (!perfReport || perfReport.status !== "passed" || perfReport.cardId !== card.id) {
-      reasons.push("Hard Gate Blocker: Performance/soak report missing, empty, failed, or cardId mismatch (performance_report_latest.json)");
+    const gate = evaluateProductionExportGate({
+      card,
+      reportsDir: REPORTS_DIR,
+      expectedIdentity
+    });
+    // Avoid double-counting status/exportPolicy already checked above
+    for (const r of gate.reasons) {
+      if (r.includes("card status must be") || r.includes("exportPolicy.productionReady must be true")) {
+        continue;
+      }
+      reasons.push(r);
     }
   }
 

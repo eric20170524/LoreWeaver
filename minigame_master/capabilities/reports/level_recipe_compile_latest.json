@@ -1,34 +1,39 @@
 {
   "schemaVersion": "loreweaver.level-recipe-compile-all.v1",
-  "status": "failed",
-  "createdAt": "2026-07-23T22:39:52.781Z",
+  "status": "passed",
+  "createdAt": "2026-07-23T22:56:15.843Z",
   "results": [
     {
       "schemaVersion": "loreweaver.level-recipe-compile.v1",
-      "status": "failed",
-      "createdAt": "2026-07-23T22:39:52.780Z",
-      "recipePath": "../../../../tmp/lw_exp_recipe.json",
-      "recipeId": "experimental_fail_test",
-      "cardId": "rhythm_timing",
-      "cardStatus": "runtime_ready",
+      "status": "passed",
+      "createdAt": "2026-07-23T22:56:15.843Z",
+      "recipePath": "minigame_master/gameplay/cards/fixtures/survivor_horde/level_recipe.cyber_pulse.json",
+      "recipeId": "survivor_horde_cyber_pulse_production_v1",
+      "cardId": "survivor_horde",
+      "cardStatus": "production_ready",
       "requireProductionCard": true,
-      "recipeHash": "69bccb55f18e1da56fc91eea4bc2c2b37d64ba60e72aa2cb2a7c8615a65254b0",
-      "contentHash": "e0c492be707618fbc2bd276db13fc43ba322ceb17c8b4548e8d81b10bd1166f2",
+      "recipeHash": "8d7b75636e8f5c5c5901c527f608f123a6694f2fab8edb36cd90003a1dbb20d8",
+      "contentHash": "7f30ca31013863ff9f6ba832d0fa50e475560e62f8fe6ab0532e3094e7d0f96b",
       "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
       "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
-      "contentThemeId": "survivor_horde_golden_demo",
+      "contentThemeId": "survivor_horde_cyber_pulse",
       "locale": "zh-CN",
-      "balanceProfile": null,
-      "modifiers": [],
-      "knobs": {
-        "durationSec": 30
-      },
-      "reasons": [
-        "card rhythm_timing is not production_ready (status=runtime_ready, productionReady=false)"
+      "balanceProfile": "normal_short",
+      "modifiers": [
+        "hazard_telegraph"
       ],
+      "knobs": {
+        "durationSec": 60,
+        "goalValue": 100,
+        "difficulty": 1,
+        "artRuntimeMode": "prototype",
+        "allowQuit": true,
+        "allowPause": true
+      },
+      "reasons": [],
       "warnings": [],
       "resolved": {
-        "contentPackPath": "minigame_master/gameplay/cards/fixtures/survivor_horde/theme_content_pack.fixture.json",
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/survivor_horde/theme_content_pack.cyber_pulse.json",
         "workspaceId": "20260611-060754-719406"
       }
     }

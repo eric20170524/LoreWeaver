@@ -220,10 +220,34 @@ export default function App() {
                   <GameplayPanel
                     gameSpec={gameSpec}
                     locale={locale}
+                    workspaceId={activeWorkspace?.id || null}
                     pendingPatch={pendingPatch}
                     setPendingPatch={setPendingPatch}
                     onApprovePendingPatch={approvePendingPatch}
                     onQueueGameplayPatch={queueGameplayPatch}
+                    addLog={addLog}
+                    onRecipeApplied={({ nodeId, node }) => {
+                      if (!gameSpec) return;
+                      const nextNodes = (gameSpec.nodes || []).map((n: any) => {
+                        if (Number(n.id) !== Number(nodeId)) return n;
+                        return {
+                          ...n,
+                          title: node.title ?? n.title,
+                          intro: node.intro ?? n.intro,
+                          mechanics: node.mechanics ?? n.mechanics,
+                          durationLimit: node.durationLimit ?? n.durationLimit,
+                          goalValue: node.goalValue ?? n.goalValue,
+                          difficulty: node.difficulty ?? n.difficulty,
+                          gameplay: node.gameplay ?? n.gameplay
+                        };
+                      });
+                      setGameSpec({ ...gameSpec, nodes: nextNodes });
+                      addLog(
+                        locale === "zh"
+                          ? `节点 #${nodeId} 已从 Level Recipe 刷新到工作台`
+                          : `Node #${nodeId} refreshed from Level Recipe`
+                      );
+                    }}
                   />
                 </motion.div>
               )}

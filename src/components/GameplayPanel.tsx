@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Layers, CheckCircle2, XCircle, AlertTriangle, Code,
-  Cpu, Zap, GitPullRequest, Settings
+  Cpu, Zap, GitPullRequest, Settings, BookOpen
 } from "lucide-react";
 import { GameSpec, Locale, ManifestPatch, GameplayAssignment } from "../types";
 import { UI_COPY } from "../utils/uiCopy";
@@ -14,13 +14,31 @@ import {
   GameplayCardOption
 } from "../utils/gameplayManifest";
 
+interface LevelRecipeOption {
+  recipeId: string;
+  cardId: string;
+  path: string;
+  status?: string | null;
+  productionReady?: boolean;
+  balanceProfile?: string | null;
+  error?: boolean;
+}
+
 interface GameplayPanelProps {
   gameSpec: GameSpec | null;
   locale: Locale;
+  workspaceId?: string | null;
   pendingPatch: ManifestPatch | null;
   setPendingPatch: (patch: ManifestPatch | null) => void;
   onApprovePendingPatch: () => Promise<void>;
   onQueueGameplayPatch: (nodeId: number, nextGameplay: GameplayAssignment, reason: string) => void;
+  /** Called after a Level Recipe is applied so the workbench can refresh node fields. */
+  onRecipeApplied?: (payload: {
+    nodeId: number;
+    node: any;
+    applied: any;
+  }) => void;
+  addLog?: (msg: string) => void;
 }
 
 const renderKnobInput = (
@@ -119,12 +137,122 @@ const renderKnobInput = (
 export function GameplayPanel({
   gameSpec,
   locale,
+  workspaceId = null,
   pendingPatch,
   setPendingPatch,
   onApprovePendingPatch,
-  onQueueGameplayPatch
+  onQueueGameplayPatch,
+  onRecipeApplied,
+  addLog
 }: GameplayPanelProps) {
   const copy = UI_COPY[locale];
+  const [recipes, setRecipes] = useState<LevelRecipeOption[]>([]);
+  const [selectedRecipePath, setSelectedRecipePath] = useState<string>("");
+  const [applyingNodeId, setApplyingNodeId] = useState<number | null>(null);
+  const [recipeMessage, setRecipeMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!workspaceId) {
+      setRecipes([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/workspaces/${workspaceId}/level-recipes`);
+        if (!res.ok) return;
+        const body = await res.json();
+        const list: LevelRecipeOption[] = body?.data?.recipes || body?.recipes || [];
+        if (cancelled) return;
+        setRecipes(list.filter((r) => r && !r.error && r.path));
+        if (list.length && !selectedRecipePath) {
+          const preferred =
+            list.find((r) => String(r.recipeId || "").includes("cyber")) || list[0];
+          if (preferred?.path) setSelectedRecipePath(preferred.path);
+        }
+      } catch {
+        /* ignore list errors; apply path still documents CLI */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
+  const applyRecipeToNode = useCallback(
+    async (nodeId: number, dryRun = false) => {
+      if (!workspaceId || !selectedRecipePath) {
+        setRecipeMessage(
+          locale === "zh"
+            ? "需要工作区与 Level Recipe 路径"
+            : "Workspace and Level Recipe path required"
+        );
+        return;
+      }
+      setApplyingNodeId(nodeId);
+      setRecipeMessage(null);
+      try {
+        const res = await fetch(`/api/workspaces/${workspaceId}/level-recipe/apply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            recipe: selectedRecipePath,
+            nodeId,
+            dryRun
+          })
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || body?.success === false) {
+          const detail =
+            body?.detail?.message ||
+            body?.detail ||
+            body?.message ||
+            res.statusText;
+          const msg =
+            locale === "zh"
+              ? `应用 Recipe 失败: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`
+              : `Recipe apply failed: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`;
+          setRecipeMessage(msg);
+          addLog?.(msg);
+          return;
+        }
+        const applied = body?.data?.applied;
+        const node = body?.data?.node;
+        const title = applied?.after?.title || node?.title || "";
+        const msg = dryRun
+          ? locale === "zh"
+            ? `[试运行] 节点 #${nodeId} → ${applied?.recipeId} / ${title}`
+            : `[dry-run] node #${nodeId} → ${applied?.recipeId} / ${title}`
+          : locale === "zh"
+            ? `已应用 Recipe ${applied?.recipeId} 到节点 #${nodeId}${
+                applied?.staleMarked?.count
+                  ? `；已标记 ${applied.staleMarked.count} 份门禁报告为 stale`
+                  : ""
+              }`
+            : `Applied recipe ${applied?.recipeId} to node #${nodeId}${
+                applied?.staleMarked?.count
+                  ? `; marked ${applied.staleMarked.count} gate reports stale`
+                  : ""
+              }`;
+        setRecipeMessage(msg);
+        addLog?.(msg);
+        if (!dryRun && onRecipeApplied && node) {
+          onRecipeApplied({ nodeId, node, applied });
+        }
+      } catch (e: any) {
+        const msg =
+          locale === "zh"
+            ? `应用 Recipe 异常: ${e?.message || e}`
+            : `Recipe apply error: ${e?.message || e}`;
+        setRecipeMessage(msg);
+        addLog?.(msg);
+      } finally {
+        setApplyingNodeId(null);
+      }
+    },
+    [workspaceId, selectedRecipePath, locale, onRecipeApplied, addLog]
+  );
 
   if (!gameSpec) {
     return (
@@ -318,6 +446,74 @@ export function GameplayPanel({
         </div>
       )}
 
+      {/* Level Recipe apply (shared CLI path via backend) */}
+      <div className="rounded-lg border border-emerald-500/25 bg-emerald-950/5 dark:bg-emerald-950/20 p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-start gap-2">
+            <BookOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                {lc.applyRecipeTitle}
+              </div>
+              <div className="text-3xs text-slate-500 mt-0.5">{lc.applyRecipeHint}</div>
+            </div>
+          </div>
+          {!workspaceId && (
+            <span className="text-3xs text-amber-600 dark:text-amber-400 font-mono">
+              {lc.needWorkspace}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col md:flex-row gap-2 md:items-center">
+          <select
+            value={selectedRecipePath}
+            onChange={(e) => setSelectedRecipePath(e.target.value)}
+            disabled={!workspaceId || recipes.length === 0}
+            data-testid="level-recipe-select"
+            className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded px-2.5 py-1.5 text-2xs focus:outline-none focus:ring-1 focus:ring-emerald-500/40 text-slate-800 dark:text-slate-200"
+          >
+            {recipes.length === 0 ? (
+              <option value="">
+                {locale === "zh" ? "无可用 Recipe（或未加载）" : "No recipes loaded"}
+              </option>
+            ) : (
+              recipes.map((r) => (
+                <option key={r.path} value={r.path}>
+                  {r.recipeId} · {r.cardId}
+                  {r.productionReady ? " · production" : ""}
+                </option>
+              ))
+            )}
+          </select>
+          <button
+            type="button"
+            data-testid="level-recipe-apply-node1"
+            disabled={!workspaceId || !selectedRecipePath || applyingNodeId !== null}
+            onClick={() => applyRecipeToNode(1, false)}
+            className="px-3 py-1.5 rounded bg-emerald-500 text-slate-950 text-3xs font-bold cursor-pointer hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {applyingNodeId === 1 ? lc.applyingRecipe : lc.applyRecipeToNode1}
+          </button>
+          <button
+            type="button"
+            data-testid="level-recipe-dry-run"
+            disabled={!workspaceId || !selectedRecipePath || applyingNodeId !== null}
+            onClick={() => applyRecipeToNode(1, true)}
+            className="px-3 py-1.5 rounded bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 text-3xs font-bold cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition disabled:opacity-40"
+          >
+            {lc.dryRunRecipe}
+          </button>
+        </div>
+        {recipeMessage && (
+          <div
+            data-testid="level-recipe-message"
+            className="text-3xs font-mono text-slate-600 dark:text-slate-400 bg-white/60 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800 rounded p-2"
+          >
+            {recipeMessage}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-4">
         {normalizedSpec.nodes.map((node) => {
           const gameplay = node.gameplay!;
@@ -340,8 +536,20 @@ export function GameplayPanel({
                   </h3>
                   <p className="text-3xs text-slate-500 mt-0.5 line-clamp-1">{node.intro}</p>
                 </div>
-                <div className="text-3xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-950/60 px-2 py-1 rounded border border-slate-200/50 dark:border-slate-850 shrink-0 self-start sm:self-center">
-                  {copy.gameplay.adapter}: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{gameplay.adapter}</span>
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                  <button
+                    type="button"
+                    data-testid={`level-recipe-apply-node-${node.id}`}
+                    disabled={!workspaceId || !selectedRecipePath || applyingNodeId !== null}
+                    onClick={() => applyRecipeToNode(node.id, false)}
+                    className="px-2 py-1 rounded border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold hover:bg-emerald-500/10 transition disabled:opacity-40"
+                    title={lc.applyRecipeTitle}
+                  >
+                    {applyingNodeId === node.id ? lc.applyingRecipe : lc.applyRecipe}
+                  </button>
+                  <div className="text-3xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-950/60 px-2 py-1 rounded border border-slate-200/50 dark:border-slate-850">
+                    {copy.gameplay.adapter}: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{gameplay.adapter}</span>
+                  </div>
                 </div>
               </div>
 
@@ -824,7 +1032,15 @@ const LOCAL_COPY = {
     changesLabel: "改变领域:",
     knobsTitle: "配置参数 (Gameplay Knobs)",
     baseKnobs: "关卡基础玩法参数",
-    knobsOwnership: "时长 / 难度 / 敌人池 / Boss / 胜利模式等局内参数仅在本工作台修改；作品设计方案中只读展示。"
+    knobsOwnership: "时长 / 难度 / 敌人池 / Boss / 胜利模式等局内参数仅在本工作台修改；作品设计方案中只读展示。",
+    applyRecipeTitle: "Level Recipe 一键应用",
+    applyRecipeHint:
+      "将 Theme Content Pack + knobs/modifiers 写入节点（与 CLI recipe:apply 同一路径）。写入后相关门禁报告标为 stale，需重跑证据才能 production 发布。",
+    applyRecipe: "应用 Recipe",
+    applyRecipeToNode1: "应用到节点 #1",
+    dryRunRecipe: "试运行",
+    applyingRecipe: "应用中…",
+    needWorkspace: "请先选择工作区"
   },
   en: {
     comboEditor: "Gameplay Combination Editor",
@@ -847,6 +1063,15 @@ const LOCAL_COPY = {
     requiresLabel: "Requires:",
     changesLabel: "Changes:",
     knobsTitle: "Gameplay Knobs",
+    applyRecipeTitle: "Apply Level Recipe",
+    applyRecipeHint:
+      "Writes Theme Content Pack + knobs/modifiers to the node (same path as CLI recipe:apply). Marks dependent gate reports stale until evidence is re-run.",
+    applyRecipe: "Apply Recipe",
+    applyRecipeToNode1: "Apply to node #1",
+    dryRunRecipe: "Dry run",
+    applyingRecipe: "Applying…",
+    needWorkspace: "Select a workspace first",
+
     baseKnobs: "Level runtime parameters",
     knobsOwnership: "Duration / difficulty / enemy pool / boss / victory mode are edited only here. The design brief shows a read-only summary."
   }

@@ -2551,3 +2551,216 @@ def api_advance_department_stage(ws_id: str, payload: dict = None):
             "nodeSmoke": smoke_report,
         },
     }
+
+
+# ── Phase D: Level Recipe apply (workbench path shares CLI job) ──────────────
+
+LEVEL_RECIPE_APPLY_SCRIPT = os.path.join(
+    LORE_ROOT, "productize", "jobs", "apply-level-recipe.mjs"
+)
+
+
+@app.get("/api/workspaces/{ws_id}/level-recipes")
+def api_list_level_recipes(ws_id: str):
+    """List bundled Level Recipes available for workbench apply."""
+    resolve_existing_ws_path(ws_id)
+    if not os.path.isfile(LEVEL_RECIPE_APPLY_SCRIPT):
+        raise HTTPException(status_code=500, detail="apply-level-recipe.mjs missing")
+    proc = subprocess.run(
+        ["node", LEVEL_RECIPE_APPLY_SCRIPT, "--list"],
+        cwd=LORE_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    if proc.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail={"message": "list_recipes_failed", "stderr": proc.stderr, "stdout": proc.stdout},
+        )
+    try:
+        payload = json.loads(proc.stdout)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"invalid recipe list json: {exc}") from exc
+    return {"success": True, "data": payload}
+
+
+@app.post("/api/workspaces/{ws_id}/level-recipe/apply")
+def api_apply_level_recipe(ws_id: str, payload: dict = None):
+    """
+    Apply a Level Recipe to a workspace node via the shared CLI job
+    (same write path as `npm run recipe:apply`).
+
+    Body:
+      recipe: relative path under repo root (required unless recipeId)
+      recipeId: optional id to resolve from --list
+      nodeId: node id (default 1)
+      dryRun: bool (default false)
+      markStale: bool (default true on write)
+    """
+    resolve_existing_ws_path(ws_id)
+    payload = payload or {}
+    if not os.path.isfile(LEVEL_RECIPE_APPLY_SCRIPT):
+        raise HTTPException(status_code=500, detail="apply-level-recipe.mjs missing")
+
+    recipe = payload.get("recipe") or payload.get("recipePath")
+    recipe_id = payload.get("recipeId")
+    node_id = str(payload.get("nodeId") or payload.get("node") or "1")
+    dry_run = bool(payload.get("dryRun"))
+    mark_stale = payload.get("markStale")
+    if mark_stale is None:
+        mark_stale = True
+
+    if not recipe and recipe_id:
+        list_proc = subprocess.run(
+            ["node", LEVEL_RECIPE_APPLY_SCRIPT, "--list"],
+            cwd=LORE_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if list_proc.returncode != 0:
+            raise HTTPException(status_code=500, detail="recipe list failed for recipeId resolve")
+        try:
+            listed = json.loads(list_proc.stdout)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"recipe list parse failed: {exc}") from exc
+        hit = next(
+            (r for r in listed.get("recipes") or [] if r.get("recipeId") == recipe_id),
+            None,
+        )
+        if not hit:
+            raise HTTPException(status_code=404, detail=f"recipeId not found: {recipe_id}")
+        recipe = hit.get("path")
+
+    if not recipe:
+        raise HTTPException(status_code=400, detail="recipe or recipeId required")
+
+    # Safety: only allow paths under repo (no absolute escape)
+    recipe_abs = recipe if os.path.isabs(recipe) else os.path.join(LORE_ROOT, recipe)
+    recipe_abs = os.path.abspath(recipe_abs)
+    if not recipe_abs.startswith(os.path.abspath(LORE_ROOT) + os.sep):
+        raise HTTPException(status_code=400, detail="recipe path escapes repository root")
+    if not os.path.isfile(recipe_abs):
+        raise HTTPException(status_code=404, detail=f"recipe file not found: {recipe}")
+
+    rel = os.path.relpath(recipe_abs, LORE_ROOT).replace(os.sep, "/")
+    cmd = [
+        "node",
+        LEVEL_RECIPE_APPLY_SCRIPT,
+        "--recipe",
+        rel,
+        "--workspace",
+        ws_id,
+        "--node",
+        node_id,
+    ]
+    if dry_run:
+        cmd.append("--dry-run")
+    if not mark_stale:
+        cmd.append("--no-stale")
+
+    proc = subprocess.run(
+        cmd,
+        cwd=LORE_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    # Job prints JSON then a status line — parse first JSON object
+    raw = (proc.stdout or "").strip()
+    applied = None
+    if raw:
+        # find first { ... } JSON block
+        start = raw.find("{")
+        if start >= 0:
+            depth = 0
+            end = None
+            for i, ch in enumerate(raw[start:], start):
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        end = i + 1
+                        break
+            if end:
+                try:
+                    applied = json.loads(raw[start:end])
+                except Exception:
+                    applied = None
+
+    if proc.returncode != 0:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "recipe_apply_failed",
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+                "applied": applied,
+            },
+        )
+
+    # Reload node + refresh assembled manifest cache if present
+    node_payload = None
+    try:
+        nodes_dir = os.path.join(get_ws_path(ws_id), "loreweaver", "nodes")
+        if os.path.isdir(nodes_dir):
+            for fname in os.listdir(nodes_dir):
+                if not fname.endswith(".json"):
+                    continue
+                fpath = os.path.join(nodes_dir, fname)
+                with open(fpath, "r", encoding="utf-8") as f:
+                    n = json.load(f)
+                if str(n.get("id")) == node_id:
+                    node_payload = n
+                    break
+    except Exception:
+        node_payload = None
+
+    return {
+        "success": True,
+        "data": {
+            "applied": applied,
+            "node": node_payload,
+            "dryRun": dry_run,
+            "stdout": proc.stdout,
+        },
+    }
+
+
+@app.get("/api/workspaces/{ws_id}/production-export-gate")
+def api_production_export_gate(ws_id: str, card_id: str = Query("survivor_horde")):
+    """Evaluate production export hard-gate for a card (shared node module)."""
+    resolve_existing_ws_path(ws_id)
+    gate_script = os.path.join(LORE_ROOT, "productize", "lib", "production-export-gate.mjs")
+    card_path = os.path.join(LORE_ROOT, "minigame_master", "gameplay", "cards", f"{card_id}.json")
+    if not os.path.isfile(card_path):
+        raise HTTPException(status_code=404, detail=f"card not found: {card_id}")
+    # Inline eval via node -e importing the module is fragile; use validate-gameplay-card
+    proc = subprocess.run(
+        ["node", os.path.join(LORE_ROOT, "productize", "validate-gameplay-card.mjs"), card_path],
+        cwd=LORE_ROOT,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    report = None
+    try:
+        report = json.loads(proc.stdout)
+    except Exception:
+        report_path = os.path.join(REPORTS_DIR, "gameplay_card_validate_latest.json")
+        if os.path.isfile(report_path):
+            with open(report_path, "r", encoding="utf-8") as f:
+                report = json.load(f)
+    return {
+        "success": True,
+        "data": {
+            "cardId": card_id,
+            "exitCode": proc.returncode,
+            "report": report,
+            "productionExportAllowed": bool(report and report.get("productionExportAllowed")),
+            "stderr": proc.stderr if proc.returncode != 0 else None,
+        },
+    }
+
