@@ -166,15 +166,17 @@
 - [x] 定义 `LevelRecipe` schema（`productize/schemas/level-recipe.schema.json`）
 - [x] 编译器校验 card 成熟度 / content / atlas / audio / modifier / `recipeHash`（`npm run check:level-recipe`）
 - [x] golden production recipes：荒域 + 霓虹（只换 content pack）
-- [ ] IDE UI 一键应用 Recipe 到节点 / standalone 导出流水线
+- [x] CLI 应用 Recipe 到工作区节点（`npm run recipe:apply`）
+- [ ] IDE UI 一键应用 Recipe 按钮
 - [ ] Recipe 变化精确失效对应测试与资产报告（stale 联动）
 
 #### D2. 编排器玩法选择
 
 - [x] Catalog 成熟度列表（`npm run catalog:gameplay` / `:production`）
-- [x] 策略：自动选择仅限 `production_ready`；实验卡需显式（负例：rhythm_timing production_recipe 被拒）
-- [ ] 移除主题生成器只能输出三种 mechanics 的限制（后端接 catalog）
-- [ ] 按主题、叙事功能、节奏位置、平台、目标玩家选基础卡
+- [x] 策略：自动选择仅限 `production_ready`；实验卡需显式
+- [x] 后端 `gameplay_catalog` + department gameplay 补丁接入
+- [x] 冷启动 preset 默认生产卡 `survivor_horde`（不再轮换三种未认证 mechanics）
+- [ ] 按主题、叙事功能、节奏位置、平台、目标玩家在多 production 卡间选择
 - [ ] 按兼容矩阵选 modifier；禁止自动生成不支持组合
 - [ ] 需要新行为时生成 L3 提案，不得把配置改动伪装成已实现玩法
 

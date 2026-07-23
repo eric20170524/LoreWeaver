@@ -355,19 +355,44 @@ Rules:
 
 # ── Phase D: stale cascade, gate, controlled patches ─────────────────────────
 
-MECHANICS_TO_CARD = {
-    "tap_reaction": "rhythm_timing",
-    "collect_dodge": "drag_collect_grid",
-    "memory_sequence": "sequence_synthesis",
-    "survivor_horde": "survivor_horde",
-    "rhythm_timing": "rhythm_timing",
-    "drag_collect_grid": "drag_collect_grid",
-    "turn_based_skill_battle": "turn_based_skill_battle",
-    "sequence_synthesis": "sequence_synthesis",
-    "side_scrolling_brawler": "side_scrolling_brawler",
-    "energy_balance": "energy_balance",
-    "pressure_survival": "pressure_survival",
-}
+# Prefer catalog-driven resolution (production_ready only for auto-select).
+try:
+    from backend.gameplay_catalog import (  # type: ignore
+        MECHANICS_TO_CARD as _CATALOG_MECHANICS,
+        resolve_card_id as catalog_resolve_card_id,
+        default_production_card_id,
+        catalog_summary as gameplay_catalog_summary,
+    )
+    MECHANICS_TO_CARD = dict(_CATALOG_MECHANICS)
+except Exception:  # pragma: no cover
+    MECHANICS_TO_CARD = {
+        "tap_reaction": "rhythm_timing",
+        "collect_dodge": "drag_collect_grid",
+        "memory_sequence": "sequence_synthesis",
+        "survivor_horde": "survivor_horde",
+        "rhythm_timing": "rhythm_timing",
+        "drag_collect_grid": "drag_collect_grid",
+        "turn_based_skill_battle": "turn_based_skill_battle",
+        "sequence_synthesis": "sequence_synthesis",
+        "side_scrolling_brawler": "side_scrolling_brawler",
+        "energy_balance": "energy_balance",
+        "pressure_survival": "pressure_survival",
+    }
+
+    def catalog_resolve_card_id(mechanics=None, preferred=None, *, allow_experimental=False):
+        mapped = MECHANICS_TO_CARD.get(str(mechanics or ""), "survivor_horde")
+        return {
+            "cardId": preferred or mapped or "survivor_horde",
+            "experimental": False,
+            "productionReady": (preferred or mapped) == "survivor_horde",
+            "reason": "fallback mapping",
+        }
+
+    def default_production_card_id():
+        return "survivor_horde"
+
+    def gameplay_catalog_summary():
+        return {"totals": {"productionReady": 1}, "autoSelectable": [{"id": "survivor_horde"}]}
 
 # Simple path prefixes allowed per department for L1/L2 patches on GDD JSON
 PATCH_ALLOWLIST = {
@@ -1107,14 +1132,33 @@ def build_controlled_patches(dept_id: str, gdd: dict) -> List[dict]:
             card = gp.get("cardId")
             mechanics = node.get("mechanics") or ""
             if not card:
-                mapped = MECHANICS_TO_CARD.get(str(mechanics), "survivor_horde")
+                resolved = catalog_resolve_card_id(mechanics=str(mechanics) if mechanics else None)
+                mapped = resolved.get("cardId") or default_production_card_id()
                 patches.append({
                     "path": f"nodes[{i}].gameplay.cardId",
                     "value": mapped,
                     "level": "L2",
-                    "reason": f"map mechanics={mechanics or 'empty'} → card",
+                    "reason": resolved.get("reason")
+                    or f"map mechanics={mechanics or 'empty'} → production catalog card",
                 })
                 card = mapped
+            else:
+                # If assigned card is experimental, re-route auto path to production default
+                # unless node explicitly opts in via knobs.allowExperimentalCard
+                knobs0 = gp.get("knobs") if isinstance(gp.get("knobs"), dict) else {}
+                allow_exp = bool(knobs0.get("allowExperimentalCard"))
+                resolved = catalog_resolve_card_id(
+                    preferred=str(card),
+                    allow_experimental=allow_exp,
+                )
+                if resolved.get("cardId") and resolved["cardId"] != card and not allow_exp:
+                    patches.append({
+                        "path": f"nodes[{i}].gameplay.cardId",
+                        "value": resolved["cardId"],
+                        "level": "L2",
+                        "reason": resolved.get("reason") or "replace experimental card with production default",
+                    })
+                    card = resolved["cardId"]
             if not gp.get("adapter"):
                 patches.append({
                     "path": f"nodes[{i}].gameplay.adapter",

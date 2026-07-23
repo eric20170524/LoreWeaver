@@ -1,11 +1,13 @@
 import os
 import json
+from pathlib import Path
 
 def get_procedural_preset(theme: str) -> dict:
     normalized = theme.strip()
     
     # 1. 检查是否是特定预设的路径或别名
-    presets_dir = "/Users/lm/pyProj/hungry-for-knowledge/LoreWeaver/data/presets"
+    repo_root = Path(__file__).resolve().parents[1]
+    presets_dir = str(repo_root / "data" / "presets")
     
     # 支持加载物理路径上的 JSON 文件
     if normalized.endswith(".json") and os.path.exists(normalized):
@@ -120,7 +122,23 @@ def get_procedural_preset(theme: str) -> dict:
                     f"「{theme}幻影已经显现，静心吐纳！」",
                     "「幻境空间无情，心神不宁者必受反噬！」"
                 ],
-                "mechanics": "tap_reaction" if i % 3 == 0 else "collect_dodge" if i % 3 == 1 else "memory_sequence",
+                # Auto path uses production_ready catalog (currently survivor_horde).
+                # Experimental mechanics remain only if explicitly allowed later.
+                "mechanics": "survivor_horde",
+                "gameplay": {
+                    "adapter": "phaser",
+                    "cardId": "survivor_horde",
+                    "modifiers": [],
+                    "knobs": {
+                        "durationSec": 30 + (i % 3) * 10,
+                        "goalValue": 5 + i // 2 if i % 3 == 2 else 15 + i * 5,
+                        "difficulty": i // 2 + 1,
+                        "allowQuit": True,
+                        "allowPause": True,
+                        "playable": True,
+                    },
+                    "patchLevel": "L1",
+                },
                 "rewards": f"能量结晶 +{(i + 1) * 3}, 产出效率提升",
                 "goalValue": 5 + i // 2 if i % 3 == 2 else 15 + i * 5,
                 "resourceMultiplier": float(f"{1.8 ** (i + 1):.1f}"),
@@ -130,8 +148,13 @@ def get_procedural_preset(theme: str) -> dict:
                     "mainlineHooks": ["main_idle_growth", "realm_breakthrough"] + (["ability_mastery"] if i >= 2 else []),
                     "rewardUnlocks": ["breakthrough_art"] if i in [6, 9, 11] else [],
                     "runSkillPool": ["starter_art"] + (["guard_art"] if i >= 2 else []) + (["breakthrough_art"] if i >= 6 else []),
-                    "notes": "主干养成决定局内起手能力与首通奖励。"
+                    "notes": "主干养成决定局内起手能力与首通奖励。默认 gameplay 使用 production_ready 卡 survivor_horde。",
                 }
             } for i in range(12)
-        ]
+        ],
+        "gameplayCards": ["survivor_horde"],
+        "orchestrationPolicy": {
+            "autoSelectOnlyProductionReady": True,
+            "defaultCardId": "survivor_horde",
+        },
     }

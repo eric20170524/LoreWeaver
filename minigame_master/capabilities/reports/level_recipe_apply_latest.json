@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "loreweaver.level-recipe-apply.v1",
+  "createdAt": "2026-07-23T22:43:22.247Z",
+  "dryRun": false,
+  "workspaceId": "20260611-060754-719406",
+  "nodeId": "1",
+  "nodePath": "data/workspaces/20260611-060754-719406/loreweaver/nodes/node-01-dahuang.json",
+  "recipeId": "survivor_horde_golden_production_v1",
+  "cardId": "survivor_horde",
+  "contentThemeId": "survivor_horde_golden_demo",
+  "before": {
+    "title": "霓虹脉冲清场",
+    "cardId": "survivor_horde",
+    "durationLimit": 60
+  },
+  "after": {
+    "title": "荒域生存试炼",
+    "cardId": "survivor_horde",
+    "durationLimit": 60,
+    "modifiers": [
+      "hazard_telegraph"
+    ]
+  },
+  "contentHash": "e0c492be707618fb"
+}

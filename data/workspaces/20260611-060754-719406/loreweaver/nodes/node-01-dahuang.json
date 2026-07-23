@@ -1,14 +1,14 @@
 {
   "id": 1,
-  "title": "荒域历练",
-  "intro": "星骁初出星槎村，荒域之中万兽蛰伏。以蛮兽精血洗礼肉身，完成搬血境起点试炼。",
+  "title": "荒域生存试炼",
+  "intro": "在限时内移动、自动攻击并收集升级，击败或撑过敌潮。",
   "taunts": [
     "穷奇幼崽：蝼蚁，也敢觊觎我的真血！",
     "星骁：好大一只凶兽，吃掉一定大补！"
   ],
   "mechanics": "survivor_horde",
   "rewards": "气血精华 +200，概率获得雷吼骨文",
-  "goalValue": 120,
+  "goalValue": 100,
   "resourceMultiplier": 1.2,
   "difficulty": 1,
   "durationLimit": 60,
@@ -19,8 +19,10 @@
       {
         "id": "hazard_telegraph",
         "knobs": {
-          "bossId": "qiongqi_cub",
-          "sourceSceneClass": "Node1Scene"
+          "intervalMs": 3600,
+          "warningDelayMs": 900,
+          "radius": 54,
+          "damage": 18
         }
       }
     ],
@@ -41,7 +43,7 @@
         ]
       },
       "durationSec": 60,
-      "goalValue": 120,
+      "goalValue": 100,
       "difficulty": 1,
       "victoryMode": "survive",
       "envKey": "env_bg_desert",
@@ -59,9 +61,12 @@
       "runtimeCardId": "survivor_horde",
       "shellRetreat": true,
       "loadingLabel": "LOADING",
-      "statusText": "正在初始化修真世界沙盒 INITIALIZING..."
+      "statusText": "正在初始化修真世界沙盒 INITIALIZING...",
+      "artRuntimeMode": "prototype",
+      "recipeId": "survivor_horde_golden_production_v1",
+      "balanceProfile": "normal_short"
     },
-    "patchLevel": "L1"
+    "patchLevel": "L2"
   },
   "planning": {
     "mainlineHooks": [

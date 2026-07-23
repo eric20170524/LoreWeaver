@@ -26,6 +26,8 @@
     "check:level-recipe": "node productize/jobs/compile-level-recipe.mjs --all",
     "catalog:gameplay": "node productize/jobs/list-gameplay-catalog.mjs",
     "catalog:gameplay:production": "node productize/jobs/list-gameplay-catalog.mjs --production-only",
+    "check:catalog-policy": "python3 productize/jobs/check-gameplay-catalog-policy.py",
+    "recipe:apply": "node productize/jobs/apply-level-recipe.mjs",
     "rebuild:survivor-atlas": "python3 productize/jobs/rebuild-survivor-atlas.py",
     "productize:compile": "node productize/compile-workspace.mjs",
     "productize:export": "tsx productize/export-standalone.mjs",
