@@ -85,22 +85,36 @@ export class ThemeContentResolver {
       return val;
     }
 
-    // Check levelMeta
+    // Check levelMeta (schema fields + short aliases)
     if (parts[0] === "level" && this.contentPack.levelMeta) {
-      const field = parts[1];
+      const aliases = {
+        objective: "objectiveText",
+        control_hint: "controlHints",
+        controlHints: "controlHints",
+        victory: "victoryText",
+        failure: "failureText",
+        retreat: "retreatText",
+        hudLabels: "hudLabels"
+      };
+      const field = aliases[parts[1]] || parts[1];
       const obj = this.contentPack.levelMeta[field];
       if (obj && typeof obj === "object") {
         return obj[this.locale] || obj[this.fallbackLocale] || Object.values(obj)[0];
       }
     }
 
-    // Check entities
+    // Check entities: entity.player | entity.enemies.mob | entity.bosses.boss
     if (parts[0] === "entity" && this.contentPack.entities) {
       const cat = parts[1];
-      const obj = this.contentPack.entities[cat];
+      let obj = this.contentPack.entities[cat];
+      if (obj && parts.length >= 3 && typeof obj === "object" && !obj[this.locale] && !obj[this.fallbackLocale]) {
+        // Nested kind map: entities.enemies.mob
+        obj = obj[parts[2]];
+      }
       if (obj && typeof obj === "object") {
         return obj[this.locale] || obj[this.fallbackLocale] || Object.values(obj)[0];
       }
+      if (typeof obj === "string") return obj;
     }
 
     return null;

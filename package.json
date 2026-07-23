@@ -22,6 +22,7 @@
     "check:survivor-visual-soak:full": "SOAK_SECONDS=600 node productize/jobs/run-survivor-visual-soak.mjs",
     "check:survivor-c7-readiness": "node productize/jobs/check-survivor-c7-readiness.mjs",
     "check:atlas-integrity": "node productize/jobs/check-atlas-frame-integrity.js",
+    "check:survivor-theme-skin": "node productize/jobs/check-survivor-theme-skin.mjs",
     "rebuild:survivor-atlas": "python3 productize/jobs/rebuild-survivor-atlas.py",
     "productize:compile": "node productize/compile-workspace.mjs",
     "productize:export": "tsx productize/export-standalone.mjs",

@@ -1,9 +1,9 @@
 {
   "schemaVersion": "loreweaver.standalone-browser-report.v1",
   "status": "passed",
-  "createdAt": "2026-07-23T08:58:29.811Z",
+  "createdAt": "2026-07-23T14:36:01.328Z",
   "cardId": "survivor_horde",
-  "specHash": "survivor_horde:core_demo:v1",
+  "specHash": "survivor_horde:core_demo:v2_theme_skin",
   "runtimeVersion": "minigame_master.core.demo.survivor_horde",
   "releaseEligible": false,
   "sourceReport": "runtime_e2e_survivor_horde_latest.json",
@@ -54,16 +54,5 @@
       "id": "desktop_enter_run_retreat",
       "status": "passed"
     }
-  ],
-  "demoE2e": {
-    "specHash": "survivor_horde:core_demo:v1",
-    "status": "passed"
-  },
-  "standaloneE2e": {
-    "status": "passed",
-    "specHash": "sha256:7946754e2cbc0f197f25e8f49b39044642e6031fd64ceedf411adb5ec52d06cd",
-    "runtimeVersion": "2.0.0",
-    "assetManifestHash": "0421e4f4bce25b23",
-    "report": "runtime_e2e_standalone_survivor_latest.json"
-  }
+  ]
 }

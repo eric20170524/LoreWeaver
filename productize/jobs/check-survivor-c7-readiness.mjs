@@ -52,6 +52,7 @@ function main() {
   const goldenExists = fs.existsSync(
     path.join(LORE_ROOT, "minigame_master/gameplay/cards/fixtures/survivor_horde/golden_asset_fixture.json")
   );
+  const themeSkin = readJson(path.join(REPORTS, "survivor_theme_skin_latest.json"));
 
   const playtestText = fs.existsSync(PLAYTEST_PATH)
     ? fs.readFileSync(PLAYTEST_PATH, "utf8")
@@ -99,7 +100,14 @@ function main() {
         ? `soak=${perf.soakSeconds}s full=${perf.isFullDodDuration} avgFps=${perf.summary?.avgFps}`
         : "missing"
     ),
-    check("golden_fixture_present", goldenExists, goldenExists ? "ok" : "missing golden_asset_fixture")
+    check("golden_fixture_present", goldenExists, goldenExists ? "ok" : "missing golden_asset_fixture"),
+    check(
+      "theme_skin_swap_passed",
+      !themeSkin || themeSkin.status === "passed",
+      themeSkin
+        ? `status=${themeSkin.status}`
+        : "optional: run npm run check:survivor-theme-skin"
+    )
   ];
 
   const productionBlockers = [

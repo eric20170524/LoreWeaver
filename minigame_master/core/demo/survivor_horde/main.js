@@ -7,19 +7,76 @@ import {
     createNodePayload,
     TestHooks
 } from '../../lib/contracts/index.js';
+import { ThemeContentResolver, validateThemeContentPack } from '../../lib/utils/ThemeContentResolver.js';
+import themeWasteland from '../../../gameplay/cards/fixtures/survivor_horde/theme_content_pack.fixture.json';
+import themeCyberPulse from '../../../gameplay/cards/fixtures/survivor_horde/theme_content_pack.cyber_pulse.json';
 
 const LAST_RESULT_KEY = '__LW_SURVIVOR_DEMO_LAST_RESULT__';
 /** Stable demo identity for E2E reports (not production releaseEligible). */
 const DEMO_CARD_ID = 'survivor_horde';
-const DEMO_SPEC_HASH = 'survivor_horde:core_demo:v1';
+const DEMO_SPEC_HASH = 'survivor_horde:core_demo:v2_theme_skin';
 const DEMO_RUNTIME_VERSION = 'minigame_master.core.demo.survivor_horde';
 window.Phaser = Phaser;
-window.__LW_SURVIVOR_DEMO_META__ = {
-    cardId: DEMO_CARD_ID,
-    specHash: DEMO_SPEC_HASH,
-    runtimeVersion: DEMO_RUNTIME_VERSION,
-    releaseEligible: false
+
+const THEME_PACKS = {
+    wasteland: themeWasteland,
+    default: themeWasteland,
+    cyber: themeCyberPulse,
+    cyber_pulse: themeCyberPulse
 };
+
+function readQuery() {
+    try {
+        return new URLSearchParams(window.location.search || '');
+    } catch {
+        return new URLSearchParams();
+    }
+}
+
+function resolveThemePack() {
+    const q = readQuery();
+    const key = String(q.get('theme') || q.get('skin') || 'wasteland').toLowerCase();
+    const locale = q.get('locale') || q.get('lang') || 'zh-CN';
+    const pack = THEME_PACKS[key] || THEME_PACKS.wasteland;
+    const validation = validateThemeContentPack(pack);
+    const resolver = new ThemeContentResolver(pack, locale);
+    const themeApi = {
+        themeKey: THEME_PACKS[key] ? key : 'wasteland',
+        themeId: pack.themeId || key,
+        locale,
+        pack,
+        validation,
+        getText: (k, params, fallback) => resolver.getText(k, params, fallback),
+        hudParts() {
+            const raw = resolver.getText('level.hudLabels', {}, 'HP|Time|Kills|Score');
+            const labels = String(raw || '').split('|').map((s) => s.trim()).filter(Boolean);
+            return {
+                hp: labels[0] || resolver.getText('level.hud.hp'),
+                time: labels[1] || resolver.getText('level.hud.time'),
+                kills: labels[2] || 'Kills',
+                score: labels[3] || resolver.getText('level.hud.score')
+            };
+        }
+    };
+
+    window.__LW_THEME__ = themeApi;
+    window.__LW_SURVIVOR_DEMO_META__ = {
+        cardId: DEMO_CARD_ID,
+        specHash: DEMO_SPEC_HASH,
+        runtimeVersion: DEMO_RUNTIME_VERSION,
+        releaseEligible: false,
+        themeKey: themeApi.themeKey,
+        themeId: themeApi.themeId,
+        locale: themeApi.locale,
+        title: themeApi.getText('level.title'),
+        victoryText: themeApi.getText('level.victory'),
+        failureText: themeApi.getText('level.failure'),
+        retreatText: themeApi.getText('level.retreat')
+    };
+    return themeApi;
+}
+
+const theme = resolveThemePack();
 
 const controls = {
     start: document.getElementById('lw-start'),
@@ -41,6 +98,10 @@ function writeTestState(patch = {}) {
         specHash: DEMO_SPEC_HASH,
         runtimeVersion: DEMO_RUNTIME_VERSION,
         releaseEligible: false,
+        themeKey: theme.themeKey,
+        themeId: theme.themeId,
+        locale: theme.locale,
+        title: theme.getText('level.title'),
         ...previous,
         ...patch
     };
@@ -55,7 +116,7 @@ function writeTestState(patch = {}) {
 
 function readDemoDurationSec() {
     try {
-        const q = new URLSearchParams(window.location.search || '');
+        const q = readQuery();
         const n = Number(q.get('durationSec') || q.get('duration') || 30);
         if (Number.isFinite(n) && n >= 10 && n <= 3600) return Math.floor(n);
     } catch {
@@ -70,10 +131,11 @@ function createDemoPayload() {
     return createNodePayload({
         nodeId: 'survivor_horde_demo',
         nodeConfig: {
-            title: 'Survivor Horde Demo',
+            title: theme.getText('level.title'),
             duration: durationSec,
             rewards: { demoToken: 3 },
             failPenalty: { rewardMultiplier: 0.5 },
+            themeContentPack: theme.pack,
             gameplay: {
                 adapter: 'survivor_horde',
                 knobs: {
@@ -155,20 +217,43 @@ class MenuScene extends Phaser.Scene {
         const lastResult = data.lastResult || window[LAST_RESULT_KEY] || null;
         this.add.rectangle(width / 2, height / 2, width, height, 0x101216, 1);
 
-        this.add.text(width / 2, height * 0.28, 'Survivor Horde', {
-            fontSize: '42px',
+        const title = theme.getText('level.title');
+        const intro = theme.getText('level.intro');
+        const hint = theme.getText('level.control_hint');
+
+        this.add.text(width / 2, height * 0.26, title, {
+            fontSize: '36px',
             color: '#f8fafc',
-            fontStyle: 'bold'
+            fontStyle: 'bold',
+            align: 'center',
+            wordWrap: { width: width - 48 }
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, height * 0.36, 'Core Adapter Demo', {
-            fontSize: '20px',
-            color: '#94a3b8'
+        this.add.text(width / 2, height * 0.36, intro, {
+            fontSize: '16px',
+            color: '#94a3b8',
+            align: 'center',
+            wordWrap: { width: width - 64 }
+        }).setOrigin(0.5);
+
+        this.add.text(width / 2, height * 0.46, hint, {
+            fontSize: '14px',
+            color: '#5eead4',
+            align: 'center'
+        }).setOrigin(0.5);
+
+        this.add.text(width / 2, height * 0.52, `theme=${theme.themeKey} · ${theme.themeId}`, {
+            fontSize: '12px',
+            color: '#64748b'
         }).setOrigin(0.5);
 
         if (lastResult) {
-            const rewardText = JSON.stringify(lastResult.rewards || {});
-            this.add.text(width / 2, height * 0.47, `Last: ${lastResult.reason} | ${rewardText}`, {
+            const endLabel = lastResult.success
+                ? theme.getText('level.victory')
+                : (lastResult.reason === 'retreated'
+                    ? theme.getText('level.retreat')
+                    : theme.getText('level.failure'));
+            this.add.text(width / 2, height * 0.6, `${endLabel} · ${lastResult.reason}`, {
                 fontSize: '16px',
                 color: lastResult.success ? '#5eead4' : '#fda4af'
             }).setOrigin(0.5);
@@ -178,7 +263,10 @@ class MenuScene extends Phaser.Scene {
         writeTestState({
             mode: 'menu',
             status: 'idle',
-            hasLastResult: Boolean(lastResult)
+            hasLastResult: Boolean(lastResult),
+            title,
+            intro,
+            controlHint: hint
         });
         controls.start.onclick = () => {
             this.scene.start('RunScene');
@@ -194,9 +282,16 @@ class RunScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
         this.add.rectangle(width / 2, height / 2, width, height, 0x111827, 1);
+        this.hudLabels = theme.hudParts();
         this.hud = this.add.text(16, 14, '', {
             fontSize: '18px',
             color: '#e2e8f0'
+        }).setDepth(50);
+
+        this.objective = this.add.text(16, 72, theme.getText('level.objective'), {
+            fontSize: '13px',
+            color: '#94a3b8',
+            wordWrap: { width: width - 32 }
         }).setDepth(50);
 
         this.testHooks = new TestHooks();
@@ -232,7 +327,8 @@ class RunScene extends Phaser.Scene {
         writeTestState({
             mode: 'run',
             status: this.adapter.status,
-            nodeId: this.adapter.payload.nodeId
+            nodeId: this.adapter.payload.nodeId,
+            objective: theme.getText('level.objective')
         });
 
         setControlMode('run');
@@ -249,11 +345,12 @@ class RunScene extends Phaser.Scene {
         this.adapter?.update(time, delta);
         const state = this.adapter?.getTestState();
         if (!state) return;
+        const h = this.hudLabels;
         this.hud.setText([
-            `HP ${state.hp}`,
-            `Time ${state.timer}`,
-            `Kills ${state.kills}`,
-            `Score ${state.score}`
+            `${h.hp} ${state.hp}`,
+            `${h.time} ${state.timer}`,
+            `${h.kills} ${state.kills}`,
+            `${h.score} ${state.score}`
         ]);
         writeTestState({
             mode: state.status === 'ended' ? 'result' : 'run',
@@ -261,17 +358,24 @@ class RunScene extends Phaser.Scene {
             hp: state.hp,
             timer: state.timer,
             kills: state.kills,
-            score: state.score
+            score: state.score,
+            hudHpLabel: h.hp
         });
     }
 
     showResult(result) {
         window[LAST_RESULT_KEY] = result;
+        const headline = result.success
+            ? theme.getText('level.victory')
+            : (result.reason === 'retreated'
+                ? theme.getText('level.retreat')
+                : theme.getText('level.failure'));
         writeTestState({
             mode: 'result',
             status: 'ended',
             resultReason: result.reason,
             resultSuccess: result.success,
+            resultHeadline: headline,
             rewards: result.rewards
         });
         const { width, height } = this.scale;
@@ -279,14 +383,16 @@ class RunScene extends Phaser.Scene {
             .setStrokeStyle(2, result.success ? 0x5eead4 : 0xf43f5e)
             .setDepth(100);
 
-        this.add.text(width / 2, height / 2 - 58, result.success ? 'Completed' : 'Ended', {
-            fontSize: '30px',
+        this.add.text(width / 2, height / 2 - 58, headline, {
+            fontSize: '28px',
             color: result.success ? '#5eead4' : '#fda4af',
-            fontStyle: 'bold'
+            fontStyle: 'bold',
+            align: 'center',
+            wordWrap: { width: 360 }
         }).setOrigin(0.5).setDepth(101);
 
-        this.add.text(width / 2, height / 2 - 12, `${result.reason} | ${JSON.stringify(result.rewards)}`, {
-            fontSize: '16px',
+        this.add.text(width / 2, height / 2 - 8, `${result.reason} | ${JSON.stringify(result.rewards)}`, {
+            fontSize: '14px',
             color: '#e2e8f0'
         }).setOrigin(0.5).setDepth(101);
 

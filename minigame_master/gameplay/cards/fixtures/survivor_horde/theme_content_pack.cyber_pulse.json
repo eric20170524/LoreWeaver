@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "survivor_horde_cyber_pulse",
+  "locales": ["zh-CN", "en"],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": {
+      "zh-CN": "霓虹脉冲清场",
+      "en": "Neon Pulse Sweep"
+    },
+    "intro": {
+      "zh-CN": "在脉冲时限内清扫感染体，收集数据核心。",
+      "en": "Clear infected units and collect data cores before the pulse ends."
+    },
+    "objectiveText": {
+      "zh-CN": "存活至脉冲结束或击破主脑",
+      "en": "Survive the pulse or destroy the core mind"
+    },
+    "controlHints": {
+      "zh-CN": "拖拽移动 · 自动射击",
+      "en": "Drag to move · Auto fire"
+    },
+    "hudLabels": {
+      "zh-CN": "护盾|脉冲|清除|数据",
+      "en": "Shield|Pulse|Clears|Data"
+    },
+    "victoryText": {
+      "zh-CN": "脉冲肃清完成",
+      "en": "Pulse cleared"
+    },
+    "failureText": {
+      "zh-CN": "护盾击穿",
+      "en": "Shield ruptured"
+    },
+    "retreatText": {
+      "zh-CN": "紧急脱离",
+      "en": "Emergency extract"
+    }
+  },
+  "entities": {
+    "player": {
+      "zh-CN": "脉冲特工",
+      "en": "Pulse Agent"
+    },
+    "enemies": {
+      "mob": { "zh-CN": "感染体", "en": "Infected" },
+      "elite": { "zh-CN": "重装感染", "en": "Heavy Infected" }
+    },
+    "bosses": {
+      "boss": { "zh-CN": "主脑节点", "en": "Core Mind" }
+    },
+    "pickups": {
+      "soul": { "zh-CN": "数据核", "en": "Data Core" }
+    },
+    "skills": {
+      "auto_bolt": { "zh-CN": "自动脉冲枪", "en": "Auto Pulse Gun" }
+    },
+    "statuses": {
+      "level_up": { "zh-CN": "协议升级", "en": "Protocol Up" }
+    }
+  },
+  "copyKeys": {
+    "taunts": {
+      "zh-CN": "脉冲逼近！",
+      "en": "Pulse inbound!"
+    }
+  }
+}

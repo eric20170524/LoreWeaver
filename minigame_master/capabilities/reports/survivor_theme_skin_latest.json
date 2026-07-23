@@ -1,0 +1,157 @@
+{
+  "schemaVersion": "loreweaver.theme-skin-check.v1",
+  "cardId": "survivor_horde",
+  "status": "passed",
+  "createdAt": "2026-07-23T14:35:26.543Z",
+  "releaseEligible": false,
+  "assertions": {
+    "wastelandThemeId": true,
+    "cyberThemeId": true,
+    "titlesDiffer": true,
+    "wastelandTitleZh": true,
+    "cyberTitleZh": true,
+    "victoryDiffers": true,
+    "hudHpDiffers": true,
+    "stateTitleMatchesMeta": true,
+    "noPageErrors": true
+  },
+  "observed": {
+    "wasteland": {
+      "theme": {
+        "themeKey": "wasteland",
+        "themeId": "survivor_horde_golden_demo",
+        "title": "荒域生存试炼",
+        "victory": "试炼通过",
+        "failure": "试炼失败",
+        "retreat": "已撤退",
+        "hud": {
+          "hp": "生命",
+          "time": "时间",
+          "kills": "击杀",
+          "score": "灵魂"
+        }
+      },
+      "demoMeta": {
+        "cardId": "survivor_horde",
+        "specHash": "survivor_horde:core_demo:v2_theme_skin",
+        "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+        "releaseEligible": false,
+        "themeKey": "wasteland",
+        "themeId": "survivor_horde_golden_demo",
+        "locale": "zh-CN",
+        "title": "荒域生存试炼",
+        "victoryText": "试炼通过",
+        "failureText": "试炼失败",
+        "retreatText": "已撤退"
+      },
+      "state": {
+        "cardId": "survivor_horde",
+        "specHash": "survivor_horde:core_demo:v2_theme_skin",
+        "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+        "releaseEligible": false,
+        "themeKey": "wasteland",
+        "themeId": "survivor_horde_golden_demo",
+        "locale": "zh-CN",
+        "title": "荒域生存试炼",
+        "mode": "menu",
+        "status": "idle",
+        "hasLastResult": false,
+        "intro": "在限时内移动、自动攻击并收集升级，击败或撑过敌潮。",
+        "controlHint": "移动：指针/WASD · 攻击：自动"
+      },
+      "runState": {
+        "cardId": "survivor_horde",
+        "specHash": "survivor_horde:core_demo:v2_theme_skin",
+        "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+        "releaseEligible": false,
+        "themeKey": "wasteland",
+        "themeId": "survivor_horde_golden_demo",
+        "locale": "zh-CN",
+        "title": "荒域生存试炼",
+        "mode": "run",
+        "status": "running",
+        "hasLastResult": false,
+        "intro": "在限时内移动、自动攻击并收集升级，击败或撑过敌潮。",
+        "controlHint": "移动：指针/WASD · 攻击：自动",
+        "nodeId": "survivor_horde_demo",
+        "objective": "存活至倒计时结束或击败首领",
+        "hp": 120,
+        "timer": 30,
+        "kills": 0,
+        "score": 0,
+        "hudHpLabel": "生命"
+      }
+    },
+    "cyber": {
+      "theme": {
+        "themeKey": "cyber",
+        "themeId": "survivor_horde_cyber_pulse",
+        "title": "霓虹脉冲清场",
+        "victory": "脉冲肃清完成",
+        "failure": "护盾击穿",
+        "retreat": "紧急脱离",
+        "hud": {
+          "hp": "护盾",
+          "time": "脉冲",
+          "kills": "清除",
+          "score": "数据"
+        }
+      },
+      "demoMeta": {
+        "cardId": "survivor_horde",
+        "specHash": "survivor_horde:core_demo:v2_theme_skin",
+        "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+        "releaseEligible": false,
+        "themeKey": "cyber",
+        "themeId": "survivor_horde_cyber_pulse",
+        "locale": "zh-CN",
+        "title": "霓虹脉冲清场",
+        "victoryText": "脉冲肃清完成",
+        "failureText": "护盾击穿",
+        "retreatText": "紧急脱离"
+      },
+      "state": {
+        "cardId": "survivor_horde",
+        "specHash": "survivor_horde:core_demo:v2_theme_skin",
+        "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+        "releaseEligible": false,
+        "themeKey": "cyber",
+        "themeId": "survivor_horde_cyber_pulse",
+        "locale": "zh-CN",
+        "title": "霓虹脉冲清场",
+        "mode": "menu",
+        "status": "idle",
+        "hasLastResult": false,
+        "intro": "在脉冲时限内清扫感染体，收集数据核心。",
+        "controlHint": "拖拽移动 · 自动射击"
+      },
+      "runState": {
+        "cardId": "survivor_horde",
+        "specHash": "survivor_horde:core_demo:v2_theme_skin",
+        "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+        "releaseEligible": false,
+        "themeKey": "cyber",
+        "themeId": "survivor_horde_cyber_pulse",
+        "locale": "zh-CN",
+        "title": "霓虹脉冲清场",
+        "mode": "run",
+        "status": "running",
+        "hasLastResult": false,
+        "intro": "在脉冲时限内清扫感染体，收集数据核心。",
+        "controlHint": "拖拽移动 · 自动射击",
+        "nodeId": "survivor_horde_demo",
+        "objective": "存活至脉冲结束或击破主脑",
+        "hp": 120,
+        "timer": 30,
+        "kills": 0,
+        "score": 0,
+        "hudHpLabel": "护盾"
+      }
+    }
+  },
+  "errors": [],
+  "notes": [
+    "Swap packs with ?theme=wasteland | ?theme=cyber — no adapter code change.",
+    "Does not grant production_ready by itself."
+  ]
+}

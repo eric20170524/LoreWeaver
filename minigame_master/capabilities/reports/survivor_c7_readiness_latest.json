@@ -1,7 +1,7 @@
 {
   "schemaVersion": "loreweaver.survivor-c7-readiness.v1",
   "cardId": "survivor_horde",
-  "createdAt": "2026-07-23T13:35:47.598Z",
+  "createdAt": "2026-07-23T14:35:47.658Z",
   "currentStatus": "gate_verified",
   "recommendedStatus": "gate_verified",
   "gateVerifiedEligible": true,
@@ -42,6 +42,11 @@
       "id": "golden_fixture_present",
       "ok": true,
       "detail": "ok"
+    },
+    {
+      "id": "theme_skin_swap_passed",
+      "ok": true,
+      "detail": "status=passed"
     }
   ],
   "productionBlockers": [
