@@ -2,19 +2,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const demoRoot = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(demoRoot, '../../../..');
+// survivor_horde → demo → core → minigame_master → LoreWeaver root
+const loreRoot = path.resolve(demoRoot, '../../../..');
+const phaserEsm = path.resolve(loreRoot, 'node_modules/phaser/dist/phaser.esm.js');
 
 export default {
     root: demoRoot,
     cacheDir: path.join('/private/tmp', 'lw_survivor_horde_vite_cache'),
     resolve: {
         alias: {
-            phaser: path.resolve(repoRoot, 'LoreWeaver/node_modules/phaser/dist/phaser.esm.js')
+            phaser: phaserEsm
         }
     },
     server: {
         fs: {
-            allow: [repoRoot]
+            allow: [loreRoot]
         }
     },
     build: {

@@ -2,13 +2,30 @@
  * RuntimeArtBinder — atlas-first art wiring for LoreWeaver gameplay adapters.
  *
  * Contract (docs/contracts/asset_pipeline_contract.md):
- *   atlas first → semantic key lookup → procedural fallback last
+ *   atlas first → semantic key lookup → procedural fallback last (prototype only)
+ *
+ * Runtime modes (Phase A1):
+ *   - prototype: procedural/fallback allowed; artSource + degradations exposed on
+ *     global status and TestHooks (must never look like production art).
+ *   - production: critical roles must resolve to atlas textures; missing → throw.
  *
  * Installs every frame from an imagegen-style manifest into Phaser textures,
  * then resolves roles (player / enemy / projectile / item / vfx / env …).
  */
 
 const DEFAULT_GLOBAL_STATUS_KEY = '__LOREWEAVER_ART_PIPELINE__';
+
+/** Critical semantic roles that production mode refuses to fake. */
+const DEFAULT_CRITICAL_ROLES = Object.freeze(['player', 'hero', 'enemy', 'environment', 'env']);
+
+export class ArtAssetMissingError extends Error {
+    constructor(message, details = {}) {
+        super(message);
+        this.name = 'ArtAssetMissingError';
+        this.code = 'ART_ASSET_MISSING';
+        this.details = details;
+    }
+}
 
 const SEMANTIC_ALIASES = Object.freeze({
     player: [
@@ -72,16 +89,24 @@ function classifyFrameKey(frameKey) {
 
 function textureKeyForFrame(frameKey) {
     // Prefer stable lw_ keys for combat bindings used by GameRunner historically
+    // Aligns with survivor_horde golden_asset_fixture.semanticAssetMapping
     const map = {
         shihao_young_runtime: 'lw_runtime_player_shihao',
         player_idle: 'lw_runtime_player_idle',
+        player_walk_0: 'lw_runtime_player_walk',
+        player_walk_1: 'lw_runtime_player_walk_1',
+        player_attack: 'lw_runtime_player_attack',
+        player_hurt: 'lw_runtime_player_hurt',
+        player_death: 'lw_runtime_player_death',
+        player_dash: 'lw_runtime_player_dash',
         enemy_wild_rhino: 'lw_enemy_wild_rhino',
         enemy_green_scaled_eagle: 'lw_enemy_green_scaled_eagle',
         enemy_rock_golem: 'lw_enemy_rock_golem',
         enemy_qiongqi_cub: 'lw_enemy_qiongqi_cub',
         skill_fist_projectile: 'lw_skill_fist_projectile',
         pickup_blood_essence: 'lw_pickup_blood_essence',
-        vfx_effect_frame: 'lw_vfx_effect_frame'
+        vfx_effect_frame: 'lw_vfx_effect_frame',
+        env_bg_desert: 'lw_art_env_bg_desert'
     };
     if (map[frameKey]) return map[frameKey];
     if (frameKey.startsWith('enemy_') && !frameKey.includes('_walk') && !frameKey.includes('_attack')
@@ -100,6 +125,15 @@ export default class RuntimeArtBinder {
         this.manifest = null;
         this.installed = new Map(); // textureKey -> { frameKey, group, w, h }
         this.frameIndex = new Map(); // frameKey -> textureKey
+        this.degradations = []; // { role, artSource, reason, at }
+        this.criticalRoles = new Set(
+            Array.isArray(options.criticalRoles)
+                ? options.criticalRoles
+                : DEFAULT_CRITICAL_ROLES
+        );
+        this.runtimeMode = 'prototype';
+        this.allowProceduralFallback = true;
+        this.onMissingAsset = 'degrade'; // degrade | throw_hard_error
         this.status = {
             status: 'idle',
             loadedCount: 0,
@@ -107,8 +141,294 @@ export default class RuntimeArtBinder {
             loadedKeys: [],
             missingKeys: [],
             groups: {},
-            frameKeys: []
+            frameKeys: [],
+            runtimeMode: 'prototype',
+            allowProceduralFallback: true,
+            artDegradations: [],
+            degradationCount: 0
         };
+        this.setRuntimeMode(options.runtimeMode || options.mode || 'prototype', {
+            allowProceduralFallback: options.allowProceduralFallback,
+            onMissingAsset: options.onMissingAsset,
+            criticalRoles: options.criticalRoles
+        });
+    }
+
+    /**
+     * Switch prototype vs production art policy.
+     * @param {'prototype'|'production'} mode
+     * @param {{ allowProceduralFallback?: boolean, onMissingAsset?: string, criticalRoles?: string[] }} [policy]
+     */
+    setRuntimeMode(mode, policy = {}) {
+        const normalized = String(mode || 'prototype').toLowerCase() === 'production'
+            ? 'production'
+            : 'prototype';
+        this.runtimeMode = normalized;
+        if (Array.isArray(policy.criticalRoles) && policy.criticalRoles.length) {
+            this.criticalRoles = new Set(policy.criticalRoles);
+        }
+        if (policy.allowProceduralFallback != null) {
+            this.allowProceduralFallback = Boolean(policy.allowProceduralFallback);
+        } else {
+            this.allowProceduralFallback = normalized !== 'production';
+        }
+        if (policy.onMissingAsset) {
+            this.onMissingAsset = policy.onMissingAsset;
+        } else {
+            this.onMissingAsset = this.allowProceduralFallback ? 'degrade' : 'throw_hard_error';
+        }
+        this._publishPolicy();
+        return this;
+    }
+
+    /**
+     * Apply golden fixture (or equivalent) fallbackPolicy block.
+     * Uses productionMode or prototypeMode based on current runtimeMode.
+     */
+    applyFallbackPolicy(fallbackPolicy = {}) {
+        const block = this.runtimeMode === 'production'
+            ? (fallbackPolicy.productionMode || {})
+            : (fallbackPolicy.prototypeMode || {});
+        return this.setRuntimeMode(this.runtimeMode, {
+            allowProceduralFallback: block.allowProceduralFallback,
+            onMissingAsset: block.onMissingAsset,
+            criticalRoles: block.criticalRoles
+        });
+    }
+
+    isProduction() {
+        return this.runtimeMode === 'production';
+    }
+
+    isCriticalRole(roleOrId) {
+        const role = String(roleOrId || '').toLowerCase();
+        if (this.criticalRoles.has(role)) return true;
+        if (role === 'hero' && this.criticalRoles.has('player')) return true;
+        if (role.startsWith('enemy') && this.criticalRoles.has('enemy')) return true;
+        if ((role.startsWith('env') || role === 'background' || role === 'bg_default')
+            && (this.criticalRoles.has('environment') || this.criticalRoles.has('env'))) {
+            return true;
+        }
+        return false;
+    }
+
+    _publishPolicy() {
+        this.status = publishStatus(this.statusKey, {
+            ...this.status,
+            runtimeMode: this.runtimeMode,
+            allowProceduralFallback: this.allowProceduralFallback,
+            onMissingAsset: this.onMissingAsset,
+            criticalRoles: [...this.criticalRoles],
+            artDegradations: [...this.degradations],
+            degradationCount: this.degradations.length,
+            binder: 'RuntimeArtBinder'
+        });
+        return this.status;
+    }
+
+    _recordDegradation(role, artSource, reason = 'missing_atlas') {
+        const entry = {
+            role: String(role || 'unknown'),
+            artSource: artSource || 'missing',
+            reason,
+            at: new Date().toISOString()
+        };
+        this.degradations.push(entry);
+        // keep last 64 entries for hooks
+        if (this.degradations.length > 64) {
+            this.degradations.splice(0, this.degradations.length - 64);
+        }
+        this._publishPolicy();
+        return entry;
+    }
+
+    clearDegradations() {
+        this.degradations = [];
+        this._publishPolicy();
+        return this;
+    }
+
+    getArtTelemetry() {
+        return {
+            runtimeMode: this.runtimeMode,
+            allowProceduralFallback: this.allowProceduralFallback,
+            onMissingAsset: this.onMissingAsset,
+            criticalRoles: [...this.criticalRoles],
+            degradations: [...this.degradations],
+            degradationCount: this.degradations.length,
+            atlasStatus: this.status?.status || 'idle',
+            loadedCount: this.status?.loadedCount || 0
+        };
+    }
+
+    /**
+     * Mirror art policy + degradations onto a TestHooks instance (or plain update target).
+     */
+    syncToTestHooks(testHooks) {
+        const telemetry = this.getArtTelemetry();
+        if (testHooks && typeof testHooks.update === 'function') {
+            testHooks.update({
+                artRuntimeMode: telemetry.runtimeMode,
+                artAllowProceduralFallback: telemetry.allowProceduralFallback,
+                artSourceSummary: telemetry.degradationCount > 0 ? 'degraded' : 'atlas_or_idle',
+                artDegradations: telemetry.degradations,
+                artDegradationCount: telemetry.degradationCount,
+                artAtlasStatus: telemetry.atlasStatus
+            });
+        }
+        return telemetry;
+    }
+
+    /**
+     * Production hard-fail helper for missing critical art.
+     */
+    assertCriticalResolved(roleOrId, textureKey, options = {}) {
+        if (textureKey) return textureKey;
+        const critical = options.critical != null
+            ? Boolean(options.critical)
+            : this.isCriticalRole(roleOrId);
+        const mustThrow = !this.allowProceduralFallback
+            && critical
+            && (this.onMissingAsset === 'throw_hard_error' || this.isProduction());
+        if (mustThrow) {
+            throw new ArtAssetMissingError(
+                `[RuntimeArtBinder] production missing critical art for role "${roleOrId}"`,
+                {
+                    role: roleOrId,
+                    runtimeMode: this.runtimeMode,
+                    allowProceduralFallback: this.allowProceduralFallback,
+                    enemyId: options.enemyId || null,
+                    clip: options.clip || null
+                }
+            );
+        }
+        return null;
+    }
+
+    /**
+     * Validate card requiredAssets (or golden fixture requiredAssets) against loaded textures.
+     * Production: throws ArtAssetMissingError when any critical entry is missing.
+     * Prototype: records degradations and returns { ok:false, issues }.
+     *
+     * options.semanticAssetMapping — same shape as golden_asset_fixture.semanticAssetMapping
+     * options.enemyIdMap — kind → enemy id (e.g. mob → wild_rhino)
+     * options.envKeyMap — logical env id → texture/frame key
+     */
+    validateRequiredAssets(requiredAssets = {}, options = {}) {
+        const issues = [];
+        const semantic = options.semanticAssetMapping || {};
+        const enemyIdMap = options.enemyIdMap || options.semanticEnemyMap || {};
+        const envKeyMap = options.envKeyMap || semantic.environment || {};
+
+        // Prefer mapped clip textures, then generic player resolve.
+        const playerClips = requiredAssets.playerClips || ['idle'];
+        let playerOk = false;
+        for (const clip of playerClips) {
+            const mapped = semantic.player?.[clip];
+            if (mapped && this.has(mapped)) {
+                playerOk = true;
+                break;
+            }
+            if (this.resolve('player', { clip })) {
+                playerOk = true;
+                break;
+            }
+        }
+        if (!playerOk && !this.resolve('player')) {
+            issues.push({ role: 'player', reason: 'missing_player_texture' });
+        }
+
+        for (const kind of requiredAssets.enemyKinds || []) {
+            const mappedTex = semantic.enemy?.[kind];
+            if (mappedTex && this.has(mappedTex)) continue;
+            const enemyId = enemyIdMap[kind]
+                || (mappedTex ? String(mappedTex).replace(/^lw_enemy_/, '') : null)
+                || kind;
+            const key = this.resolve('enemy', { enemyId });
+            if (!key) {
+                issues.push({ role: 'enemy', enemyId, enemyKind: kind, reason: 'missing_enemy_texture' });
+            }
+        }
+
+        for (const env of requiredAssets.environments || []) {
+            const mapped = envKeyMap[env] || env;
+            const prefer = [
+                mapped,
+                env,
+                env === 'bg_default' ? 'env_bg_desert' : null,
+                env === 'bg_default' ? 'lw_art_env_bg_desert' : null,
+                `lw_art_${env}`,
+                textureKeyForFrame(env),
+                textureKeyForFrame(String(mapped).replace(/^lw_art_/, ''))
+            ].filter(Boolean);
+            const envKey = this.resolveEnvKey(null, prefer)
+                || this._existing(prefer, this.scene);
+            if (!envKey) {
+                issues.push({ role: 'environment', key: env, mapped, reason: 'missing_env_texture' });
+            }
+        }
+
+        if (issues.length === 0) {
+            return { ok: true, issues: [] };
+        }
+
+        for (const issue of issues) {
+            this._recordDegradation(issue.role, 'missing', issue.reason);
+        }
+
+        const mustThrow = !this.allowProceduralFallback
+            && (this.onMissingAsset === 'throw_hard_error' || this.isProduction());
+        if (mustThrow) {
+            throw new ArtAssetMissingError(
+                `[RuntimeArtBinder] production requiredAssets validation failed (${issues.length} missing)`,
+                { issues, runtimeMode: this.runtimeMode }
+            );
+        }
+        return { ok: false, issues };
+    }
+
+    /**
+     * After atlas install, seed mock/scene textures by frame list (no PNG) for contract tests,
+     * or re-index semantic aliases for golden texture keys.
+     */
+    seedTextureKeys(textureKeys = []) {
+        if (!this.scene?.textures) return this;
+        for (const key of textureKeys) {
+            if (!key) continue;
+            if (typeof this.scene.textures.addCanvas === 'function') {
+                if (!this.scene.textures.exists(key)) this.scene.textures.addCanvas(key);
+            } else if (this.scene.textures._keys instanceof Set) {
+                this.scene.textures._keys.add(String(key));
+            }
+            this.frameIndex.set(key, key);
+            this.installed.set(key, { frameKey: key, group: classifyFrameKey(key), w: 64, h: 64 });
+        }
+        return this;
+    }
+
+    /**
+     * Register semanticAssetMapping texture keys into frameIndex (call after install or seed).
+     */
+    applySemanticAssetMapping(semanticAssetMapping = {}) {
+        const collect = [];
+        const player = semanticAssetMapping.player || {};
+        const enemy = semanticAssetMapping.enemy || {};
+        const environment = semanticAssetMapping.environment || {};
+        for (const v of Object.values(player)) collect.push(v);
+        for (const v of Object.values(enemy)) collect.push(v);
+        for (const v of Object.values(environment)) collect.push(v);
+        for (const key of collect) {
+            if (!key) continue;
+            if (this.has(key) || this.scene?.textures?.exists?.(key)) {
+                this.frameIndex.set(key, key);
+            }
+        }
+        // Logical env alias used by cards: bg_default → desert bg texture
+        if (environment.bg_default && this.has(environment.bg_default)) {
+            this.frameIndex.set('bg_default', environment.bg_default);
+            this.frameIndex.set('alias:bg_default', environment.bg_default);
+        }
+        return this;
     }
 
     /**
@@ -196,6 +516,12 @@ export default class RuntimeArtBinder {
             missingKeys,
             groups,
             frameKeys,
+            runtimeMode: this.runtimeMode,
+            allowProceduralFallback: this.allowProceduralFallback,
+            onMissingAsset: this.onMissingAsset,
+            criticalRoles: [...this.criticalRoles],
+            artDegradations: [...this.degradations],
+            degradationCount: this.degradations.length,
             binder: 'RuntimeArtBinder'
         });
         return this.getStatus();
@@ -439,6 +765,12 @@ export default class RuntimeArtBinder {
             || null;
 
         const bgTex = envKey && scene.textures.exists(envKey) ? envKey : null;
+        if (!bgTex) {
+            this.assertCriticalResolved('environment', null, {
+                critical: options.critical != null ? options.critical : true
+            });
+            this._recordDegradation('environment', 'procedural', 'missing_env_texture');
+        }
         if (bgTex) {
             // Stretch primary bg
             const bg = scene.add.image(width / 2, height / 2, bgTex);
@@ -521,6 +853,7 @@ export default class RuntimeArtBinder {
 
     /**
      * Create a sprite using atlas art when available, else invoke fallbackFactory.
+     * Production mode throws for critical roles when no atlas texture is available.
      */
     createSprite(scene, roleOrId, options = {}) {
         const textureKey = this.resolve(roleOrId, options);
@@ -541,12 +874,21 @@ export default class RuntimeArtBinder {
             }
             return sprite;
         }
+
+        // Hard-fail before any procedural/fallback path for critical production roles.
+        this.assertCriticalResolved(roleOrId, null, {
+            critical: options.critical,
+            enemyId: options.enemyId,
+            clip: options.clip
+        });
+
         if (typeof options.fallbackFactory === 'function') {
             const node = options.fallbackFactory(scene, options);
             if (node?.setData) {
                 node.setData('artSource', 'fallback');
                 node.setData('artRole', roleOrId);
             }
+            this._recordDegradation(roleOrId, 'fallback', 'missing_atlas_used_fallback_factory');
             return node;
         }
         // last resort circle
@@ -555,6 +897,7 @@ export default class RuntimeArtBinder {
         const circle = scene.add.circle(options.x || 0, options.y || 0, r, color, 1);
         circle.setData?.('artSource', 'primitive');
         circle.setData?.('artRole', roleOrId);
+        this._recordDegradation(roleOrId, 'primitive', 'missing_atlas_used_primitive');
         return circle;
     }
 
@@ -568,6 +911,11 @@ export default class RuntimeArtBinder {
         return {
             binder,
             status: () => binder.getStatus(),
+            artTelemetry: () => binder.getArtTelemetry(),
+            syncToTestHooks: (hooks) => binder.syncToTestHooks(hooks),
+            setRuntimeMode: (mode, policy) => binder.setRuntimeMode(mode, policy),
+            applyFallbackPolicy: (policy) => binder.applyFallbackPolicy(policy),
+            validateRequiredAssets: (req, opts) => binder.validateRequiredAssets(req, opts),
             has: (key) => binder.has(key),
             resolve: (role, opts) => binder.resolve(role, opts),
             resolveClipKeys: (role, clip, opts) => binder.resolveClipKeys(role, clip, opts),
@@ -590,6 +938,7 @@ export default class RuntimeArtBinder {
 
 export {
     DEFAULT_GLOBAL_STATUS_KEY,
+    DEFAULT_CRITICAL_ROLES,
     SEMANTIC_ALIASES,
     textureKeyForFrame,
     classifyFrameKey

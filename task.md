@@ -23,8 +23,9 @@
 ### 0.2 未完成基线缺口
 
 - [x] 通用 Mock adapter smoke 从 12/12 扩到全基础卡覆盖 (23/23 唯一 Card ID 覆盖，Step C1 已完成 Headless 契约校验)
-- [ ] 23 张卡全部具备独立、可执行的 E2E / Soak 浏览器测试路径
-- [ ] 真实 Atlas 美术 + 真实音频完整装载（生产禁用关键 fallback）
+- [x] `survivor_horde` core demo 具备 Playwright E2E（进/撤/胜）；全 23 卡 + Soak 仍待
+- [x] 生产模式禁用关键美术 fallback 的**运行核**（unit）；真实 Atlas 全量装载与 Playwright 硬证仍待
+- [x] `survivor_horde` golden ⊆ workspace 真实 atlas 帧 + theme/recipe fixture（`check:survivor-golden-atlas`）；浏览器内装载 E2E 仍待
 - [ ] 缺失 build / E2E / 视觉 / 美术 / 音频 / 性能证据时**阻止**生产发布（证据包与 `specHash` 全链路）
 - [ ] 至少 1 张卡达到 `production_ready`（首张：`survivor_horde`）
 
@@ -62,12 +63,12 @@
 
 #### A1. 美术生产接线
 
-- [ ] 生产模式禁止关键角色 / 敌人 / 目标使用程序化 fallback
-- [ ] 原型模式保留 fallback，但必须在 HUD / TestHooks 明确暴露降级状态（atlas | fallback | missing）
-- [ ] 生成资产进入 atlas、manifest、provenance、license/credits 流程
+- [x] 生产模式禁止关键角色 / 敌人 / 环境使用程序化 fallback（`ArtAssetMissingError` 运行核 unit 通过；Playwright 真机仍待）
+- [x] 原型模式保留 fallback，并在 TestHooks / 全局 status 暴露 `artSource` 与 `artDegradations`
+- [x] 工作区 atlas/manifest/provenance 已挂 golden（`20260611-060754-719406`）；全量 license/credits 流水线仍待规范化
 - [ ] 校验切片边界、透明背景、朝向、缩放、锚点、碰撞体与动画帧顺序
-- [ ] 自动检查重要语义组是否在**真实 gameplay** 中可见（不只检查文件存在）
-- [ ] 为每张卡至少一套 golden asset fixture（**已完成静态规范草稿 `survivor_horde`**）
+- [ ] 自动检查重要语义组是否在**真实 gameplay** 中可见（不只检查文件存在 / Playwright）
+- [x] 为 `survivor_horde` 建立 golden asset fixture + theme + recipe 夹具（`releaseEligible: false`）
 - [ ] 对真实主题资产跑 VLM：角色一致性、敌我可辨识度、前景遮挡、动作可读性
 
 #### A2. 文案真实视觉溢出
@@ -123,10 +124,12 @@
 
 #### C4. 真实浏览器 E2E（先一张卡）
 
-- [ ] Playwright：Chrome Desktop + Mobile viewport
-- [ ] `survivor_horde`：完整胜利流 + 失败/撤退流
-- [ ] 生成与 `specHash` / `runtimeVersion` / card 版本 / modifier 组合 / 资产 manifest hash 绑定的报告
-- [ ] console / page / request error 为空
+- [x] Playwright：Chrome Desktop(1280×800) + Mobile(720×1280) — **core demo**（`npm run check:survivor-e2e`）
+- [x] `survivor_horde` demo：进关 + 撤退 + force 胜利；**自然失败 / 工作台路径仍待**
+- [x] 报告含 `specHash` / `runtimeVersion` / cardId / modifiers / `releaseEligible:false`（`runtime_e2e_survivor_horde_latest.json`）
+- [x] demo 路径 console/page error 为空（本机最新跑次）
+- [ ] 工作台 IDE / standalone export 路径同等 E2E
+- [ ] 自然死亡失败流 + 暂停恢复
 
 #### C5. 性能与 soak（先动作卡）
 

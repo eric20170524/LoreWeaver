@@ -3,11 +3,29 @@
   "fixtureId": "survivor_horde_golden_asset_v1",
   "cardId": "survivor_horde",
   "mode": "production_golden",
+  "workspaceId": "20260611-060754-719406",
+  "atlasPack": {
+    "manifestPath": "assets/imagegen/manifest.json",
+    "atlasPath": "assets/imagegen/atlas.png",
+    "provenancePath": "assets/imagegen/provenance.json"
+  },
   "requiredAssets": {
     "playerClips": ["idle", "walk", "attack", "hurt", "death"],
     "enemyKinds": ["mob", "elite", "boss"],
     "environments": ["bg_default"],
     "audioCues": ["bgm_main", "sfx_attack", "sfx_hit", "sfx_win", "sfx_lose"]
+  },
+  "atlasFrameSources": {
+    "player_idle": "player_idle",
+    "player_walk_0": "player_walk_0",
+    "player_walk_1": "player_walk_1",
+    "player_attack": "player_attack",
+    "player_hurt": "player_hurt",
+    "player_death": "player_death",
+    "enemy_wild_rhino": "enemy_wild_rhino",
+    "enemy_green_scaled_eagle": "enemy_green_scaled_eagle",
+    "enemy_qiongqi_cub": "enemy_qiongqi_cub",
+    "env_bg_desert": "env_bg_desert"
   },
   "semanticAssetMapping": {
     "player": {
@@ -27,8 +45,8 @@
     },
     "audio": {
       "bgm_main": "node1_battle",
-      "sfx_attack": "sfx_attack_slash",
-      "sfx_hit": "sfx_hit_impact",
+      "sfx_attack": "hit",
+      "sfx_hit": "hit",
       "sfx_win": "victory_sting",
       "sfx_lose": "defeat_sting"
     }

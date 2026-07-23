@@ -9,7 +9,17 @@ import {
 } from '../../lib/contracts/index.js';
 
 const LAST_RESULT_KEY = '__LW_SURVIVOR_DEMO_LAST_RESULT__';
+/** Stable demo identity for E2E reports (not production releaseEligible). */
+const DEMO_CARD_ID = 'survivor_horde';
+const DEMO_SPEC_HASH = 'survivor_horde:core_demo:v1';
+const DEMO_RUNTIME_VERSION = 'minigame_master.core.demo.survivor_horde';
 window.Phaser = Phaser;
+window.__LW_SURVIVOR_DEMO_META__ = {
+    cardId: DEMO_CARD_ID,
+    specHash: DEMO_SPEC_HASH,
+    runtimeVersion: DEMO_RUNTIME_VERSION,
+    releaseEligible: false
+};
 
 const controls = {
     start: document.getElementById('lw-start'),
@@ -26,7 +36,14 @@ function setControlMode(mode) {
 
 function writeTestState(patch = {}) {
     const previous = testStateNode.textContent ? JSON.parse(testStateNode.textContent) : {};
-    const next = { ...previous, ...patch };
+    const next = {
+        cardId: DEMO_CARD_ID,
+        specHash: DEMO_SPEC_HASH,
+        runtimeVersion: DEMO_RUNTIME_VERSION,
+        releaseEligible: false,
+        ...previous,
+        ...patch
+    };
     testStateNode.textContent = JSON.stringify(next);
     Object.entries(next).forEach(([key, value]) => {
         if (typeof value !== 'object') {

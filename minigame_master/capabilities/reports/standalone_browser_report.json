@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "loreweaver.standalone-browser-report.v1",
+  "status": "passed",
+  "createdAt": "2026-07-23T08:53:52.670Z",
+  "cardId": "survivor_horde",
+  "specHash": "survivor_horde:core_demo:v1",
+  "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+  "releaseEligible": false,
+  "sourceReport": "runtime_e2e_survivor_horde_latest.json",
+  "assertions": {
+    "mobile_720x1280_startButton": true,
+    "mobile_720x1280_hasSpecHash": true,
+    "mobile_720x1280_releaseEligibleFalse": true,
+    "mobile_720x1280_running": true,
+    "mobile_720x1280_timerUpdated": true,
+    "mobile_720x1280_canvasNonblank": true,
+    "mobile_720x1280_specHash": true,
+    "mobile_720x1280_combatLoop": true,
+    "mobile_720x1280_retreat": true,
+    "mobile_720x1280_menu": true,
+    "winResultSuccess": true,
+    "winResultReason": true,
+    "desktop_1280x800_startButton": true,
+    "desktop_1280x800_hasSpecHash": true,
+    "desktop_1280x800_releaseEligibleFalse": true,
+    "desktop_1280x800_running": true,
+    "desktop_1280x800_timerUpdated": true,
+    "desktop_1280x800_canvasNonblank": true,
+    "desktop_1280x800_specHash": true,
+    "desktop_1280x800_combatLoop": true,
+    "desktop_1280x800_retreat": true,
+    "desktop_1280x800_menu": true,
+    "consoleErrors": 0
+  },
+  "errors": [],
+  "flows": [
+    {
+      "id": "mobile_enter_run_retreat",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_enter_run_win_force",
+      "status": "passed"
+    },
+    {
+      "id": "desktop_enter_run_retreat",
+      "status": "passed"
+    }
+  ]
+}

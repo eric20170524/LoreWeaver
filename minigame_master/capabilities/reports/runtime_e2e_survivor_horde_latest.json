@@ -1,0 +1,224 @@
+{
+  "schemaVersion": "loreweaver.browser-e2e.v1",
+  "gate": "runtime_e2e",
+  "target": "minigame_master/core/demo/survivor_horde",
+  "cardId": "survivor_horde",
+  "status": "passed",
+  "createdAt": "2026-07-23T08:53:52.670Z",
+  "method": "Playwright chromium against Vite-served survivor_horde demo",
+  "viewports": [
+    {
+      "id": "mobile_720x1280",
+      "width": 720,
+      "height": 1280
+    },
+    {
+      "id": "desktop_1280x800",
+      "width": 1280,
+      "height": 800
+    }
+  ],
+  "platforms": [
+    "mobile_720x1280",
+    "desktop_1280x800"
+  ],
+  "specHash": "survivor_horde:core_demo:v1",
+  "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+  "releaseEligible": false,
+  "modifiers": [
+    "hazard_telegraph",
+    "defend_core"
+  ],
+  "assetManifestHash": "b82e7d7496fd6a92",
+  "server": {
+    "url": "http://127.0.0.1:49236/",
+    "viteLogTail": "\n  VITE v6.4.3  ready in 154 ms\n\n  ➜  Local:   http://127.0.0.1:49236/\n"
+  },
+  "assertions": {
+    "mobile_720x1280_startButton": true,
+    "mobile_720x1280_hasSpecHash": true,
+    "mobile_720x1280_releaseEligibleFalse": true,
+    "mobile_720x1280_running": true,
+    "mobile_720x1280_timerUpdated": true,
+    "mobile_720x1280_canvasNonblank": true,
+    "mobile_720x1280_specHash": true,
+    "mobile_720x1280_combatLoop": true,
+    "mobile_720x1280_retreat": true,
+    "mobile_720x1280_menu": true,
+    "winResultSuccess": true,
+    "winResultReason": true,
+    "desktop_1280x800_startButton": true,
+    "desktop_1280x800_hasSpecHash": true,
+    "desktop_1280x800_releaseEligibleFalse": true,
+    "desktop_1280x800_running": true,
+    "desktop_1280x800_timerUpdated": true,
+    "desktop_1280x800_canvasNonblank": true,
+    "desktop_1280x800_specHash": true,
+    "desktop_1280x800_combatLoop": true,
+    "desktop_1280x800_retreat": true,
+    "desktop_1280x800_menu": true,
+    "consoleErrors": 0
+  },
+  "observedState": {
+    "byViewport": {
+      "mobile_720x1280": {
+        "duringStart": {
+          "cardId": "survivor_horde",
+          "specHash": "survivor_horde:core_demo:v1",
+          "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+          "releaseEligible": false,
+          "mode": "run",
+          "status": "running",
+          "hasLastResult": false,
+          "nodeId": "survivor_horde_demo",
+          "hp": 120,
+          "timer": 30,
+          "kills": 0,
+          "score": 0
+        },
+        "duringCombat": {
+          "cardId": "survivor_horde",
+          "specHash": "survivor_horde:core_demo:v1",
+          "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+          "releaseEligible": false,
+          "mode": "run",
+          "status": "running",
+          "hasLastResult": false,
+          "nodeId": "survivor_horde_demo",
+          "hp": 120,
+          "timer": 25,
+          "kills": 1,
+          "score": 0
+        },
+        "runningCanvas": {
+          "present": true,
+          "width": 720,
+          "height": 1280,
+          "dataUrlLength": 54482,
+          "nonBlank": true
+        },
+        "combatProbe": {
+          "adapterStatus": "running",
+          "enemies": 6,
+          "bullets": 1
+        },
+        "afterRetreat": {
+          "cardId": "survivor_horde",
+          "specHash": "survivor_horde:core_demo:v1",
+          "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+          "releaseEligible": false,
+          "mode": "result",
+          "status": "ended",
+          "hasLastResult": false,
+          "nodeId": "survivor_horde_demo",
+          "hp": 120,
+          "timer": 25,
+          "kills": 1,
+          "score": 0,
+          "resultReason": "retreated",
+          "resultSuccess": false,
+          "rewards": {}
+        }
+      },
+      "desktop_1280x800": {
+        "duringStart": {
+          "cardId": "survivor_horde",
+          "specHash": "survivor_horde:core_demo:v1",
+          "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+          "releaseEligible": false,
+          "mode": "run",
+          "status": "running",
+          "hasLastResult": false,
+          "nodeId": "survivor_horde_demo",
+          "hp": 120,
+          "timer": 30,
+          "kills": 0,
+          "score": 0
+        },
+        "duringCombat": {
+          "cardId": "survivor_horde",
+          "specHash": "survivor_horde:core_demo:v1",
+          "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+          "releaseEligible": false,
+          "mode": "run",
+          "status": "running",
+          "hasLastResult": false,
+          "nodeId": "survivor_horde_demo",
+          "hp": 120,
+          "timer": 27,
+          "kills": 0,
+          "score": 0
+        },
+        "runningCanvas": {
+          "present": true,
+          "width": 1280,
+          "height": 800,
+          "dataUrlLength": 56606,
+          "nonBlank": true
+        },
+        "combatProbe": {
+          "adapterStatus": "running",
+          "enemies": 4,
+          "bullets": 1
+        },
+        "afterRetreat": {
+          "cardId": "survivor_horde",
+          "specHash": "survivor_horde:core_demo:v1",
+          "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+          "releaseEligible": false,
+          "mode": "result",
+          "status": "ended",
+          "hasLastResult": false,
+          "nodeId": "survivor_horde_demo",
+          "hp": 120,
+          "timer": 27,
+          "kills": 0,
+          "score": 0,
+          "resultReason": "retreated",
+          "resultSuccess": false,
+          "rewards": {}
+        }
+      }
+    },
+    "demoMeta": {
+      "cardId": "survivor_horde",
+      "specHash": "survivor_horde:core_demo:v1",
+      "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+      "releaseEligible": false
+    },
+    "afterWin": {
+      "cardId": "survivor_horde",
+      "specHash": "survivor_horde:core_demo:v1",
+      "runtimeVersion": "minigame_master.core.demo.survivor_horde",
+      "releaseEligible": false,
+      "mode": "result",
+      "status": "ended",
+      "hasLastResult": true,
+      "nodeId": "survivor_horde_demo",
+      "hp": 120,
+      "timer": 30,
+      "kills": 0,
+      "score": 0,
+      "resultReason": "e2e_completed",
+      "resultSuccess": true,
+      "rewards": {
+        "demoToken": 3
+      }
+    }
+  },
+  "errors": [],
+  "flows": [
+    {
+      "id": "mobile_enter_run_retreat",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_enter_run_win_force",
+      "status": "passed"
+    },
+    {
+      "id": "desktop_enter_run_retreat",
+      "status": "passed"
+    }
+  ]
+}

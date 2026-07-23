@@ -151,6 +151,18 @@ export function initializePhaserGame(
 ): Phaser.Game {
   const imageGenAssetPaths = getImageGenAssetPaths(options.workspaceId);
   const runtimeArtBinder = new RuntimeArtBinder();
+  // Workbench defaults to prototype (procedural fallback + artSource telemetry).
+  // Production hard-fail: options.artRuntimeMode / window.__LOREWEAVER_ART_RUNTIME_MODE__ / knobs.artRuntimeMode
+  const resolveArtRuntimeMode = (): "prototype" | "production" => {
+    const fromOptions = (options as any).artRuntimeMode || (options as any).runtimeArtMode;
+    const fromWindow =
+      typeof window !== "undefined"
+        ? (window as any).__LOREWEAVER_ART_RUNTIME_MODE__
+        : null;
+    const raw = String(fromOptions || fromWindow || "prototype").toLowerCase();
+    return raw === "production" ? "production" : "prototype";
+  };
+  runtimeArtBinder.setRuntimeMode(resolveArtRuntimeMode());
   
   // Custom scenes configuration
   class BootScene extends Phaser.Scene {
@@ -166,6 +178,8 @@ export function initializePhaserGame(
           (window as any).__LOREWEAVER_ART_PIPELINE__ = {
             ...prev,
             status: "error",
+            runtimeMode: runtimeArtBinder.runtimeMode,
+            allowProceduralFallback: runtimeArtBinder.allowProceduralFallback,
             manifestError: `failed to load ${file?.src || file?.key || "unknown imagegen asset"}`,
             updatedAt: new Date().toISOString()
           };
@@ -176,15 +190,27 @@ export function initializePhaserGame(
     create() {
       const { width, height } = this.scale;
       const bootKnobs = spec.nodes?.[0]?.gameplay?.knobs || {};
+      const knobMode = (bootKnobs as any).artRuntimeMode || (bootKnobs as any).runtimeArtMode;
+      if (knobMode) {
+        runtimeArtBinder.setRuntimeMode(String(knobMode).toLowerCase() === "production" ? "production" : "prototype");
+      }
       const artStatus = runtimeArtBinder.install(this, imageGenAssetPaths);
       this.game.registry.set("runtimeArtBinder", runtimeArtBinder);
       this.game.registry.set("runtimeArt", runtimeArtBinder.createContext(this));
       if (artStatus?.status === "loaded") {
-        onLog(`🎨 美术 atlas 已接线：${artStatus.loadedCount}/${artStatus.expectedCount} 帧 (RuntimeArtBinder)`);
+        onLog(`🎨 美术 atlas 已接线：${artStatus.loadedCount}/${artStatus.expectedCount} 帧 (RuntimeArtBinder, mode=${runtimeArtBinder.runtimeMode})`);
       } else if (artStatus?.status === "skipped_no_workspace_assets") {
-        onLog(`🎨 未找到 workspace imagegen 资源，玩法将使用程序化兜底精灵。`);
+        if (runtimeArtBinder.isProduction()) {
+          onLog(`⚠️ 生产模式未找到 workspace imagegen 资源：关键角色创建时将硬失败（ArtAssetMissingError）。`);
+        } else {
+          onLog(`🎨 未找到 workspace imagegen 资源，原型模式将使用程序化兜底（artSource=fallback|primitive）。`);
+        }
       } else if (artStatus?.status === "error") {
-        onLog(`⚠️ 美术 atlas 接线失败，将回退程序化精灵。`);
+        if (runtimeArtBinder.isProduction()) {
+          onLog(`⚠️ 美术 atlas 接线失败（生产模式）：关键角色创建时将硬失败。`);
+        } else {
+          onLog(`⚠️ 美术 atlas 接线失败，原型模式将回退程序化精灵。`);
+        }
       }
       
       // Draw background
@@ -545,6 +571,57 @@ export function initializePhaserGame(
         const mergedRaw = this.node.gameplay.knobs
           ? { ...baseKnobs, ...this.node.gameplay.knobs, cardId }
           : baseKnobs;
+
+        // Per-node art runtime mode override (prototype default; production hard-fails missing critical art)
+        if (artBinder && (mergedRaw.artRuntimeMode || mergedRaw.runtimeArtMode)) {
+          const m = String(mergedRaw.artRuntimeMode || mergedRaw.runtimeArtMode).toLowerCase();
+          artBinder.setRuntimeMode(m === "production" ? "production" : "prototype");
+        }
+        // survivor_horde golden critical set: fail early in production if atlas did not install
+        if (artBinder && artBinder.isProduction() && cardId === "survivor_horde") {
+          try {
+            artBinder.validateRequiredAssets(
+              {
+                playerClips: ["idle", "walk", "attack", "hurt", "death"],
+                enemyKinds: ["mob", "elite", "boss"],
+                environments: ["bg_default"]
+              },
+              {
+                enemyIdMap: {
+                  mob: "wild_rhino",
+                  elite: "green_scaled_eagle",
+                  boss: "qiongqi_cub"
+                },
+                envKeyMap: { bg_default: "lw_art_env_bg_desert" },
+                semanticAssetMapping: {
+                  player: {
+                    idle: "lw_runtime_player_idle",
+                    walk: "lw_runtime_player_walk",
+                    attack: "lw_runtime_player_attack",
+                    hurt: "lw_runtime_player_hurt",
+                    death: "lw_runtime_player_death"
+                  },
+                  enemy: {
+                    mob: "lw_enemy_wild_rhino",
+                    elite: "lw_enemy_green_scaled_eagle",
+                    boss: "lw_enemy_qiongqi_cub"
+                  },
+                  environment: { bg_default: "lw_art_env_bg_desert" }
+                }
+              }
+            );
+          } catch (artErr: any) {
+            const msg = artErr?.message || String(artErr);
+            onLog(`⚠️ production art validation failed: ${msg}`);
+            this.testHooks?.recordError?.(artErr);
+            artBinder.syncToTestHooks(this.testHooks);
+            // Re-throw so production does not silently continue with missing critical art
+            throw artErr;
+          }
+        }
+        if (artBinder && this.testHooks) {
+          artBinder.syncToTestHooks(this.testHooks);
+        }
         // Shared PlayabilityContract — card-standard + legacy aliases
         const mergedKnobs = normalizePlayabilityKnobs(cardId, mergedRaw, {
           durationLimit: this.node.durationLimit,
