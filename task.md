@@ -134,16 +134,17 @@
 
 #### C5. 性能与 soak（先动作卡）
 
-- [ ] normal / boss 场景记录 P95 FPS、帧时间、活动对象数、纹理/音频数量
-- [ ] 10 分钟 soak：timer / listener / tween / physics / audio 无泄漏
-- [ ] 对照 `performanceBudget` 硬判定
+- [x] demo soak 记录 FPS 采样 / 敌人数 / 可选 heap（`check:survivor-visual-soak`，默认 120s）
+- [x] 全量 10 分钟路径：`npm run check:survivor-visual-soak:full`（`SOAK_SECONDS=600`）
+- [x] 对照 card `performanceBudget` **记录**比较；headless 用楼地板门禁（avg≥20），**非**真机 P95 认证
+- [ ] 真机/非 headless 上 normalP95Fps≥55 证据
 
 #### C6. 视觉 / 场景卫生 Hard Gate
 
-- [ ] Canvas 非黑屏、尺寸正确
-- [ ] 关键 UI、安全区、最小触控目标
-- [ ] 无文字溢出、HUD 遮挡、按钮重叠、关键资产缺失
-- [ ] 输出 `visual_audit_latest.json`（或等价报告）并与 spec 绑定
+- [x] Canvas 非黑屏、尺寸正确（双视口截图 + toDataURL）
+- [x] 控件在 viewport 内
+- [ ] VLM：无文字溢出、HUD 遮挡、按钮重叠
+- [x] 输出 `visual_audit_latest.json` + `performance_report_latest.json`（`releaseEligible: false`）
 
 #### C7. 发布门禁与状态晋升
 

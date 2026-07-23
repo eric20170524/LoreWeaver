@@ -18,6 +18,8 @@
     "check:survivor-golden-atlas": "node productize/jobs/check-survivor-golden-atlas.js",
     "check:survivor-e2e": "node productize/jobs/run-survivor-e2e.mjs",
     "check:standalone-survivor-e2e": "node productize/jobs/run-standalone-survivor-e2e.mjs",
+    "check:survivor-visual-soak": "node productize/jobs/run-survivor-visual-soak.mjs",
+    "check:survivor-visual-soak:full": "SOAK_SECONDS=600 node productize/jobs/run-survivor-visual-soak.mjs",
     "productize:compile": "node productize/compile-workspace.mjs",
     "productize:export": "tsx productize/export-standalone.mjs",
     "productize:card": "node productize/validate-gameplay-card.mjs",

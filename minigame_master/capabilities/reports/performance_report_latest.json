@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "loreweaver.performance-report.v1",
+  "gate": "performance_soak",
+  "target": "minigame_master/core/demo/survivor_horde",
+  "cardId": "survivor_horde",
+  "status": "passed",
+  "createdAt": "2026-07-23T09:18:08.028Z",
+  "method": "Playwright headless rAF FPS + enemy count + optional heap",
+  "soakSeconds": 600,
+  "fullDodSeconds": 600,
+  "isFullDodDuration": true,
+  "releaseEligible": false,
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "maxActiveEnemies": 50
+  },
+  "assertions": {
+    "soakSamplesCollected": true,
+    "avgFpsAboveFloor": true,
+    "noCatastrophicFps": true,
+    "enemyCountBounded": true,
+    "heapNotExplosive": true,
+    "noConsoleErrorsDuringSoak": true,
+    "budgetComparisonRecorded": true
+  },
+  "summary": {
+    "minFps": 47,
+    "avgFps": 60.5,
+    "p95Low": 60,
+    "p95High": 61,
+    "maxEnemy": 36,
+    "heapGrowthRatio": 1,
+    "sampleCount": 594
+  },
+  "budgetMetInHeadless": true,
+  "errors": [],
+  "notes": [
+    "Headless Chromium FPS is not device-class; floor gates used (avg>=20).",
+    "Set SOAK_SECONDS=600 for full 10-minute DoD soak.",
+    "production_ready still requires human playtest + device-class FPS evidence."
+  ]
+}

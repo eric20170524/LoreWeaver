@@ -53,17 +53,32 @@ function writeTestState(patch = {}) {
     return next;
 }
 
+function readDemoDurationSec() {
+    try {
+        const q = new URLSearchParams(window.location.search || '');
+        const n = Number(q.get('durationSec') || q.get('duration') || 30);
+        if (Number.isFinite(n) && n >= 10 && n <= 3600) return Math.floor(n);
+    } catch {
+        /* ignore */
+    }
+    return 30;
+}
+
 function createDemoPayload() {
+    const durationSec = readDemoDurationSec();
+    const bossAt = Math.max(12, Math.min(durationSec - 8, Math.floor(durationSec * 0.6)));
     return createNodePayload({
         nodeId: 'survivor_horde_demo',
         nodeConfig: {
             title: 'Survivor Horde Demo',
-            duration: 30,
+            duration: durationSec,
             rewards: { demoToken: 3 },
             failPenalty: { rewardMultiplier: 0.5 },
             gameplay: {
                 adapter: 'survivor_horde',
                 knobs: {
+                    durationSec,
+                    duration: durationSec,
                     player: {
                         hp: 120,
                         speed: 180,
@@ -111,7 +126,7 @@ function createDemoPayload() {
                     },
                     boss: {
                         id: 'demo_boss',
-                        spawnAt: 18,
+                        spawnAt: bossAt,
                         hp: 36,
                         speed: 48,
                         damage: 18,

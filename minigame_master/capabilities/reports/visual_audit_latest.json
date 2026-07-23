@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "loreweaver.visual-audit.v1",
+  "gate": "visual_audit",
+  "target": "minigame_master/core/demo/survivor_horde",
+  "cardId": "survivor_horde",
+  "status": "passed",
+  "createdAt": "2026-07-23T09:18:08.020Z",
+  "method": "Playwright screenshots + canvas toDataURL non-blank probe",
+  "releaseEligible": false,
+  "assertions": {
+    "mobile_720x1280_canvasPresent": true,
+    "mobile_720x1280_canvasSized": true,
+    "mobile_720x1280_notBlackScreen": true,
+    "mobile_720x1280_screenshotWritten": true,
+    "mobile_720x1280_controlsInViewport": true,
+    "desktop_1280x800_canvasPresent": true,
+    "desktop_1280x800_canvasSized": true,
+    "desktop_1280x800_notBlackScreen": true,
+    "desktop_1280x800_screenshotWritten": true,
+    "desktop_1280x800_controlsInViewport": true
+  },
+  "screenshots": [
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/survivor_horde/mobile_720x1280_menu.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/survivor_horde/mobile_720x1280_running.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/survivor_horde/desktop_1280x800_menu.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/survivor_horde/desktop_1280x800_running.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/survivor_horde/soak_600s_end.png"
+  ],
+  "observedState": {
+    "canvas_mobile_720x1280": {
+      "present": true,
+      "width": 720,
+      "height": 1280,
+      "cssWidth": 720,
+      "cssHeight": 1280,
+      "nonBlank": true,
+      "dataUrlLength": 52926,
+      "method": "dataUrl"
+    },
+    "canvas_desktop_1280x800": {
+      "present": true,
+      "width": 1280,
+      "height": 800,
+      "cssWidth": 1280,
+      "cssHeight": 800,
+      "nonBlank": true,
+      "dataUrlLength": 53034,
+      "method": "dataUrl"
+    }
+  },
+  "errors": [],
+  "notes": [
+    "Deterministic checks only (no VLM).",
+    "Not a full HUD overflow VLM audit."
+  ]
+}

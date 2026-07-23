@@ -1,52 +1,51 @@
 # minigame_master 关卡生产化进度与质量报告 (report.md)
 
-> **当前总体状态**: 进行中 / **C2+C3 浏览器证据已扩展**（demo 失败/暂停 + standalone 真 atlas）  
+> **当前总体状态**: 进行中 / **C5–C6 visual+soak 门禁已落地**（demo；默认 120s，全量 600s）  
 > **更新时间**: 2026-07-23  
-> **首张竖切**: `survivor_horde` · **`runtime_ready`** · **`releaseEligible: false`**  
-> **禁止**: 勿因 demo/standalone 冒烟通过而晋升 `production_ready`
+> **首张竖切**: `survivor_horde` · **`runtime_ready`** · **`releaseEligible: false`**
 
 ---
 
 ## 阶段进度
 
-| 步骤 | 状态 | 命令 / 证据 |
+| 步骤 | 状态 | 命令 |
 | --- | --- | --- |
-| A1 美术运行核 | 完成 | `npm run check:art-binder` |
-| N+2 golden atlas | 完成 | `npm run check:survivor-golden-atlas` |
-| C2 demo E2E 双视口 | 完成 | `npm run check:survivor-e2e` |
-| **C3 暂停/自然失败** | **完成** | demo E2E 内嵌 |
-| **C3 standalone 真 atlas** | **完成** | `npm run check:standalone-survivor-e2e` |
-| C5–C6 视觉 + soak | 未做 | — |
+| A1 美术运行核 | 完成 | `check:art-binder` |
+| N+2 golden atlas | 完成 | `check:survivor-golden-atlas` |
+| C2/C3 E2E demo + standalone | 完成 | `check:survivor-e2e` · `check:standalone-survivor-e2e` |
+| **C5 visual** | **完成（确定性）** | `check:survivor-visual-soak` |
+| **C6 soak** | **完成（可配置时长）** | 同上 · full=`check:survivor-visual-soak:full` |
+| VLM / 真机 FPS / 真人试玩 | 未做 | — |
 | C7 production_ready | 未做 | 0 张 |
 
 ---
 
-## 最新 E2E 摘要
+## C5–C6 摘要
 
-### Demo (`check:survivor-e2e`)
+```bash
+npm run check:survivor-visual-soak          # default SOAK_SECONDS=120
+SOAK_SECONDS=90 npm run check:survivor-visual-soak   # quick
+npm run check:survivor-visual-soak:full     # 600s DoD
+```
 
-- Mobile：pause/resume · `hp_zero` 失败 · force 胜利  
-- Desktop：撤退  
-- `specHash`: `survivor_horde:core_demo:v1`  
-- errors: []
+产出：
 
-### Standalone export (`check:standalone-survivor-e2e`)
+- `visual_audit_latest.json`
+- `performance_report_latest.json`
+- `visual/survivor_horde/*.png`
 
-- 包：`standalone-20260611-060754-719406-20260722064022`  
-- `artAtlasLoaded: true`  
-- `adapterRunning: true`  
-- `specHash` 与 release-manifest 对齐  
-- `releaseEligible: false`
+本机已跑 **全量 600s** soak：
 
-详情：
+- visual: **passed**（5 张截图）  
+- performance: **passed** · `isFullDodDuration: true` · avgFps≈60.5 · minFps≈47 · maxEnemy=36 · heapGrowth≈1  
+- **releaseEligible 仍 false**
 
-- [step_C2](docs/reports/step_C2_survivor_playwright_e2e.md)  
-- [step_C3](docs/reports/step_C3_standalone_and_fail_pause.md)
+详情：[step_C5C6_visual_soak.md](docs/reports/step_C5C6_visual_soak.md)
 
 ---
 
-## 下一步
+## 下一步（C7 前）
 
-1. 可选：IDE 工作台 UI 进关路径 E2E  
-2. C5–C6 视觉 + 10 分钟 soak  
-3. 证据齐备后再 C7 晋升（勿提前改 card status）  
+1. 可选 VLM 文字溢出 / 真机帧率记录  
+2. 真人完整试玩签字  
+3. 汇总证据包后改 card：`gate_verified` → `production_ready`（勿跳步）  
