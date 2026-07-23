@@ -1,0 +1,22 @@
+{
+  "id": 22,
+  "title": "横版横扫清刀",
+  "intro": "卷轴横版推关，连招清剿沿途波次魔物。",
+  "mechanics": "side_scrolling_brawler",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "side_scrolling_brawler",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": 14,
+  "title": "平台逃逸试炼",
+  "intro": "快速跳跃穿过崩塌平台，在倒计时结束前逃离风险区域。",
+  "mechanics": "platform_escape",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "platform_escape",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

@@ -1,0 +1,544 @@
+{
+  "schemaVersion": "loreweaver.node-smoke.v1",
+  "gate": "production_prep→asset_confirm",
+  "status": "passed",
+  "score": 100,
+  "createdAt": "2026-07-23T07:32:47.208Z",
+  "workspaceId": "20260611-060754-719406",
+  "workspacePath": "/Users/lm/pyProj/LoreWeaver/data/workspaces/20260611-060754-719406",
+  "budget": {
+    "simulatedSecPerNode": 10,
+    "wallMsPerNode": 3000
+  },
+  "owners": {
+    "gate": "qa",
+    "runtime": "code",
+    "contract": "gameplay",
+    "softWarnings": [
+      "art",
+      "audio"
+    ]
+  },
+  "summary": {
+    "total": 23,
+    "passed": 23,
+    "failed": 0,
+    "score": 100
+  },
+  "perNode": [
+    {
+      "id": 1,
+      "title": "荒域历练",
+      "cardId": "survivor_horde",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 6,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 2,
+      "title": "千崖秘径",
+      "cardId": "drag_collect_grid",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 2,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 3,
+      "title": "镜魄试炼场",
+      "cardId": "rhythm_timing",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 2,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 4,
+      "title": "天潮巢",
+      "cardId": "dodge_counter_boss",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 2,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "ui_progress",
+      "playableKnown": true
+    },
+    {
+      "id": 5,
+      "title": "石都大战",
+      "cardId": "drag_to_core",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "ui_progress",
+      "playableKnown": true
+    },
+    {
+      "id": 6,
+      "title": "药都风云",
+      "cardId": "energy_balance",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 2,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 7,
+      "title": "三千道州天才战",
+      "cardId": "observe_capture",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 2,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "ui_progress",
+      "playableKnown": true
+    },
+    {
+      "id": 8,
+      "title": "仙古遗地",
+      "cardId": "node_iframe_microgame",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 0,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "iframe: contract-only",
+      "playableKnown": true
+    },
+    {
+      "id": 9,
+      "title": "天神书院",
+      "cardId": "pressure_survival",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 10,
+      "title": "边荒帝关",
+      "cardId": "reaction_pick",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 11,
+      "title": "异域大战",
+      "cardId": "sequence_synthesis",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 12,
+      "title": "终极血战",
+      "cardId": "shooter_duel",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 13,
+      "title": "迷宫探索试炼",
+      "cardId": "maze_exploration_choice",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 2,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "ui_progress",
+      "playableKnown": true
+    },
+    {
+      "id": 14,
+      "title": "平台逃逸试炼",
+      "cardId": "platform_escape",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 15,
+      "title": "危局收集试炼",
+      "cardId": "hazard_collect_waves",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 16,
+      "title": "连击解谜试炼",
+      "cardId": "sequence_puzzle_combo",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 17,
+      "title": "律动拾取试炼",
+      "cardId": "rhythm_then_pickup",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "ui_progress",
+      "playableKnown": true
+    },
+    {
+      "id": 18,
+      "title": "划界圈地试炼",
+      "cardId": "qix_area_capture",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 2,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "ui_progress",
+      "playableKnown": true
+    },
+    {
+      "id": 19,
+      "title": "点拖推进试炼",
+      "cardId": "point_drag_progression",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 4,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 20,
+      "title": "符文连线试炼",
+      "cardId": "rune_connect_sequence",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 21,
+      "title": "对话抉择判定",
+      "cardId": "branching_dialogue_check",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "ui_progress",
+      "playableKnown": true
+    },
+    {
+      "id": 22,
+      "title": "横版横扫清刀",
+      "cardId": "side_scrolling_brawler",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 2,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "",
+      "playableKnown": true
+    },
+    {
+      "id": 23,
+      "title": "回合策略对抗",
+      "cardId": "turn_based_skill_battle",
+      "enter": true,
+      "spawnOrProgress": true,
+      "retreat": true,
+      "noCrash": true,
+      "ms": 1,
+      "ok": true,
+      "owners": [],
+      "contractIssues": [],
+      "warnings": [
+        {
+          "code": "no_envKey",
+          "owner": "art",
+          "msg": "missing envKey"
+        },
+        {
+          "code": "no_bgmKey",
+          "owner": "audio",
+          "msg": "missing bgmKey"
+        }
+      ],
+      "runtimeErrors": [],
+      "note": "ui_progress",
+      "playableKnown": true
+    }
+  ],
+  "suggestedHandoffs": [],
+  "method": "core/lib/testing/runAdapterSmoke"
+}

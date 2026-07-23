@@ -1,0 +1,22 @@
+{
+  "id": 20,
+  "title": "符文连线试炼",
+  "intro": "一笔画连通同系符文节点，激活大阵护罩。",
+  "mechanics": "rune_connect_sequence",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "rune_connect_sequence",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

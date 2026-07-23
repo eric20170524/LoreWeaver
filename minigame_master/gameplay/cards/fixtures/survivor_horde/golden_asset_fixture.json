@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "2.0",
+  "fixtureId": "survivor_horde_golden_asset_v1",
+  "cardId": "survivor_horde",
+  "mode": "production_golden",
+  "requiredAssets": {
+    "playerClips": ["idle", "walk", "attack", "hurt", "death"],
+    "enemyKinds": ["mob", "elite", "boss"],
+    "environments": ["bg_default"],
+    "audioCues": ["bgm_main", "sfx_attack", "sfx_hit", "sfx_win", "sfx_lose"]
+  },
+  "semanticAssetMapping": {
+    "player": {
+      "idle": "lw_runtime_player_idle",
+      "walk": "lw_runtime_player_walk",
+      "attack": "lw_runtime_player_attack",
+      "hurt": "lw_runtime_player_hurt",
+      "death": "lw_runtime_player_death"
+    },
+    "enemy": {
+      "mob": "lw_enemy_wild_rhino",
+      "elite": "lw_enemy_green_scaled_eagle",
+      "boss": "lw_enemy_qiongqi_cub"
+    },
+    "environment": {
+      "bg_default": "lw_art_env_bg_desert"
+    },
+    "audio": {
+      "bgm_main": "node1_battle",
+      "sfx_attack": "sfx_attack_slash",
+      "sfx_hit": "sfx_hit_impact",
+      "sfx_win": "victory_sting",
+      "sfx_lose": "defeat_sting"
+    }
+  },
+  "fallbackPolicy": {
+    "productionMode": {
+      "allowProceduralFallback": false,
+      "onMissingAsset": "throw_hard_error",
+      "releaseEligible": true
+    },
+    "prototypeMode": {
+      "allowProceduralFallback": true,
+      "exposeStatusInHooks": true,
+      "telemetryTag": "artSource:fallback"
+    }
+  }
+}

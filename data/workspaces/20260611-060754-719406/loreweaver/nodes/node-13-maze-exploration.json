@@ -1,0 +1,22 @@
+{
+  "id": 13,
+  "title": "迷宫探索试炼",
+  "intro": "在迷宫中穿梭探索，做出选择避开陷阱并收集资源。",
+  "mechanics": "maze_exploration_choice",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "maze_exploration_choice",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

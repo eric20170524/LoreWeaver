@@ -146,7 +146,8 @@ export async function smokeAdapter(node, opts = {}) {
                 (typeof st.score === 'number' && st.score > 0) ||
                 (typeof st.spawnedTotal === 'number' && st.spawnedTotal > 0) ||
                 (typeof st.fallers === 'number' && st.fallers > 0) ||
-                st.timer != null
+                st.timer != null ||
+                (adapter.status === 'running' && mock.timers.some((t) => !t.removed))
             ) {
                 result.spawnOrProgress = true;
             }
@@ -186,7 +187,15 @@ export async function smokeAdapter(node, opts = {}) {
                     'turn_based_skill_battle',
                     'branching_dialogue_check',
                     'sequence_synthesis',
-                    'rhythm_timing'
+                    'rhythm_timing',
+                    'maze_exploration_choice',
+                    'sequence_puzzle_combo',
+                    'rhythm_then_pickup',
+                    'qix_area_capture',
+                    'dodge_counter_boss',
+                    'drag_to_core',
+                    'observe_capture',
+                    'reaction_pick'
                 ].includes(cardId)
             ) {
                 result.spawnOrProgress = true;
@@ -202,7 +211,7 @@ export async function smokeAdapter(node, opts = {}) {
                 const reason = r?.reason || onEndResult?.reason;
                 if (reason === 'retreated' || onEndResult?.reason === 'retreated') {
                     result.retreat = true;
-                } else if (onEndResult && onEndResult.success === false) {
+                } else if ((onEndResult && onEndResult.success === false) || (r && r.success === false)) {
                     result.retreat = true;
                 }
             }

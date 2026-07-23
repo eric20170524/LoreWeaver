@@ -1,0 +1,22 @@
+{
+  "id": 18,
+  "title": "划界圈地试炼",
+  "intro": "划线圈定领地，封锁凶兽活动范围。",
+  "mechanics": "qix_area_capture",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "qix_area_capture",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

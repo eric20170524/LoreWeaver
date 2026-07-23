@@ -6,15 +6,15 @@
     "金阙君：纵使背负裂天重城，我仍可踏碎群星！",
     "星骁：万象化影，万影归一！破阵！"
   ],
-  "mechanics": "turn_based_skill_battle",
+  "mechanics": "shooter_duel",
   "rewards": "气血精华 +999999，纯血 +100，仙王道果",
   "goalValue": 600,
   "resourceMultiplier": 60,
   "difficulty": 12,
   "durationLimit": 600,
   "gameplay": {
-    "adapter": "iframe",
-    "cardId": "turn_based_skill_battle",
+    "adapter": "phaser",
+    "cardId": "shooter_duel",
     "modifiers": [],
     "knobs": {
       "legacySceneClass": "Node12Scene",
@@ -45,7 +45,7 @@
       "sfxVictory": "victory_sting",
       "sfxDefeat": "defeat_sting",
       "bossBgmKey": "boss_theme_late",
-      "runtimeCardId": "turn_based_skill_battle",
+      "runtimeCardId": "shooter_duel",
       "shellRetreat": true
     },
     "patchLevel": "L2"

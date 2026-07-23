@@ -1,0 +1,22 @@
+{
+  "id": 21,
+  "title": "对话抉择判定",
+  "intro": "在机缘对话中做出正确问答选择，通过道心检验。",
+  "mechanics": "branching_dialogue_check",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "branching_dialogue_check",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

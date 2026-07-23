@@ -6,7 +6,7 @@
     "毒雾幻影：在此沉沦吧……",
     "星骁：区区毒雾，也想困住我？"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "energy_balance",
   "rewards": "气血精华 +10000，纯血 +4~6，圣药精华",
   "goalValue": 240,
   "resourceMultiplier": 6.2,
@@ -14,7 +14,7 @@
   "durationLimit": 240,
   "gameplay": {
     "adapter": "phaser",
-    "cardId": "survivor_horde",
+    "cardId": "energy_balance",
     "modifiers": [
       {
         "id": "poison_fog",
@@ -52,7 +52,7 @@
       "sfxVictory": "victory_sting",
       "sfxDefeat": "defeat_sting",
       "bossBgmKey": "boss_theme",
-      "runtimeCardId": "survivor_horde",
+      "runtimeCardId": "energy_balance",
       "shellRetreat": true
     },
     "patchLevel": "L3"

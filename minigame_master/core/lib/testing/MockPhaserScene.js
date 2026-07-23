@@ -203,7 +203,8 @@ export function createMockPhaser(width = 720, height = 1280) {
                 setBounds() { return this; },
                 startFollow() { return this; },
                 stopFollow() { return this; },
-                setScroll() { return this; }
+                setScroll() { return this; },
+                setDeadzone() { return this; }
             }
         },
         input: {
@@ -216,6 +217,12 @@ export function createMockPhaser(width = 720, height = 1280) {
         add: {
             circle(x, y, r) {
                 return new Circle(x, y, r);
+            },
+            ellipse(x, y, w, h) {
+                const e = new GameObject(x, y);
+                e.width = w;
+                e.height = h;
+                return e;
             },
             text(x, y, str) {
                 const t = new GameObject(x, y);

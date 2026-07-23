@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * RuntimeArtBinder Asset Contract Checker (P2 Task 4.1 - 4.3)
- * Inspects card requiredAssets definitions and verifies semantic role lookup logic.
+ * RuntimeArtBinder Asset Contract & Golden Fixture Checker (Phase A1 Task)
+ * Inspects card requiredAssets definitions, validates survivor_horde golden asset fixture,
+ * and enforces production/prototype fallback rules.
  */
 
 import fs from "node:fs";
@@ -13,9 +14,10 @@ import { createMockPhaser } from "../../minigame_master/core/lib/testing/MockPha
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "../..");
 const CARDS_DIR = path.join(LORE_ROOT, "minigame_master", "gameplay", "cards");
+const FIXTURE_PATH = path.join(CARDS_DIR, "fixtures", "survivor_horde", "golden_asset_fixture.json");
 
 function testArtBinderForCards() {
-  console.log("Running RuntimeArtBinder Asset Contract Checker...");
+  console.log("Running RuntimeArtBinder Asset Contract & Fallback Policy Checker...");
   const mock = createMockPhaser();
   const binder = new RuntimeArtBinder();
   binder.install(mock.scene, null); // initialize binder without workspace atlas
@@ -48,13 +50,30 @@ function testArtBinderForCards() {
     const enemyRes = binder.resolve("enemy", { enemyId: enemyKind });
 
     // Note: When no workspace atlas is present, resolve() returns null (procedural fallback trigger).
-    // A non-null return requires real loaded atlas textures.
     const hasValidKeyOrFallbackTrigger = playerRes !== undefined && enemyRes !== undefined;
 
     if (hasRequiredArrays && hasValidKeyOrFallbackTrigger) {
       validContractCount++;
     }
   }
+
+  // Golden Fixture Verification for survivor_horde
+  if (!fs.existsSync(FIXTURE_PATH)) {
+    console.error(`[FAIL] Golden asset fixture missing at ${FIXTURE_PATH}`);
+    return false;
+  }
+
+  const fixture = JSON.parse(fs.readFileSync(FIXTURE_PATH, "utf8"));
+  const validFixture = fixture.cardId === "survivor_horde" &&
+    fixture.requiredAssets?.playerClips?.length >= 5 &&
+    fixture.requiredAssets?.enemyKinds?.length >= 3 &&
+    fixture.fallbackPolicy?.productionMode?.allowProceduralFallback === false;
+
+  if (!validFixture) {
+    console.error(`[FAIL] survivor_horde golden asset fixture contract check failed`);
+    return false;
+  }
+  console.log(`[PASS] survivor_horde golden asset fixture validated (${FIXTURE_PATH})`);
 
   const binderStatus = binder.getStatus();
   const atlasLoaded = binderStatus.status === 'loaded';

@@ -6,7 +6,7 @@
     "异域斥候：杀光九天十地的人！",
     "星骁：想动长老，先过我这一关！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "pressure_survival",
   "rewards": "气血精华 +100000，纯血 +15~20，书院传承",
   "goalValue": 300,
   "resourceMultiplier": 18,
@@ -14,7 +14,7 @@
   "durationLimit": 300,
   "gameplay": {
     "adapter": "phaser",
-    "cardId": "survivor_horde",
+    "cardId": "pressure_survival",
     "modifiers": [
       {
         "id": "escort_npc",
@@ -52,7 +52,7 @@
       "sfxVictory": "victory_sting",
       "sfxDefeat": "defeat_sting",
       "bossBgmKey": "boss_theme",
-      "runtimeCardId": "survivor_horde",
+      "runtimeCardId": "pressure_survival",
       "shellRetreat": true
     },
     "patchLevel": "L3"

@@ -1,67 +1,71 @@
-# minigame_master 关卡生产化进度报告 (report.md)
+# minigame_master 关卡生产化进度与质量报告 (report.md)
 
-> **当前总体状态**: 进行中 / 核心架构与底层框架重构就绪 (待补齐 Playwright E2E / 真实 Canvas 视觉 / 10 分钟 Soak 性能 Gate 证据)  
-> **更新时间**: 2026-07-22 (三轮深度整改完成)
+> **当前总体状态**: 进行中 / Phase C (首张竖切关卡 `survivor_horde` 验证推进中)  
+> **更新时间**: 2026-07-23  
+> **元数据 (Auditable Metadata)**:  
+> - **Workspace ID**: `20260611-060754-719406`  
+> - **测试报告时间戳**: `2026-07-23T07:23:43.828Z`  
+> - **首张竖切目标**: `survivor_horde` (当前成熟度: `runtime_ready`, `releaseEligible: false`)  
 
 ---
 
-## 审查意见响应与三轮整改明细 (Audit & Response Log - Round 3)
+## 审查整改与评审响应日志 (Audit & Revision Log)
 
-针对提出的 2 个门禁问题和 4 个报告判定项，已完成全量整改与代码合规：
+针对最新评审提出的意见，已完成全面修正与证据对齐：
 
-| 审查问题项 | 三轮整改措施 |
+| 评审意见项 | 修正与对齐措施 |
 | --- | --- |
-| **[P0] Passing JSON 伪造生产证据问题** | **硬门禁校验升级**: `validate-gameplay-card.mjs` 解析 E2E / Standalone / Visual / Performance 报告时，强制校验 `report.status === "passed"`、`specHash === card.id`、`releaseEligible === true` 及有效 timestamp。不匹配或伪造报告立刻阻断。 |
-| **[P1] Node Smoke 字段读取错误** | **兼容 summary 结构**: `validate-gameplay-card.mjs` 重构节点 Smoke 读取逻辑为 `e2eReport?.passed ?? e2eReport?.summary?.passed`，避免结构层差异导致正常证据被判失败。 |
-| **[P1] UI 禁用 21 张基础卡问题** | **成熟度一致性修护**: 修复 `GameplayPanel.tsx` 成熟度评估表达式为 `card.maturityStatus || (card.implementationStatus === "implemented" ? "runtime_ready" : "card_json")`，所有 22 张已实现基础卡均在工作台下拉框中解除禁用并正常可选。 |
-| **[P1] Modifier V2 结构校验补齐** | **全量 Modifier 校验**: `validate-gameplay-card.mjs` 为 24 个 Modifier 增加了 `schemaVersion` (2.0)、`compatibleBaseCards` (非空数组)、`requiredAssets`、`maturityImpact` 及 `exportPolicy` 的完整 V2 结构门禁断言。 |
-| **[P1] GameRunner 去题材化扫描与清理** | **扩展扫描目标至 GameRunner.ts**: `check-theme-decoupling.js` 扩展扫描 `src/game/GameRunner.ts`，并将 36 个黑名单词库应用全量代码清理（移除修真/境界/造化/功德/灵石/心魔/天劫/元神/仙途/修为/灵珠/御煞/符文/炼制等）；扫描实现 100% 零残留通过。 |
-| **[P2] 美术检查把 null 当作有效解析** | **精细化断言**: `check-runtime-art-binder.js` 明确指出无工作台 Atlas 时 `resolve()` 返回 null (仅触发 Procedural Fallback)；明确记录 `Workspace Atlas Loaded: false`，绝不夸大美术接线结论。 |
+| **[P1] 23/23 覆盖卡片统计纠偏** | **节点1:1映射重构**: 重构 `loreweaver/nodes/` 1 至 23 号节点契约，确保 23 个节点 1:1 映射全部 22 张基础 Gameplay Cards 与 1 张微型容器卡 (`node_iframe_microgame`)。Node Smoke 实际测试结果为 **23/23 节点实例通过，23/23 唯一 Card ID 覆盖通过**。 |
+| **[P1] A1 生产 Fallback 拦截验证范围说明** | **结论客观化调整**: 明确标注“结构合同与 Golden Fixture 静态校验通过；运行时生产模式缺失资产时的抛错拦截逻辑（Throw/Block）尚未在真实渲染/Playwright 框架中完成验证”。 |
+| **[P2] 验证项名称规范化** | **消除过度解读**: 将 `check-audio-asset-resolver.js` 明确标注为“单元测试 (Audio Resolver Unit Check)”，将 `check-text-visual-layout.js` 明确标注为“启发式字数槽位静态检查 (Text Layout Heuristic Check)”。 |
+| **[P2] 阶段标识与成熟度状态统一** | **规范阶段术语**: 阶段标识统一为 `task.md` 定义的 `Phase C (竖切推进)`；明确指出 `survivor_horde` 当前为 `runtime_ready`，尚无 `gate_verified` 或 `production_ready` 认证。 |
+| **[P2] 报告链接可移植化** | **相对路径替换**: 将所有报告文档链接替换为项目内可移植相对路径（如 `docs/reports/step_S0_survivor_horde_spec.md`）。 |
 
 ---
 
-## 阶段进展与交付明细
+## 阶段实施简要报告索引 (Step Reports Index)
 
-### 1. Milestone A (P0 - 成熟度模型与状态表达)
-- **完成项**:
-  - `gameplay-card-v2.schema.json` 规范制定，23 张基础卡与 24 张修饰卡结构重构。
-  - 成熟度状态拆分为 6 级：`inventoried` | `card_json` | `ui_registered` | `runtime_ready` | `gate_verified` | `production_ready`。
-  - `GameplayPanel.tsx` 动态渲染成熟度 Tag (`[runtime_ready]`)，22 张已实现基础卡正常可选。
-  - `validate-gameplay-card.mjs` 门禁重构：解析并校验 specHash、runtimeVersion 与 E2E / 视觉 / 性能报告；`survivor_horde` 当前为 `runtime_ready` (`productionExportAllowed: false`)。
-
-### 2. Milestone B (P1 - 运行时文案彻底数据化)
-- **完成项**:
-  - `ThemeContentResolver.js` 与 `theme-content-pack.schema.json` 架构完成。
-  - 核心 Adapter 与 `GameRunner.ts` 结算/失败界面全量去题材化重构。
-  - `check-theme-decoupling.js` 36 词黑名单门禁（涵盖 `core/lib` 与 `GameRunner.ts`）静态检查通过 (0 题材词残留，违规 exit 1 门禁)。
-  - `check-text-visual-layout.js` 启发式字数槽位校验通过。
-
-### 3. Milestone C (P2 & P5.1 - 资产/音频/测试底座)
-- **完成项**:
-  - 23 张卡片 `requiredAssets` 语义结构完成。
-  - `AudioAssetResolver.js` 接入 `GameRunner.ts` 生命周期，场景销毁时自动销毁音频/ASMR，消除重复 BGM 启动。
-  - `MockPhaserScene.js` 补齐 `setRadius`、`ellipse`、`camera bounds/follow` API。
-  - `npm run check:node-smoke` 12/12 节点 Node Smoke 测试 100% 通过。
+| 步骤 | 报告文档路径 | 核心产出与验证结论 |
+| --- | --- | --- |
+| **Step S0** | [step_S0_survivor_horde_spec.md](docs/reports/step_S0_survivor_horde_spec.md) | 冻结 `survivor_horde` 首张竖切卡规格、主题包/资产/音频契约与 DoD 12 项硬判定检查表。 |
+| **Step C1** | [step_C1_node_smoke_coverage.md](docs/reports/step_C1_node_smoke_coverage.md) | 重构节点映射，节点 Smoke 测试覆盖 **23/23 节点实例 & 23/23 唯一 Card ID (100% 通过)**。 |
+| **Step A1** | [step_A1_art_binder_fallback_rules.md](docs/reports/step_A1_art_binder_fallback_rules.md) | 建立 `survivor_horde` Golden Asset Fixture，完成结构与策略静态校验（运行时生产抛错拦截待 Playwright 验证）。 |
 
 ---
 
-## 校验证据汇总 (Execution Log)
+## 校验证据汇总 (Execution Log & Gate Evidence)
 
 ```bash
-npx tsc --noEmit                                    # Passed (0 TypeScript errors)
-npm run check:node-smoke                            # Passed (12/12 nodes passed)
-node productize/validate-gameplay-card.mjs --all    # Passed (23 base cards + 24 modifiers = 47 V2 schema structural checks)
-node productize/jobs/check-theme-decoupling.js       # Passed (0 theme terms in 36-word dictionary across core/lib & GameRunner.ts, exit 1 active)
-node productize/jobs/check-runtime-art-binder.js    # Passed (23/23 requiredAssets contracts valid)
-node productize/jobs/check-audio-asset-resolver.js  # Passed (Audio resolver unit check)
-node productize/jobs/check-text-visual-layout.js   # Passed (7 text limit heuristic checks)
+# 1. 节点与全卡 Headless Smoke 测试 (23 节点 1:1 覆盖 23 唯一卡)
+node minigame_master/capabilities/verification/run_node_smoke.mjs
+# 结果: Passed (status: "passed", score: 100, passed: 23, failed: 0, total: 23)
+
+# 2. V2 Schema 结构门禁校验 (23 基础卡 + 24 修饰卡)
+node productize/validate-gameplay-card.mjs --all
+# 结果: Passed (status: "passed", total: 47, failed: 0)
+
+# 3. 去题材化黑名单静态扫描 (GameRunner & core/lib)
+node productize/jobs/check-theme-decoupling.js
+# 结果: Passed (0 theme terms in 36-word dictionary, exit 1 active)
+
+# 4. 资产绑定契约与 Golden Fixture 静态校验
+node productize/jobs/check-runtime-art-binder.js
+# 结果: Passed (23/23 requiredAssets contracts + survivor_horde golden fixture valid)
+
+# 5. 音频解析器单元测试 (Unit Check)
+node productize/jobs/check-audio-asset-resolver.js
+# 结果: Passed (Audio resolver unit check)
+
+# 6. 文本字数启发式静态检查 (Heuristic Check)
+node productize/jobs/check-text-visual-layout.js
+# 结果: Passed (7 text limit heuristic checks)
 ```
 
 ---
 
-## 剩余待完成事项 (Pending Milestone Roadmap)
+## 剩余待完成事项 (Pending Roadmap)
 
-- [ ] **P5.4 真实浏览器 E2E 矩阵**: 搭建 Playwright 覆盖 Chrome Desktop / Mobile 胜利与失败流，生成真实 E2E 报告 (`standalone_browser_report.json`)。
-- [ ] **P6 真实视觉/VLM 审计**: 对无黑屏、HUD 遮挡、文字溢出进行真实 Canvas 截图与 VLM 检查，生成 `visual_audit_latest.json`。
-- [ ] **P5.5 性能 Soak 测试**: 跑 10 分钟高频动作关卡，校验 P95 FPS、内存与对象泄漏，生成 `performance_report_latest.json`。
-- [ ] **P7 认证首张 Production Ready 关卡**: 在补齐上述真实 Gate 证据包后，正式认证 `survivor_horde` 为 `production_ready`。
+- [ ] **Phase B (P3.2 / P3.3) 表现层事件与 Game Feel**: 建立 Gameplay Event → Presentation Event 解耦系统与 Game Feel 统一档位。
+- [ ] **Phase C2–C4 (P5.4) Playwright 真实浏览器 E2E**: 搭建 Playwright 覆盖 Chrome Desktop / Mobile 胜/败/撤退全流，生成包含 `specHash` 的真实 E2E 报告 (`standalone_browser_report.json`)。
+- [ ] **Phase C5–C6 (P5.5 & P6) 真实 Canvas 视觉与 Soak 门禁**: 接入 Canvas 视觉审计 (`visual_audit_latest.json`) 与 10 分钟 Soak 性能测试 (`performance_report_latest.json`)。
+- [ ] **Phase C7 认证首张 Production Ready 关卡**: 在签署完整真实证据包后，将 `survivor_horde` 从 `runtime_ready` 正式晋升为 `production_ready`。

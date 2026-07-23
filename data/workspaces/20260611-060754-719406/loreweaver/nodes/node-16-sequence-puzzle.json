@@ -1,0 +1,22 @@
+{
+  "id": 16,
+  "title": "连击解谜试炼",
+  "intro": "按特定顺序触发符文连击，解开古阵迷局。",
+  "mechanics": "sequence_puzzle_combo",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "sequence_puzzle_combo",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

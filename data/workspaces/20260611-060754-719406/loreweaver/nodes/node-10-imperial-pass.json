@@ -6,7 +6,7 @@
     "不朽者：帝关必破，九天当灭！",
     "星骁：有我在，帝关不倒！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "reaction_pick",
   "rewards": "气血精华 +250000，纯血 +20~30，边荒战功",
   "goalValue": 300,
   "resourceMultiplier": 26,
@@ -14,7 +14,7 @@
   "durationLimit": 300,
   "gameplay": {
     "adapter": "phaser",
-    "cardId": "survivor_horde",
+    "cardId": "reaction_pick",
     "modifiers": [
       {
         "id": "defend_core",
@@ -52,7 +52,7 @@
       "sfxVictory": "victory_sting",
       "sfxDefeat": "defeat_sting",
       "bossBgmKey": "boss_theme_late",
-      "runtimeCardId": "survivor_horde",
+      "runtimeCardId": "reaction_pick",
       "shellRetreat": true
     },
     "patchLevel": "L3"

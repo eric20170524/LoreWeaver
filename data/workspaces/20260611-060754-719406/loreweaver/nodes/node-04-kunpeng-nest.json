@@ -6,7 +6,7 @@
     "守巢尊者：小辈，交出潮翼秘印！",
     "星骁：想要我的法，拿命来换！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "dodge_counter_boss",
   "rewards": "气血精华 +2000，纯血 +2~4，潮翼符文碎片",
   "goalValue": 180,
   "resourceMultiplier": 3,
@@ -14,7 +14,7 @@
   "durationLimit": 180,
   "gameplay": {
     "adapter": "phaser",
-    "cardId": "survivor_horde",
+    "cardId": "dodge_counter_boss",
     "modifiers": [
       {
         "id": "hazard_telegraph",
@@ -52,7 +52,7 @@
       "sfxVictory": "victory_sting",
       "sfxDefeat": "defeat_sting",
       "bossBgmKey": "boss_theme",
-      "runtimeCardId": "survivor_horde",
+      "runtimeCardId": "dodge_counter_boss",
       "shellRetreat": true
     },
     "patchLevel": "L3"

@@ -1,0 +1,22 @@
+{
+  "id": 17,
+  "title": "律动拾取试炼",
+  "intro": "跟随节奏节点进退，精准拾取飘落的灵材。",
+  "mechanics": "rhythm_then_pickup",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "rhythm_then_pickup",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

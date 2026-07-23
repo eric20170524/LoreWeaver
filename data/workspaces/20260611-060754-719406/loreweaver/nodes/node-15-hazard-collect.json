@@ -1,0 +1,22 @@
+{
+  "id": 15,
+  "title": "危局收集试炼",
+  "intro": "在波次避险的同时尽可能收集能量晶核。",
+  "mechanics": "hazard_collect_waves",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "hazard_collect_waves",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

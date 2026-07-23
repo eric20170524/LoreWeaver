@@ -1,0 +1,22 @@
+{
+  "id": 23,
+  "title": "回合策略对抗",
+  "intro": "回合制技能对决，合理分配技能冷却与灵气资源取得胜利。",
+  "mechanics": "turn_based_skill_battle",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "turn_based_skill_battle",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}

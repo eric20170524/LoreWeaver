@@ -6,7 +6,7 @@
     "三教教主：大势已去，石国当灭！",
     "星骁：我守此城，当镇世间一切敌！"
   ],
-  "mechanics": "survivor_horde",
+  "mechanics": "drag_to_core",
   "rewards": "气血精华 +5000，纯血 +3~5，人皇印记",
   "goalValue": 240,
   "resourceMultiplier": 4.4,
@@ -14,7 +14,7 @@
   "durationLimit": 240,
   "gameplay": {
     "adapter": "phaser",
-    "cardId": "survivor_horde",
+    "cardId": "drag_to_core",
     "modifiers": [
       {
         "id": "defend_core",
@@ -52,7 +52,7 @@
       "sfxVictory": "victory_sting",
       "sfxDefeat": "defeat_sting",
       "bossBgmKey": "boss_theme",
-      "runtimeCardId": "survivor_horde",
+      "runtimeCardId": "drag_to_core",
       "shellRetreat": true
     },
     "patchLevel": "L3"

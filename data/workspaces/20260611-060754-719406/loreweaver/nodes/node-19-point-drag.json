@@ -1,0 +1,22 @@
+{
+  "id": 19,
+  "title": "点拖推进试炼",
+  "intro": "通过点选与拖拽引导阵纹推进，打通灵气通路。",
+  "mechanics": "point_drag_progression",
+  "goalValue": 100,
+  "difficulty": 3,
+  "durationLimit": 120,
+  "gameplay": {
+    "adapter": "phaser",
+    "cardId": "point_drag_progression",
+    "modifiers": [],
+    "knobs": {
+      "durationSec": 120,
+      "goalValue": 100,
+      "difficulty": 3,
+      "allowQuit": true,
+      "allowPause": true
+    },
+    "patchLevel": "L1"
+  }
+}
