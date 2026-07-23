@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "loreweaver.survivor-c7-readiness.v1",
+  "cardId": "survivor_horde",
+  "createdAt": "2026-07-23T13:35:47.598Z",
+  "currentStatus": "gate_verified",
+  "recommendedStatus": "gate_verified",
+  "gateVerifiedEligible": true,
+  "productionReadyEligible": false,
+  "releaseEligible": false,
+  "gateChecks": [
+    {
+      "id": "node_smoke_passed",
+      "ok": true,
+      "detail": "passed=23"
+    },
+    {
+      "id": "demo_e2e_passed",
+      "ok": true,
+      "detail": "specHash=survivor_horde:core_demo:v1"
+    },
+    {
+      "id": "standalone_e2e_passed",
+      "ok": true,
+      "detail": "artAtlas=true"
+    },
+    {
+      "id": "browser_summary_passed",
+      "ok": true,
+      "detail": "releaseEligible=false"
+    },
+    {
+      "id": "visual_passed",
+      "ok": true,
+      "detail": "screens=5"
+    },
+    {
+      "id": "performance_soak_passed",
+      "ok": true,
+      "detail": "soak=600s full=true avgFps=60.5"
+    },
+    {
+      "id": "golden_fixture_present",
+      "ok": true,
+      "detail": "ok"
+    }
+  ],
+  "productionBlockers": [
+    {
+      "id": "human_playtest_approved",
+      "ok": false,
+      "detail": "docs/reports/step_C7_human_playtest_signoff.md not approved"
+    },
+    {
+      "id": "release_eligible_true",
+      "ok": false,
+      "detail": "browser/standalone reports still releaseEligible=false by policy"
+    },
+    {
+      "id": "device_class_fps_evidence",
+      "ok": false,
+      "detail": "headless soak is not device-class P95>=55 evidence"
+    },
+    {
+      "id": "vlm_visual_overflow",
+      "ok": false,
+      "detail": "VLM text overflow / HUD occlusion audit not run"
+    },
+    {
+      "id": "export_policy_and_status_aligned",
+      "ok": false,
+      "detail": "status=gate_verified productionReady=false"
+    }
+  ],
+  "notes": [
+    "gate_verified = automated browser/smoke/visual/soak evidence green.",
+    "production_ready requires human playtest + releaseEligible + device FPS + no open blockers.",
+    "This script does not mutate the card; apply status changes deliberately."
+  ]
+}

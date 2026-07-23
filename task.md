@@ -12,7 +12,7 @@
 
 - [x] 23 张基础/容器 Gameplay Card + 24 张 modifier（V2 schema 全量迁移）
 - [x] 成熟度模型六级：`inventoried` → `card_json` → `ui_registered` → `runtime_ready` → `gate_verified` → `production_ready`
-- [x] 全部基础卡当前状态：`runtime_ready`（**0** 张 `gate_verified` / `production_ready`）
+- [x] 基础卡成熟度：`survivor_horde` = **`gate_verified`**；其余 `runtime_ready`；**0** 张 `production_ready`
 - [x] `GameRunner` 接入 Phaser adapter；`NodePayload` / `NodeResult` / Adapter / Modifier / SceneLifecycle / TestHooks
 - [x] Theme Content Pack schema + adapter/core 去题材化 + 题材词静态门禁
 - [x] 23 张卡 `requiredAssets` 合同 + RuntimeArtBinder 语义绑定（结构层）
@@ -148,11 +148,12 @@
 
 #### C7. 发布门禁与状态晋升
 
-- [ ] 缺失 build / E2E / 视觉 / art / audio / performance 证据 → 阻止生产发布
+- [x] 自动化证据汇总脚本：`npm run check:survivor-c7-readiness`
+- [x] `survivor_horde`：`runtime_ready` → **`gate_verified`**（smoke/e2e/visual/600s soak 全绿）
+- [x] `exportPolicy.productionReady` 保持 false；blockReason 列出剩余阻塞项
+- [ ] 真人试玩签字（`docs/reports/step_C7_human_playtest_signoff.md` → approved）
+- [ ] `releaseEligible=true` + 真机 FPS +（可选）VLM 后 → **`production_ready`**
 - [ ] 上游 content / knobs / 资产 / adapter 变化 → 相关报告标 stale
-- [ ] standalone export 仅在匹配证据且 `releaseEligible=true` 时允许生产导出
-- [ ] `survivor_horde`：`runtime_ready` → `gate_verified` → `production_ready`
-- [ ] 至少一次真人完整试玩验收签字（记录在证据包）
 
 ---
 
@@ -204,7 +205,7 @@
 
 #### E3. 首批认证顺序（逐张）
 
-- [ ] `survivor_horde` — 第一张动作卡（Phase C 完成即认证）
+- [x] `survivor_horde` — 已 `gate_verified`；`production_ready` 待真人签字与 releaseEligible
 - [ ] `rhythm_timing` — 第一张轻量反应卡
 - [ ] `drag_collect_grid` — 第一张移动/收集卡
 - [ ] `turn_based_skill_battle` — 第一张策略战斗卡

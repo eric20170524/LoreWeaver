@@ -3,7 +3,7 @@
   "id": "survivor_horde",
   "title": "Survivor Horde",
   "category": "action_survival",
-  "status": "runtime_ready",
+  "status": "gate_verified",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -275,15 +275,27 @@
   "testScenarios": [
     {
       "id": "smoke_test",
-      "tags": [
-        "smoke",
-        "runtime",
-        "e2e"
-      ]
+      "tags": ["smoke", "runtime", "e2e"]
+    },
+    {
+      "id": "playwright_demo_e2e",
+      "tags": ["e2e", "browser", "demo"]
+    },
+    {
+      "id": "playwright_standalone_e2e",
+      "tags": ["e2e", "browser", "standalone", "atlas"]
+    },
+    {
+      "id": "visual_audit_deterministic",
+      "tags": ["visual", "browser"]
+    },
+    {
+      "id": "soak_600s",
+      "tags": ["performance", "soak"]
     }
   ],
   "exportPolicy": {
     "productionReady": false,
-    "blockReason": "Awaiting build, E2E, visual, audio, and performance gate evidence"
+    "blockReason": "gate_verified: automated smoke/e2e/visual/600s-soak green. Blocked for production_ready: human playtest signoff, releaseEligible, device-class FPS, VLM overflow audit."
   }
 }

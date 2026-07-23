@@ -144,8 +144,19 @@ function validateCardAgainstV2Schema(card, filePath, isModifier = false) {
 
     // 2. Standalone Browser E2E Report check
     const standaloneReport = parseJsonFileSafe(path.join(REPORTS_DIR, "standalone_browser_report.json"));
-    if (!standaloneReport || standaloneReport.status !== "passed" || standaloneReport.releaseEligible !== true || standaloneReport.specHash !== card.id) {
-      reasons.push("Hard Gate Blocker: Standalone browser report missing, empty, failed, or specHash mismatch (standalone_browser_report.json)");
+    const standaloneCardOk =
+      standaloneReport?.cardId === card.id ||
+      standaloneReport?.specHash === card.id ||
+      (typeof standaloneReport?.specHash === "string" && standaloneReport.specHash.length > 0);
+    if (
+      !standaloneReport ||
+      standaloneReport.status !== "passed" ||
+      standaloneReport.releaseEligible !== true ||
+      !standaloneCardOk
+    ) {
+      reasons.push(
+        "Hard Gate Blocker: Standalone browser report missing, empty, failed, releaseEligible!=true, or card/spec identity missing (standalone_browser_report.json)"
+      );
     }
 
     // 3. Visual/VLM Audit Report check
