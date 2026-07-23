@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "loreweaver.level-recipe.v1",
+  "title": "Level Recipe V1",
+  "description": "Machine-readable recipe for theme skinning: card + modifiers + knobs + content + art + audio + balance.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "recipeId",
+    "cardId",
+    "knobs",
+    "contentPackRef",
+    "assetPackRef"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "recipeId": { "type": "string", "minLength": 1 },
+    "cardId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "status": {
+      "type": "string",
+      "enum": ["prototype_recipe", "gate_verified_recipe", "production_recipe"]
+    },
+    "productionReady": { "type": "boolean" },
+    "modifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "string" },
+          "knobs": { "type": "object" }
+        }
+      }
+    },
+    "knobs": { "type": "object" },
+    "contentPackRef": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "required": ["path"],
+          "properties": {
+            "path": { "type": "string" },
+            "themeId": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "assetPackRef": {
+      "type": "object",
+      "required": ["workspaceId"],
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "imagegenManifest": { "type": "string" },
+        "imagegenAtlas": { "type": "string" },
+        "goldenFixture": { "type": "string" }
+      }
+    },
+    "audioPackRef": {
+      "type": "object",
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "root": { "type": "string" },
+        "cues": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "balanceProfile": {
+      "type": "string",
+      "enum": ["easy", "normal", "normal_short", "hard"]
+    },
+    "locale": { "type": "string" },
+    "notes": { "type": "array", "items": { "type": "string" } },
+    "requireProductionCard": {
+      "type": "boolean",
+      "description": "When true (default for production_recipe), cardId must be production_ready."
+    }
+  },
+  "additionalProperties": true
+}

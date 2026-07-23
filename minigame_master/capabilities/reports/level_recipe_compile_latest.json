@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "loreweaver.level-recipe-compile-all.v1",
+  "status": "failed",
+  "createdAt": "2026-07-23T22:39:52.781Z",
+  "results": [
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile.v1",
+      "status": "failed",
+      "createdAt": "2026-07-23T22:39:52.780Z",
+      "recipePath": "../../../../tmp/lw_exp_recipe.json",
+      "recipeId": "experimental_fail_test",
+      "cardId": "rhythm_timing",
+      "cardStatus": "runtime_ready",
+      "requireProductionCard": true,
+      "recipeHash": "69bccb55f18e1da56fc91eea4bc2c2b37d64ba60e72aa2cb2a7c8615a65254b0",
+      "contentHash": "e0c492be707618fbc2bd276db13fc43ba322ceb17c8b4548e8d81b10bd1166f2",
+      "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+      "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+      "contentThemeId": "survivor_horde_golden_demo",
+      "locale": "zh-CN",
+      "balanceProfile": null,
+      "modifiers": [],
+      "knobs": {
+        "durationSec": 30
+      },
+      "reasons": [
+        "card rhythm_timing is not production_ready (status=runtime_ready, productionReady=false)"
+      ],
+      "warnings": [],
+      "resolved": {
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/survivor_horde/theme_content_pack.fixture.json",
+        "workspaceId": "20260611-060754-719406"
+      }
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "schemaVersion": "loreweaver.gameplay-catalog.v1",
+  "createdAt": "2026-07-23T22:39:18.394Z",
+  "policy": {
+    "autoSelectOnlyProductionReady": true,
+    "experimentalRequiresExplicitFlag": true,
+    "note": "Orchestrators must not auto-pick experimental cards without explicit user/agent flag."
+  },
+  "totals": {
+    "all": 23,
+    "productionReady": 1,
+    "experimental": 22
+  },
+  "autoSelectable": [
+    {
+      "id": "survivor_horde",
+      "title": "Survivor Horde",
+      "category": "action_survival",
+      "status": "production_ready",
+      "productionReady": true,
+      "experimental": false,
+      "adapter": "SurvivorHordeAdapter",
+      "inputs": [
+        "pointer_move",
+        "keyboard_move"
+      ],
+      "fit": {
+        "goodFor": [
+          "cultivation trials",
+          "monster waves",
+          "survival validation",
+          "power fantasy combat"
+        ],
+        "poorFor": [
+          "quiet puzzle scenes",
+          "dialogue-only branches",
+          "precision platforming"
+        ]
+      },
+      "knobs": [
+        "durationSec",
+        "enemySpawnRateSec",
+        "enemyPool",
+        "boss",
+        "modifiers",
+        "rewardTable"
+      ],
+      "requiredAssets": {
+        "playerClips": [
+          "idle",
+          "walk",
+          "attack",
+          "hurt",
+          "death"
+        ],
+        "enemyKinds": [
+          "mob",
+          "elite",
+          "boss"
+        ],
+        "environments": [
+          "bg_default"
+        ],
+        "audioCues": [
+          "bgm_main",
+          "sfx_attack",
+          "sfx_hit",
+          "sfx_win",
+          "sfx_lose"
+        ]
+      },
+      "blockReason": null
+    }
+  ],
+  "cards": [
+    {
+      "id": "survivor_horde",
+      "title": "Survivor Horde",
+      "category": "action_survival",
+      "status": "production_ready",
+      "productionReady": true,
+      "experimental": false,
+      "adapter": "SurvivorHordeAdapter",
+      "inputs": [
+        "pointer_move",
+        "keyboard_move"
+      ],
+      "fit": {
+        "goodFor": [
+          "cultivation trials",
+          "monster waves",
+          "survival validation",
+          "power fantasy combat"
+        ],
+        "poorFor": [
+          "quiet puzzle scenes",
+          "dialogue-only branches",
+          "precision platforming"
+        ]
+      },
+      "knobs": [
+        "durationSec",
+        "enemySpawnRateSec",
+        "enemyPool",
+        "boss",
+        "modifiers",
+        "rewardTable"
+      ],
+      "requiredAssets": {
+        "playerClips": [
+          "idle",
+          "walk",
+          "attack",
+          "hurt",
+          "death"
+        ],
+        "enemyKinds": [
+          "mob",
+          "elite",
+          "boss"
+        ],
+        "environments": [
+          "bg_default"
+        ],
+        "audioCues": [
+          "bgm_main",
+          "sfx_attack",
+          "sfx_hit",
+          "sfx_win",
+          "sfx_lose"
+        ]
+      },
+      "blockReason": null
+    }
+  ]
+}

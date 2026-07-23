@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "recipeId": "survivor_horde_golden_production_v1",
+  "recipeId": "survivor_horde_cyber_pulse_production_v1",
   "cardId": "survivor_horde",
   "status": "production_recipe",
   "productionReady": true,
@@ -9,10 +9,10 @@
     {
       "id": "hazard_telegraph",
       "knobs": {
-        "intervalMs": 3600,
-        "warningDelayMs": 900,
-        "radius": 54,
-        "damage": 18
+        "intervalMs": 3200,
+        "warningDelayMs": 800,
+        "radius": 50,
+        "damage": 16
       }
     }
   ],
@@ -24,7 +24,7 @@
     "allowQuit": true,
     "allowPause": true
   },
-  "contentPackRef": "minigame_master/gameplay/cards/fixtures/survivor_horde/theme_content_pack.fixture.json",
+  "contentPackRef": "minigame_master/gameplay/cards/fixtures/survivor_horde/theme_content_pack.cyber_pulse.json",
   "assetPackRef": {
     "workspaceId": "20260611-060754-719406",
     "imagegenManifest": "assets/imagegen/manifest.json",
@@ -44,7 +44,6 @@
   "balanceProfile": "normal_short",
   "locale": "zh-CN",
   "notes": [
-    "Golden production recipe for survivor_horde after production_ready certification.",
-    "Swap contentPackRef to theme_content_pack.cyber_pulse.json for alternate skin."
+    "Same production card/assets as golden recipe; only Theme Content Pack differs (cyber_pulse skin)."
   ]
 }

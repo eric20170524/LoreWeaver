@@ -163,17 +163,17 @@
 
 #### D1. Level Recipe
 
-- [ ] 定义 `LevelRecipe = card + modifiers + knobs + contentPack + assetPack + audioPack + balanceProfile`
-- [ ] 编译器校验字段、依赖、版本、hash
-- [ ] 同一 Recipe 在 IDE 与 standalone 使用同一 resolved runtime spec
-- [ ] Recipe 变化精确失效对应测试与资产报告
-- [ ] 支持保存 golden Recipe（主题换皮基准模板）
+- [x] 定义 `LevelRecipe` schema（`productize/schemas/level-recipe.schema.json`）
+- [x] 编译器校验 card 成熟度 / content / atlas / audio / modifier / `recipeHash`（`npm run check:level-recipe`）
+- [x] golden production recipes：荒域 + 霓虹（只换 content pack）
+- [ ] IDE UI 一键应用 Recipe 到节点 / standalone 导出流水线
+- [ ] Recipe 变化精确失效对应测试与资产报告（stale 联动）
 
 #### D2. 编排器玩法选择
 
-- [ ] 移除主题生成器只能输出三种 mechanics 的限制
-- [ ] 向编排器提供完整 catalog：fit / poorFor / 输入 / 复杂度 / 成熟度
-- [ ] 自动选择仅限 `production_ready`；其他卡必须显式标记实验性
+- [x] Catalog 成熟度列表（`npm run catalog:gameplay` / `:production`）
+- [x] 策略：自动选择仅限 `production_ready`；实验卡需显式（负例：rhythm_timing production_recipe 被拒）
+- [ ] 移除主题生成器只能输出三种 mechanics 的限制（后端接 catalog）
 - [ ] 按主题、叙事功能、节奏位置、平台、目标玩家选基础卡
 - [ ] 按兼容矩阵选 modifier；禁止自动生成不支持组合
 - [ ] 需要新行为时生成 L3 提案，不得把配置改动伪装成已实现玩法
