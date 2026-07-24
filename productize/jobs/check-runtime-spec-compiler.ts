@@ -94,10 +94,34 @@ check("runtime_spec_is_deeply_frozen", () => {
 check("workbench_not_shipped_to_runtime", () => assert.equal(first.gameSpec.workbench, undefined));
 check("catalog_hashes_present", () => assert.equal(Object.keys(first.catalogHashes).length, 6));
 
-check("patch_conflict_blocks_compile", () => {
+check("patch_conflict_blocks_compile_strict", () => {
   const source = sourceSpec();
   source.workbench!.patches[0].before = 999;
-  assert.throws(() => compileRuntimeSpec(source), /Applied patch conflict/);
+  const prev = process.env.LOREWEAVER_STRICT_PATCHES;
+  process.env.LOREWEAVER_STRICT_PATCHES = "1";
+  try {
+    assert.throws(() => compileRuntimeSpec(source), /Applied patch conflict/);
+  } finally {
+    if (prev === undefined) delete process.env.LOREWEAVER_STRICT_PATCHES;
+    else process.env.LOREWEAVER_STRICT_PATCHES = prev;
+  }
+});
+
+check("patch_conflict_soft_skips_by_default", () => {
+  const source = sourceSpec();
+  source.workbench!.patches[0].before = 999;
+  const prev = process.env.LOREWEAVER_STRICT_PATCHES;
+  delete process.env.LOREWEAVER_STRICT_PATCHES;
+  try {
+    const resolved = compileRuntimeSpec(source);
+    // duration patch skipped; base stays 30
+    assert.equal(getResolvedValue(resolved, "nodes.1.gameplay.knobs.durationSec"), 30);
+    assert.ok(
+      resolved.migrationWarnings.some((w) => w.includes("stale_applied_patch_skipped:patch_duration"))
+    );
+  } finally {
+    if (prev !== undefined) process.env.LOREWEAVER_STRICT_PATCHES = prev;
+  }
 });
 
 check("missing_replace_target_blocks_compile", () => {

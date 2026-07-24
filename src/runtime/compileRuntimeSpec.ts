@@ -113,10 +113,20 @@ function valuesEqual(a: any, b: any): boolean {
 function valueContains(current: any, expected: any): boolean {
   if (valuesEqual(current, expected)) return true;
   if (!current || !expected || typeof current !== "object" || typeof expected !== "object") return false;
+  if (Array.isArray(current) && Array.isArray(expected)) {
+    return expected.every((expItem) =>
+      current.some((currItem) => valueContains(currItem, expItem))
+    );
+  }
   if (Array.isArray(current) || Array.isArray(expected)) return false;
   return Object.keys(expected).every((key) =>
     Object.prototype.hasOwnProperty.call(current, key) && valueContains(current[key], expected[key])
   );
+}
+
+function isPathOverlappingOrCovered(parts1: string[], parts2: string[]): boolean {
+  return parts1.every((seg, idx) => parts2[idx] === undefined || parts2[idx] === seg) ||
+         parts2.every((seg, idx) => parts1[idx] === undefined || parts1[idx] === seg);
 }
 
 function targetParts(spec: GameSpec, target: string): string[] {
@@ -173,32 +183,79 @@ function writePath(root: any, parts: string[], patch: ManifestPatch): void {
   parent[key] = cloneJson(patch.after);
 }
 
-function materializeAppliedPatches(spec: GameSpec): { gameSpec: GameSpec; appliedPatchIds: string[] } {
+/**
+ * Whether to hard-fail when an applied patch's `before` snapshot no longer matches base.
+ * Default soft-skip: persisted manifests often bake `after` into nodes then later mutate
+ * knobs/cardId via L1 autosave or recipe apply, leaving stale applied patch history.
+ * Set LOREWEAVER_STRICT_PATCHES=1 for unit/CI strict re-apply checks.
+ */
+function strictAppliedPatches(): boolean {
+  try {
+    return (
+      (typeof process !== "undefined" && process.env?.LOREWEAVER_STRICT_PATCHES === "1") ||
+      (typeof globalThis !== "undefined" &&
+        (globalThis as any).__LOREWEAVER_STRICT_PATCHES__ === true)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function materializeAppliedPatches(spec: GameSpec): {
+  gameSpec: GameSpec;
+  appliedPatchIds: string[];
+  patchWarnings: string[];
+} {
   const result = cloneJson(spec);
   const patches = [...(spec.workbench?.patches || [])]
     .filter((patch) => patch.status === "applied")
     .sort((a, b) => `${a.createdAt}\u0000${a.id}`.localeCompare(`${b.createdAt}\u0000${b.id}`));
   const ids = new Set<string>();
+  const patchWarnings: string[] = [];
 
-  for (const patch of patches) {
+  for (let i = 0; i < patches.length; i += 1) {
+    const patch = patches[i];
     if (!patch.id || ids.has(patch.id)) throw new Error(`Duplicate or empty applied patch id: ${patch.id || "<empty>"}`);
     ids.add(patch.id);
     const parts = targetParts(result, patch.target);
     const current = readPath(result, parts);
-    const alreadyApplied = patch.operation === "remove"
+
+    const isSuperseded = patches.slice(i + 1).some((laterPatch) => {
+      try {
+        const parts1 = targetParts(result, patch.target);
+        const parts2 = targetParts(result, laterPatch.target);
+        return isPathOverlappingOrCovered(parts1, parts2);
+      } catch {
+        return false;
+      }
+    });
+
+    const alreadyApplied = isSuperseded || (patch.operation === "remove"
       ? !current.exists
-      : current.exists && valueContains(current.value, patch.after);
+      : current.exists && valueContains(current.value, patch.after));
     if (!alreadyApplied) {
       if (patch.operation !== "add" && !current.exists) {
         throw new Error(`Applied patch target is missing: ${patch.id} -> ${patch.target}`);
       }
       if (patch.before !== undefined && !valuesEqual(current.value, patch.before)) {
-        throw new Error(`Applied patch conflict: ${patch.id} expected ${patch.target} to match before`);
+        // Base already diverged from patch lineage (recipe apply / L1 knobs / multi-session).
+        // Prefer current base over hard-crashing the workbench emulator.
+        const msg =
+          `Applied patch conflict: ${patch.id} expected ${patch.target} to match before` +
+          ` (base diverged; ${strictAppliedPatches() ? "strict" : "soft-skip"})`;
+        if (strictAppliedPatches()) {
+          throw new Error(msg);
+        }
+        patchWarnings.push(
+          `stale_applied_patch_skipped:${patch.id}:${patch.target}` +
+            ` — base no longer matches patch.before; keeping current node data`
+        );
+        continue;
       }
       writePath(result, parts, patch);
     }
   }
-  return { gameSpec: result, appliedPatchIds: [...ids] };
+  return { gameSpec: result, appliedPatchIds: [...ids], patchWarnings };
 }
 
 function stripWorkbench(spec: GameSpec): GameSpec {
@@ -225,9 +282,13 @@ export function compileRuntimeSpec(source: GameSpec): ResolvedRuntimeSpec {
     .filter((id, index, all) => all.indexOf(id) !== index);
   if (duplicateNodeIds.length) throw new Error(`Duplicate node ids: ${[...new Set(duplicateNodeIds)].join(", ")}`);
 
-  const { gameSpec: patched, appliedPatchIds } = materializeAppliedPatches(normalized);
+  const {
+    gameSpec: patched,
+    appliedPatchIds,
+    patchWarnings
+  } = materializeAppliedPatches(normalized);
   const gameSpec = stripWorkbench(ensureGameplayManifest(patched));
-  const migrationWarnings: string[] = [];
+  const migrationWarnings: string[] = [...patchWarnings];
   for (const node of gameSpec.nodes) {
     if (!node.gameplay?.cardId) migrationWarnings.push(`node:${node.id}: gameplay card inferred from legacy mechanics`);
   }

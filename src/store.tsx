@@ -365,7 +365,16 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         (window as any).__LOREWEAVER_GAME__ = runtime.game;
       } catch (err) {
         console.error("Phaser boot error:", err);
-        addLog(`❌ Phaser WebGL initialization crashed: ${err}`);
+        const msg = String(err ?? "");
+        if (msg.includes("Applied patch conflict") || msg.includes("stale_applied_patch")) {
+          addLog(
+            locale === "zh"
+              ? `❌ 运行时规格编译失败（玩法 patch 冲突）: ${msg}。可尝试：丢弃过期 workbench.patches，或重新应用玩法卡/Recipe 后保存 manifest。`
+              : `❌ Runtime spec compile failed (gameplay patch conflict): ${msg}. Try clearing stale workbench.patches or re-apply gameplay/recipe and save manifest.`
+          );
+        } else {
+          addLog(`❌ Phaser WebGL initialization crashed: ${err}`);
+        }
       }
     }
   };
