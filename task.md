@@ -12,7 +12,7 @@
 
 - [x] 23 张基础/容器 Gameplay Card + 24 张 modifier（V2 schema 全量迁移）
 - [x] 成熟度模型六级：`inventoried` → `card_json` → `ui_registered` → `runtime_ready` → `gate_verified` → `production_ready`
-- [x] 基础卡成熟度：`survivor_horde` + **`rhythm_timing`** = **`production_ready`**；其余 `runtime_ready`
+- [x] 基础卡成熟度：`survivor_horde` + `rhythm_timing` + **`drag_collect_grid`** = **`production_ready`**；其余 `runtime_ready`
 - [x] `GameRunner` 接入 Phaser adapter；`NodePayload` / `NodeResult` / Adapter / Modifier / SceneLifecycle / TestHooks
 - [x] Theme Content Pack schema + adapter/core 去题材化 + 题材词静态门禁
 - [x] 23 张卡 `requiredAssets` 合同 + RuntimeArtBinder 语义绑定（结构层）
@@ -209,7 +209,7 @@
 
 - [x] `survivor_horde` — **`production_ready`**（有条件；见 step_C7_production_ready.md）
 - [x] `rhythm_timing` — **`production_ready`**（有条件 residual；见 step_E3_rhythm_timing_production_ready.md）
-- [ ] `drag_collect_grid` — 第一张移动/收集卡
+- [x] `drag_collect_grid` — **`production_ready`**（有条件 residual；见 step_E3_drag_collect_grid_production_ready.md）
 - [ ] `turn_based_skill_battle` — 第一张策略战斗卡
 - [ ] `sequence_synthesis` — 第一张顺序解谜卡
 - [ ] `side_scrolling_brawler` — 多输入 / 镜头 / 性能 / 资产流水线完成后

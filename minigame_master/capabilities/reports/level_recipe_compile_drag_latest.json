@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "loreweaver.level-recipe-compile-drag.v1",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:07:40.424Z",
+  "results": [
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile.v1",
+      "status": "passed",
+      "createdAt": "2026-07-24T02:07:40.392Z",
+      "recipePath": "minigame_master/gameplay/cards/fixtures/drag_collect_grid/level_recipe.fixture.json",
+      "recipeId": "drag_collect_void_production_v1",
+      "cardId": "drag_collect_grid",
+      "cardStatus": "production_ready",
+      "requireProductionCard": true,
+      "recipeHash": "e1c6218e70622faeca7d621f51c21e56681c8626e932e4d78edd751a1026562e",
+      "contentHash": "2d5bbe4eca8069ee89e0b3174261cc6c1a396e5e31885edb1b6030becbb0ce7e",
+      "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+      "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+      "contentThemeId": "drag_collect_void_orchard",
+      "locale": "zh-CN",
+      "balanceProfile": "normal_short",
+      "modifiers": [],
+      "knobs": {
+        "timeLimitSec": 40,
+        "durationSec": 40,
+        "needAmount": 12,
+        "goalValue": 12,
+        "spawnIntervalMs": 550,
+        "itemSpeed": 260,
+        "hazardRate": 0.28,
+        "damageOnHit": 14,
+        "difficulty": 1,
+        "skipBoss": true,
+        "artRuntimeMode": "prototype",
+        "allowQuit": true,
+        "allowPause": true
+      },
+      "reasons": [],
+      "warnings": [],
+      "resolved": {
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/drag_collect_grid/theme_content_pack.fixture.json",
+        "workspaceId": "20260611-060754-719406"
+      }
+    },
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile.v1",
+      "status": "passed",
+      "createdAt": "2026-07-24T02:07:40.421Z",
+      "recipePath": "minigame_master/gameplay/cards/fixtures/drag_collect_grid/level_recipe.neon.json",
+      "recipeId": "drag_collect_neon_production_v1",
+      "cardId": "drag_collect_grid",
+      "cardStatus": "production_ready",
+      "requireProductionCard": true,
+      "recipeHash": "9e0b34ef8861415278cd2b5ea05b8020b72005cf8cbc0562aa8b320687eecf05",
+      "contentHash": "700d82e98410a31939b3403f2dc7a3990c4b70b86cd9c3481e11307812c6243e",
+      "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+      "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+      "contentThemeId": "drag_collect_neon_drop",
+      "locale": "zh-CN",
+      "balanceProfile": "normal_short",
+      "modifiers": [],
+      "knobs": {
+        "timeLimitSec": 40,
+        "durationSec": 40,
+        "needAmount": 12,
+        "goalValue": 12,
+        "spawnIntervalMs": 520,
+        "itemSpeed": 270,
+        "hazardRate": 0.3,
+        "damageOnHit": 14,
+        "difficulty": 1,
+        "skipBoss": true,
+        "artRuntimeMode": "prototype",
+        "allowQuit": true,
+        "allowPause": true
+      },
+      "reasons": [],
+      "warnings": [],
+      "resolved": {
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/drag_collect_grid/theme_content_pack.neon.json",
+        "workspaceId": "20260611-060754-719406"
+      }
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "drag_collect_void_orchard",
+  "locales": ["zh-CN", "en"],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": {
+      "zh-CN": "虚空灵果采收",
+      "en": "Void Orchard Harvest"
+    },
+    "intro": {
+      "zh-CN": "左右滑动接住灵果，躲开坠落雷晶。",
+      "en": "Slide to catch spirit fruit and dodge falling thunder crystals."
+    },
+    "objectiveText": {
+      "zh-CN": "在时限内收集足够灵果",
+      "en": "Collect enough fruit before time runs out"
+    },
+    "controlHints": {
+      "zh-CN": "拖动/滑动移动 · 接绿躲红",
+      "en": "Drag/slide to move · catch green, dodge red"
+    },
+    "hudLabels": {
+      "zh-CN": "生命|时间|采集|目标",
+      "en": "HP|Time|Collected|Goal"
+    },
+    "victoryText": {
+      "zh-CN": "采收完成",
+      "en": "Harvest complete"
+    },
+    "failureText": {
+      "zh-CN": "采收失败",
+      "en": "Harvest failed"
+    },
+    "retreatText": {
+      "zh-CN": "已退出采收",
+      "en": "Withdrew from harvest"
+    }
+  },
+  "entities": {
+    "player": { "zh-CN": "采收人", "en": "Harvester" },
+    "enemies": {
+      "hazard": { "zh-CN": "雷晶", "en": "Thunder Crystal" },
+      "orb": { "zh-CN": "灵果", "en": "Spirit Fruit" }
+    },
+    "bosses": {
+      "boss": { "zh-CN": "雷兽残影", "en": "Thunder Beast Echo" }
+    },
+    "pickups": {
+      "gem": { "zh-CN": "灵果", "en": "Spirit Fruit" },
+      "sword": { "zh-CN": "飞剑", "en": "Flying Sword" }
+    },
+    "skills": {
+      "collect": { "zh-CN": "吸纳", "en": "Absorb" }
+    },
+    "statuses": {
+      "focus": { "zh-CN": "专注", "en": "Focused" }
+    }
+  },
+  "copyKeys": {
+    "control_hint_inline": {
+      "zh-CN": "← 左右滑动接灵果 · 躲雷晶 →",
+      "en": "← Slide for fruit · dodge crystals →"
+    },
+    "sword_pickup": {
+      "zh-CN": "飞剑！",
+      "en": "Sword!"
+    }
+  }
+}

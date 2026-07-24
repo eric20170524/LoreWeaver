@@ -292,6 +292,9 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
   if (cardId === "rhythm_timing") {
     companionCandidates.push("rhythm_gate_readiness_latest.json");
   }
+  if (cardId === "drag_collect_grid") {
+    companionCandidates.push("drag_gate_readiness_latest.json");
+  }
 
   for (const companion of [...new Set(companionCandidates)]) {
     const p = path.join(reportsDir, companion);

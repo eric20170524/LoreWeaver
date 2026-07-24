@@ -259,6 +259,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
+    maturityStatus: "production_ready",
     victory: "收集灵珠到达目标值并击败雷兽首领",
     victoryEn: "Collect target gems and defeat Thunder Beast Boss",
     failure: "玩家生命值归零 (HP <= 0) 或雷劫超时",
@@ -1628,7 +1629,8 @@ export function createGameplayPatch(
   reason = "Gameplay card selection changed",
   patchLevel: PatchLevel = "L2"
 ): ManifestPatch {
-  const node = spec.nodes.find((item) => item.id === nodeId);
+  const normalized = ensureGameplayManifest(spec);
+  const node = normalized.nodes.find((item) => item.id === nodeId);
   const before = node?.gameplay || defaultGameplayForMechanics(node?.mechanics || "survivor_horde");
 
   return {

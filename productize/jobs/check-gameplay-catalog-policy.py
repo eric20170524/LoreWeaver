@@ -22,6 +22,7 @@ def main() -> int:
     prod_ids = {c.get("id") for c in prod}
     assert "survivor_horde" in prod_ids, "survivor_horde must be production"
     assert "rhythm_timing" in prod_ids, "rhythm_timing must be production"
+    assert "drag_collect_grid" in prod_ids, "drag_collect_grid must be production"
     assert default_production_card_id() == "survivor_horde"
 
     # tap_reaction maps to rhythm_timing which is now production-ready → direct select
@@ -34,10 +35,11 @@ def main() -> int:
     assert r2["cardId"] == "rhythm_timing", r2
     assert r2["productionReady"] is True, r2
 
-    # Non-production mapped mechanics still fall back to default production
-    r_fallback = resolve_card_id(mechanics="drag_collect_grid", allow_experimental=False)
-    # drag_collect_grid may map to itself if in MECHANICS_TO_CARD; check catalog
-    # Prefer: explicit preferred production
+    # drag_collect_grid is production → direct select
+    r_drag = resolve_card_id(mechanics="drag_collect_grid", allow_experimental=False)
+    assert r_drag["cardId"] == "drag_collect_grid", r_drag
+    assert r_drag["productionReady"] is True, r_drag
+
     r3 = resolve_card_id(preferred="survivor_horde")
     assert r3["cardId"] == "survivor_horde"
 
@@ -45,16 +47,19 @@ def main() -> int:
     assert r4["cardId"] == "rhythm_timing"
     assert r4["productionReady"] is True
 
+    r4b = resolve_card_id(preferred="drag_collect_grid")
+    assert r4b["cardId"] == "drag_collect_grid"
+
     # Explicit non-production experimental
     r5 = resolve_card_id(preferred="sequence_synthesis", allow_experimental=True)
     assert r5["cardId"] == "sequence_synthesis", r5
     assert r5["experimental"] is True, r5
 
     summary = catalog_summary()
-    assert summary["totals"]["productionReady"] >= 2
+    assert summary["totals"]["productionReady"] >= 3
     assert summary["policy"]["autoSelectOnlyProductionReady"] is True
     auto_ids = {c["id"] for c in summary["autoSelectable"]}
-    assert "survivor_horde" in auto_ids and "rhythm_timing" in auto_ids
+    assert {"survivor_horde", "rhythm_timing", "drag_collect_grid"} <= auto_ids
 
     print("PASSED gameplay catalog policy checks")
     print(
@@ -63,8 +68,9 @@ def main() -> int:
             "autoSelectable": [c["id"] for c in summary["autoSelectable"]],
             "tap_reaction_auto": r1,
             "preferred_rhythm": r4,
+            "preferred_drag": r4b,
             "explicit_experimental_sequence": r5,
-            "drag_collect_auto": r_fallback,
+            "drag_collect_auto": r_drag,
         }
     )
     return 0

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "drag_collect_neon_drop",
+  "locales": ["zh-CN", "en"],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": {
+      "zh-CN": "霓虹数据雨",
+      "en": "Neon Data Rain"
+    },
+    "intro": {
+      "zh-CN": "接住绿色数据包，避开红色干扰包。",
+      "en": "Catch green data packets; dodge red interference."
+    },
+    "objectiveText": {
+      "zh-CN": "在倒计时内收集目标数据包",
+      "en": "Collect the target packet quota before timeout"
+    },
+    "controlHints": {
+      "zh-CN": "拖动移动 · 接绿躲红",
+      "en": "Drag to move · green good, red bad"
+    },
+    "hudLabels": {
+      "zh-CN": "护盾|时限|包数|目标",
+      "en": "Shield|Time|Packets|Goal"
+    },
+    "victoryText": {
+      "zh-CN": "数据同步完成",
+      "en": "Sync complete"
+    },
+    "failureText": {
+      "zh-CN": "链路崩溃",
+      "en": "Link collapsed"
+    },
+    "retreatText": {
+      "zh-CN": "已断开采集",
+      "en": "Collection aborted"
+    }
+  },
+  "entities": {
+    "player": { "zh-CN": "采集节点", "en": "Collector Node" },
+    "enemies": {
+      "hazard": { "zh-CN": "干扰包", "en": "Interference Pack" },
+      "orb": { "zh-CN": "数据包", "en": "Data Pack" }
+    },
+    "bosses": {
+      "boss": { "zh-CN": "核心洪流", "en": "Core Flood" }
+    },
+    "pickups": {
+      "gem": { "zh-CN": "数据包", "en": "Data Pack" },
+      "sword": { "zh-CN": "反击脉冲", "en": "Counter Pulse" }
+    },
+    "skills": {
+      "collect": { "zh-CN": "捕获", "en": "Capture" }
+    },
+    "statuses": {
+      "focus": { "zh-CN": "锁定", "en": "Locked" }
+    }
+  },
+  "copyKeys": {
+    "control_hint_inline": {
+      "zh-CN": "← 滑动接数据包 · 躲干扰 →",
+      "en": "← Slide for packets · dodge noise →"
+    },
+    "sword_pickup": {
+      "zh-CN": "反击脉冲！",
+      "en": "Counter!"
+    }
+  }
+}

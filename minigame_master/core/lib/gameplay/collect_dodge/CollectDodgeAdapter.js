@@ -12,6 +12,8 @@ const DEFAULT_CONFIG = Object.freeze({
     damageOnHit: 15,
     difficulty: 1,
     collectRadius: 36,
+    /** Pure collect loop without boss phase — preferred for gate demos */
+    skipBoss: false,
     boss: {
         hp: 100,
         speed: 150,
@@ -73,12 +75,24 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         super.init(payload);
         // Shared playability surface: timeLimitSec / needAmount / allowQuit / …
         const play = this.readPlayabilityKnobs(payload, 'drag_collect_grid');
-        const knobs = play || {};
+        const nodeConfig = payload.nodeConfig || {};
+        const gameplay = nodeConfig.gameplay || {};
+        const rawKnobs = gameplay.knobs || nodeConfig.knobs || {};
+        const knobs = { ...(play || {}), ...rawKnobs };
         this.config = mergeConfig(DEFAULT_CONFIG, knobs);
 
-        this.config.duration = Number(play.durationSec || DEFAULT_CONFIG.duration);
+        this.config.duration = Number(
+            knobs.timeLimitSec || knobs.durationSec || play.durationSec || DEFAULT_CONFIG.duration
+        );
         // Card-standard needAmount (+ legacy collectGoal/goalValue via normalize)
-        this.config.goalValue = Number(play.needAmount || play.collectGoal || DEFAULT_CONFIG.goalValue);
+        this.config.goalValue = Number(
+            knobs.needAmount ||
+                knobs.goalValue ||
+                knobs.collectGoal ||
+                play.needAmount ||
+                play.collectGoal ||
+                DEFAULT_CONFIG.goalValue
+        );
 
         this.config.spawnIntervalMs = Math.max(
             280,
@@ -91,15 +105,21 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.config.difficulty = Math.max(1, Number(this.config.difficulty || 1));
         this.config.hazardRate = Math.min(
             0.7,
-            Math.max(0.12, Number(this.config.hazardRate ?? DEFAULT_CONFIG.hazardRate))
+            Math.max(0.05, Number(this.config.hazardRate ?? DEFAULT_CONFIG.hazardRate))
         );
         this.config.collectRadius = Number(this.config.collectRadius || DEFAULT_CONFIG.collectRadius);
+        this.config.skipBoss = Boolean(knobs.skipBoss ?? this.config.skipBoss);
 
         if (!this.config.boss || typeof this.config.boss !== 'object') {
             this.config.boss = { ...DEFAULT_CONFIG.boss };
         } else {
             this.config.boss = { ...DEFAULT_CONFIG.boss, ...this.config.boss };
         }
+
+        this.themePack =
+            nodeConfig.themeContentPack || knobs.themeContentPack || payload.themeContentPack || null;
+        this.themeLocale =
+            knobs.locale || nodeConfig.locale || this.themePack?.defaultLocale || 'zh-CN';
 
         this.state.hp = payload.playerStats?.hp || 100;
         this.state.timeRemaining = this.config.duration;
@@ -111,6 +131,23 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.fallers = [];
         this.projectiles = [];
         return this;
+    }
+
+    t(key, fallback) {
+        const pack = this.themePack;
+        if (!pack) return fallback;
+        const locale = this.themeLocale || pack.defaultLocale || 'zh-CN';
+        const fb = pack.defaultLocale || 'zh-CN';
+        if (pack.copyKeys?.[key]) {
+            const v = pack.copyKeys[key];
+            if (typeof v === 'object') return v[locale] || v[fb] || Object.values(v)[0] || fallback;
+            if (typeof v === 'string') return v;
+        }
+        if (key === 'entity.boss' && pack.entities?.bosses?.boss) {
+            const v = pack.entities.bosses.boss;
+            return v[locale] || v[fb] || Object.values(v)[0] || fallback;
+        }
+        return fallback;
     }
 
     create(scene) {
@@ -130,9 +167,10 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.player.setStrokeStyle(3, 0xffffff, 1);
         this.player.setDepth(20);
 
-        // Hint text
+        // Hint text (themeable)
+        const hint = this.t('control_hint_inline', this.t('level.control_hint', 'Drag to collect · dodge hazards'));
         this.hintText = scene.add
-            .text(width / 2, height - 90, '← 左右滑动接绿珠 · 躲红雷 →', {
+            .text(width / 2, height - 90, hint, {
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '16px',
                 color: '#94a3b8'
@@ -200,9 +238,10 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
 
         // Manual fall (reliable across Phaser versions)
         for (let i = this.fallers.length - 1; i >= 0; i--) {
+            if (!this.isRunning()) break;
             const f = this.fallers[i];
-            if (!f.go || !f.go.active) {
-                this.fallers.splice(i, 1);
+            if (!f || !f.go || !f.go.active) {
+                if (f) this.fallers.splice(i, 1);
                 continue;
             }
             if (f._vx != null || f._vy != null) {
@@ -233,7 +272,10 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
                     if (f.kind === 'gem') this.collectGem(f);
                     else if (f.kind === 'hazard') this.hitHazard(f);
                     else if (f.kind === 'swordDrop') this.collectSwordDrop(f);
-                    this.fallers.splice(i, 1);
+                    // collect/hit may finish() and clearFallers — only splice if still present
+                    const idx = this.fallers.indexOf(f);
+                    if (idx >= 0) this.fallers.splice(idx, 1);
+                    if (!this.isRunning()) break;
                 }
             }
         }
@@ -341,16 +383,19 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     collectGem(f) {
-        f.icon?.destroy?.();
-        f.go?.destroy?.();
+        const x = f?.go?.x ?? 0;
+        const y = f?.go?.y ?? 0;
+        f?.icon?.destroy?.();
+        f?.go?.destroy?.();
         this.state.score += 1;
         this.playSynthSound('loot');
-        this.spawnParticles(f.go.x, f.go.y, 0x10b981);
-        this.spawnFloatingText(f.go.x, f.go.y, '+1', '#10b981');
+        this.spawnParticles(x, y, 0x10b981);
+        this.spawnFloatingText(x, y, '+1', '#10b981');
 
         if (this.state.score >= this.config.goalValue) {
             this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
         } else if (
+            !this.config.skipBoss &&
             this.state.score >= Math.max(5, Math.floor(this.config.goalValue * 0.55)) &&
             !this.state.bossSpawned
         ) {
@@ -359,21 +404,25 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     hitHazard(f) {
-        f.icon?.destroy?.();
-        f.go?.destroy?.();
+        const x = f?.go?.x ?? 0;
+        const y = f?.go?.y ?? 0;
+        f?.icon?.destroy?.();
+        f?.go?.destroy?.();
         this.damagePlayer(this.config.damageOnHit, NODE_RESULT_REASONS.HP_ZERO);
         this.playSynthSound('damage');
         this.triggerScreenShake(140, 0.008);
-        this.spawnParticles(f.go.x, f.go.y, 0xef4444);
+        this.spawnParticles(x, y, 0xef4444);
     }
 
     collectSwordDrop(f) {
-        f.icon?.destroy?.();
-        f.go?.destroy?.();
+        const x = f?.go?.x ?? 0;
+        const y = f?.go?.y ?? 0;
+        f?.icon?.destroy?.();
+        f?.go?.destroy?.();
         this.playSynthSound('loot');
-        this.spawnParticles(f.go.x, f.go.y, 0xf59e0b);
-        this.spawnFloatingText(f.go.x, f.go.y, '飞剑！', '#f59e0b');
-        this.shootFlyingSword(this.player.x, this.player.y - 24);
+        this.spawnParticles(x, y, 0xf59e0b);
+        this.spawnFloatingText(x, y, this.t('sword_pickup', 'Sword!'), '#f59e0b');
+        if (this.player) this.shootFlyingSword(this.player.x, this.player.y - 24);
     }
 
     shootFlyingSword(x, y) {
@@ -394,7 +443,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.boss.setStrokeStyle(3, 0xffffff, 1);
         this.boss.setDepth(12);
         this.bossText = this.scene.add
-            .text(this.world.width / 2, 210, '⚡兽王', {
+            .text(this.world.width / 2, 210, `⚡${this.t('entity.boss', 'Boss')}`, {
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '18px',
                 color: '#fff'
