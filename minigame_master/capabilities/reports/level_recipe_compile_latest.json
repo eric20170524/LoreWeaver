@@ -1,42 +1,34 @@
 {
   "schemaVersion": "loreweaver.level-recipe-compile-all.v1",
   "status": "passed",
-  "createdAt": "2026-07-24T01:38:39.878Z",
+  "createdAt": "2026-07-24T02:55:09.098Z",
   "results": [
     {
       "schemaVersion": "loreweaver.level-recipe-compile.v1",
       "status": "passed",
-      "createdAt": "2026-07-24T01:38:39.878Z",
-      "recipePath": "minigame_master/gameplay/cards/fixtures/rhythm_timing/level_recipe.neon.json",
-      "recipeId": "rhythm_timing_neon_gate_v1",
-      "cardId": "rhythm_timing",
-      "cardStatus": "gate_verified",
-      "requireProductionCard": false,
-      "recipeHash": "b690e120e2b3b388361aa8f46120f4d64eb742791b263fe340a9874c594ddb59",
-      "contentHash": "b81647ad4a7b067e00d8382f7b7e05de9d3fda937e2cef0ec459be3f33a7c9a3",
+      "createdAt": "2026-07-24T02:55:09.098Z",
+      "recipePath": "minigame_master/gameplay/cards/fixtures/pressure_survival/level_recipe.neon.json",
+      "recipeId": "pressure_survival_neon_production_v1",
+      "cardId": "pressure_survival",
+      "cardStatus": "production_ready",
+      "requireProductionCard": true,
+      "recipeHash": "02fffc68f9a7eac6452acf6ec6b257a7833de96fd0a845c3747036527ad239cb",
+      "contentHash": "9479ff6e5314560cdbc5bc6e3f1876a775564c7b190fcbb5d6c79ae6e78e1534",
       "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
       "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
-      "contentThemeId": "rhythm_timing_neon_pulse",
+      "contentThemeId": "pressure_survival_neon",
       "locale": "zh-CN",
-      "balanceProfile": "demo_short",
+      "balanceProfile": "normal_short",
       "modifiers": [],
       "knobs": {
-        "durationSec": 45,
-        "goalValue": 12,
-        "difficulty": 1,
-        "beatIntervalMs": 850,
-        "spawnIntervalMs": 850,
-        "orbLifetimeMs": 1700,
-        "targetProgress": 12,
-        "skipBoss": true,
-        "artRuntimeMode": "prototype",
         "allowQuit": true,
-        "allowPause": true
+        "allowPause": true,
+        "artRuntimeMode": "prototype"
       },
       "reasons": [],
       "warnings": [],
       "resolved": {
-        "contentPackPath": "minigame_master/gameplay/cards/fixtures/rhythm_timing/theme_content_pack.neon.json",
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/pressure_survival/theme_content_pack.neon.json",
         "workspaceId": "20260611-060754-719406"
       }
     }
