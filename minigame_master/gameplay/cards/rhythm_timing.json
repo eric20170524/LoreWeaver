@@ -3,13 +3,13 @@
   "id": "rhythm_timing",
   "title": "Rhythm Timing",
   "category": "timing",
-  "status": "runtime_ready",
+  "status": "gate_verified",
   "runtime": {
     "engineTargets": [
       "html_canvas",
       "phaser"
     ],
-    "adapter": "RhythmTimingAdapter",
+    "adapter": "TapReactionAdapter",
     "container": "node_iframe_microgame",
     "template": "rhythm_timing"
   },
@@ -65,6 +65,70 @@
       "max": 200,
       "patchLevel": "L1",
       "description": "Optional best combo requirement."
+    },
+    "spawnIntervalMs": {
+      "type": "integer",
+      "default": 1200,
+      "min": 300,
+      "max": 5000,
+      "patchLevel": "L1",
+      "description": "Alias of beatIntervalMs for adapter spawn loop."
+    },
+    "orbLifetimeMs": {
+      "type": "integer",
+      "default": 2500,
+      "min": 400,
+      "max": 8000,
+      "patchLevel": "L1",
+      "description": "How long a reaction orb remains clickable."
+    },
+    "skipBoss": {
+      "type": "boolean",
+      "default": false,
+      "patchLevel": "L1",
+      "description": "When true, pure timing loop without boss phase (demo/gate)."
+    },
+    "durationSec": {
+      "type": "integer",
+      "default": 30,
+      "min": 10,
+      "max": 600,
+      "patchLevel": "L1",
+      "description": "Run duration seconds."
+    },
+    "goalValue": {
+      "type": "integer",
+      "default": 15,
+      "min": 1,
+      "max": 1000,
+      "patchLevel": "L1",
+      "description": "Score/progress needed to win (alias of targetProgress)."
+    },
+    "difficulty": {
+      "type": "integer",
+      "default": 1,
+      "min": 1,
+      "max": 5,
+      "patchLevel": "L1",
+      "description": "Difficulty scaling for spawn and orb lifetime."
+    },
+    "artRuntimeMode": {
+      "type": "string",
+      "default": "prototype",
+      "patchLevel": "L1",
+      "description": "prototype | production art binding mode."
+    },
+    "allowQuit": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "Allow retreat/quit."
+    },
+    "allowPause": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "Allow pause/resume."
     }
   },
   "patchPolicy": {
@@ -126,23 +190,16 @@
   "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
   "requiredAssets": {
     "playerClips": [
-      "idle",
-      "walk",
-      "attack",
-      "hurt",
-      "death"
+      "idle"
     ],
     "enemyKinds": [
-      "mob",
-      "elite",
-      "boss"
+      "orb"
     ],
     "environments": [
       "bg_default"
     ],
     "audioCues": [
       "bgm_main",
-      "sfx_attack",
       "sfx_hit",
       "sfx_win",
       "sfx_lose"
@@ -151,7 +208,7 @@
   "performanceBudget": {
     "normalP95Fps": 55,
     "bossP95Fps": 45,
-    "maxActiveEnemies": 50
+    "maxActiveEnemies": 12
   },
   "maturityImpact": {
     "dimensions": [
@@ -169,10 +226,38 @@
         "smoke",
         "runtime"
       ]
+    },
+    {
+      "id": "demo_e2e_enter_retreat_fail_win",
+      "tags": [
+        "e2e",
+        "demo",
+        "gate"
+      ]
     }
   ],
   "exportPolicy": {
     "productionReady": false,
-    "blockReason": "Awaiting P1-P7 production readiness certification"
+    "blockReason": "gate_verified only; missing standalone E2E, soak/device FPS, VLM, human signoff, production recipe certification"
+  },
+  "certificationNotes": {
+    "status": "gate_verified",
+    "certifiedAt": "2026-07-24",
+    "demo": "minigame_master/core/demo/rhythm_timing",
+    "e2eScript": "npm run check:rhythm-e2e",
+    "readinessScript": "npm run check:rhythm-gate",
+    "fixtures": "minigame_master/gameplay/cards/fixtures/rhythm_timing/",
+    "evidence": [
+      "runtime_e2e_rhythm_timing_latest.json",
+      "level_recipe_compile_rhythm_latest.json",
+      "rhythm_gate_readiness_latest.json"
+    ],
+    "nextForProductionReady": [
+      "standalone export E2E",
+      "visual soak / device FPS",
+      "VLM audit",
+      "human playtest signoff",
+      "production_recipe + exportPolicy.productionReady"
+    ]
   }
 }

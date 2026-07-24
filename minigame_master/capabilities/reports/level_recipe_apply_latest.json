@@ -2,47 +2,47 @@
   "schemaVersion": "loreweaver.level-recipe-apply.v1",
   "status": "passed",
   "ok": true,
-  "createdAt": "2026-07-23T22:56:15.847Z",
+  "createdAt": "2026-07-24T01:38:39.883Z",
   "dryRun": true,
   "workspaceId": "20260611-060754-719406",
-  "nodeId": "1",
-  "nodePath": "data/workspaces/20260611-060754-719406/loreweaver/nodes/node-01-dahuang.json",
-  "recipeId": "survivor_horde_cyber_pulse_production_v1",
-  "recipePath": "minigame_master/gameplay/cards/fixtures/survivor_horde/level_recipe.cyber_pulse.json",
-  "cardId": "survivor_horde",
-  "contentThemeId": "survivor_horde_cyber_pulse",
-  "recipeHash": "8d7b75636e8f5c5c5901c527f608f123a6694f2fab8edb36cd90003a1dbb20d8",
-  "contentHash": "7f30ca31013863ff",
-  "contentHashFull": "7f30ca31013863ff9f6ba832d0fa50e475560e62f8fe6ab0532e3094e7d0f96b",
+  "nodeId": "3",
+  "nodePath": "data/workspaces/20260611-060754-719406/loreweaver/nodes/node-03-xushenjie.json",
+  "recipeId": "rhythm_timing_neon_gate_v1",
+  "recipePath": "minigame_master/gameplay/cards/fixtures/rhythm_timing/level_recipe.neon.json",
+  "cardId": "rhythm_timing",
+  "contentThemeId": "rhythm_timing_neon_pulse",
+  "recipeHash": "b690e120e2b3b388361aa8f46120f4d64eb742791b263fe340a9874c594ddb59",
+  "contentHash": "b81647ad4a7b067e",
+  "contentHashFull": "b81647ad4a7b067e00d8382f7b7e05de9d3fda937e2cef0ec459be3f33a7c9a3",
   "before": {
-    "title": "荒域生存试炼",
-    "intro": "在限时内移动、自动攻击并收集升级，击败或撑过敌潮。",
-    "cardId": "survivor_horde",
-    "durationLimit": 60,
-    "modifiers": [
-      "hazard_telegraph"
-    ],
+    "title": "镜魄试炼场",
+    "intro": "镜魄试炼场内天才云集，最后三十秒出现强压 Boss 投影。目标是在高压围攻中完成封王试炼。",
+    "cardId": "rhythm_timing",
+    "durationLimit": 180,
+    "modifiers": [],
     "knobs": {
-      "legacySceneClass": "Node1Scene",
-      "realmRequired": 1,
+      "legacySceneClass": "Node3Scene",
+      "realmRequired": 3,
       "enemyPool": [
-        "wild_rhino",
-        "green_scaled_eagle",
-        "rock_golem"
+        "human_genius",
+        "genius_beast",
+        "shi_yi_projection",
+        "huo_linger_projection"
       ],
-      "bossId": "qiongqi_cub",
+      "bossId": "shi_yi_phantom",
       "sourceRewards": {
-        "bloodEssence": 200,
-        "suanBoneScript": [
-          0,
-          1
+        "bloodEssence": 1000,
+        "pureBlood": [
+          2,
+          2
         ]
       },
-      "durationSec": 60,
-      "goalValue": 100,
-      "difficulty": 1,
-      "victoryMode": "survive",
-      "envKey": "env_bg_desert",
+      "unlocksFlag": "young_supreme",
+      "durationSec": 180,
+      "goalValue": 180,
+      "difficulty": 3,
+      "victoryMode": "objective",
+      "envKey": "env_bg_arena",
       "playable": true,
       "allowQuit": true,
       "allowPause": true,
@@ -50,48 +50,43 @@
       "clearable": true,
       "retreatReturnsToShell": true,
       "artAtlasFirst": true,
-      "bgmKey": "node1_battle",
+      "bgmKey": "node3_rival",
       "sfxVictory": "victory_sting",
       "sfxDefeat": "defeat_sting",
       "bossBgmKey": "boss_theme",
-      "runtimeCardId": "survivor_horde",
-      "shellRetreat": true,
-      "loadingLabel": "LOADING",
-      "statusText": "正在初始化修真世界沙盒 INITIALIZING...",
-      "artRuntimeMode": "prototype",
-      "recipeId": "survivor_horde_golden_production_v1",
-      "balanceProfile": "normal_short"
+      "runtimeCardId": "rhythm_timing",
+      "shellRetreat": true
     }
   },
   "after": {
-    "title": "霓虹脉冲清场",
-    "intro": "在脉冲时限内清扫感染体，收集数据核心。",
-    "cardId": "survivor_horde",
-    "durationLimit": 60,
-    "modifiers": [
-      "hazard_telegraph"
-    ],
+    "title": "霓虹节拍关",
+    "intro": "跟上脉冲节拍，点亮数据环。",
+    "cardId": "rhythm_timing",
+    "durationLimit": 45,
+    "modifiers": [],
     "knobs": {
-      "legacySceneClass": "Node1Scene",
-      "realmRequired": 1,
+      "legacySceneClass": "Node3Scene",
+      "realmRequired": 3,
       "enemyPool": [
-        "wild_rhino",
-        "green_scaled_eagle",
-        "rock_golem"
+        "human_genius",
+        "genius_beast",
+        "shi_yi_projection",
+        "huo_linger_projection"
       ],
-      "bossId": "qiongqi_cub",
+      "bossId": "shi_yi_phantom",
       "sourceRewards": {
-        "bloodEssence": 200,
-        "suanBoneScript": [
-          0,
-          1
+        "bloodEssence": 1000,
+        "pureBlood": [
+          2,
+          2
         ]
       },
-      "durationSec": 60,
-      "goalValue": 100,
+      "unlocksFlag": "young_supreme",
+      "durationSec": 45,
+      "goalValue": 12,
       "difficulty": 1,
-      "victoryMode": "survive",
-      "envKey": "env_bg_desert",
+      "victoryMode": "objective",
+      "envKey": "env_bg_arena",
       "playable": true,
       "allowQuit": true,
       "allowPause": true,
@@ -99,17 +94,20 @@
       "clearable": true,
       "retreatReturnsToShell": true,
       "artAtlasFirst": true,
-      "bgmKey": "node1_battle",
+      "bgmKey": "node3_rival",
       "sfxVictory": "victory_sting",
       "sfxDefeat": "defeat_sting",
       "bossBgmKey": "boss_theme",
-      "runtimeCardId": "survivor_horde",
+      "runtimeCardId": "rhythm_timing",
       "shellRetreat": true,
-      "loadingLabel": "LOADING",
-      "statusText": "正在初始化修真世界沙盒 INITIALIZING...",
+      "beatIntervalMs": 850,
+      "spawnIntervalMs": 850,
+      "orbLifetimeMs": 1700,
+      "targetProgress": 12,
+      "skipBoss": true,
       "artRuntimeMode": "prototype",
-      "recipeId": "survivor_horde_cyber_pulse_production_v1",
-      "balanceProfile": "normal_short"
+      "recipeId": "rhythm_timing_neon_gate_v1",
+      "balanceProfile": "demo_short"
     }
   },
   "staleMarked": null

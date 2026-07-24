@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "rhythm_timing_temple_breath",
+  "locales": ["zh-CN", "en"],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": {
+      "zh-CN": "灵息节奏试炼",
+      "en": "Spirit Breath Rhythm"
+    },
+    "intro": {
+      "zh-CN": "在光环最亮时点按，积攒灵息进度。",
+      "en": "Tap when the orb peaks to build spirit progress."
+    },
+    "objectiveText": {
+      "zh-CN": "达到目标进度以通过试炼",
+      "en": "Reach target progress to clear the trial"
+    },
+    "controlHints": {
+      "zh-CN": "点按光环 · 错过扣血",
+      "en": "Tap orbs · Miss drains HP"
+    },
+    "hudLabels": {
+      "zh-CN": "生命|时间|进度|连击",
+      "en": "HP|Time|Progress|Combo"
+    },
+    "victoryText": {
+      "zh-CN": "灵息圆满",
+      "en": "Breath completed"
+    },
+    "failureText": {
+      "zh-CN": "节奏失准",
+      "en": "Rhythm broken"
+    },
+    "retreatText": {
+      "zh-CN": "已退出试炼",
+      "en": "Withdrew from trial"
+    }
+  },
+  "entities": {
+    "player": {
+      "zh-CN": "行者",
+      "en": "Walker"
+    },
+    "enemies": {
+      "orb": { "zh-CN": "灵息光环", "en": "Breath Orb" }
+    },
+    "bosses": {
+      "boss": { "zh-CN": "心魔残影", "en": "Heart-Demon Echo" }
+    },
+    "pickups": {
+      "combo": { "zh-CN": "连击火苗", "en": "Combo Spark" }
+    },
+    "skills": {
+      "perfect_hit": { "zh-CN": "完美拍点", "en": "Perfect Beat" }
+    },
+    "statuses": {
+      "focus": { "zh-CN": "入定", "en": "Focused" }
+    }
+  },
+  "copyKeys": {
+    "boss_banner": {
+      "zh-CN": "心魔降临！点破弱点，点按护盾反弹！",
+      "en": "Heart-demon! Break weak points, tap shields to counter!"
+    },
+    "weak_point": {
+      "zh-CN": "击破",
+      "en": "Break"
+    },
+    "defend": {
+      "zh-CN": "点按防御",
+      "en": "Defend"
+    },
+    "laser_charge": {
+      "zh-CN": "蓄力中！点击弱点打断！",
+      "en": "Charging! Tap weak points to interrupt!"
+    },
+    "laser_fire": {
+      "zh-CN": "强力轰击！",
+      "en": "Beam fire!"
+    },
+    "interrupt_ok": {
+      "zh-CN": "打断成功！",
+      "en": "Interrupted!"
+    },
+    "defend_ok": {
+      "zh-CN": "防御成功！反弹",
+      "en": "Deflected! Counter"
+    }
+  }
+}

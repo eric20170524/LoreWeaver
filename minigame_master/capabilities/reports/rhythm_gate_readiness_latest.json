@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "loreweaver.rhythm-gate-readiness.v1",
+  "status": "passed",
+  "createdAt": "2026-07-24T01:38:39.578Z",
+  "cardId": "rhythm_timing",
+  "gateVerifiedEligible": true,
+  "productionReadyEligible": false,
+  "checks": [
+    {
+      "name": "card_present",
+      "ok": true,
+      "detail": "rhythm_timing"
+    },
+    {
+      "name": "card_runtime_or_gate",
+      "ok": true,
+      "detail": "gate_verified"
+    },
+    {
+      "name": "export_not_production",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "e2e_present",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "name": "e2e_passed",
+      "ok": true,
+      "detail": "passed"
+    },
+    {
+      "name": "e2e_cardId",
+      "ok": true,
+      "detail": "rhythm_timing"
+    },
+    {
+      "name": "e2e_releaseEligible_false",
+      "ok": true,
+      "detail": "false"
+    },
+    {
+      "name": "e2e_flows",
+      "ok": true,
+      "detail": "mobile_fail_hp_zero,mobile_force_win,mobile_pause_resume,desktop_retreat"
+    },
+    {
+      "name": "theme_fixtures",
+      "ok": true,
+      "detail": "temple+neon"
+    },
+    {
+      "name": "demo_present",
+      "ok": true,
+      "detail": "demo/main.js"
+    },
+    {
+      "name": "recipe_compile",
+      "ok": true,
+      "detail": "passed"
+    }
+  ],
+  "residuals": [
+    "no production_ready certification",
+    "no standalone export E2E for rhythm_timing",
+    "no 10min soak / device FPS",
+    "no VLM visual audit",
+    "no human playtest signoff",
+    "boss phase skipped in demo (skipBoss)"
+  ],
+  "notes": [
+    "gate_verified requires demo E2E + fixtures only for this lightweight card.",
+    "production_ready still blocked by full DoD residuals."
+  ]
+}

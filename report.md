@@ -1,62 +1,58 @@
 # minigame_master 关卡生产化进度与质量报告 (report.md)
 
-> **当前总体状态**: **publish hard-gate + Level Recipe 工作台路径 + stale 联动已落地**  
+> **当前总体状态**: **survivor_horde = production_ready** · **rhythm_timing = gate_verified**  
 > **更新时间**: 2026-07-24
 
 ---
 
 ## 成熟度
 
-| Card | status | 自动编排 |
-| --- | --- | --- |
-| **survivor_horde** | **production_ready** | **是** |
-| 其余 22 | runtime_ready | 否 |
+| Card | status | 自动编排 | 说明 |
+| --- | --- | --- | --- |
+| **survivor_horde** | **production_ready** | **是** | 有 residual（真机 FPS / VLM） |
+| **rhythm_timing** | **gate_verified** | 否（需显式 experimental） | demo E2E 竖切；未 production |
+| 其余 21 | runtime_ready | 否 | — |
 
 ---
 
-## 本轮（D1 收口 + publish hard-block）
+## 本轮（E3：`rhythm_timing` 竖切）
 
-| 能力 | 命令 / 模块 |
+| 能力 | 命令 / 路径 |
 | --- | --- |
-| 生产导出硬门禁 | `productize/lib/production-export-gate.mjs` · `npm run productize:card` · `npm run check:production-export-gate` |
-| 证据 stale 标记 | `productize/lib/mark-gate-reports-stale.mjs`（recipe apply 写节点后联动） |
-| Recipe 共享 apply | `productize/lib/apply-level-recipe-core.mjs` · CLI `recipe:apply` / `recipe:list` |
-| 工作台 UI | GameplayPanel「Level Recipe 一键应用」 |
-| 后端 API | `POST /api/workspaces/{id}/level-recipe/apply` · `GET …/level-recipes` |
+| Core demo | `minigame_master/core/demo/rhythm_timing`（`?theme=temple|neon`） |
+| Playwright E2E | `npm run check:rhythm-e2e` |
+| Gate 就绪 | `npm run check:rhythm-gate` |
+| 实验 Recipe | `fixtures/rhythm_timing/level_recipe.*.json` |
+| 主题包 | 灵息试炼 / 霓虹节拍 |
 
-验收要点：
+证据：进关、暂停恢复、`hp_zero` 失败、force 胜利、桌面撤退；`releaseEligible: false`。
 
-1. 完整证据 → `productionExportAllowed: true`
-2. 报告 stale / 缺失 / cardId 不匹配 / `releaseEligible!=true` → **硬失败**
-3. cyber recipe dry-run → 节点标题 **霓虹脉冲清场**（与 CLI 同路径）
-4. 写节点 apply 会标记门禁报告 stale，发布门禁拒绝直至重跑证据
-
-详见 [step_D1_publish_gate_recipe_ui.md](docs/reports/step_D1_publish_gate_recipe_ui.md)
+详见 [step_E3_rhythm_timing_gate_verified.md](docs/reports/step_E3_rhythm_timing_gate_verified.md)
 
 ---
 
-## 换皮最短路径（生产）
+## 换皮最短路径（生产卡 survivor）
 
 ```bash
-# 1) 校验配方
 npm run check:level-recipe
-
-# 2) 应用到工作区节点（CLI 或工作台 UI 按钮）
 npm run recipe:apply -- \
   --recipe minigame_master/gameplay/cards/fixtures/survivor_horde/level_recipe.cyber_pulse.json \
-  --workspace 20260611-060754-719406 \
-  --node 1
-
-# 3) 重跑 E2E/视觉/性能证据后：
+  --workspace 20260611-060754-719406 --node 1
 npm run productize:card -- minigame_master/gameplay/cards/survivor_horde.json
+```
 
-# 4) 打开 http://localhost:3000 模拟器验证
+## rhythm_timing 体验
+
+```bash
+npx vite --config minigame_master/core/demo/rhythm_timing/vite.config.mjs --host 127.0.0.1 --port 5190
+# open http://127.0.0.1:5190/?theme=neon
+npm run check:rhythm-e2e
 ```
 
 ---
 
-## 下一步（非本轮 scope）
+## 下一步
 
-1. 横向认证 `rhythm_timing`  
-2. residual：真机 FPS / VLM  
-3. 生产音频 cue 全矩阵硬失败  
+1. 将 `rhythm_timing` 推到 `production_ready`（standalone E2E + 证据包 + 签字）  
+2. 或横向下一张 **`drag_collect_grid`** → gate_verified  
+3. residual：真机 FPS / VLM  

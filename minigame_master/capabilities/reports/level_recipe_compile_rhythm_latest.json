@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "loreweaver.level-recipe-compile-rhythm.v1",
+  "status": "passed",
+  "createdAt": "2026-07-24T01:37:29.906Z",
+  "results": [
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile-all.v1",
+      "status": "passed",
+      "createdAt": "2026-07-24T01:37:29.871Z",
+      "results": [
+        {
+          "schemaVersion": "loreweaver.level-recipe-compile.v1",
+          "status": "passed",
+          "createdAt": "2026-07-24T01:37:29.870Z",
+          "recipePath": "minigame_master/gameplay/cards/fixtures/rhythm_timing/level_recipe.fixture.json",
+          "recipeId": "rhythm_timing_temple_gate_v1",
+          "cardId": "rhythm_timing",
+          "cardStatus": "runtime_ready",
+          "requireProductionCard": false,
+          "recipeHash": "b923b8ca2a99692fb68120901bd221022a1a2ff5658aa28c8a4669c8ec57b30d",
+          "contentHash": "c254086a5b4b770dbf021b320ce19533f81ae25d939f13dd9ef466e347eb3747",
+          "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+          "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+          "contentThemeId": "rhythm_timing_temple_breath",
+          "locale": "zh-CN",
+          "balanceProfile": "demo_short",
+          "modifiers": [],
+          "knobs": {
+            "durationSec": 45,
+            "goalValue": 12,
+            "difficulty": 1,
+            "beatIntervalMs": 900,
+            "spawnIntervalMs": 900,
+            "orbLifetimeMs": 1800,
+            "targetProgress": 12,
+            "skipBoss": true,
+            "artRuntimeMode": "prototype",
+            "allowQuit": true,
+            "allowPause": true
+          },
+          "reasons": [],
+          "warnings": [
+            "card rhythm_timing is runtime_ready only — experimental recipe",
+            "knob 'spawnIntervalMs' not in card knobs schema (allowed experimental)",
+            "knob 'orbLifetimeMs' not in card knobs schema (allowed experimental)",
+            "knob 'skipBoss' not in card knobs schema (allowed experimental)"
+          ],
+          "resolved": {
+            "contentPackPath": "minigame_master/gameplay/cards/fixtures/rhythm_timing/theme_content_pack.fixture.json",
+            "workspaceId": "20260611-060754-719406"
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile-all.v1",
+      "status": "passed",
+      "createdAt": "2026-07-24T01:37:29.903Z",
+      "results": [
+        {
+          "schemaVersion": "loreweaver.level-recipe-compile.v1",
+          "status": "passed",
+          "createdAt": "2026-07-24T01:37:29.902Z",
+          "recipePath": "minigame_master/gameplay/cards/fixtures/rhythm_timing/level_recipe.neon.json",
+          "recipeId": "rhythm_timing_neon_gate_v1",
+          "cardId": "rhythm_timing",
+          "cardStatus": "runtime_ready",
+          "requireProductionCard": false,
+          "recipeHash": "b690e120e2b3b388361aa8f46120f4d64eb742791b263fe340a9874c594ddb59",
+          "contentHash": "b81647ad4a7b067e00d8382f7b7e05de9d3fda937e2cef0ec459be3f33a7c9a3",
+          "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+          "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+          "contentThemeId": "rhythm_timing_neon_pulse",
+          "locale": "zh-CN",
+          "balanceProfile": "demo_short",
+          "modifiers": [],
+          "knobs": {
+            "durationSec": 45,
+            "goalValue": 12,
+            "difficulty": 1,
+            "beatIntervalMs": 850,
+            "spawnIntervalMs": 850,
+            "orbLifetimeMs": 1700,
+            "targetProgress": 12,
+            "skipBoss": true,
+            "artRuntimeMode": "prototype",
+            "allowQuit": true,
+            "allowPause": true
+          },
+          "reasons": [],
+          "warnings": [
+            "card rhythm_timing is runtime_ready only — experimental recipe",
+            "knob 'spawnIntervalMs' not in card knobs schema (allowed experimental)",
+            "knob 'orbLifetimeMs' not in card knobs schema (allowed experimental)",
+            "knob 'skipBoss' not in card knobs schema (allowed experimental)"
+          ],
+          "resolved": {
+            "contentPackPath": "minigame_master/gameplay/cards/fixtures/rhythm_timing/theme_content_pack.neon.json",
+            "workspaceId": "20260611-060754-719406"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "schemaVersion": "loreweaver.runtime-e2e.v1",
+  "gate": "rhythm_timing_demo_e2e",
+  "status": "passed",
+  "createdAt": "2026-07-24T01:37:40.784Z",
+  "cardId": "rhythm_timing",
+  "specHash": "rhythm_timing:core_demo:v1_theme_skin",
+  "runtimeVersion": "minigame_master.core.demo.rhythm_timing",
+  "releaseEligible": false,
+  "viewports": [
+    "mobile_720x1280",
+    "desktop_1280x800"
+  ],
+  "assertions": {
+    "mobile_720x1280_startButton": true,
+    "mobile_720x1280_hasSpecHash": true,
+    "mobile_720x1280_cardId": true,
+    "mobile_720x1280_releaseEligibleFalse": true,
+    "mobile_720x1280_themeTitle": true,
+    "mobile_720x1280_running": true,
+    "mobile_720x1280_timerUpdated": true,
+    "mobile_720x1280_canvasNonblank": true,
+    "mobile_720x1280_specHash": true,
+    "pauseStatus": true,
+    "resumeStatus": true,
+    "pauseTimerFrozen": true,
+    "naturalFailHpZero": true,
+    "naturalFailNotSuccess": true,
+    "winResultSuccess": true,
+    "winResultReason": true,
+    "desktop_1280x800_startButton": true,
+    "desktop_1280x800_hasSpecHash": true,
+    "desktop_1280x800_cardId": true,
+    "desktop_1280x800_releaseEligibleFalse": true,
+    "desktop_1280x800_themeTitle": true,
+    "desktop_1280x800_running": true,
+    "desktop_1280x800_timerUpdated": true,
+    "desktop_1280x800_canvasNonblank": true,
+    "desktop_1280x800_specHash": true,
+    "desktop_1280x800_retreat": true,
+    "consoleErrors": 0
+  },
+  "failedAssertions": [],
+  "flows": [
+    {
+      "id": "mobile_fail_hp_zero",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_force_win",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_pause_resume",
+      "status": "passed"
+    },
+    {
+      "id": "desktop_retreat",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "observed": {
+    "demoMeta": {
+      "cardId": "rhythm_timing",
+      "specHash": "rhythm_timing:core_demo:v1_theme_skin",
+      "runtimeVersion": "minigame_master.core.demo.rhythm_timing",
+      "releaseEligible": false,
+      "themeKey": "temple",
+      "themeId": "rhythm_timing_temple_breath",
+      "locale": "zh-CN",
+      "title": "灵息节奏试炼",
+      "victoryText": "灵息圆满",
+      "failureText": "节奏失准",
+      "retreatText": "已退出试炼"
+    },
+    "pauseProbe": {
+      "ok": true,
+      "before": 41,
+      "mid": 41,
+      "midStatus": "paused",
+      "afterStatus": "running"
+    },
+    "afterFail": {
+      "cardId": "rhythm_timing",
+      "specHash": "rhythm_timing:core_demo:v1_theme_skin",
+      "runtimeVersion": "minigame_master.core.demo.rhythm_timing",
+      "releaseEligible": false,
+      "themeKey": "temple",
+      "themeId": "rhythm_timing_temple_breath",
+      "locale": "zh-CN",
+      "title": "灵息节奏试炼",
+      "mode": "result",
+      "status": "ended",
+      "hasLastResult": false,
+      "intro": "在光环最亮时点按，积攒灵息进度。",
+      "controlHint": "点按光环 · 错过扣血",
+      "nodeId": "rhythm_timing_demo",
+      "objective": "达到目标进度以通过试炼",
+      "goalValue": 6,
+      "hp": 0,
+      "timer": 41,
+      "score": 0,
+      "bossSpawned": false,
+      "hudHpLabel": "生命",
+      "resultReason": "hp_zero",
+      "resultSuccess": false,
+      "resultHeadline": "节奏失准",
+      "rewards": {}
+    },
+    "afterWin": {
+      "cardId": "rhythm_timing",
+      "specHash": "rhythm_timing:core_demo:v1_theme_skin",
+      "runtimeVersion": "minigame_master.core.demo.rhythm_timing",
+      "releaseEligible": false,
+      "themeKey": "temple",
+      "themeId": "rhythm_timing_temple_breath",
+      "locale": "zh-CN",
+      "title": "灵息节奏试炼",
+      "mode": "result",
+      "status": "ended",
+      "hasLastResult": true,
+      "intro": "在光环最亮时点按，积攒灵息进度。",
+      "controlHint": "点按光环 · 错过扣血",
+      "nodeId": "rhythm_timing_demo",
+      "objective": "达到目标进度以通过试炼",
+      "goalValue": 6,
+      "hp": 100,
+      "timer": 45,
+      "score": 0,
+      "bossSpawned": false,
+      "hudHpLabel": "生命",
+      "resultReason": "objective_met",
+      "resultSuccess": true,
+      "resultHeadline": "灵息圆满",
+      "rewards": {
+        "mainCurrency": 9
+      }
+    }
+  },
+  "notes": [
+    "Core demo E2E only — not workbench IDE path.",
+    "releaseEligible forced false until production certification.",
+    "skipBoss demo knobs for pure timing loop."
+  ],
+  "viteLogTail": "\n  VITE v6.4.3  ready in 144 ms\n\n  ➜  Local:   http://127.0.0.1:61727/\n"
+}

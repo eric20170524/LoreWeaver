@@ -10,6 +10,8 @@ const DEFAULT_CONFIG = Object.freeze({
     orbLifetimeMs: 2500,
     damageOnMiss: 10,
     difficulty: 1,
+    /** When true, pure timing loop (no boss phase) — preferred for gate demos */
+    skipBoss: false,
     boss: {
         hp: 100,
         weakPointRadius: 20,
@@ -59,11 +61,43 @@ export default class TapReactionAdapter extends GameplayAdapter {
         const nodeConfig = payload.nodeConfig || {};
         const gameplayConfig = nodeConfig.gameplay || {};
         const knobs = gameplayConfig.knobs || nodeConfig.knobs || {};
-        this.config = mergeConfig(DEFAULT_CONFIG, mergeConfig(gameplayConfig, knobs));
-        
-        // Match duration to node config if present
-        this.config.duration = nodeConfig.duration || this.config.duration;
-        this.config.goalValue = nodeConfig.rewards?.score || nodeConfig.goalValue || this.config.goalValue;
+        // Map Gameplay Card knob aliases → adapter config
+        const aliasPatch = {};
+        if (knobs.beatIntervalMs != null) aliasPatch.spawnIntervalMs = knobs.beatIntervalMs;
+        if (knobs.targetProgress != null) aliasPatch.goalValue = knobs.targetProgress;
+        if (knobs.durationSec != null) aliasPatch.duration = knobs.durationSec;
+        if (knobs.goodWindowMs != null && knobs.orbLifetimeMs == null) {
+            // Good window ~ orb lifetime heuristic for demo
+            aliasPatch.orbLifetimeMs = Math.max(800, knobs.goodWindowMs * 10);
+        }
+        this.config = mergeConfig(
+            DEFAULT_CONFIG,
+            mergeConfig(gameplayConfig, mergeConfig(knobs, aliasPatch))
+        );
+
+        // Match duration / goal to node config if present
+        this.config.duration =
+            knobs.durationSec || nodeConfig.duration || nodeConfig.durationLimit || this.config.duration;
+        this.config.goalValue =
+            knobs.targetProgress ||
+            knobs.goalValue ||
+            nodeConfig.goalValue ||
+            nodeConfig.rewards?.score ||
+            this.config.goalValue;
+        this.config.skipBoss = Boolean(
+            knobs.skipBoss ?? gameplayConfig.skipBoss ?? this.config.skipBoss
+        );
+
+        this.themePack =
+            nodeConfig.themeContentPack ||
+            knobs.themeContentPack ||
+            payload.themeContentPack ||
+            null;
+        this.themeLocale =
+            knobs.locale ||
+            nodeConfig.locale ||
+            this.themePack?.defaultLocale ||
+            'zh-CN';
 
         this.state.hp = payload.playerStats?.hp || 100;
         this.state.timeRemaining = this.config.duration;
@@ -71,7 +105,26 @@ export default class TapReactionAdapter extends GameplayAdapter {
         this.state.bossMaxHp = this.config.boss.hp;
         this.state.score = 0;
         this.state.bossSpawned = false;
+        this.readPlayabilityKnobs(payload, 'rhythm_timing');
         return this;
+    }
+
+    /** Resolve themed copy with generic fallbacks (no hardcoded IP). */
+    t(key, fallback) {
+        const pack = this.themePack;
+        if (!pack) return fallback;
+        const locale = this.themeLocale || pack.defaultLocale || 'zh-CN';
+        const fb = pack.defaultLocale || 'zh-CN';
+        if (pack.copyKeys?.[key]) {
+            const v = pack.copyKeys[key];
+            if (typeof v === 'object') return v[locale] || v[fb] || Object.values(v)[0] || fallback;
+            if (typeof v === 'string') return v;
+        }
+        if (key === 'entity.boss' && pack.entities?.bosses?.boss) {
+            const v = pack.entities.bosses.boss;
+            return v[locale] || v[fb] || Object.values(v)[0] || fallback;
+        }
+        return fallback;
     }
 
     create(scene) {
@@ -203,7 +256,11 @@ export default class TapReactionAdapter extends GameplayAdapter {
             // Win condition check or Boss trigger
             if (this.state.score >= this.config.goalValue) {
                 this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
-            } else if (this.state.score >= Math.floor(this.config.goalValue * 0.8) && !this.state.bossSpawned) {
+            } else if (
+                !this.config.skipBoss &&
+                this.state.score >= Math.floor(this.config.goalValue * 0.8) &&
+                !this.state.bossSpawned
+            ) {
                 this.spawnBoss();
             }
         });
@@ -243,7 +300,8 @@ export default class TapReactionAdapter extends GameplayAdapter {
         bossCore.strokeCircle(0, 0, 52);
         this.bossGroup.add(bossCore);
 
-        const bossText = this.scene.add.text(0, 0, "Boss 首领", {
+        const bossLabel = this.t('entity.boss', 'Boss');
+        const bossText = this.scene.add.text(0, 0, bossLabel, {
             fontFamily: "Inter, sans-serif",
             fontSize: "14px",
             fontStyle: "bold",
@@ -267,7 +325,8 @@ export default class TapReactionAdapter extends GameplayAdapter {
             wp.setDepth(100);
             wp.setInteractive({ useHandCursor: true });
 
-            const wpText = this.scene.add.text(wx, wy, "🎯 击破", {
+            const wpLabel = this.t('weak_point', 'Break');
+            const wpText = this.scene.add.text(wx, wy, `🎯 ${wpLabel}`, {
                 fontFamily: "Inter, sans-serif",
                 fontSize: "11px",
                 fontStyle: "bold",
@@ -280,7 +339,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
                 this.damageBoss(20);
                 this.playSynthSound('loot');
                 this.spawnClickParticle(wp.x, wp.y, 0xef4444);
-                this.spawnFloatingText(wp.x, wp.y, '-20 劫力', '#ef4444');
+                this.spawnFloatingText(wp.x, wp.y, '-20', '#ef4444');
                 this.triggerScreenShake(80, 0.003);
 
                 // Interrupt active laser warning if hit
@@ -309,9 +368,13 @@ export default class TapReactionAdapter extends GameplayAdapter {
         bannerBg.lineStyle(2, 0xa855f7, 0.9);
         bannerBg.strokeRect(20, height / 2 - 220, width - 40, 56);
 
+        const bannerCopy = this.t(
+            'boss_banner',
+            'Boss phase! Break weak points, tap shields to counter!'
+        );
         const bannerText = this.scene.add.text(
             width / 2, height / 2 - 192,
-            "⚡ Boss 降临！点击红色【🎯击破】痛击 Boss，点击蓝色【🛡️防御】拦截攻击！",
+            `⚡ ${bannerCopy}`,
             {
                 fontFamily: "Inter, sans-serif",
                 fontSize: "13px",
@@ -384,7 +447,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
         warningLine.lineStyle(4, 0xef4444, 0.7);
         warningLine.lineBetween(12, py, width - 12, py);
 
-        const warningText = this.scene.add.text(width / 2, py - 18, "⚡ 蓄力中！点击弱点打断！", {
+        const warningText = this.scene.add.text(width / 2, py - 18, `⚡ ${this.t('laser_charge', 'Charging!')}`, {
             fontFamily: "Inter, sans-serif",
             fontSize: "13px",
             fontStyle: "bold",
@@ -405,7 +468,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
             warningLine.clear();
             warningLine.lineStyle(10, 0xffffff, 1);
             warningLine.lineBetween(12, py, width - 12, py);
-            warningText.setText("⚡ 强力轰击！");
+            warningText.setText(`⚡ ${this.t('laser_fire', 'Beam fire!')}`);
             this.playSynthSound('damage'); // fire sweep
             this.triggerScreenShake(200, 0.01);
             this.damagePlayer(12, NODE_RESULT_REASONS.HP_ZERO);
@@ -438,7 +501,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
         try { warningTimer?.destroy?.(); } catch (_) {}
         if (warningLine?.active) warningLine.destroy();
         if (warningText?.active) {
-            warningText.setText("💥 成功打断蓄力！");
+            warningText.setText(`💥 ${this.t('interrupt_ok', 'Interrupted!')}`);
             warningText.setStyle({ color: "#10b981" });
             this.scene.tweens.add({
                 targets: warningText,
@@ -448,7 +511,12 @@ export default class TapReactionAdapter extends GameplayAdapter {
                 onComplete: () => warningText.destroy()
             });
         }
-        this.spawnFloatingText(this.world.width / 2, this.world.height / 2 - 120, "💥 打断成功！", "#10b981");
+        this.spawnFloatingText(
+            this.world.width / 2,
+            this.world.height / 2 - 120,
+            `💥 ${this.t('interrupt_ok', 'Interrupted!')}`,
+            "#10b981"
+        );
     }
 
     triggerShieldDeflectAttack() {
@@ -463,7 +531,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
         this.deflectShield = shield;
 
         // Label indicator
-        const shieldText = this.scene.add.text(sx, sy, "🛡️ 点按防御", {
+        const shieldText = this.scene.add.text(sx, sy, `🛡️ ${this.t('defend', 'Defend')}`, {
             fontFamily: "Inter, sans-serif",
             fontSize: "13px",
             fontStyle: "bold",
@@ -487,7 +555,12 @@ export default class TapReactionAdapter extends GameplayAdapter {
             this.playSynthSound('loot');
             this.damageBoss(10); // Counter damage!
             this.spawnClickParticle(sx, sy, 0x38bdf8);
-            this.spawnFloatingText(sx, sy, '🛡️ 防御成功！反弹-10', '#38bdf8');
+            this.spawnFloatingText(
+                sx,
+                sy,
+                `🛡️ ${this.t('defend_ok', 'Deflected!')} -10`,
+                '#38bdf8'
+            );
             failTimer.destroy();
             shield.destroy();
             shieldText.destroy();
