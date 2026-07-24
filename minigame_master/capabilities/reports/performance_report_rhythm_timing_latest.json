@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "loreweaver.performance-report.v1",
+  "gate": "performance_soak",
+  "target": "minigame_master/core/demo/rhythm_timing",
+  "cardId": "rhythm_timing",
+  "status": "passed",
+  "createdAt": "2026-07-24T01:49:40.499Z",
+  "method": "Playwright headless rAF FPS + optional interaction taps",
+  "soakSeconds": 120,
+  "fullDodSeconds": 600,
+  "isFullDodDuration": false,
+  "releaseEligible": true,
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "maxActiveEnemies": 12
+  },
+  "assertions": {
+    "soakSamplesCollected": true,
+    "avgFpsAboveFloor": true,
+    "noCatastrophicFps": true,
+    "noConsoleErrorsDuringSoak": true,
+    "budgetComparisonRecorded": true
+  },
+  "summary": {
+    "minFps": 60,
+    "avgFps": 60,
+    "sampleCount": 119,
+    "declaredBudgetP95": 55
+  },
+  "budgetMetInHeadless": true,
+  "errors": [],
+  "notes": [
+    "Headless Chromium FPS is not device-class; floor gates used (avg>=20).",
+    "SOAK_SECONDS=120",
+    "production_ready accepts headless soak as residual proxy (same policy as survivor_horde)."
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "recipeId": "rhythm_timing_temple_gate_v1",
+  "recipeId": "rhythm_timing_temple_production_v1",
   "cardId": "rhythm_timing",
   "status": "production_recipe",
   "productionReady": true,
@@ -8,12 +8,12 @@
   "modifiers": [],
   "knobs": {
     "durationSec": 45,
-    "goalValue": 12,
+    "goalValue": 15,
     "difficulty": 1,
     "beatIntervalMs": 900,
     "spawnIntervalMs": 900,
     "orbLifetimeMs": 1800,
-    "targetProgress": 12,
+    "targetProgress": 15,
     "skipBoss": true,
     "artRuntimeMode": "prototype",
     "allowQuit": true,
@@ -35,10 +35,10 @@
       "sfx_lose": "bgm/defeat_sting.wav"
     }
   },
-  "balanceProfile": "demo_short",
+  "balanceProfile": "normal_short",
   "locale": "zh-CN",
   "notes": [
-    "Experimental gate-verified slice for rhythm_timing (not production_recipe).",
-    "skipBoss keeps pure timing loop for E2E; production cert may re-enable boss phase."
+    "Production recipe for rhythm_timing after production_ready certification.",
+    "skipBoss keeps pure timing loop; boss phase remains optional residual."
   ]
 }

@@ -203,7 +203,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "gate_verified",
+    maturityStatus: "production_ready",
     victory: "吸收到达目标灵力值并战胜阵眼首领",
     victoryEn: "Reach target energy and defeat Mandala Boss",
     failure: "玩家生命值归零 (HP <= 0) 或雷劫超时",

@@ -62,6 +62,45 @@ function seedPassingReports(dir, cardId = "survivor_horde") {
     status: "passed",
     cardId
   });
+  writeJson(path.join(dir, `runtime_e2e_${cardId}_latest.json`), {
+    schemaVersion: "loreweaver.runtime-e2e.v1",
+    status: "passed",
+    cardId,
+    releaseEligible: true,
+    specHash: `${cardId}:test`
+  });
+}
+
+function seedPassingReportsPerCard(dir, cardId) {
+  writeJson(path.join(dir, "node_smoke_latest.json"), {
+    schemaVersion: "loreweaver.node-smoke.v1",
+    status: "passed",
+    summary: { total: 1, passed: 1, failed: 0 }
+  });
+  writeJson(path.join(dir, `standalone_browser_report_${cardId}.json`), {
+    schemaVersion: "loreweaver.standalone-browser-report.v1",
+    status: "passed",
+    cardId,
+    releaseEligible: true,
+    specHash: `${cardId}:test`,
+    runtimeVersion: "test"
+  });
+  writeJson(path.join(dir, `visual_audit_${cardId}_latest.json`), {
+    schemaVersion: "loreweaver.visual-audit.v1",
+    status: "passed",
+    cardId
+  });
+  writeJson(path.join(dir, `performance_report_${cardId}_latest.json`), {
+    schemaVersion: "loreweaver.performance-report.v1",
+    status: "passed",
+    cardId
+  });
+  writeJson(path.join(dir, `runtime_e2e_${cardId}_latest.json`), {
+    schemaVersion: "loreweaver.runtime-e2e.v1",
+    status: "passed",
+    cardId,
+    releaseEligible: true
+  });
 }
 
 function main() {
@@ -147,6 +186,24 @@ function main() {
   });
   assert(failHash.productionExportAllowed === false, "expected recipeHash mismatch fail");
   log(`[ok] fail-closed on recipeHash identity mismatch`);
+
+  // Multi-card isolation: shared latest is survivor; rhythm uses per-card files
+  const tmpMulti = path.join(scratchRoot, "reports_multi");
+  seedPassingReports(tmpMulti, "survivor_horde");
+  seedPassingReportsPerCard(tmpMulti, "rhythm_timing");
+  const rhythmCard = {
+    id: "rhythm_timing",
+    status: "production_ready",
+    exportPolicy: { productionReady: true }
+  };
+  const multiSurv = evaluateProductionExportGate({ card, reportsDir: tmpMulti });
+  const multiRhythm = evaluateProductionExportGate({
+    card: rhythmCard,
+    reportsDir: tmpMulti
+  });
+  assert(multiSurv.productionExportAllowed === true, `survivor multi: ${multiSurv.reasons}`);
+  assert(multiRhythm.productionExportAllowed === true, `rhythm multi: ${multiRhythm.reasons}`);
+  log(`[ok] multi-card per-file evidence isolation`);
 
   // --- 2) Recipe list + pure applyRecipeToNode ---
   const recipes = listBundledRecipes(LORE_ROOT);

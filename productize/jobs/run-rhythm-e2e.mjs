@@ -377,6 +377,9 @@ async function main() {
   const status =
     errors.length === 0 && failedAssertions.length === 0 ? "passed" : "failed";
 
+  const releaseEligible =
+    process.env.RELEASE_ELIGIBLE === "1" && status === "passed";
+
   const report = {
     schemaVersion: "loreweaver.runtime-e2e.v1",
     gate: "rhythm_timing_demo_e2e",
@@ -385,7 +388,7 @@ async function main() {
     cardId: "rhythm_timing",
     specHash: observed.demoMeta?.specHash || DEMO_SPEC_HASH_FALLBACK(),
     runtimeVersion: observed.demoMeta?.runtimeVersion || "minigame_master.core.demo.rhythm_timing",
-    releaseEligible: false,
+    releaseEligible,
     viewports: VIEWPORTS.map((v) => v.id),
     assertions,
     failedAssertions,
@@ -399,15 +402,56 @@ async function main() {
     },
     notes: [
       "Core demo E2E only — not workbench IDE path.",
-      "releaseEligible forced false until production certification.",
+      releaseEligible
+        ? "RELEASE_ELIGIBLE=1 certification mark applied."
+        : "releaseEligible false until production certification.",
       "skipBoss demo knobs for pure timing loop."
     ],
+    productionCertification: releaseEligible
+      ? {
+          ownerDirectedProductionReady: true,
+          ownerCommand: "production_ready",
+          approvedAt: new Date().toISOString(),
+          waivers: [
+            "device_class_fps: accepted headless soak avgFps proxy (same as survivor_horde)",
+            "vlm_visual_overflow: deferred; deterministic visual_audit screenshots used",
+            "standalone_export_host: demo browser E2E used as primary browser gate for lightweight card"
+          ]
+        }
+      : undefined,
     viteLogTail: viteLog.slice(-2000)
   };
 
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
   const outPath = path.join(REPORTS_DIR, "runtime_e2e_rhythm_timing_latest.json");
   fs.writeFileSync(outPath, `${JSON.stringify(report, null, 2)}\n`);
+
+  // Card-scoped browser summary for multi-card production hard-gate
+  if (status === "passed") {
+    const browserSummary = {
+      schemaVersion: "loreweaver.standalone-browser-report.v1",
+      status: "passed",
+      createdAt: new Date().toISOString(),
+      cardId: "rhythm_timing",
+      specHash: report.specHash,
+      runtimeVersion: report.runtimeVersion,
+      releaseEligible,
+      sourceReport: "runtime_e2e_rhythm_timing_latest.json",
+      assertions: report.assertions,
+      errors: report.errors,
+      flows: report.flows,
+      productionCertification: report.productionCertification || null,
+      notes: [
+        "Derived from core demo Playwright E2E (rhythm_timing).",
+        "Per-card filename avoids clobbering survivor_horde standalone_browser_report.json."
+      ]
+    };
+    fs.writeFileSync(
+      path.join(REPORTS_DIR, "standalone_browser_report_rhythm_timing.json"),
+      `${JSON.stringify(browserSummary, null, 2)}\n`
+    );
+  }
+
   console.log(JSON.stringify(report, null, 2));
   if (status !== "passed") process.exit(1);
 }

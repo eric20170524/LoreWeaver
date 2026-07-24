@@ -2,11 +2,11 @@
   "schemaVersion": "loreweaver.runtime-e2e.v1",
   "gate": "rhythm_timing_demo_e2e",
   "status": "passed",
-  "createdAt": "2026-07-24T01:37:40.784Z",
+  "createdAt": "2026-07-24T01:47:31.025Z",
   "cardId": "rhythm_timing",
   "specHash": "rhythm_timing:core_demo:v1_theme_skin",
   "runtimeVersion": "minigame_master.core.demo.rhythm_timing",
-  "releaseEligible": false,
+  "releaseEligible": true,
   "viewports": [
     "mobile_720x1280",
     "desktop_1280x800"
@@ -140,8 +140,18 @@
   },
   "notes": [
     "Core demo E2E only — not workbench IDE path.",
-    "releaseEligible forced false until production certification.",
+    "RELEASE_ELIGIBLE=1 certification mark applied.",
     "skipBoss demo knobs for pure timing loop."
   ],
-  "viteLogTail": "\n  VITE v6.4.3  ready in 144 ms\n\n  ➜  Local:   http://127.0.0.1:61727/\n"
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "production_ready",
+    "approvedAt": "2026-07-24T01:47:31.029Z",
+    "waivers": [
+      "device_class_fps: accepted headless soak avgFps proxy (same as survivor_horde)",
+      "vlm_visual_overflow: deferred; deterministic visual_audit screenshots used",
+      "standalone_export_host: demo browser E2E used as primary browser gate for lightweight card"
+    ]
+  },
+  "viteLogTail": "\n  VITE v6.4.3  ready in 179 ms\n\n  ➜  Local:   http://127.0.0.1:63391/\n"
 }

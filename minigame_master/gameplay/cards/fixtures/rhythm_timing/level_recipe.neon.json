@@ -2,9 +2,9 @@
   "schemaVersion": "1.0",
   "recipeId": "rhythm_timing_neon_gate_v1",
   "cardId": "rhythm_timing",
-  "status": "experimental_recipe",
-  "productionReady": false,
-  "requireProductionCard": false,
+  "status": "production_recipe",
+  "productionReady": true,
+  "requireProductionCard": true,
   "modifiers": [],
   "knobs": {
     "durationSec": 45,
