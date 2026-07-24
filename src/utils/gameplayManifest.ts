@@ -164,6 +164,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
+    maturityStatus: "production_ready",
     victory: "敌方 HP 归零",
     victoryEn: "Enemy HP reaches zero",
     failure: "玩家 HP 归零或撤退",

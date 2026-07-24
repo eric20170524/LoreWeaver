@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "loreweaver.level-recipe-compile-tbsb.v1",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:28:38.427Z",
+  "results": [
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile.v1",
+      "status": "passed",
+      "createdAt": "2026-07-24T02:28:38.391Z",
+      "recipePath": "minigame_master/gameplay/cards/fixtures/turn_based_skill_battle/level_recipe.fixture.json",
+      "recipeId": "tbsb_sect_duel_production_v1",
+      "cardId": "turn_based_skill_battle",
+      "cardStatus": "production_ready",
+      "requireProductionCard": true,
+      "recipeHash": "5960998378055ab603f3ade4acca78fe8a9fba6c2b318d5b6f30b06dfd3b0d1d",
+      "contentHash": "3cb219c14079e9630df3be67da496807814b7c67ea0f6255bff92d75b993b5c3",
+      "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+      "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+      "contentThemeId": "tbsb_sect_duel",
+      "locale": "zh-CN",
+      "balanceProfile": "normal_short",
+      "modifiers": [],
+      "knobs": {
+        "playerHp": 100,
+        "enemyHp": 120,
+        "enemyAtk": 16,
+        "playerAtk": 20,
+        "allowQuit": true,
+        "allowPause": true,
+        "artRuntimeMode": "prototype"
+      },
+      "reasons": [],
+      "warnings": [],
+      "resolved": {
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/turn_based_skill_battle/theme_content_pack.fixture.json",
+        "workspaceId": "20260611-060754-719406"
+      }
+    },
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile.v1",
+      "status": "passed",
+      "createdAt": "2026-07-24T02:28:38.424Z",
+      "recipePath": "minigame_master/gameplay/cards/fixtures/turn_based_skill_battle/level_recipe.neon.json",
+      "recipeId": "tbsb_neon_arena_production_v1",
+      "cardId": "turn_based_skill_battle",
+      "cardStatus": "production_ready",
+      "requireProductionCard": true,
+      "recipeHash": "e65c9dbbece363856077562928917210251a81e6c3017e1ea2421553235994c8",
+      "contentHash": "cca6cc5666c12326d77548bae2e5526b71a70142d029bc124cd9ccee1f656514",
+      "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+      "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+      "contentThemeId": "tbsb_neon_arena",
+      "locale": "zh-CN",
+      "balanceProfile": "normal_short",
+      "modifiers": [],
+      "knobs": {
+        "playerHp": 100,
+        "enemyHp": 120,
+        "enemyAtk": 16,
+        "playerAtk": 20,
+        "allowQuit": true,
+        "allowPause": true,
+        "artRuntimeMode": "prototype"
+      },
+      "reasons": [],
+      "warnings": [],
+      "resolved": {
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/turn_based_skill_battle/theme_content_pack.neon.json",
+        "workspaceId": "20260611-060754-719406"
+      }
+    }
+  ]
+}

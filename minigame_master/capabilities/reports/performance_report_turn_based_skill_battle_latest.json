@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "loreweaver.performance-report.v1",
+  "gate": "performance_soak",
+  "target": "minigame_master/core/demo/turn_based_skill_battle",
+  "cardId": "turn_based_skill_battle",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:28:12.508Z",
+  "method": "Playwright headless rAF FPS + optional interaction taps",
+  "soakSeconds": 120,
+  "fullDodSeconds": 600,
+  "isFullDodDuration": false,
+  "releaseEligible": true,
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "maxActiveEnemies": 12
+  },
+  "assertions": {
+    "soakSamplesCollected": true,
+    "avgFpsAboveFloor": true,
+    "noCatastrophicFps": true,
+    "noConsoleErrorsDuringSoak": true,
+    "budgetComparisonRecorded": true
+  },
+  "summary": {
+    "minFps": 56,
+    "avgFps": 95.4,
+    "sampleCount": 117,
+    "declaredBudgetP95": 55
+  },
+  "budgetMetInHeadless": true,
+  "errors": [],
+  "notes": [
+    "Headless Chromium FPS is not device-class; floor gates used (avg>=20).",
+    "SOAK_SECONDS=120",
+    "production_ready accepts headless soak as residual proxy (same policy as survivor_horde)."
+  ]
+}

@@ -3,10 +3,10 @@ import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
 
 const DEFAULT_SKILL_DECK = Object.freeze([
-    { id: 'strike', label: '普攻', damage: 28, heal: 0, cooldown: 0, color: 0xfbbf24 },
-    { id: 'heavy', label: '重击', damage: 55, heal: 0, cooldown: 2, color: 0xf97316 },
-    { id: 'heal', label: '回春', damage: 0, heal: 35, cooldown: 3, color: 0x34d399 },
-    { id: 'burst', label: '破军', damage: 90, heal: 0, cooldown: 4, color: 0xef4444 }
+    { id: 'strike', label: 'Strike', damage: 28, heal: 0, cooldown: 0, color: 0xfbbf24 },
+    { id: 'heavy', label: 'Heavy', damage: 55, heal: 0, cooldown: 2, color: 0xf97316 },
+    { id: 'heal', label: 'Heal', damage: 0, heal: 35, cooldown: 3, color: 0x34d399 },
+    { id: 'burst', label: 'Burst', damage: 90, heal: 0, cooldown: 4, color: 0xef4444 }
 ]);
 
 const DEFAULT_CONFIG = Object.freeze({
@@ -15,9 +15,11 @@ const DEFAULT_CONFIG = Object.freeze({
     playerAtk: 20,
     enemyHp: 180,
     enemyAtk: 18,
-    enemyName: '敌方目标',
+    enemyName: 'Enemy',
     skillDeck: DEFAULT_SKILL_DECK.slice(),
-    rewardTable: { score: 1 }
+    rewardTable: { score: 1 },
+    allowQuit: true,
+    allowPause: true
 });
 
 function mergeConfig(base, patch) {
@@ -95,6 +97,21 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
         this.config.enemyHp = enemyHp;
         this.config.enemyAtk = enemyAtk;
 
+        this.themePack =
+            nodeConfig.themeContentPack || knobs.themeContentPack || payload.themeContentPack || null;
+        this.themeLocale =
+            knobs.locale || nodeConfig.locale || this.themePack?.defaultLocale || 'zh-CN';
+
+        // Optional themed skill labels from content pack copyKeys.skills.*
+        if (this.themePack?.copyKeys) {
+            this.config.skillDeck = this.config.skillDeck.map((skill) => {
+                const key = `skill_${skill.id}`;
+                const label = this.t(key, skill.label);
+                return { ...skill, label };
+            });
+        }
+        this.config.enemyName = this.t('entity.boss', this.config.enemyName || 'Enemy');
+
         this.state.playerHp = playerHp;
         this.state.playerMaxHp = playerHp;
         this.state.enemyHp = enemyHp;
@@ -109,7 +126,29 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
         this.config.skillDeck.forEach((skill) => {
             this.state.cooldowns[skill.id] = 0;
         });
+        this.readPlayabilityKnobs(payload, 'turn_based_skill_battle');
         return this;
+    }
+
+    t(key, fallback) {
+        const pack = this.themePack;
+        if (!pack) return fallback;
+        const locale = this.themeLocale || pack.defaultLocale || 'zh-CN';
+        const fb = pack.defaultLocale || 'zh-CN';
+        if (pack.copyKeys?.[key]) {
+            const v = pack.copyKeys[key];
+            if (typeof v === 'object') return v[locale] || v[fb] || Object.values(v)[0] || fallback;
+            if (typeof v === 'string') return v;
+        }
+        if (key === 'entity.boss' && pack.entities?.bosses?.boss) {
+            const v = pack.entities.bosses.boss;
+            return v[locale] || v[fb] || Object.values(v)[0] || fallback;
+        }
+        if (key === 'entity.player' && pack.entities?.player) {
+            const v = pack.entities.player;
+            return v[locale] || v[fb] || Object.values(v)[0] || fallback;
+        }
+        return fallback;
     }
 
     create(scene) {
@@ -124,7 +163,7 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
         this.drawArena(width, height);
         this.drawHud(width, height);
         this.buildActionBar(width, height);
-        this.pushLog('战斗开始。选择技能发动回合。');
+        this.pushLog(this.t('battle_start', 'Battle start. Choose a skill.'));
         this.publishTestState();
         return this;
     }
@@ -139,13 +178,13 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
         this.playerSprite = this.scene.add.circle(width * 0.28, height * 0.32, 34, 0x66fcf1, 1);
         this.enemySprite = this.scene.add.circle(width * 0.72, height * 0.32, 42, 0xf43f5e, 1);
 
-        this.scene.add.text(width * 0.28, height * 0.32 + 52, '玩家角色', {
+        this.scene.add.text(width * 0.28, height * 0.32 + 52, this.t('entity.player', 'Player'), {
             fontFamily: 'Inter, sans-serif',
             fontSize: '14px',
             color: '#e2e8f0'
         }).setOrigin(0.5);
 
-        this.scene.add.text(width * 0.72, height * 0.32 + 56, this.config.enemyName || '敌方目标', {
+        this.scene.add.text(width * 0.72, height * 0.32 + 56, this.config.enemyName || this.t('entity.boss', 'Enemy'), {
             fontFamily: 'Inter, sans-serif',
             fontSize: '14px',
             color: '#fecdd3'
@@ -159,7 +198,7 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
     }
 
     drawHud(width, height) {
-        this.ui.turnText = this.scene.add.text(width / 2, 48, '你的回合', {
+        this.ui.turnText = this.scene.add.text(width / 2, 48, this.t('turn_player', 'Your turn'), {
             fontFamily: 'Inter, sans-serif',
             fontSize: '20px',
             fontStyle: 'bold',
@@ -211,13 +250,17 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
                 fontStyle: 'bold',
                 color: '#0f172a'
             }).setOrigin(0.5);
-            const cdLabel = this.scene.add.text(x, y + 12, skill.cooldown > 0 ? `CD ${skill.cooldown}` : '就绪', {
+            const ready = this.t('skill_ready', 'Ready');
+            const cdLabel = this.scene.add.text(x, y + 12, skill.cooldown > 0 ? `CD ${skill.cooldown}` : ready, {
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '11px',
                 color: '#1e293b'
             }).setOrigin(0.5);
 
             bg.on('pointerdown', () => this.onSkillClick(skill));
+            // data-testid for E2E
+            bg.setData?.('testid', `skill-${skill.id}`);
+            if (bg.setName) bg.setName(`skill-${skill.id}`);
             this.ui.buttons.push({ bg, label, cdLabel, skillId: skill.id });
             x += btnW + gap;
         });
@@ -227,6 +270,7 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
     refreshBars() {
         const { width } = this.scene.scale;
         const drawBar = (g, x, y, w, ratio, color) => {
+            if (!g) return;
             g.clear();
             g.fillStyle(0x1e293b, 0.9);
             g.fillRoundedRect(x, y, w, 12, 6);
@@ -235,22 +279,29 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
         };
         drawBar(this.ui.playerHpBar, width * 0.12, 100, width * 0.3, this.state.playerHp / this.state.playerMaxHp, 0x34d399);
         drawBar(this.ui.enemyHpBar, width * 0.58, 100, width * 0.3, this.state.enemyHp / this.state.enemyMaxHp, 0xf43f5e);
+        const pLabel = this.t('entity.player', 'Player');
+        const eLabel = this.t('entity.boss', 'Enemy');
         this.ui.statusText?.setText(
-            `玩家 ${Math.ceil(this.state.playerHp)}/${this.state.playerMaxHp}  |  敌人 ${Math.ceil(this.state.enemyHp)}/${this.state.enemyMaxHp}`
+            `${pLabel} ${Math.ceil(this.state.playerHp)}/${this.state.playerMaxHp}  |  ${eLabel} ${Math.ceil(this.state.enemyHp)}/${this.state.enemyMaxHp}`
         );
     }
 
     refreshButtons() {
+        const ready = this.t('skill_ready', 'Ready');
         this.ui.buttons.forEach((btn) => {
             const cd = this.state.cooldowns[btn.skillId] || 0;
             const locked = this.state.turn !== 'player' || cd > 0 || !this.isRunning();
             btn.bg.setAlpha(locked ? 0.35 : 0.95);
             btn.bg.disableInteractive();
             if (!locked) btn.bg.setInteractive({ useHandCursor: true });
-            btn.cdLabel.setText(cd > 0 ? `CD ${cd}` : '就绪');
+            btn.cdLabel.setText(cd > 0 ? `CD ${cd}` : ready);
         });
         if (this.ui.turnText) {
-            this.ui.turnText.setText(this.state.turn === 'player' ? '你的回合' : '敌方回合');
+            this.ui.turnText.setText(
+                this.state.turn === 'player'
+                    ? this.t('turn_player', 'Your turn')
+                    : this.t('turn_enemy', 'Enemy turn')
+            );
             this.ui.turnText.setColor(this.state.turn === 'player' ? '#f8fafc' : '#fda4af');
         }
     }
@@ -274,16 +325,24 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
         if (skill.heal > 0) {
             const before = this.state.playerHp;
             this.state.playerHp = Math.min(this.state.playerMaxHp, this.state.playerHp + skill.heal);
-            this.pushLog(`使用【${skill.label}】回复 ${Math.round(this.state.playerHp - before)} 点生命。`);
+            this.pushLog(
+                this.t('log_heal', 'Used [{skill}] heal {n}.')
+                    .replace('{skill}', skill.label)
+                    .replace('{n}', String(Math.round(this.state.playerHp - before)))
+            );
             this.flashSprite(this.playerSprite, 0x34d399);
         }
         if (skill.damage > 0) {
             const dmg = skill.damage + Number(this.config.playerAtk || 0) * 0.25;
             this.state.enemyHp = Math.max(0, this.state.enemyHp - dmg);
             this.state.damageDealt += dmg;
-            this.pushLog(`使用【${skill.label}】造成 ${Math.round(dmg)} 点伤害。`);
+            this.pushLog(
+                this.t('log_damage', 'Used [{skill}] hit {n}.')
+                    .replace('{skill}', skill.label)
+                    .replace('{n}', String(Math.round(dmg)))
+            );
             this.flashSprite(this.enemySprite, 0xf97316);
-            this.scene.cameras.main.shake(80, 0.004);
+            this.scene?.cameras?.main?.shake?.(80, 0.004);
         }
 
         this.refreshBars();
@@ -305,9 +364,12 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
         this.state.playerHp = Math.max(0, this.state.playerHp - dmg);
         this.state.damageTaken += dmg;
         this.state.turnsElapsed += 1;
-        this.pushLog(`敌人发动攻击，造成 ${Math.round(dmg)} 点伤害。`);
+        this.pushLog(
+            this.t('log_enemy_hit', 'Enemy hits for {n}.')
+                .replace('{n}', String(Math.round(dmg)))
+        );
         this.flashSprite(this.playerSprite, 0xef4444);
-        this.scene.cameras.main.shake(100, 0.006);
+        this.scene?.cameras?.main?.shake?.(100, 0.006);
 
         // Tick cooldowns at end of full round
         Object.keys(this.state.cooldowns).forEach((id) => {
@@ -339,8 +401,10 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
     getTestState() {
         return {
             adapter: 'TurnBasedSkillBattleAdapter',
+            adapterId: this.config.id,
             status: this.status,
             hp: this.state.playerHp,
+            timer: null,
             score: Math.round(this.state.damageDealt),
             enemyHp: this.state.enemyHp,
             turn: this.state.turn,
@@ -348,6 +412,30 @@ export default class TurnBasedSkillBattleAdapter extends GameplayAdapter {
             combatLog: this.state.combatLog.slice(),
             lastResult: this.result
         };
+    }
+
+    /** Test/demo helper: apply damage to player (E2E fail path). */
+    damagePlayer(amount, failReason = NODE_RESULT_REASONS.HP_ZERO) {
+        if (!this.isRunning()) return;
+        this.state.playerHp = Math.max(0, this.state.playerHp - Number(amount || 0));
+        this.refreshBars();
+        this.publishTestState();
+        if (this.state.playerHp <= 0) {
+            this.finish(false, failReason);
+        }
+    }
+
+    /** Test/demo helper: apply damage to enemy (E2E win path). */
+    damageEnemy(amount) {
+        if (!this.isRunning()) return;
+        const dmg = Number(amount || 0);
+        this.state.enemyHp = Math.max(0, this.state.enemyHp - dmg);
+        this.state.damageDealt += dmg;
+        this.refreshBars();
+        this.publishTestState();
+        if (this.state.enemyHp <= 0) {
+            this.finish(true, NODE_RESULT_REASONS.BOSS_DEFEATED);
+        }
     }
 
     finish(success, reason = null) {

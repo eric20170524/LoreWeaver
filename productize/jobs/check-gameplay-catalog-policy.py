@@ -23,6 +23,7 @@ def main() -> int:
     assert "survivor_horde" in prod_ids, "survivor_horde must be production"
     assert "rhythm_timing" in prod_ids, "rhythm_timing must be production"
     assert "drag_collect_grid" in prod_ids, "drag_collect_grid must be production"
+    assert "turn_based_skill_battle" in prod_ids, "turn_based_skill_battle must be production"
     assert default_production_card_id() == "survivor_horde"
 
     # tap_reaction maps to rhythm_timing which is now production-ready → direct select
@@ -50,16 +51,25 @@ def main() -> int:
     r4b = resolve_card_id(preferred="drag_collect_grid")
     assert r4b["cardId"] == "drag_collect_grid"
 
+    r4c = resolve_card_id(preferred="turn_based_skill_battle")
+    assert r4c["cardId"] == "turn_based_skill_battle"
+    assert r4c["productionReady"] is True
+
     # Explicit non-production experimental
     r5 = resolve_card_id(preferred="sequence_synthesis", allow_experimental=True)
     assert r5["cardId"] == "sequence_synthesis", r5
     assert r5["experimental"] is True, r5
 
     summary = catalog_summary()
-    assert summary["totals"]["productionReady"] >= 3
+    assert summary["totals"]["productionReady"] >= 4
     assert summary["policy"]["autoSelectOnlyProductionReady"] is True
     auto_ids = {c["id"] for c in summary["autoSelectable"]}
-    assert {"survivor_horde", "rhythm_timing", "drag_collect_grid"} <= auto_ids
+    assert {
+        "survivor_horde",
+        "rhythm_timing",
+        "drag_collect_grid",
+        "turn_based_skill_battle",
+    } <= auto_ids
 
     print("PASSED gameplay catalog policy checks")
     print(
@@ -69,6 +79,7 @@ def main() -> int:
             "tap_reaction_auto": r1,
             "preferred_rhythm": r4,
             "preferred_drag": r4b,
+            "preferred_tbsb": r4c,
             "explicit_experimental_sequence": r5,
             "drag_collect_auto": r_drag,
         }

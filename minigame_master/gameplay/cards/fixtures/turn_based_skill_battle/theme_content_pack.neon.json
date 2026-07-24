@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "tbsb_neon_arena",
+  "locales": ["zh-CN", "en"],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": {
+      "zh-CN": "霓虹竞技场",
+      "en": "Neon Arena"
+    },
+    "intro": {
+      "zh-CN": "数据化回合战，击穿对手护盾协议。",
+      "en": "Digitized turn combat — breach the opponent protocol."
+    },
+    "objectiveText": {
+      "zh-CN": "清空对手护盾值",
+      "en": "Drain opponent shield to zero"
+    },
+    "controlHints": {
+      "zh-CN": "点选技能模块 · 冷却同步",
+      "en": "Pick skill modules · sync cooldowns"
+    },
+    "hudLabels": {
+      "zh-CN": "护盾|回合|输出|模块",
+      "en": "Shield|Turn|Output|Modules"
+    },
+    "victoryText": {
+      "zh-CN": "协议击破",
+      "en": "Protocol breached"
+    },
+    "failureText": {
+      "zh-CN": "链路中断",
+      "en": "Link severed"
+    },
+    "retreatText": {
+      "zh-CN": "已退出竞技",
+      "en": "Left arena"
+    }
+  },
+  "entities": {
+    "player": { "zh-CN": "操作员", "en": "Operator" },
+    "enemies": {
+      "mob": { "zh-CN": "镜像节点", "en": "Mirror Node" }
+    },
+    "bosses": {
+      "boss": { "zh-CN": "竞技核心", "en": "Arena Core" }
+    },
+    "pickups": {
+      "focus": { "zh-CN": "同步核心", "en": "Sync Core" }
+    },
+    "skills": {
+      "strike": { "zh-CN": "脉冲", "en": "Pulse" }
+    },
+    "statuses": {
+      "focus": { "zh-CN": "锁定", "en": "Locked" }
+    }
+  },
+  "copyKeys": {
+    "battle_start": {
+      "zh-CN": "竞技开始。选择技能模块。",
+      "en": "Arena start. Choose a module."
+    },
+    "turn_player": { "zh-CN": "你的回合", "en": "Your turn" },
+    "turn_enemy": { "zh-CN": "核心回合", "en": "Core turn" },
+    "skill_ready": { "zh-CN": "就绪", "en": "Ready" },
+    "skill_strike": { "zh-CN": "脉冲", "en": "Pulse" },
+    "skill_heavy": { "zh-CN": "过载", "en": "Overload" },
+    "skill_heal": { "zh-CN": "修复", "en": "Repair" },
+    "skill_burst": { "zh-CN": "坍缩", "en": "Collapse" },
+    "log_heal": {
+      "zh-CN": "模块【{skill}】修复 {n}。",
+      "en": "Module [{skill}] repair {n}."
+    },
+    "log_damage": {
+      "zh-CN": "模块【{skill}】输出 {n}。",
+      "en": "Module [{skill}] output {n}."
+    },
+    "log_enemy_hit": {
+      "zh-CN": "核心反击，造成 {n}。",
+      "en": "Core counters for {n}."
+    }
+  }
+}

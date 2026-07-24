@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "tbsb_sect_duel",
+  "locales": ["zh-CN", "en"],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": {
+      "zh-CN": "宗门论剑",
+      "en": "Sect Duel"
+    },
+    "intro": {
+      "zh-CN": "回合制技能对决，击败对面宗门挑战者。",
+      "en": "Turn-based skill duel against a sect challenger."
+    },
+    "objectiveText": {
+      "zh-CN": "将对手生命值削减至零",
+      "en": "Reduce opponent HP to zero"
+    },
+    "controlHints": {
+      "zh-CN": "点击技能 · 注意冷却",
+      "en": "Tap skills · watch cooldowns"
+    },
+    "hudLabels": {
+      "zh-CN": "生命|回合|伤害|技能",
+      "en": "HP|Turn|Damage|Skills"
+    },
+    "victoryText": {
+      "zh-CN": "论剑获胜",
+      "en": "Duel won"
+    },
+    "failureText": {
+      "zh-CN": "论剑落败",
+      "en": "Duel lost"
+    },
+    "retreatText": {
+      "zh-CN": "已退出论剑",
+      "en": "Withdrew from duel"
+    }
+  },
+  "entities": {
+    "player": { "zh-CN": "弟子", "en": "Disciple" },
+    "enemies": {
+      "mob": { "zh-CN": "外门挑战者", "en": "Outer Challenger" }
+    },
+    "bosses": {
+      "boss": { "zh-CN": "宗门挑战者", "en": "Sect Challenger" }
+    },
+    "pickups": {
+      "focus": { "zh-CN": "心法碎片", "en": "Focus Shard" }
+    },
+    "skills": {
+      "strike": { "zh-CN": "普攻", "en": "Strike" }
+    },
+    "statuses": {
+      "focus": { "zh-CN": "凝神", "en": "Focused" }
+    }
+  },
+  "copyKeys": {
+    "battle_start": {
+      "zh-CN": "论剑开始。选择招式发动回合。",
+      "en": "Duel start. Choose a skill."
+    },
+    "turn_player": { "zh-CN": "你的回合", "en": "Your turn" },
+    "turn_enemy": { "zh-CN": "敌方回合", "en": "Enemy turn" },
+    "skill_ready": { "zh-CN": "就绪", "en": "Ready" },
+    "skill_strike": { "zh-CN": "普攻", "en": "Strike" },
+    "skill_heavy": { "zh-CN": "重击", "en": "Heavy" },
+    "skill_heal": { "zh-CN": "回春", "en": "Heal" },
+    "skill_burst": { "zh-CN": "破军", "en": "Burst" },
+    "log_heal": {
+      "zh-CN": "使用【{skill}】回复 {n} 点生命。",
+      "en": "Used [{skill}] heal {n}."
+    },
+    "log_damage": {
+      "zh-CN": "使用【{skill}】造成 {n} 点伤害。",
+      "en": "Used [{skill}] hit {n}."
+    },
+    "log_enemy_hit": {
+      "zh-CN": "敌人发动攻击，造成 {n} 点伤害。",
+      "en": "Enemy hits for {n}."
+    }
+  }
+}
