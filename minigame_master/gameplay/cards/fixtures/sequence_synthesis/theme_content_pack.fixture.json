@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "seq_alchemy_furnace",
+  "locales": ["zh-CN", "en"],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": { "zh-CN": "炼丹炉序列", "en": "Alchemy Furnace Sequence" },
+    "intro": {
+      "zh-CN": "按配方顺序投入材料，完成一炉丹。",
+      "en": "Feed materials in recipe order to finish the furnace."
+    },
+    "objectiveText": {
+      "zh-CN": "完整完成配方序列",
+      "en": "Complete the full recipe sequence"
+    },
+    "controlHints": {
+      "zh-CN": "点选材料 · 注意顺序",
+      "en": "Tap materials · mind the order"
+    },
+    "hudLabels": {
+      "zh-CN": "进度|步骤|失误|时间",
+      "en": "Progress|Step|Mistakes|Time"
+    },
+    "victoryText": { "zh-CN": "丹成", "en": "Elixir ready" },
+    "failureText": { "zh-CN": "炉毁", "en": "Furnace ruined" },
+    "retreatText": { "zh-CN": "已退出炼制", "en": "Left the furnace" }
+  },
+  "entities": {
+    "player": { "zh-CN": "炼丹徒", "en": "Alchemist" },
+    "enemies": { "hazard": { "zh-CN": "走火", "en": "Backfire" } },
+    "bosses": { "boss": { "zh-CN": "丹毒", "en": "Elixir toxin" } },
+    "pickups": { "material": { "zh-CN": "药材", "en": "Herb" } },
+    "skills": { "feed": { "zh-CN": "投料", "en": "Feed" } },
+    "statuses": { "focus": { "zh-CN": "凝神", "en": "Focused" } }
+  },
+  "copyKeys": {
+    "title_inline": { "zh-CN": "顺序合成", "en": "Sequence Synthesis" },
+    "hint_feed": { "zh-CN": "按提示顺序投入材料", "en": "Feed materials in order" },
+    "recipe_prefix": { "zh-CN": "配方：", "en": "Recipe:" },
+    "step_fmt": { "zh-CN": "步骤 {i}/{n}  ·  需要：{m}", "en": "Step {i}/{n} · need: {m}" },
+    "progress_fmt": {
+      "zh-CN": "进度 {p}%  ·  失误 {m}  ·  连错 {c}/{max}",
+      "en": "Progress {p}% · mistakes {m} · streak {c}/{max}"
+    },
+    "ok_feed": { "zh-CN": "正确投入【{m}】", "en": "Correct: [{m}]" },
+    "bad_feed": { "zh-CN": "材料错误！进度 -{n}", "en": "Wrong material! -{n}" },
+    "explode_reset": { "zh-CN": "炉鼎过热爆炸！配方重置", "en": "Overheat! Recipe reset" },
+    "explode_fail": { "zh-CN": "炉鼎过热爆炸！炼制失败", "en": "Overheat — synthesis failed" },
+    "material_wood": { "zh-CN": "灵木", "en": "Spirit Wood" },
+    "material_fire": { "zh-CN": "赤焰", "en": "Crimson Flame" },
+    "material_water": { "zh-CN": "玄水", "en": "Dark Water" },
+    "material_metal": { "zh-CN": "精金", "en": "Refined Metal" },
+    "material_earth": { "zh-CN": "厚土", "en": "Thick Earth" },
+    "material_wind": { "zh-CN": "清风", "en": "Clear Wind" },
+    "material_thunder": { "zh-CN": "雷晶", "en": "Thunder Crystal" },
+    "material_ice": { "zh-CN": "寒霜", "en": "Frost" }
+  }
+}

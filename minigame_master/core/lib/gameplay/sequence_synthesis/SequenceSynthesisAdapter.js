@@ -3,14 +3,14 @@ import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
 
 const MATERIAL_PALETTE = [
-    { id: 'wood', label: '灵木', color: 0x22c55e },
-    { id: 'fire', label: '赤焰', color: 0xef4444 },
-    { id: 'water', label: '玄水', color: 0x3b82f6 },
-    { id: 'metal', label: '精金', color: 0xeab308 },
-    { id: 'earth', label: '厚土', color: 0xa16207 },
-    { id: 'wind', label: '清风', color: 0x2dd4bf },
-    { id: 'thunder', label: '雷晶', color: 0xa855f7 },
-    { id: 'ice', label: '寒霜', color: 0x67e8f9 }
+    { id: 'wood', label: 'Wood', color: 0x22c55e },
+    { id: 'fire', label: 'Fire', color: 0xef4444 },
+    { id: 'water', label: 'Water', color: 0x3b82f6 },
+    { id: 'metal', label: 'Metal', color: 0xeab308 },
+    { id: 'earth', label: 'Earth', color: 0xa16207 },
+    { id: 'wind', label: 'Wind', color: 0x2dd4bf },
+    { id: 'thunder', label: 'Thunder', color: 0xa855f7 },
+    { id: 'ice', label: 'Ice', color: 0x67e8f9 }
 ];
 
 const DEFAULT_CONFIG = Object.freeze({
@@ -19,8 +19,12 @@ const DEFAULT_CONFIG = Object.freeze({
     materialPoolSize: 6,
     wrongInputProgressPenalty: 30,
     explodeOnConsecutiveMistakes: 2,
+    /** When true, consecutive mistakes hard-fail instead of recipe reset */
+    explodeFails: false,
     goalProgress: 100,
-    rewardTable: { score: 1 }
+    rewardTable: { score: 1 },
+    allowQuit: true,
+    allowPause: true
 });
 
 function mergeConfig(base, patch) {
@@ -76,12 +80,24 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         this.config.recipeLength = Math.max(1, Number(this.config.recipeLength || 4));
         this.config.materialPoolSize = Math.max(2, Number(this.config.materialPoolSize || 6));
         this.config.wrongInputProgressPenalty = Number(this.config.wrongInputProgressPenalty ?? 30);
-        this.config.explodeOnConsecutiveMistakes = Math.max(1, Number(this.config.explodeOnConsecutiveMistakes || 2));
+        this.config.explodeOnConsecutiveMistakes = Math.max(
+            1,
+            Number(this.config.explodeOnConsecutiveMistakes || 2)
+        );
+        this.config.explodeFails = Boolean(knobs.explodeFails ?? this.config.explodeFails);
 
-        const rng = seededRandom(payload.runSeed || (Date.now() % 100000));
+        this.themePack =
+            nodeConfig.themeContentPack || knobs.themeContentPack || payload.themeContentPack || null;
+        this.themeLocale =
+            knobs.locale || nodeConfig.locale || this.themePack?.defaultLocale || 'zh-CN';
+
+        const rng = seededRandom(payload.runSeed || knobs.runSeed || (Date.now() % 100000));
         const poolSize = Math.min(MATERIAL_PALETTE.length, this.config.materialPoolSize);
         const shuffled = MATERIAL_PALETTE.slice().sort(() => rng() - 0.5);
-        this.state.pool = shuffled.slice(0, poolSize).map((m) => ({ ...m }));
+        this.state.pool = shuffled.slice(0, poolSize).map((m) => ({
+            ...m,
+            label: this.t(`material_${m.id}`, m.label)
+        }));
         this.state.recipe = Array.from({ length: this.config.recipeLength }, () => {
             const pick = this.state.pool[Math.floor(rng() * this.state.pool.length)];
             return pick.id;
@@ -93,7 +109,21 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         this.state.consecutiveMistakes = 0;
         this.state.elapsedSeconds = 0;
         this.state.hp = payload.playerStats?.hp || 100;
+        this.readPlayabilityKnobs(payload, 'sequence_synthesis');
         return this;
+    }
+
+    t(key, fallback) {
+        const pack = this.themePack;
+        if (!pack) return fallback;
+        const locale = this.themeLocale || pack.defaultLocale || 'zh-CN';
+        const fb = pack.defaultLocale || 'zh-CN';
+        if (pack.copyKeys?.[key]) {
+            const v = pack.copyKeys[key];
+            if (typeof v === 'object') return v[locale] || v[fb] || Object.values(v)[0] || fallback;
+            if (typeof v === 'string') return v;
+        }
+        return fallback;
     }
 
     create(scene) {
@@ -131,7 +161,7 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         g.lineStyle(2, 0xf59e0b, 0.5);
         g.strokeRoundedRect(width * 0.18, height * 0.16, width * 0.64, height * 0.28, 18);
 
-        this.ui.title = this.scene.add.text(width / 2, height * 0.2, '顺序合成', {
+        this.ui.title = this.scene.add.text(width / 2, height * 0.2, this.t('title_inline', 'Sequence Synthesis'), {
             fontFamily: 'Inter, sans-serif',
             fontSize: '22px',
             fontStyle: 'bold',
@@ -144,11 +174,16 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
             color: '#fbbf24'
         }).setOrigin(0.5);
 
-        this.ui.feedback = this.scene.add.text(width / 2, height * 0.36, '按提示顺序投入材料', {
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            color: '#94a3b8'
-        }).setOrigin(0.5);
+        this.ui.feedback = this.scene.add.text(
+            width / 2,
+            height * 0.36,
+            this.t('hint_feed', 'Feed materials in order'),
+            {
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '14px',
+                color: '#94a3b8'
+            }
+        ).setOrigin(0.5);
 
         this.lifecycle.addCleanup(() => {
             g.destroy();
@@ -164,7 +199,8 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
             const mat = this.state.pool.find((m) => m.id === id) || MATERIAL_PALETTE.find((m) => m.id === id);
             return mat?.label || id;
         });
-        this.ui.recipeHint = this.scene.add.text(width / 2, height * 0.48, `配方：${labels.join(' → ')}`, {
+        const recipePrefix = this.t('recipe_prefix', 'Recipe:');
+        this.ui.recipeHint = this.scene.add.text(width / 2, height * 0.48, `${recipePrefix} ${labels.join(' → ')}`, {
             fontFamily: 'Inter, sans-serif',
             fontSize: '13px',
             color: '#cbd5e1',
@@ -228,9 +264,11 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
     refreshStepText() {
         const nextId = this.state.recipe[this.state.stepIndex];
         const mat = this.state.pool.find((m) => m.id === nextId);
-        this.ui.stepText?.setText(
-            `步骤 ${this.state.stepIndex + 1}/${this.state.recipe.length}  ·  需要：${mat?.label || nextId || '—'}`
-        );
+        const step = this.t('step_fmt', 'Step {i}/{n} · need: {m}')
+            .replace('{i}', String(this.state.stepIndex + 1))
+            .replace('{n}', String(this.state.recipe.length))
+            .replace('{m}', mat?.label || nextId || '—');
+        this.ui.stepText?.setText(step);
     }
 
     refreshProgress() {
@@ -244,7 +282,11 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         g.fillStyle(0xf59e0b, 1);
         g.fillRoundedRect(width * 0.2, this.scene.scale.height * 0.5, width * 0.6 * ratio, 14, 7);
         this.ui.progressText?.setText(
-            `进度 ${Math.round(this.state.progress)}%  ·  失误 ${this.state.mistakes}  ·  连错 ${this.state.consecutiveMistakes}/${this.config.explodeOnConsecutiveMistakes}`
+            this.t('progress_fmt', 'Progress {p}% · mistakes {m} · streak {c}/{max}')
+                .replace('{p}', String(Math.round(this.state.progress)))
+                .replace('{m}', String(this.state.mistakes))
+                .replace('{c}', String(this.state.consecutiveMistakes))
+                .replace('{max}', String(this.config.explodeOnConsecutiveMistakes))
         );
     }
 
@@ -256,8 +298,10 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
             this.state.stepIndex += 1;
             const gain = 100 / this.state.recipe.length;
             this.state.progress = Math.min(100, this.state.progress + gain);
-            this.ui.feedback?.setText(`正确投入【${mat.label}】`).setColor('#34d399');
-            this.scene.cameras.main.flash(80, 52, 211, 153);
+            this.ui.feedback
+                ?.setText(this.t('ok_feed', 'Correct: [{m}]').replace('{m}', mat.label))
+                .setColor('#34d399');
+            this.scene?.cameras?.main?.flash?.(80, 52, 211, 153);
             this.context.spawnParticles?.(this.scene.scale.width / 2, this.scene.scale.height * 0.3, mat.color);
 
             if (this.state.stepIndex >= this.state.recipe.length) {
@@ -272,15 +316,30 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
             this.state.mistakes += 1;
             this.state.consecutiveMistakes += 1;
             this.state.progress = Math.max(0, this.state.progress - this.config.wrongInputProgressPenalty);
-            this.ui.feedback?.setText(`材料错误！进度 -${this.config.wrongInputProgressPenalty}`).setColor('#f87171');
-            this.scene.cameras.main.shake(120, 0.008);
+            this.ui.feedback
+                ?.setText(
+                    this.t('bad_feed', 'Wrong material! -{n}')
+                        .replace('{n}', String(this.config.wrongInputProgressPenalty))
+                )
+                .setColor('#f87171');
+            this.scene?.cameras?.main?.shake?.(120, 0.008);
 
             if (this.state.consecutiveMistakes >= this.config.explodeOnConsecutiveMistakes) {
-                this.ui.feedback?.setText('炉鼎过热爆炸！配方重置').setColor('#ef4444');
+                if (this.config.explodeFails) {
+                    this.ui.feedback
+                        ?.setText(this.t('explode_fail', 'Overheat — synthesis failed'))
+                        .setColor('#ef4444');
+                    this.scene?.cameras?.main?.shake?.(280, 0.02);
+                    this.finish(false, NODE_RESULT_REASONS.FAILED);
+                    return;
+                }
+                this.ui.feedback
+                    ?.setText(this.t('explode_reset', 'Overheat! Recipe reset'))
+                    .setColor('#ef4444');
                 this.state.stepIndex = 0;
                 this.state.progress = 0;
                 this.state.consecutiveMistakes = 0;
-                this.scene.cameras.main.shake(280, 0.02);
+                this.scene?.cameras?.main?.shake?.(280, 0.02);
             }
         }
 
@@ -292,17 +351,38 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
     getTestState() {
         return {
             adapter: 'SequenceSynthesisAdapter',
+            adapterId: this.config.id,
             status: this.status,
             hp: this.state.hp,
+            timer: this.state.elapsedSeconds,
             score: Math.round(this.state.progress),
             progress: this.state.progress,
             stepIndex: this.state.stepIndex,
             recipeLength: this.state.recipe.length,
+            recipe: this.state.recipe.slice(),
             mistakes: this.state.mistakes,
             consecutiveMistakes: this.state.consecutiveMistakes,
             elapsedSeconds: this.state.elapsedSeconds,
             lastResult: this.result
         };
+    }
+
+    /** Test helper: force fail path */
+    damagePlayer(amount, failReason = NODE_RESULT_REASONS.HP_ZERO) {
+        if (!this.isRunning()) return;
+        this.state.hp = Math.max(0, this.state.hp - Number(amount || 0));
+        this.publishTestState();
+        if (this.state.hp <= 0) this.finish(false, failReason);
+    }
+
+    /** Test helper: complete remaining recipe steps */
+    forceComplete() {
+        if (!this.isRunning()) return;
+        this.state.stepIndex = this.state.recipe.length;
+        this.state.progress = 100;
+        this.refreshProgress();
+        this.refreshStepText();
+        this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
     }
 
     finish(success, reason = null) {

@@ -322,6 +322,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
+    maturityStatus: "production_ready",
     victory: "按配方顺序完成全部材料投入",
     victoryEn: "Complete full recipe sequence",
     failure: "撤退或爆炸重置后放弃",

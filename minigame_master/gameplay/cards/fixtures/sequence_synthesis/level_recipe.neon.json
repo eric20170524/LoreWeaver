@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "recipeId": "seq_neon_protocol_production_v1",
+  "cardId": "sequence_synthesis",
+  "status": "production_recipe",
+  "productionReady": true,
+  "requireProductionCard": true,
+  "modifiers": [],
+  "knobs": {
+    "recipeLength": 3,
+    "materialPoolSize": 5,
+    "wrongInputProgressPenalty": 25,
+    "explodeOnConsecutiveMistakes": 3,
+    "explodeFails": false,
+    "allowQuit": true,
+    "allowPause": true,
+    "artRuntimeMode": "prototype"
+  },
+  "contentPackRef": "minigame_master/gameplay/cards/fixtures/sequence_synthesis/theme_content_pack.neon.json",
+  "assetPackRef": {
+    "workspaceId": "20260611-060754-719406",
+    "imagegenManifest": "assets/imagegen/manifest.json",
+    "imagegenAtlas": "assets/imagegen/atlas.png"
+  },
+  "audioPackRef": {
+    "workspaceId": "20260611-060754-719406",
+    "root": "assets/audio",
+    "cues": {
+      "bgm_main": "bgm/node1_battle.wav",
+      "sfx_hit": "sfx/hit.wav",
+      "sfx_win": "bgm/victory_sting.wav",
+      "sfx_lose": "bgm/defeat_sting.wav"
+    }
+  },
+  "balanceProfile": "normal_short",
+  "locale": "zh-CN",
+  "notes": [
+    "Neon protocol skin — content pack swap only."
+  ]
+}

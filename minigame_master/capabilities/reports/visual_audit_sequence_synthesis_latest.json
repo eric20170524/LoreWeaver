@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "loreweaver.visual-audit.v1",
+  "gate": "visual_audit",
+  "target": "minigame_master/core/demo/sequence_synthesis",
+  "cardId": "sequence_synthesis",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:35:46.836Z",
+  "method": "Playwright screenshots + canvas toDataURL non-blank probe",
+  "releaseEligible": true,
+  "assertions": {
+    "mobile_720x1280_canvasPresent": true,
+    "mobile_720x1280_canvasSized": true,
+    "mobile_720x1280_notBlackScreen": true,
+    "mobile_720x1280_screenshotWritten": true,
+    "mobile_720x1280_controlsInViewport": true,
+    "desktop_1280x800_canvasPresent": true,
+    "desktop_1280x800_canvasSized": true,
+    "desktop_1280x800_notBlackScreen": true,
+    "desktop_1280x800_screenshotWritten": true,
+    "desktop_1280x800_controlsInViewport": true
+  },
+  "screenshots": [
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/sequence_synthesis/mobile_720x1280_menu.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/sequence_synthesis/mobile_720x1280_running.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/sequence_synthesis/desktop_1280x800_menu.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/sequence_synthesis/desktop_1280x800_running.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/sequence_synthesis/soak_120s_end.png"
+  ],
+  "observedState": {
+    "canvas_mobile_720x1280": {
+      "present": true,
+      "width": 720,
+      "height": 1280,
+      "nonBlank": true,
+      "dataUrlLength": 25258
+    },
+    "canvas_desktop_1280x800": {
+      "present": true,
+      "width": 1280,
+      "height": 800,
+      "nonBlank": true,
+      "dataUrlLength": 26258
+    }
+  },
+  "errors": [],
+  "notes": [
+    "Deterministic visual only — no VLM.",
+    "RELEASE_ELIGIBLE=1 certification mark"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "seq_neon_protocol",
+  "locales": ["zh-CN", "en"],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": { "zh-CN": "霓虹协议序列", "en": "Neon Protocol Sequence" },
+    "intro": {
+      "zh-CN": "按协议顺序注入数据模块，完成编译。",
+      "en": "Inject data modules in protocol order to finish compile."
+    },
+    "objectiveText": {
+      "zh-CN": "完整完成协议序列",
+      "en": "Complete the full protocol sequence"
+    },
+    "controlHints": {
+      "zh-CN": "点选模块 · 严格顺序",
+      "en": "Tap modules · strict order"
+    },
+    "hudLabels": {
+      "zh-CN": "进度|步骤|错误|耗时",
+      "en": "Progress|Step|Errors|Time"
+    },
+    "victoryText": { "zh-CN": "协议编译完成", "en": "Protocol compiled" },
+    "failureText": { "zh-CN": "协议崩溃", "en": "Protocol crash" },
+    "retreatText": { "zh-CN": "已中止编译", "en": "Compile aborted" }
+  },
+  "entities": {
+    "player": { "zh-CN": "编译员", "en": "Compiler" },
+    "enemies": { "hazard": { "zh-CN": "噪声包", "en": "Noise pack" } },
+    "bosses": { "boss": { "zh-CN": "死锁核", "en": "Deadlock core" } },
+    "pickups": { "material": { "zh-CN": "数据模块", "en": "Data module" } },
+    "skills": { "feed": { "zh-CN": "注入", "en": "Inject" } },
+    "statuses": { "focus": { "zh-CN": "锁定", "en": "Locked" } }
+  },
+  "copyKeys": {
+    "title_inline": { "zh-CN": "协议序列", "en": "Protocol Sequence" },
+    "hint_feed": { "zh-CN": "按协议顺序注入模块", "en": "Inject modules in order" },
+    "recipe_prefix": { "zh-CN": "协议：", "en": "Protocol:" },
+    "step_fmt": { "zh-CN": "步骤 {i}/{n}  ·  需要：{m}", "en": "Step {i}/{n} · need: {m}" },
+    "progress_fmt": {
+      "zh-CN": "进度 {p}%  ·  错误 {m}  ·  连错 {c}/{max}",
+      "en": "Progress {p}% · errors {m} · streak {c}/{max}"
+    },
+    "ok_feed": { "zh-CN": "注入正确【{m}】", "en": "Injected [{m}]" },
+    "bad_feed": { "zh-CN": "模块错误！进度 -{n}", "en": "Wrong module! -{n}" },
+    "explode_reset": { "zh-CN": "过热！协议重置", "en": "Overheat! Protocol reset" },
+    "explode_fail": { "zh-CN": "过热崩溃！编译失败", "en": "Overheat crash — compile failed" },
+    "material_wood": { "zh-CN": "绿核", "en": "Green Core" },
+    "material_fire": { "zh-CN": "红核", "en": "Red Core" },
+    "material_water": { "zh-CN": "蓝核", "en": "Blue Core" },
+    "material_metal": { "zh-CN": "金核", "en": "Gold Core" },
+    "material_earth": { "zh-CN": "褐核", "en": "Brown Core" },
+    "material_wind": { "zh-CN": "青核", "en": "Teal Core" },
+    "material_thunder": { "zh-CN": "紫核", "en": "Violet Core" },
+    "material_ice": { "zh-CN": "冰核", "en": "Ice Core" }
+  }
+}

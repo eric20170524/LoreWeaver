@@ -298,6 +298,9 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
   if (cardId === "turn_based_skill_battle") {
     companionCandidates.push("tbsb_gate_readiness_latest.json");
   }
+  if (cardId === "sequence_synthesis") {
+    companionCandidates.push("seq_gate_readiness_latest.json");
+  }
 
   for (const companion of [...new Set(companionCandidates)]) {
     const p = path.join(reportsDir, companion);

@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "loreweaver.seq-gate-readiness.v1",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:36:43.399Z",
+  "cardId": "sequence_synthesis",
+  "gateVerifiedEligible": true,
+  "productionReadyEligible": true,
+  "productionExportAllowed": true,
+  "exportGateReasons": [],
+  "checks": [
+    {
+      "name": "card_present",
+      "ok": true,
+      "detail": "sequence_synthesis"
+    },
+    {
+      "name": "card_status_gate_or_prod",
+      "ok": true,
+      "detail": "production_ready"
+    },
+    {
+      "name": "e2e_present",
+      "ok": true,
+      "detail": "found"
+    },
+    {
+      "name": "e2e_passed",
+      "ok": true,
+      "detail": "passed"
+    },
+    {
+      "name": "e2e_cardId",
+      "ok": true,
+      "detail": "sequence_synthesis"
+    },
+    {
+      "name": "theme_fixtures",
+      "ok": true,
+      "detail": "temple"
+    },
+    {
+      "name": "demo_present",
+      "ok": true,
+      "detail": "demo/main.js"
+    },
+    {
+      "name": "recipe_compile",
+      "ok": true,
+      "detail": "passed"
+    },
+    {
+      "name": "export_policy_true",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "status_production_ready",
+      "ok": true,
+      "detail": "production_ready"
+    },
+    {
+      "name": "e2e_releaseEligible",
+      "ok": true,
+      "detail": "true"
+    },
+    {
+      "name": "browser_summary",
+      "ok": true,
+      "detail": "passed"
+    },
+    {
+      "name": "visual_passed",
+      "ok": true,
+      "detail": "passed"
+    },
+    {
+      "name": "perf_passed",
+      "ok": true,
+      "detail": "passed"
+    },
+    {
+      "name": "production_export_gate",
+      "ok": true,
+      "detail": "allowed"
+    }
+  ],
+  "residuals": [
+    "device_class_fps: headless soak proxy only",
+    "vlm_visual_overflow: deferred",
+    "standalone zip host E2E optional residual for lightweight card"
+  ]
+}

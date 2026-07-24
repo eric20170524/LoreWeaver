@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "loreweaver.level-recipe-compile-seq.v1",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:36:12.514Z",
+  "results": [
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile.v1",
+      "status": "passed",
+      "createdAt": "2026-07-24T02:36:12.477Z",
+      "recipePath": "minigame_master/gameplay/cards/fixtures/sequence_synthesis/level_recipe.fixture.json",
+      "recipeId": "seq_alchemy_production_v1",
+      "cardId": "sequence_synthesis",
+      "cardStatus": "production_ready",
+      "requireProductionCard": true,
+      "recipeHash": "c5f250d027c92e9c5d7adf4dc067eaf6ab550fa3ff85364757f312ba3233c9c5",
+      "contentHash": "f9f6eb2b8a8cd1e56a4799f3410185eb8be8330e2b85569dda605d174303e6a6",
+      "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+      "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+      "contentThemeId": "seq_alchemy_furnace",
+      "locale": "zh-CN",
+      "balanceProfile": "normal_short",
+      "modifiers": [],
+      "knobs": {
+        "recipeLength": 3,
+        "materialPoolSize": 5,
+        "wrongInputProgressPenalty": 25,
+        "explodeOnConsecutiveMistakes": 3,
+        "explodeFails": false,
+        "allowQuit": true,
+        "allowPause": true,
+        "artRuntimeMode": "prototype"
+      },
+      "reasons": [],
+      "warnings": [],
+      "resolved": {
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/sequence_synthesis/theme_content_pack.fixture.json",
+        "workspaceId": "20260611-060754-719406"
+      }
+    },
+    {
+      "schemaVersion": "loreweaver.level-recipe-compile.v1",
+      "status": "passed",
+      "createdAt": "2026-07-24T02:36:12.510Z",
+      "recipePath": "minigame_master/gameplay/cards/fixtures/sequence_synthesis/level_recipe.neon.json",
+      "recipeId": "seq_neon_protocol_production_v1",
+      "cardId": "sequence_synthesis",
+      "cardStatus": "production_ready",
+      "requireProductionCard": true,
+      "recipeHash": "e6450bf35c82c4b6dd17188ef50ebb1f619de43ac3e8121e07356a906d1702c5",
+      "contentHash": "d1c9ced03ce48be1d7f377652757d7d8df47153b0773e56eda0c0d8fdb8508de",
+      "atlasHash": "a07a7147f1666d752b7328c5c6fa8f58f8d3f9d29b4dad95f8fb459e6186e8ae",
+      "manifestHash": "42906a2971015e1a9377e6008b8798ebea26bfa7197f12fc99cd4ab441f7bbfc",
+      "contentThemeId": "seq_neon_protocol",
+      "locale": "zh-CN",
+      "balanceProfile": "normal_short",
+      "modifiers": [],
+      "knobs": {
+        "recipeLength": 3,
+        "materialPoolSize": 5,
+        "wrongInputProgressPenalty": 25,
+        "explodeOnConsecutiveMistakes": 3,
+        "explodeFails": false,
+        "allowQuit": true,
+        "allowPause": true,
+        "artRuntimeMode": "prototype"
+      },
+      "reasons": [],
+      "warnings": [],
+      "resolved": {
+        "contentPackPath": "minigame_master/gameplay/cards/fixtures/sequence_synthesis/theme_content_pack.neon.json",
+        "workspaceId": "20260611-060754-719406"
+      }
+    }
+  ]
+}

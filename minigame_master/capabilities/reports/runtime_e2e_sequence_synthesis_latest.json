@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "loreweaver.runtime-e2e.v1",
+  "gate": "sequence_synthesis_demo_e2e",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:33:31.274Z",
+  "cardId": "sequence_synthesis",
+  "specHash": "sequence_synthesis:core_demo:v1_theme_skin",
+  "runtimeVersion": "minigame_master.core.demo.sequence_synthesis",
+  "releaseEligible": true,
+  "viewports": [
+    "mobile_720x1280",
+    "desktop_1280x800"
+  ],
+  "assertions": {
+    "mobile_720x1280_startButton": true,
+    "mobile_720x1280_hasSpecHash": true,
+    "mobile_720x1280_cardId": true,
+    "mobile_720x1280_releaseEligibleFalse": true,
+    "mobile_720x1280_themeTitle": true,
+    "mobile_720x1280_running": true,
+    "mobile_720x1280_timerUpdated": true,
+    "mobile_720x1280_skillInteraction": true,
+    "mobile_720x1280_canvasNonblank": true,
+    "mobile_720x1280_specHash": true,
+    "pauseStatus": true,
+    "resumeStatus": true,
+    "pauseTimerFrozen": true,
+    "naturalFailHpZero": true,
+    "naturalFailNotSuccess": true,
+    "winResultSuccess": true,
+    "winResultReason": true,
+    "desktop_1280x800_startButton": true,
+    "desktop_1280x800_hasSpecHash": true,
+    "desktop_1280x800_cardId": true,
+    "desktop_1280x800_releaseEligibleFalse": true,
+    "desktop_1280x800_themeTitle": true,
+    "desktop_1280x800_running": true,
+    "desktop_1280x800_timerUpdated": true,
+    "desktop_1280x800_skillInteraction": true,
+    "desktop_1280x800_canvasNonblank": true,
+    "desktop_1280x800_specHash": true,
+    "desktop_1280x800_retreat": true,
+    "consoleErrors": 0
+  },
+  "failedAssertions": [],
+  "flows": [
+    {
+      "id": "mobile_fail_hp_zero",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_force_win",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_pause_resume",
+      "status": "passed"
+    },
+    {
+      "id": "desktop_retreat",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "observed": {
+    "demoMeta": {
+      "cardId": "sequence_synthesis",
+      "specHash": "sequence_synthesis:core_demo:v1_theme_skin",
+      "runtimeVersion": "minigame_master.core.demo.sequence_synthesis",
+      "releaseEligible": false,
+      "themeKey": "alchemy",
+      "themeId": "seq_alchemy_furnace",
+      "locale": "zh-CN",
+      "title": "炼丹炉序列",
+      "victoryText": "丹成",
+      "failureText": "炉毁",
+      "retreatText": "已退出炼制"
+    },
+    "pauseProbe": {
+      "ok": true,
+      "midStatus": "paused",
+      "afterStatus": "running"
+    },
+    "afterFail": {
+      "cardId": "sequence_synthesis",
+      "specHash": "sequence_synthesis:core_demo:v1_theme_skin",
+      "runtimeVersion": "minigame_master.core.demo.sequence_synthesis",
+      "releaseEligible": false,
+      "themeKey": "alchemy",
+      "themeId": "seq_alchemy_furnace",
+      "locale": "zh-CN",
+      "title": "炼丹炉序列",
+      "mode": "result",
+      "status": "ended",
+      "hasLastResult": false,
+      "intro": "按配方顺序投入材料，完成一炉丹。",
+      "controlHint": "点选材料 · 注意顺序",
+      "nodeId": "sequence_synthesis_demo",
+      "objective": "完整完成配方序列",
+      "recipeLength": 3,
+      "stepIndex": 1,
+      "hp": 0,
+      "timer": 4,
+      "score": 33,
+      "progress": 33.333333333333336,
+      "mistakes": 0,
+      "resultReason": "hp_zero",
+      "resultSuccess": false,
+      "resultHeadline": "炉毁",
+      "rewards": {}
+    },
+    "afterWin": {
+      "cardId": "sequence_synthesis",
+      "specHash": "sequence_synthesis:core_demo:v1_theme_skin",
+      "runtimeVersion": "minigame_master.core.demo.sequence_synthesis",
+      "releaseEligible": false,
+      "themeKey": "alchemy",
+      "themeId": "seq_alchemy_furnace",
+      "locale": "zh-CN",
+      "title": "炼丹炉序列",
+      "mode": "result",
+      "status": "ended",
+      "hasLastResult": true,
+      "intro": "按配方顺序投入材料，完成一炉丹。",
+      "controlHint": "点选材料 · 注意顺序",
+      "nodeId": "sequence_synthesis_demo",
+      "objective": "完整完成配方序列",
+      "recipeLength": 3,
+      "stepIndex": 0,
+      "hp": 100,
+      "timer": 0,
+      "score": 0,
+      "progress": 0,
+      "mistakes": 0,
+      "resultReason": "objective_met",
+      "resultSuccess": true,
+      "resultHeadline": "丹成",
+      "rewards": {
+        "score": 2
+      }
+    }
+  },
+  "notes": [
+    "Core demo E2E only — not workbench IDE path.",
+    "RELEASE_ELIGIBLE=1 certification mark applied.",
+    "skipBoss demo knobs for sequence synthesis puzzle."
+  ],
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "production_ready",
+    "approvedAt": "2026-07-24T02:33:31.275Z",
+    "waivers": [
+      "device_class_fps: accepted headless soak avgFps proxy (same as survivor_horde)",
+      "vlm_visual_overflow: deferred; deterministic visual_audit screenshots used",
+      "standalone_export_host: demo browser E2E used as primary browser gate for sequence synthesis card"
+    ]
+  },
+  "viteLogTail": "\n  VITE v6.4.3  ready in 159 ms\n\n  ➜  Local:   http://127.0.0.1:53496/\n"
+}

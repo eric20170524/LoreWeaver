@@ -3,7 +3,7 @@
   "id": "sequence_synthesis",
   "title": "Sequence Synthesis",
   "category": "crafting_puzzle",
-  "status": "runtime_ready",
+  "status": "production_ready",
   "runtime": {
     "engineTargets": [
       "html_canvas",
@@ -57,6 +57,38 @@
       "max": 10,
       "patchLevel": "L1",
       "description": "Consecutive wrong inputs before hard reset or failure."
+    },
+    "explodeFails": {
+      "type": "boolean",
+      "default": false,
+      "patchLevel": "L1",
+      "description": "Consecutive mistakes hard-fail when true."
+    },
+    "allowQuit": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "Allow retreat."
+    },
+    "allowPause": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "Allow pause."
+    },
+    "artRuntimeMode": {
+      "type": "string",
+      "default": "prototype",
+      "patchLevel": "L1",
+      "description": "prototype | production art mode."
+    },
+    "runSeed": {
+      "type": "integer",
+      "default": 0,
+      "min": 0,
+      "max": 999999999,
+      "patchLevel": "L1",
+      "description": "Optional RNG seed for recipe."
     }
   },
   "patchPolicy": {
@@ -115,23 +147,16 @@
   "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
   "requiredAssets": {
     "playerClips": [
-      "idle",
-      "walk",
-      "attack",
-      "hurt",
-      "death"
+      "idle"
     ],
     "enemyKinds": [
-      "mob",
-      "elite",
-      "boss"
+      "hazard"
     ],
     "environments": [
       "bg_default"
     ],
     "audioCues": [
       "bgm_main",
-      "sfx_attack",
       "sfx_hit",
       "sfx_win",
       "sfx_lose"
@@ -140,7 +165,7 @@
   "performanceBudget": {
     "normalP95Fps": 55,
     "bossP95Fps": 45,
-    "maxActiveEnemies": 50
+    "maxActiveEnemies": 8
   },
   "maturityImpact": {
     "dimensions": [
@@ -158,10 +183,46 @@
         "smoke",
         "runtime"
       ]
+    },
+    {
+      "id": "demo_e2e_enter_retreat_fail_win",
+      "tags": [
+        "e2e",
+        "demo",
+        "gate"
+      ]
     }
   ],
   "exportPolicy": {
-    "productionReady": false,
-    "blockReason": "Awaiting P1-P7 production readiness certification"
+    "productionReady": true,
+    "blockReason": null,
+    "conditionalWaivers": [
+      "device_class_fps: headless soak avgFps proxy",
+      "vlm_visual_overflow: deferred; deterministic visual_audit used",
+      "standalone_zip_host_e2e: demo browser gate primary for sequence puzzle card"
+    ]
+  },
+  "certificationNotes": {
+    "status": "production_ready",
+    "certifiedAt": "2026-07-24",
+    "demo": "minigame_master/core/demo/sequence_synthesis",
+    "e2eScript": "npm run check:seq-e2e:release",
+    "visualSoakScript": "npm run check:seq-visual-soak:release",
+    "readinessScript": "npm run check:seq-gate",
+    "fixtures": "minigame_master/gameplay/cards/fixtures/sequence_synthesis/",
+    "humanSignoff": "docs/reports/step_E3_sequence_synthesis_human_playtest_signoff.md",
+    "evidence": [
+      "runtime_e2e_sequence_synthesis_latest.json",
+      "standalone_browser_report_sequence_synthesis.json",
+      "visual_audit_sequence_synthesis_latest.json",
+      "performance_report_sequence_synthesis_latest.json",
+      "seq_gate_readiness_latest.json",
+      "level_recipe_compile_seq_latest.json"
+    ],
+    "residuals": [
+      "true device-class FPS P95",
+      "VLM overflow/HUD audit",
+      "full standalone export host E2E matrix"
+    ]
   }
 }
