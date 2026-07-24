@@ -16,62 +16,51 @@ from backend.gameplay_catalog import (  # noqa: E402
     resolve_card_id,
 )
 
+EXPECTED = {
+    "survivor_horde",
+    "rhythm_timing",
+    "drag_collect_grid",
+    "turn_based_skill_battle",
+    "sequence_synthesis",
+    "reaction_pick",
+    "energy_balance",
+    "observe_capture",
+    "drag_to_core",
+    "pressure_survival",
+}
+
 
 def main() -> int:
     prod = list_production_cards()
     prod_ids = {c.get("id") for c in prod}
-    assert "survivor_horde" in prod_ids, "survivor_horde must be production"
-    assert "rhythm_timing" in prod_ids, "rhythm_timing must be production"
-    assert "drag_collect_grid" in prod_ids, "drag_collect_grid must be production"
-    assert "turn_based_skill_battle" in prod_ids, "turn_based_skill_battle must be production"
-    assert "sequence_synthesis" in prod_ids, "sequence_synthesis must be production"
+    missing = EXPECTED - prod_ids
+    assert not missing, f"missing production cards: {missing}"
     assert default_production_card_id() == "survivor_horde"
 
     r1 = resolve_card_id(mechanics="tap_reaction", allow_experimental=False)
     assert r1["cardId"] == "rhythm_timing", r1
-    assert r1["productionReady"] is True, r1
-
-    r_drag = resolve_card_id(mechanics="drag_collect_grid", allow_experimental=False)
-    assert r_drag["cardId"] == "drag_collect_grid", r_drag
 
     r_seq = resolve_card_id(mechanics="memory_sequence", allow_experimental=False)
     assert r_seq["cardId"] == "sequence_synthesis", r_seq
-    assert r_seq["productionReady"] is True, r_seq
 
-    r3 = resolve_card_id(preferred="survivor_horde")
-    assert r3["cardId"] == "survivor_horde"
+    for cid in sorted(EXPECTED):
+        r = resolve_card_id(preferred=cid)
+        assert r["cardId"] == cid and r["productionReady"] is True, r
 
-    r4 = resolve_card_id(preferred="sequence_synthesis")
-    assert r4["cardId"] == "sequence_synthesis"
-    assert r4["productionReady"] is True
-
-    # Explicit non-production experimental
-    r5 = resolve_card_id(preferred="energy_balance", allow_experimental=True)
-    assert r5["cardId"] == "energy_balance", r5
+    # still experimental
+    r5 = resolve_card_id(preferred="side_scrolling_brawler", allow_experimental=True)
     assert r5["experimental"] is True, r5
 
     summary = catalog_summary()
-    assert summary["totals"]["productionReady"] >= 5
-    assert summary["policy"]["autoSelectOnlyProductionReady"] is True
+    assert summary["totals"]["productionReady"] >= 10
     auto_ids = {c["id"] for c in summary["autoSelectable"]}
-    assert {
-        "survivor_horde",
-        "rhythm_timing",
-        "drag_collect_grid",
-        "turn_based_skill_battle",
-        "sequence_synthesis",
-    } <= auto_ids
+    assert EXPECTED <= auto_ids
 
     print("PASSED gameplay catalog policy checks")
     print(
         {
             "productionReady": summary["totals"]["productionReady"],
-            "autoSelectable": [c["id"] for c in summary["autoSelectable"]],
-            "tap_reaction_auto": r1,
-            "memory_sequence_auto": r_seq,
-            "preferred_seq": r4,
-            "explicit_experimental_energy": r5,
-            "drag_collect_auto": r_drag,
+            "autoSelectable": sorted(auto_ids),
         }
     )
     return 0

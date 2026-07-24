@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "loreweaver.visual-audit.v1",
+  "gate": "visual_audit",
+  "target": "minigame_master/core/demo/lightweight?card=observe_capture",
+  "cardId": "observe_capture",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:51:28.344Z",
+  "method": "Playwright screenshots + canvas toDataURL",
+  "releaseEligible": true,
+  "assertions": {
+    "mobile_720x1280_canvasPresent": true,
+    "mobile_720x1280_canvasSized": true,
+    "mobile_720x1280_notBlackScreen": true,
+    "mobile_720x1280_screenshotWritten": true,
+    "mobile_720x1280_controlsInViewport": true,
+    "desktop_1280x800_canvasPresent": true,
+    "desktop_1280x800_canvasSized": true,
+    "desktop_1280x800_notBlackScreen": true,
+    "desktop_1280x800_screenshotWritten": true,
+    "desktop_1280x800_controlsInViewport": true
+  },
+  "screenshots": [
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/observe_capture/mobile_720x1280_menu.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/observe_capture/mobile_720x1280_running.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/observe_capture/desktop_1280x800_menu.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/observe_capture/desktop_1280x800_running.png",
+    "/Users/lm/pyProj/LoreWeaver/minigame_master/capabilities/reports/visual/observe_capture/soak_90s_end.png"
+  ],
+  "errors": [],
+  "notes": [
+    "Lightweight multi-card demo visual"
+  ]
+}

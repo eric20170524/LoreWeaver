@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "reaction_pick_neon",
+  "locales": [
+    "zh-CN",
+    "en"
+  ],
+  "defaultLocale": "zh-CN",
+  "levelMeta": {
+    "title": {
+      "zh-CN": "辨宝反应·霓虹",
+      "en": "Reaction Pick Neon"
+    },
+    "intro": {
+      "zh-CN": "在限时内找出正确目标道具。",
+      "en": "Pick the correct target before it vanishes."
+    },
+    "objectiveText": {
+      "zh-CN": "完成关卡目标",
+      "en": "Complete the objective"
+    },
+    "controlHints": {
+      "zh-CN": "按提示操作",
+      "en": "Follow on-screen hints"
+    },
+    "hudLabels": {
+      "zh-CN": "生命|进度|分数|状态",
+      "en": "HP|Progress|Score|Status"
+    },
+    "victoryText": {
+      "zh-CN": "胜利",
+      "en": "Victory"
+    },
+    "failureText": {
+      "zh-CN": "失败",
+      "en": "Defeat"
+    },
+    "retreatText": {
+      "zh-CN": "撤退",
+      "en": "Retreated"
+    }
+  },
+  "entities": {
+    "player": {
+      "zh-CN": "玩家",
+      "en": "Player"
+    },
+    "enemies": {
+      "mob": {
+        "zh-CN": "目标",
+        "en": "Target"
+      }
+    },
+    "bosses": {
+      "boss": {
+        "zh-CN": "首领",
+        "en": "Boss"
+      }
+    },
+    "pickups": {
+      "gem": {
+        "zh-CN": "道具",
+        "en": "Item"
+      }
+    },
+    "skills": {
+      "act": {
+        "zh-CN": "操作",
+        "en": "Action"
+      }
+    },
+    "statuses": {
+      "ok": {
+        "zh-CN": "正常",
+        "en": "OK"
+      }
+    }
+  },
+  "copyKeys": {}
+}

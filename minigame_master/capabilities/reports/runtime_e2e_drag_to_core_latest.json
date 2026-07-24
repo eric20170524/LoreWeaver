@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "loreweaver.runtime-e2e.v1",
+  "gate": "drag_to_core_lightweight_demo_e2e",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:51:39.442Z",
+  "cardId": "drag_to_core",
+  "specHash": "drag_to_core:core_demo:lightweight_v1",
+  "runtimeVersion": "minigame_master.core.demo.lightweight.drag_to_core",
+  "releaseEligible": true,
+  "assertions": {
+    "mobile_720x1280_startButton": true,
+    "mobile_720x1280_cardId": true,
+    "mobile_720x1280_hasSpecHash": true,
+    "mobile_720x1280_releaseEligibleFalseMeta": true,
+    "mobile_720x1280_running": true,
+    "mobile_720x1280_canvasNonblank": true,
+    "mobile_720x1280_specHash": true,
+    "mobile_720x1280_timerUpdated": true,
+    "pauseStatus": true,
+    "resumeStatus": true,
+    "pauseTimerFrozen": true,
+    "naturalFailNotSuccess": true,
+    "winResultSuccess": true,
+    "winResultReason": true,
+    "desktop_1280x800_startButton": true,
+    "desktop_1280x800_cardId": true,
+    "desktop_1280x800_hasSpecHash": true,
+    "desktop_1280x800_releaseEligibleFalseMeta": true,
+    "desktop_1280x800_running": true,
+    "desktop_1280x800_canvasNonblank": true,
+    "desktop_1280x800_specHash": true,
+    "desktop_1280x800_timerUpdated": true,
+    "desktop_1280x800_retreat": true,
+    "consoleErrors": 0
+  },
+  "failedAssertions": [],
+  "flows": [
+    {
+      "id": "mobile_force_fail",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_force_win",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_pause_resume",
+      "status": "passed"
+    },
+    {
+      "id": "desktop_retreat",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "observed": {
+    "demoMeta": {
+      "cardId": "drag_to_core",
+      "specHash": "drag_to_core:core_demo:lightweight_v1",
+      "runtimeVersion": "minigame_master.core.demo.lightweight.drag_to_core",
+      "releaseEligible": false,
+      "themeKey": "default",
+      "themeId": "drag_to_core_default",
+      "locale": "zh-CN",
+      "title": "drag_to_core",
+      "victoryText": "胜利",
+      "failureText": "失败",
+      "retreatText": "撤退"
+    },
+    "afterWin": {
+      "cardId": "drag_to_core",
+      "specHash": "drag_to_core:core_demo:lightweight_v1",
+      "runtimeVersion": "minigame_master.core.demo.lightweight.drag_to_core",
+      "releaseEligible": false,
+      "themeKey": "default",
+      "themeId": "drag_to_core_default",
+      "title": "drag_to_core",
+      "mode": "result",
+      "status": "ended",
+      "hasLastResult": true,
+      "intro": "轻量玩法演示",
+      "nodeId": "drag_to_core_demo",
+      "hp": 100,
+      "timer": null,
+      "score": 0,
+      "progress": 0,
+      "resultReason": "objective_met",
+      "resultSuccess": true,
+      "resultHeadline": "胜利",
+      "rewards": {
+        "score": 1
+      }
+    },
+    "pauseProbe": {
+      "ok": true,
+      "mid": "paused",
+      "after": "running"
+    }
+  },
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "lightweight_batch_production_ready",
+    "approvedAt": "2026-07-24T02:51:39.450Z",
+    "waivers": [
+      "device_class_fps: headless soak proxy",
+      "vlm_visual_overflow: deferred",
+      "standalone_export_host: lightweight demo browser gate"
+    ]
+  },
+  "notes": [
+    "Shared lightweight demo host",
+    "card=drag_to_core"
+  ],
+  "viteLogTail": "\n  VITE v6.4.3  ready in 234 ms\n\n  ➜  Local:   http://127.0.0.1:56480/\n"
+}

@@ -3,7 +3,7 @@
   "id": "observe_capture",
   "title": "Observe Capture",
   "category": "microgame",
-  "status": "runtime_ready",
+  "status": "production_ready",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -39,6 +39,30 @@
       "default": 12,
       "patchLevel": "L1",
       "description": "missPenalty"
+    },
+    "pauseWindowSec": {
+      "type": "number",
+      "default": 0.7,
+      "patchLevel": "L1",
+      "description": "Lightweight cert knob pauseWindowSec"
+    },
+    "allowQuit": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "allowQuit"
+    },
+    "allowPause": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "allowPause"
+    },
+    "artRuntimeMode": {
+      "type": "string",
+      "default": "prototype",
+      "patchLevel": "L1",
+      "description": "artRuntimeMode"
     }
   },
   "patchPolicy": {
@@ -125,10 +149,43 @@
         "smoke",
         "runtime"
       ]
+    },
+    {
+      "id": "lightweight_demo_e2e",
+      "tags": [
+        "e2e",
+        "demo",
+        "gate"
+      ]
     }
   ],
   "exportPolicy": {
-    "productionReady": false,
-    "blockReason": "Awaiting P1-P7 production readiness certification"
+    "productionReady": true,
+    "blockReason": null,
+    "conditionalWaivers": [
+      "device_class_fps: headless soak proxy",
+      "vlm_visual_overflow: deferred",
+      "standalone_zip_host_e2e: lightweight shared demo browser gate"
+    ]
+  },
+  "certificationNotes": {
+    "status": "production_ready",
+    "certifiedAt": "2026-07-24",
+    "demo": "minigame_master/core/demo/lightweight",
+    "e2eScript": "npm run check:light-e2e -- --card observe_capture",
+    "visualSoakScript": "npm run check:light-soak -- --card observe_capture",
+    "batchScript": "npm run check:light-batch",
+    "fixtures": "minigame_master/gameplay/cards/fixtures/observe_capture/",
+    "evidence": [
+      "runtime_e2e_observe_capture_latest.json",
+      "standalone_browser_report_observe_capture.json",
+      "visual_audit_observe_capture_latest.json",
+      "performance_report_observe_capture_latest.json"
+    ],
+    "residuals": [
+      "true device-class FPS P95",
+      "VLM overflow/HUD audit",
+      "full standalone export host E2E matrix"
+    ]
   }
 }

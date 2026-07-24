@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "loreweaver.lightweight-batch-cert.v1",
+  "createdAt": "2026-07-24T02:55:09.132Z",
+  "soakSeconds": 90,
+  "results": [
+    {
+      "cardId": "reaction_pick",
+      "status": "passed",
+      "productionExportAllowed": true,
+      "validateCode": 0,
+      "reasons": []
+    },
+    {
+      "cardId": "energy_balance",
+      "status": "passed",
+      "productionExportAllowed": true,
+      "validateCode": 0,
+      "reasons": []
+    },
+    {
+      "cardId": "observe_capture",
+      "status": "passed",
+      "productionExportAllowed": true,
+      "validateCode": 0,
+      "reasons": []
+    },
+    {
+      "cardId": "drag_to_core",
+      "status": "passed",
+      "productionExportAllowed": true,
+      "validateCode": 0,
+      "reasons": []
+    },
+    {
+      "cardId": "pressure_survival",
+      "status": "passed",
+      "productionExportAllowed": true,
+      "validateCode": 0,
+      "reasons": []
+    }
+  ],
+  "passed": [
+    "reaction_pick",
+    "energy_balance",
+    "observe_capture",
+    "drag_to_core",
+    "pressure_survival"
+  ],
+  "failed": []
+}

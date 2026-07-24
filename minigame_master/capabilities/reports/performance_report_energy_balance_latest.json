@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "loreweaver.performance-report.v1",
+  "gate": "performance_soak",
+  "target": "minigame_master/core/demo/lightweight?card=energy_balance",
+  "cardId": "energy_balance",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:49:40.829Z",
+  "method": "Playwright headless rAF FPS",
+  "soakSeconds": 90,
+  "fullDodSeconds": 600,
+  "isFullDodDuration": false,
+  "releaseEligible": true,
+  "performanceBudget": {
+    "normalP95Fps": 55,
+    "maxActiveEnemies": 20
+  },
+  "assertions": {
+    "soakSamplesCollected": true,
+    "avgFpsAboveFloor": true,
+    "noCatastrophicFps": true,
+    "noConsoleErrorsDuringSoak": true,
+    "budgetComparisonRecorded": true
+  },
+  "summary": {
+    "minFps": 59,
+    "avgFps": 60,
+    "sampleCount": 89,
+    "declaredBudgetP95": 55
+  },
+  "budgetMetInHeadless": true,
+  "errors": [],
+  "notes": [
+    "Headless FPS floor avg>=20",
+    "SOAK_SECONDS=90"
+  ]
+}

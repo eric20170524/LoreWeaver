@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "loreweaver.runtime-e2e.v1",
+  "gate": "reaction_pick_lightweight_demo_e2e",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:46:13.528Z",
+  "cardId": "reaction_pick",
+  "specHash": "reaction_pick:core_demo:lightweight_v1",
+  "runtimeVersion": "minigame_master.core.demo.lightweight.reaction_pick",
+  "releaseEligible": true,
+  "assertions": {
+    "mobile_720x1280_startButton": true,
+    "mobile_720x1280_cardId": true,
+    "mobile_720x1280_hasSpecHash": true,
+    "mobile_720x1280_releaseEligibleFalseMeta": true,
+    "mobile_720x1280_running": true,
+    "mobile_720x1280_canvasNonblank": true,
+    "mobile_720x1280_specHash": true,
+    "mobile_720x1280_timerUpdated": true,
+    "pauseStatus": true,
+    "resumeStatus": true,
+    "pauseTimerFrozen": true,
+    "naturalFailNotSuccess": true,
+    "winResultSuccess": true,
+    "winResultReason": true,
+    "desktop_1280x800_startButton": true,
+    "desktop_1280x800_cardId": true,
+    "desktop_1280x800_hasSpecHash": true,
+    "desktop_1280x800_releaseEligibleFalseMeta": true,
+    "desktop_1280x800_running": true,
+    "desktop_1280x800_canvasNonblank": true,
+    "desktop_1280x800_specHash": true,
+    "desktop_1280x800_timerUpdated": true,
+    "desktop_1280x800_retreat": true,
+    "consoleErrors": 0
+  },
+  "failedAssertions": [],
+  "flows": [
+    {
+      "id": "mobile_force_fail",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_force_win",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_pause_resume",
+      "status": "passed"
+    },
+    {
+      "id": "desktop_retreat",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "observed": {
+    "demoMeta": {
+      "cardId": "reaction_pick",
+      "specHash": "reaction_pick:core_demo:lightweight_v1",
+      "runtimeVersion": "minigame_master.core.demo.lightweight.reaction_pick",
+      "releaseEligible": false,
+      "themeKey": "default",
+      "themeId": "reaction_pick_default",
+      "locale": "zh-CN",
+      "title": "reaction_pick",
+      "victoryText": "胜利",
+      "failureText": "失败",
+      "retreatText": "撤退"
+    },
+    "afterWin": {
+      "cardId": "reaction_pick",
+      "specHash": "reaction_pick:core_demo:lightweight_v1",
+      "runtimeVersion": "minigame_master.core.demo.lightweight.reaction_pick",
+      "releaseEligible": false,
+      "themeKey": "default",
+      "themeId": "reaction_pick_default",
+      "title": "reaction_pick",
+      "mode": "result",
+      "status": "ended",
+      "hasLastResult": true,
+      "intro": "轻量玩法演示",
+      "nodeId": "reaction_pick_demo",
+      "hp": 100,
+      "timer": null,
+      "score": 0,
+      "resultReason": "objective_met",
+      "resultSuccess": true,
+      "resultHeadline": "胜利",
+      "rewards": {
+        "score": 1
+      }
+    },
+    "pauseProbe": {
+      "ok": true,
+      "mid": "paused",
+      "after": "running"
+    }
+  },
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "lightweight_batch_production_ready",
+    "approvedAt": "2026-07-24T02:46:13.529Z",
+    "waivers": [
+      "device_class_fps: headless soak proxy",
+      "vlm_visual_overflow: deferred",
+      "standalone_export_host: lightweight demo browser gate"
+    ]
+  },
+  "notes": [
+    "Shared lightweight demo host",
+    "card=reaction_pick"
+  ],
+  "viteLogTail": "\n  VITE v6.4.3  ready in 139 ms\n\n  ➜  Local:   http://127.0.0.1:54959/\n"
+}

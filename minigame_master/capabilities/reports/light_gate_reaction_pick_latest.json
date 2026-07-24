@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "loreweaver.light-gate-readiness.v1",
+  "status": "passed",
+  "cardId": "reaction_pick",
+  "productionReadyEligible": true,
+  "productionExportAllowed": true,
+  "reasons": [],
+  "createdAt": "2026-07-24T02:47:54.252Z"
+}

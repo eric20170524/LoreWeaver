@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "loreweaver.light-gate-readiness.v1",
+  "status": "passed",
+  "cardId": "drag_to_core",
+  "productionReadyEligible": true,
+  "productionExportAllowed": true,
+  "reasons": [],
+  "createdAt": "2026-07-24T02:53:21.369Z"
+}

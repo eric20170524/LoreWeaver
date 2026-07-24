@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "loreweaver.standalone-browser-report.v1",
+  "status": "passed",
+  "createdAt": "2026-07-24T02:49:50.344Z",
+  "cardId": "observe_capture",
+  "specHash": "observe_capture:core_demo:lightweight_v1",
+  "runtimeVersion": "minigame_master.core.demo.lightweight.observe_capture",
+  "releaseEligible": true,
+  "sourceReport": "runtime_e2e_observe_capture_latest.json",
+  "assertions": {
+    "mobile_720x1280_startButton": true,
+    "mobile_720x1280_cardId": true,
+    "mobile_720x1280_hasSpecHash": true,
+    "mobile_720x1280_releaseEligibleFalseMeta": true,
+    "mobile_720x1280_running": true,
+    "mobile_720x1280_canvasNonblank": true,
+    "mobile_720x1280_specHash": true,
+    "mobile_720x1280_timerUpdated": true,
+    "pauseStatus": true,
+    "resumeStatus": true,
+    "pauseTimerFrozen": true,
+    "naturalFailNotSuccess": true,
+    "winResultSuccess": true,
+    "winResultReason": true,
+    "desktop_1280x800_startButton": true,
+    "desktop_1280x800_cardId": true,
+    "desktop_1280x800_hasSpecHash": true,
+    "desktop_1280x800_releaseEligibleFalseMeta": true,
+    "desktop_1280x800_running": true,
+    "desktop_1280x800_canvasNonblank": true,
+    "desktop_1280x800_specHash": true,
+    "desktop_1280x800_timerUpdated": true,
+    "desktop_1280x800_retreat": true,
+    "consoleErrors": 0
+  },
+  "errors": [],
+  "flows": [
+    {
+      "id": "mobile_force_fail",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_force_win",
+      "status": "passed"
+    },
+    {
+      "id": "mobile_pause_resume",
+      "status": "passed"
+    },
+    {
+      "id": "desktop_retreat",
+      "status": "passed"
+    }
+  ],
+  "productionCertification": {
+    "ownerDirectedProductionReady": true,
+    "ownerCommand": "lightweight_batch_production_ready",
+    "approvedAt": "2026-07-24T02:49:50.344Z",
+    "waivers": [
+      "device_class_fps: headless soak proxy",
+      "vlm_visual_overflow: deferred",
+      "standalone_export_host: lightweight demo browser gate"
+    ]
+  },
+  "notes": [
+    "Derived from lightweight multi-card demo E2E"
+  ]
+}
