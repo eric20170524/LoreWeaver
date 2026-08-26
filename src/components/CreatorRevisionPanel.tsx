@@ -3,6 +3,13 @@ import { CheckCircle2, RotateCcw, Send, ShieldAlert, Sparkles } from "lucide-rea
 import { GameSpec } from "../types";
 import { WorkspaceMeta } from "./WorkspaceSelector";
 
+type RevisionValidation = {
+  validator?: string;
+  status?: string;
+  report?: any;
+  evidence?: string;
+};
+
 type RevisionResult = {
   status?: "applied" | "blocked" | "rolled_back" | "failed";
   reason?: string;
@@ -14,16 +21,13 @@ type RevisionResult = {
     before?: unknown;
     after?: unknown;
   }>;
-  validation?: {
-    validator?: string;
-    status?: string;
-    report?: any;
-    evidence?: string;
-  };
+  validation?: RevisionValidation;
+  validations?: RevisionValidation[];
   policy?: {
     blockers?: string[];
     patch_level?: string;
     agent_role?: string;
+    validators?: string[];
   };
   spec?: GameSpec;
   beforeSpecHash?: string;
@@ -69,7 +73,7 @@ export function CreatorRevisionPanel({
     const instruction = message.trim();
     setIsRunning(true);
     setResult(null);
-    addLog(zh ? `✨ [Creator Revision] ${instruction}` : `✨ [Creator Revision] ${instruction}`);
+    addLog(`✨ [Creator Revision] ${instruction}`);
     try {
       const response = await fetch(`/api/workspaces/${workspace.id}/creator-revise`, {
         method: "POST",
@@ -79,17 +83,23 @@ export function CreatorRevisionPanel({
       const payload: RevisionResult = await response.json();
       setResult(payload);
 
+      const chain = payload.validations?.length
+        ? payload.validations.map((item) => item.validator).filter(Boolean).join(" → ")
+        : payload.validation?.validator || "validation";
+
       if (response.ok && payload.status === "applied" && payload.spec) {
         onUpdateSpec(payload.spec);
         onRevisionApplied?.();
         setMessage("");
         addLog(
           zh
-            ? `✅ 修改已通过 ${payload.validation?.validator || "validation"}，已应用 ${payload.diff?.length || 0} 项 Diff；旧 Release Evidence 已失效。`
-            : `✅ Revision passed ${payload.validation?.validator || "validation"}; applied ${payload.diff?.length || 0} diff item(s) and invalidated old release evidence.`
+            ? `✅ 修改已通过 ${chain}，已应用 ${payload.diff?.length || 0} 项 Diff；旧 Release Evidence 已失效。`
+            : `✅ Revision passed ${chain}; applied ${payload.diff?.length || 0} diff item(s) and invalidated old release evidence.`
         );
       } else if (payload.status === "rolled_back") {
-        addLog(zh ? "↩️ 修改未通过验证，已自动回滚，当前可玩版本未改变。" : "↩️ Revision failed validation and was rolled back; the playable version is unchanged.");
+        addLog(zh ? "↩️ 修改未通过运行态验证，已自动回滚，当前可玩版本未改变。" : "↩️ Revision failed runtime validation and was rolled back; the playable version is unchanged.");
+      } else if (payload.status === "blocked" && payload.reason === "targeted_validation_failed") {
+        addLog(zh ? `🛑 ${chain} 预检未通过，修改尚未写入 Workspace。` : `🛑 ${chain} preflight failed; no workspace files were written.`);
       } else {
         addLog(zh ? `🛑 修改未应用：${payload.reason || "policy blocked"}` : `🛑 Revision not applied: ${payload.reason || "policy blocked"}`);
       }
@@ -112,8 +122,14 @@ export function CreatorRevisionPanel({
 
   const applied = result?.status === "applied";
   const rolledBack = result?.status === "rolled_back";
+  const preflightBlocked = result?.status === "blocked" && result?.reason === "targeted_validation_failed";
   const blockers = result?.policy?.blockers || [];
   const diff = result?.diff || [];
+  const validations = result?.validations?.length
+    ? result.validations
+    : result?.validation
+      ? [result.validation]
+      : [];
 
   return (
     <div className="w-full space-y-5">
@@ -128,8 +144,8 @@ export function CreatorRevisionPanel({
             </h2>
             <p className="mt-1 text-sm leading-6 text-slate-500">
               {zh
-                ? "先生成修改提案，再做权限检查和真实 Node Smoke。只有验证通过才写入；失败会自动回滚。"
-                : "LoreWeaver proposes a change, checks authority, and runs real Node Smoke. Only validated changes commit; failures roll back automatically."}
+                ? "LoreWeaver 先生成提案并检查权限。L2 玩法组合先做目录兼容预检，再暂存运行真实 Node Smoke；只有完整验证通过才写入，运行态失败会自动回滚。"
+                : "LoreWeaver proposes a change and checks authority first. L2 compositions pass catalog compatibility preflight before staging and real Node Smoke; only the full validation chain commits, and runtime failures roll back."}
             </p>
           </div>
         </div>
@@ -157,8 +173,8 @@ export function CreatorRevisionPanel({
         </div>
 
         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-mono text-slate-500">
-          <span className="rounded border border-slate-200 px-2 py-1 dark:border-slate-800">L1 numeric/copy ✓</span>
-          <span className="rounded border border-slate-200 px-2 py-1 dark:border-slate-800">L2 card/modifier ✓</span>
+          <span className="rounded border border-slate-200 px-2 py-1 dark:border-slate-800">L1 → node_smoke</span>
+          <span className="rounded border border-slate-200 px-2 py-1 dark:border-slate-800">L2 → composition → node_smoke</span>
           <span className="rounded border border-slate-200 px-2 py-1 dark:border-slate-800">Topology / Adapter / Runtime → Expert</span>
         </div>
       </div>
@@ -167,30 +183,44 @@ export function CreatorRevisionPanel({
         <div className={`rounded-2xl border p-5 ${
           applied
             ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/60 dark:bg-emerald-950/20"
-            : rolledBack
+            : rolledBack || preflightBlocked
               ? "border-amber-200 bg-amber-50/60 dark:border-amber-900/60 dark:bg-amber-950/20"
               : "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/20"
         }`}>
           <div className="flex items-start gap-3">
-            {applied ? <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-600" /> : rolledBack ? <RotateCcw className="mt-0.5 h-5 w-5 text-amber-600" /> : <ShieldAlert className="mt-0.5 h-5 w-5 text-rose-600" />}
+            {applied ? <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-600" /> : rolledBack ? <RotateCcw className="mt-0.5 h-5 w-5 text-amber-600" /> : <ShieldAlert className={`mt-0.5 h-5 w-5 ${preflightBlocked ? "text-amber-600" : "text-rose-600"}`} />}
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-slate-900 dark:text-slate-100">
                 {applied
                   ? (zh ? "验证通过，修改已应用" : "Validated and applied")
                   : rolledBack
-                    ? (zh ? "验证失败，已自动回滚" : "Validation failed; rolled back")
-                    : (zh ? "修改被策略阻止" : "Revision blocked by policy")}
+                    ? (zh ? "运行态验证失败，已自动回滚" : "Runtime validation failed; rolled back")
+                    : preflightBlocked
+                      ? (zh ? "玩法组合预检未通过，未写入" : "Gameplay composition preflight failed; nothing written")
+                      : (zh ? "修改被策略阻止" : "Revision blocked by policy")}
               </h3>
               <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-mono">
                 {(result.patchLevel || result.policy?.patch_level) && <span className="rounded bg-white/70 px-2 py-1 dark:bg-slate-950/50">{result.patchLevel || result.policy?.patch_level}</span>}
                 {(result.agentRole || result.policy?.agent_role) && <span className="rounded bg-white/70 px-2 py-1 dark:bg-slate-950/50">Agent: {result.agentRole || result.policy?.agent_role}</span>}
-                {result.validation?.validator && <span className="rounded bg-white/70 px-2 py-1 dark:bg-slate-950/50">{result.validation.validator}: {result.validation.status}</span>}
+                {validations.map((item, index) => (
+                  <span key={`${item.validator}-${index}`} className="rounded bg-white/70 px-2 py-1 dark:bg-slate-950/50">
+                    {item.validator || "validation"}: {item.status || "unknown"}
+                  </span>
+                ))}
                 {applied && result.releaseEvidenceInvalidated && <span className="rounded bg-white/70 px-2 py-1 dark:bg-slate-950/50">release evidence → stale</span>}
               </div>
 
               {blockers.length > 0 && (
                 <div className="mt-3 space-y-1 text-xs font-mono text-rose-700 dark:text-rose-300">
                   {blockers.map((blocker) => <div key={blocker}>• {blocker}</div>)}
+                </div>
+              )}
+
+              {preflightBlocked && result.validation?.report?.issues?.length > 0 && (
+                <div className="mt-3 space-y-1 text-xs font-mono text-amber-800 dark:text-amber-300">
+                  {result.validation.report.issues.slice(0, 12).map((issue: any, index: number) => (
+                    <div key={`${issue.code}-${index}`}>• {issue.code}: {issue.message}</div>
+                  ))}
                 </div>
               )}
             </div>
