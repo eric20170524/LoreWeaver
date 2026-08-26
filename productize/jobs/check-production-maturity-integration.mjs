@@ -5,6 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import { strict as assert } from "node:assert";
 import { evaluateProductionExportGate } from "../lib/production-export-gate.mjs";
+import {
+  buildDeviceVerificationEvidence,
+  buildHumanPlaytestEvidence
+} from "../lib/observed-release-evidence.mjs";
 
 function writeJson(dir, name, value) {
   fs.mkdirSync(dir, { recursive: true });
@@ -36,12 +40,69 @@ function seedAutomaticEvidence(dir, cardId) {
   });
 }
 
-function passedEvidence() {
-  return {
-    status: "passed",
-    freshness: "fresh",
-    identityMatches: true
-  };
+const identity = {
+  cardId: "survivor_horde",
+  specHash: "sha256:spec",
+  runtimeVersion: "2.0.0",
+  recipeHash: "sha256:recipe",
+  contentHash: "sha256:content",
+  atlasHash: "sha256:atlas",
+  payloadHash: "sha256:payload",
+  artifact: "productize/exports/candidate.zip",
+  artifactSha256: "sha256:artifact"
+};
+
+function observedEvidence() {
+  const human = buildHumanPlaytestEvidence({
+    identity,
+    input: {
+      kind: "human_playtest",
+      humanObserved: true,
+      fixture: false,
+      synthetic: false,
+      sessions: [{
+        sessionId: "h1",
+        completed: true,
+        understoodCoreLoop: true,
+        wouldReplay: true,
+        completionSeconds: 120,
+        understandingSeconds: 8,
+        difficulty: 3,
+        fun: 4,
+        clarity: 4,
+        blockingIssues: [],
+        failureReasons: [],
+        suggestions: []
+      }]
+    }
+  }).report;
+  const device = buildDeviceVerificationEvidence({
+    identity,
+    input: {
+      kind: "device_verification",
+      deviceObserved: true,
+      fixture: false,
+      synthetic: false,
+      headless: false,
+      emulated: false,
+      performanceBudget: { minP50Fps: 50, minMinFps: 30 },
+      runs: [{
+        physicalDevice: true,
+        headless: false,
+        emulated: false,
+        deviceClass: "mobile",
+        deviceModel: "physical-device",
+        os: "physical-os",
+        browser: "physical-browser",
+        viewport: { width: 720, height: 1280 },
+        completed: true,
+        interactionOk: true,
+        consoleErrors: 0,
+        fps: { p50: 60, p95: 55, min: 40 }
+      }]
+    }
+  }).report;
+  return { human, device };
 }
 
 function main() {
@@ -53,6 +114,7 @@ function main() {
     exportPolicy: { productionReady: true }
   };
   seedAutomaticEvidence(reportsDir, card.id);
+  const { human, device } = observedEvidence();
 
   const legacy = evaluateProductionExportGate({ card, reportsDir });
   assert.equal(legacy.productionExportAllowed, true);
@@ -64,18 +126,29 @@ function main() {
   const certified = evaluateProductionExportGate({
     card,
     reportsDir,
-    humanPlaytest: passedEvidence(),
-    deviceVerification: passedEvidence()
+    expectedIdentity: identity,
+    humanPlaytest: human,
+    deviceVerification: device
   });
   assert.equal(certified.productionExportAllowed, true);
   assert.equal(certified.maturity.certificationTier, "release_certified");
   assert.equal(certified.maturity.releaseCertified, true);
 
+  const wrongCandidate = evaluateProductionExportGate({
+    card,
+    reportsDir,
+    expectedIdentity: { ...identity, payloadHash: "sha256:other" },
+    humanPlaytest: human,
+    deviceVerification: device
+  });
+  assert.equal(wrongCandidate.maturity.releaseCertified, false);
+
   const waiver = evaluateProductionExportGate({
     card,
     reportsDir,
-    humanPlaytest: passedEvidence(),
-    deviceVerification: passedEvidence(),
+    expectedIdentity: identity,
+    humanPlaytest: human,
+    deviceVerification: device,
     waivers: ["device_lab_pending"]
   });
   assert.equal(waiver.productionExportAllowed, true);
