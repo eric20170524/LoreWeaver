@@ -71,12 +71,10 @@ def _has_any(text: str, needles: Iterable[str]) -> bool:
 
 
 def classify_blocker_owner(blocker: str) -> str:
-    """Map known gate/report failures to the department that can actually fix them."""
     value = str(blocker or "").strip().lower()
     if not value:
         return "director"
 
-    # Explicit ownership emitted by current gate evaluators wins.
     for owner in (
         "architecture",
         "gameplay",
@@ -94,7 +92,7 @@ def classify_blocker_owner(blocker: str) -> str:
 
     if _has_any(value, ("schema", "contract", "runtime_spec", "manifest invalid")):
         return "architecture"
-    if _has_any(value, ("gameplay_card", "objective", "goal", "duration", "playability")):
+    if _has_any(value, ("gameplay_card", "objective", "goal", "duration", "playability", "golden_slice", "vertical_slice")):
         return "gameplay"
     if _has_any(value, ("ability", "skill runtime", "passive")):
         return "ability"
@@ -116,8 +114,9 @@ def targeted_validators_for(blocker: str, owner: Optional[str] = None) -> List[s
     resolved_owner = owner or classify_blocker_owner(value)
     validators = list(OWNER_VALIDATORS.get(resolved_owner, ["full_qa"]))
 
-    # Narrow obvious report failures further while preserving final owner defaults.
-    if "visual" in value or "atlas" in value:
+    if "golden_slice" in value or "vertical_slice" in value:
+        validators = ["golden_slice_gate"]
+    elif "visual" in value or "atlas" in value:
         validators = ["visual_audit", "atlas_integrity"]
     elif "audio" in value or "bgm" in value or "sfx" in value:
         validators = ["audio_verify"]
@@ -182,7 +181,6 @@ def build_repair_plan(
     patch_level: str = "L1",
     attempt: int = 0,
 ) -> List[dict]:
-    """Return deterministic decisions for a gate's blocker list."""
     return [
         build_repair_decision(
             blocker,
