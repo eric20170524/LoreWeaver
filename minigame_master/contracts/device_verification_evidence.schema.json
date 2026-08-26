@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/device_verification_evidence.schema.json",
+  "title": "LoreWeaver Device Verification Evidence",
+  "type": "object",
+  "required": ["schemaVersion", "status", "cardId", "createdAt", "identityMatches", "freshness", "runs", "summary"],
+  "properties": {
+    "schemaVersion": {"const": "loreweaver.device-verification-evidence.v1"},
+    "status": {"type": "string", "enum": ["passed", "failed", "stale"]},
+    "cardId": {"type": "string", "minLength": 1},
+    "recipeHash": {"type": ["string", "null"]},
+    "contentHash": {"type": ["string", "null"]},
+    "atlasHash": {"type": ["string", "null"]},
+    "runtimeVersion": {"type": ["string", "null"]},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "identityMatches": {"type": "boolean"},
+    "freshness": {"type": "string", "enum": ["fresh", "stale"]},
+    "staleReason": {"type": ["string", "null"]},
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["deviceClass", "browser", "viewport", "completed", "interactionOk", "consoleErrors", "fps"],
+        "properties": {
+          "deviceClass": {"type": "string", "minLength": 1},
+          "os": {"type": "string"},
+          "browser": {"type": "string", "minLength": 1},
+          "viewport": {
+            "type": "object",
+            "required": ["width", "height"],
+            "properties": {
+              "width": {"type": "integer", "minimum": 1},
+              "height": {"type": "integer", "minimum": 1}
+            },
+            "additionalProperties": false
+          },
+          "completed": {"type": "boolean"},
+          "interactionOk": {"type": "boolean"},
+          "consoleErrors": {"type": "integer", "minimum": 0},
+          "fps": {
+            "type": "object",
+            "required": ["p50", "p95", "min"],
+            "properties": {
+              "p50": {"type": "number", "minimum": 0},
+              "p95": {"type": "number", "minimum": 0},
+              "min": {"type": "number", "minimum": 0}
+            },
+            "additionalProperties": true
+          },
+          "notes": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["runCount", "completedRunCount", "interactionFailureCount", "consoleErrorCount", "meetsPerformanceBudget"],
+      "properties": {
+        "runCount": {"type": "integer", "minimum": 1},
+        "completedRunCount": {"type": "integer", "minimum": 0},
+        "interactionFailureCount": {"type": "integer", "minimum": 0},
+        "consoleErrorCount": {"type": "integer", "minimum": 0},
+        "meetsPerformanceBudget": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
