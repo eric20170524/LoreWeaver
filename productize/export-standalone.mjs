@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * Solution B standalone exporter.
+ * Shared-kernel standalone exporter.
  *
  * Authoritative workspace artifacts -> compileRuntimeSpec -> shared runtime bundle
  * -> production assets -> integrity manifest -> archive.
  *
- * A file-presence smoke is never promoted to browser evidence. Production release
- * requires a matching external real-browser report unless explicitly building an
- * unverified candidate with --allow-unverified-browser.
+ * Product semantics:
+ * - candidate: may be built with incomplete release evidence, but is explicitly
+ *   marked UNVERIFIED_CANDIDATE and is never releaseEligible.
+ * - certified: requires a matching evidence-derived Release Decision AND a
+ *   matching real-browser package report. Direct invocation cannot bypass this.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -16,6 +18,7 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { compileRuntimeSpec } from "../src/runtime/compileRuntimeSpec.ts";
+import { assembleWorkspaceSpec } from "./lib/workspace-spec.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "..");
@@ -24,8 +27,13 @@ const args = process.argv.slice(2);
 const valueArg = (name) => args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
 const allowUnverifiedBrowser = args.includes("--allow-unverified-browser");
 const wsRel = valueArg("--workspace");
+const releaseMode = valueArg("--release-mode") || "candidate";
+const releaseDecisionArg = valueArg("--release-decision");
 if (!wsRel) {
-  fail("Error: Missing --workspace parameter. Usage: node productize/export-standalone.mjs --workspace=<path_to_workspace>");
+  fail("Error: Missing --workspace parameter. Usage: tsx productize/export-standalone.mjs --workspace=<path_to_workspace>");
+}
+if (!["candidate", "certified"].includes(releaseMode)) {
+  fail(`Error: invalid --release-mode=${releaseMode}; expected candidate or certified`);
 }
 const browserReportArg = valueArg("--browser-report");
 const wsPath = path.resolve(LORE_ROOT, wsRel);
@@ -57,26 +65,6 @@ function copyTree(src, dst, filter = () => true) {
     if (entry.isDirectory()) copyTree(from, to, filter);
     else if (entry.isFile()) fs.copyFileSync(from, to);
   }
-}
-
-function assembleWorkspaceSpec(workspacePath) {
-  const manifestPath = path.join(workspacePath, "manifest.json");
-  if (!fs.existsSync(manifestPath)) throw new Error("manifest.json missing");
-  const source = readJson(manifestPath, "workspace manifest");
-
-  const nodesDir = path.join(workspacePath, "loreweaver/nodes");
-  if (!fs.existsSync(nodesDir)) throw new Error("loreweaver/nodes missing");
-  const nodeFiles = fs.readdirSync(nodesDir).filter((name) => name.endsWith(".json")).sort();
-  source.nodes = nodeFiles.map((name) => readJson(path.join(nodesDir, name), `node artifact ${name}`));
-  source.nodes.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
-
-  const catalogsDir = path.join(workspacePath, "loreweaver/catalogs");
-  if (fs.existsSync(catalogsDir)) {
-    for (const name of fs.readdirSync(catalogsDir).filter((item) => item.endsWith(".json")).sort()) {
-      source[name.slice(0, -5)] = readJson(path.join(catalogsDir, name), `catalog ${name}`);
-    }
-  }
-  return source;
 }
 
 function walkFiles(dir, base = dir) {
@@ -115,6 +103,27 @@ function validateBrowserReport(reportPath, resolvedSpec) {
   };
 }
 
+function validateReleaseDecision(decisionPath, resolvedSpec) {
+  if (!decisionPath) return { valid: false, reason: "release decision not supplied", decision: null };
+  const absolute = path.resolve(LORE_ROOT, decisionPath);
+  if (!fs.existsSync(absolute)) return { valid: false, reason: `release decision missing: ${absolute}`, decision: null };
+  const decision = readJson(absolute, "release decision");
+  const valid = decision.schemaVersion === "loreweaver.workspace-release-decision.v1"
+    && decision.mode === "certified"
+    && decision.exportAllowed === true
+    && decision.releaseCertified === true
+    && decision.certificationTier === "release_certified"
+    && decision.identity?.specHash === resolvedSpec.specHash
+    && (!decision.identity?.runtimeVersion || decision.identity.runtimeVersion === resolvedSpec.runtimeVersion)
+    && (!Array.isArray(decision.waivers) || decision.waivers.length === 0);
+  return {
+    valid,
+    reason: valid ? null : "decision must be certified, waiver-free, and match current spec/runtime identity",
+    decision,
+    path: absolute
+  };
+}
+
 const normalizedWsRoot = `${path.resolve(WORKSPACES_ROOT)}${path.sep}`;
 if (!`${wsPath}${path.sep}`.startsWith(normalizedWsRoot)) {
   fail(`Workspace must be below ${WORKSPACES_ROOT}`);
@@ -126,6 +135,11 @@ try {
   resolvedSpec = compileRuntimeSpec(assembleWorkspaceSpec(wsPath));
 } catch (error) {
   fail(`Runtime spec compilation failed: ${error instanceof Error ? error.message : error}`);
+}
+
+const releaseDecisionGate = validateReleaseDecision(releaseDecisionArg, resolvedSpec);
+if (releaseMode === "certified" && !releaseDecisionGate.valid) {
+  fail(`Certified export blocked: ${releaseDecisionGate.reason}`);
 }
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "lw-shared-export-"));
@@ -189,7 +203,31 @@ fs.writeFileSync(path.join(stage, "CREDITS.json"), `${JSON.stringify({
     { path: "assets/imagegen", license: "original-generated", provider: "local" }
   ]
 }, null, 2)}\n`);
-fs.writeFileSync(path.join(stage, "README.md"), `# LoreWeaver Standalone\n\nThis package runs the shared LoreWeaver runtime kernel.\n\nServe this directory from any static HTTP server; no IDE or backend is required.\n\n- Runtime: ${resolvedSpec.runtimeVersion}\n- Spec: ${resolvedSpec.specHash}\n- Save schema: loreweaver.player-state.v1\n`);
+
+const browserGate = validateBrowserReport(browserReportArg, resolvedSpec);
+if (releaseMode === "certified" && !browserGate.valid) {
+  fs.rmSync(tempRoot, { recursive: true, force: true });
+  fail(`Certified export blocked: ${browserGate.reason}`);
+}
+
+const releaseEligible = releaseMode === "certified"
+  && releaseDecisionGate.valid
+  && browserGate.valid;
+const releaseStatus = {
+  schemaVersion: "loreweaver.release-status.v1",
+  createdAt: new Date().toISOString(),
+  mode: releaseMode,
+  artifactLabel: releaseEligible ? "CERTIFIED_RELEASE" : "UNVERIFIED_CANDIDATE",
+  releaseEligible,
+  certificationTier: releaseDecisionGate.decision?.certificationTier || "unverified_candidate",
+  nonReleaseMarker: releaseEligible ? null : "UNVERIFIED_CANDIDATE",
+  runtimeVersion: resolvedSpec.runtimeVersion,
+  specHash: resolvedSpec.specHash,
+  browserVerified: browserGate.valid,
+  releaseDecision: releaseDecisionGate.decision || null
+};
+fs.writeFileSync(path.join(stage, "RELEASE_STATUS.json"), `${JSON.stringify(releaseStatus, null, 2)}\n`);
+fs.writeFileSync(path.join(stage, "README.md"), `# LoreWeaver Standalone\n\nThis package runs the shared LoreWeaver runtime kernel.\n\nServe this directory from any static HTTP server; no IDE or backend is required.\n\n- Release mode: ${releaseMode}\n- Artifact label: ${releaseStatus.artifactLabel}\n- Release eligible: ${releaseEligible}\n- Runtime: ${resolvedSpec.runtimeVersion}\n- Spec: ${resolvedSpec.specHash}\n- Save schema: loreweaver.player-state.v1\n\nSee RELEASE_STATUS.json for machine-readable certification and missing-evidence semantics.\n`);
 
 const startSh = `#!/usr/bin/env bash
 cd "$(dirname "$0")"
@@ -248,13 +286,15 @@ pause
 `;
 fs.writeFileSync(path.join(stage, "start.bat"), startBat);
 
-
-const browserGate = validateBrowserReport(browserReportArg, resolvedSpec);
 const preManifestFiles = walkFiles(stage);
 const releaseManifest = {
-  schemaVersion: "loreweaver.release-manifest.v2",
+  schemaVersion: "loreweaver.release-manifest.v3",
   createdAt: new Date().toISOString(),
   workspaceId: path.basename(wsPath),
+  releaseMode,
+  artifactLabel: releaseStatus.artifactLabel,
+  certificationTier: releaseStatus.certificationTier,
+  nonReleaseMarker: releaseStatus.nonReleaseMarker,
   runtimeMode: "shared_kernel_v2",
   runtimeVersion: resolvedSpec.runtimeVersion,
   specHash: resolvedSpec.specHash,
@@ -272,7 +312,8 @@ const releaseManifest = {
     sharedBundle: "passed",
     integrity: "passed",
     browser: browserGate.valid ? "passed" : "pending",
-    releaseEligible: browserGate.valid
+    evidencePolicy: releaseDecisionGate.valid ? "passed" : "candidate_only",
+    releaseEligible
   }
 };
 fs.writeFileSync(path.join(stage, "release-manifest.json"), `${JSON.stringify(releaseManifest, null, 2)}\n`);
@@ -294,10 +335,14 @@ const artifact = fs.readFileSync(zipPath);
 const artifactSha256 = crypto.createHash("sha256").update(artifact).digest("hex");
 
 const exportReport = {
-  schemaVersion: "loreweaver.export-smoke.v2",
+  schemaVersion: "loreweaver.export-smoke.v3",
   createdAt: new Date().toISOString(),
-  status: browserGate.valid ? "passed" : "browser_verification_required",
-  releaseEligible: browserGate.valid,
+  status: releaseEligible ? "passed" : "candidate_built",
+  releaseMode,
+  artifactLabel: releaseStatus.artifactLabel,
+  certificationTier: releaseStatus.certificationTier,
+  nonReleaseMarker: releaseStatus.nonReleaseMarker,
+  releaseEligible,
   runtimeMode: "shared_kernel_v2",
   runtimeVersion: resolvedSpec.runtimeVersion,
   specHash: resolvedSpec.specHash,
@@ -310,6 +355,7 @@ const exportReport = {
   buildAssertions: {
     sharedKernelBundle: true,
     embeddedResolvedSpec: true,
+    releaseStatusEmbedded: true,
     legacyEntryAbsent: true,
     nodeModulesAbsent: true,
     docsCollabAbsent: true
@@ -317,6 +363,7 @@ const exportReport = {
   browserVerification: browserGate.valid
     ? { status: "passed", report: path.relative(LORE_ROOT, path.resolve(LORE_ROOT, browserReportArg)) }
     : { status: "required", reason: browserGate.reason },
+  releaseDecision: releaseDecisionGate.decision || null,
   errors: browserGate.report?.errors || null
 };
 const reportPath = path.join(LORE_ROOT, "minigame_master/capabilities/reports/export_standalone_latest.json");
@@ -329,14 +376,22 @@ fs.writeFileSync(path.join(workspaceReports, "export_artifact_meta.json"), `${JS
   sha256: artifactSha256,
   builtAt: exportReport.createdAt,
   independent: browserGate.valid,
-  releaseEligible: browserGate.valid,
+  releaseMode,
+  artifactLabel: releaseStatus.artifactLabel,
+  releaseEligible,
+  certificationTier: releaseStatus.certificationTier,
+  nonReleaseMarker: releaseStatus.nonReleaseMarker,
   specHash: resolvedSpec.specHash
 }, null, 2)}\n`);
 
 fs.rmSync(tempRoot, { recursive: true, force: true });
 console.log(JSON.stringify({
   status: exportReport.status,
+  releaseMode,
+  artifactLabel: releaseStatus.artifactLabel,
   releaseEligible: exportReport.releaseEligible,
+  certificationTier: releaseStatus.certificationTier,
+  nonReleaseMarker: releaseStatus.nonReleaseMarker,
   artifact: exportReport.artifact.path,
   stage,
   runtimeVersion: resolvedSpec.runtimeVersion,
@@ -346,5 +401,5 @@ console.log(JSON.stringify({
 }, null, 2));
 
 if (!browserGate.valid && !allowUnverifiedBrowser) {
-  fail("Standalone candidate built, but production export is blocked until a matching real-browser report is supplied with --browser-report=...");
+  fail("Standalone candidate built, but browser verification is missing. Re-run via release-compiler candidate mode or provide --browser-report=...");
 }
