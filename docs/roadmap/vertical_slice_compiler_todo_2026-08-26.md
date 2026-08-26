@@ -23,7 +23,7 @@
 - [x] B6 Gate blocker 可形成 repair context，并由负责角色生成候选修改；候选结果会缩减为 ownership 内的 structured patch。
 - [x] B7 `run_repair_loop` 支持注入 targeted validator runner；验证失败继续消耗同一 blocker 的 retry budget。
 - [x] B8 L3/L4、未知跨域 blocker、预算耗尽、无安全 patch 均 fail-closed 并返回 escalation，不无限循环。
-- [ ] B9 至少用一个真实 Gate failure 做 E2E：fail -> repair -> revalidate -> pass；当前只有 deterministic/injected-validator 回归。
+- [x] B9 使用真实 shipped `golden_slice_gate` 完成 fail -> Repair Orchestrator -> controlled L2 patch -> 同一 Gate revalidate -> pass；CI 的 Agent 响应使用确定性替身，Gate/ownership/patch/retry 均为真实生产代码。
 
 ## P0-C：RecipeGraph 与去固定 12 节点
 
@@ -39,21 +39,21 @@
 
 - [x] D1 抽取共享 `release-policy.mjs` / Evidence identity；Workspace 级按实际使用到的所有 Gameplay Card 聚合，并以最弱卡成熟度作为整体成熟度。
 - [x] D2 Workbench H5 export 与 CLI productize export 均走 `release-compiler.mjs`；原 `/api/workspaces/{id}/export` 仅保留为源码备份，不再承担 release 语义。
-- [ ] D3 UI 完整收敛为 Candidate Export / Certified Export 两种产品语义；当前 Candidate 已明确，Certified API/CLI 已就绪，UI 按钮与状态面板待接。
+- [x] D3 UI 收敛为 Source Backup / Candidate H5 / Certified H5；`release-status` dry-run 展示 certificationTier 与缺失 Evidence，只有 `release_certified` 才启用 Certified 按钮。
 - [x] D4 Certified Export 只允许 evidence-derived `release_certified`，并在底层 exporter 再次校验 Release Decision + spec/runtime identity，不能靠手改 card status 或绕过上层入口。
 - [x] D5 Candidate Export 在 ZIP 内写入 `RELEASE_STATUS.json`、`UNVERIFIED_CANDIDATE`、missing evidence/waiver 决策；`releaseEligible` 永远为 false。
 
 ## P2：黄金链路
 
-- [ ] E1 冻结新增 Gameplay Card，选 `survivor_horde` 为黄金主玩法。
-- [ ] E2 建立 3-stage vertical-slice Recipe。
-- [ ] E3 准备两套完整 Theme Content Pack。
-- [ ] E4 完成 browser E2E、VLM、standalone ZIP host E2E、offline/static boot。
-- [ ] E5 完成真机 FPS / interaction Evidence。
+- [x] E1 冻结新增 Gameplay Card，黄金主玩法固定为 `survivor_horde`；本阶段只纵向补闭环与证据。
+- [x] E2 建立 `survivor_vertical_slice_3`：Setup -> Escalation -> Climax，全部复用 `survivor_horde`，只通过已实现 Modifier/knobs 增压。
+- [x] E3 黄金链路复用两套已存在 production Theme Content Pack：wasteland / cyber_pulse；二者共享同一 runtime asset/audio source，不复制玩法代码。
+- [ ] E4 完成 browser E2E、VLM、standalone ZIP host E2E、offline/static boot，并把浏览器证据绑定可执行 Payload identity。
+- [ ] E5 完成真实设备 FPS / interaction Evidence；禁止用 headless proxy 冒充真机。
 - [ ] E6 完成真人试玩 Evidence，至少记录可玩性、理解成本、失败原因和修改建议。
-- [ ] E7 修改 Recipe/Asset/Runtime identity 后自动 stale 旧 Evidence。
-- [ ] E8 通过 Agent Repair Loop 自动修复至少一个真实失败。
-- [ ] E9 无 waiver 达到 `release_certified` 并导出 Certified H5。
+- [ ] E7 修改 Recipe/Asset/Runtime identity 后自动 stale 旧 Evidence；现有 Level Recipe apply 已支持 stale，需扩到黄金 RecipeGraph / release evidence identity。
+- [x] E8 通过 Agent Repair Loop 自动修复一个真实 `golden_slice_gate` 失败：Climax 缺 `boss_phases` -> gameplay L2 patch -> targeted revalidate -> pass。
+- [ ] E9 无 waiver 达到 `release_certified` 并导出 Certified H5；受 E4/E5/E6 真实 Evidence 阻塞，不能伪造。
 
 ## P3：产品层收敛
 
@@ -64,9 +64,9 @@
 
 ## 当前执行顺序
 
-1. [x] **A1-A5**：evidence-derived maturity、真人/真机合同与 UI 去误导。
-2. [x] **B1-B8（除真实 E2E）**：bounded repair policy/orchestrator 接现有 Agent ownership。
-3. [x] **C1-C7**：RecipeGraph、legacy round-trip、recipe-aware WorldBuilder。
-4. [x] **D1-D2/D4-D5**：共享 Release Policy + 统一 Candidate/Certified Compiler + 打包器硬门禁。
-5. [ ] **D3**：接 release status 查询和 Certified UI。
-6. [ ] **B9 + E1-E9**：用真实黄金链路证明 fail -> repair -> revalidate -> certified release。
+1. [x] **P0 + P1**：成熟度、Repair Loop、RecipeGraph、统一 Release Compiler/UI 已闭环。
+2. [x] **E1-E3 + E8/B9**：黄金 `survivor_horde` 三段 Recipe、双主题复用、真实 Gate Repair 已通过 CI。
+3. [ ] **E4**：把 Candidate 包的 browser/VLM/offline 证据绑定 executable payload identity，避免认证另一个未测 payload。
+4. [ ] **E7**：黄金 RecipeGraph / asset/runtime identity 改动统一 stale release evidence。
+5. [ ] **E5-E6**：收集真机与真人 Evidence。
+6. [ ] **E9**：仅在无 waiver 且所有 Evidence fresh/matched 后导出 Certified H5。
