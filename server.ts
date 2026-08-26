@@ -10,15 +10,9 @@ const app = express();
 
 function readPort(envName: string, fallback: number) {
   const value = process.env[envName];
-  if (!value) {
-    return fallback;
-  }
-
+  if (!value) return fallback;
   const port = Number.parseInt(value, 10);
-  if (Number.isInteger(port) && port > 0 && port <= 65535) {
-    return port;
-  }
-
+  if (Number.isInteger(port) && port > 0 && port <= 65535) return port;
   console.warn(`Invalid ${envName} value "${value}", using ${fallback}.`);
   return fallback;
 }
@@ -29,7 +23,6 @@ const PYTHON_BACKEND_PORT = readPort("PYTHON_BACKEND_PORT", 8000);
 
 app.use(express.json({ limit: "10mb" }));
 
-// 🐍 Python FastAPI Bridge & Process Manager
 let pythonProcess: any = null;
 let viteProcess: any = null;
 
@@ -70,7 +63,6 @@ function getPythonCommand(): string {
 function tryLaunchPythonBackend() {
   const pythonCmd = getPythonCommand();
   console.log(`Attempting to spawn Python FastAPI backend using "${pythonCmd}" on port ${PYTHON_BACKEND_PORT}...`);
-  
   try {
     pythonProcess = spawn(pythonCmd, ["-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", String(PYTHON_BACKEND_PORT)]);
   } catch (err) {
@@ -84,51 +76,27 @@ function tryLaunchPythonBackend() {
   }
 
   if (pythonProcess) {
-    pythonProcess.stdout.on("data", (data: any) => {
-      console.log(`[Python stdout]: ${data.toString().trim()}`);
-    });
-
-    pythonProcess.stderr.on("data", (data: any) => {
-      console.error(`[Python stderr]: ${data.toString().trim()}`);
-    });
-
-    pythonProcess.on("error", (err: any) => {
-      console.error("⚠️ Python background process error:", err);
-    });
+    pythonProcess.stdout.on("data", (data: any) => console.log(`[Python stdout]: ${data.toString().trim()}`));
+    pythonProcess.stderr.on("data", (data: any) => console.error(`[Python stderr]: ${data.toString().trim()}`));
+    pythonProcess.on("error", (err: any) => console.error("⚠️ Python background process error:", err));
   }
 }
 
-// Fire pre-emptive background parser thread
 tryLaunchPythonBackend();
 
 function pipeChildLogs(label: string, child: any) {
-  child.stdout?.on("data", (data: any) => {
-    console.log(`[${label} stdout]: ${data.toString().trim()}`);
-  });
-  child.stderr?.on("data", (data: any) => {
-    console.error(`[${label} stderr]: ${data.toString().trim()}`);
-  });
-  child.on("error", (err: any) => {
-    console.error(`⚠️ ${label} process error:`, err);
-  });
+  child.stdout?.on("data", (data: any) => console.log(`[${label} stdout]: ${data.toString().trim()}`));
+  child.stderr?.on("data", (data: any) => console.error(`[${label} stderr]: ${data.toString().trim()}`));
+  child.on("error", (err: any) => console.error(`⚠️ ${label} process error:`, err));
 }
 
 function tryLaunchViteFrontend() {
   const isWindows = process.platform === "win32";
   const viteBin = path.join(process.cwd(), "node_modules", ".bin", isWindows ? "vite.cmd" : "vite");
   console.log(`Attempting to spawn Vite frontend on port ${VITE_DEV_PORT}...`);
-  viteProcess = spawn(viteBin, [
-    "--host",
-    "127.0.0.1",
-    "--port",
-    String(VITE_DEV_PORT),
-    "--strictPort"
-  ], {
+  viteProcess = spawn(viteBin, ["--host", "127.0.0.1", "--port", String(VITE_DEV_PORT), "--strictPort"], {
     cwd: process.cwd(),
-    env: {
-      ...process.env,
-      DISABLE_HMR: "true"
-    },
+    env: { ...process.env, DISABLE_HMR: "true" },
     shell: isWindows
   });
   pipeChildLogs("Vite", viteProcess);
@@ -136,9 +104,7 @@ function tryLaunchViteFrontend() {
 
 function shutdownChildren() {
   for (const child of [viteProcess, pythonProcess]) {
-    if (child && child.exitCode === null) {
-      child.kill();
-    }
+    if (child && child.exitCode === null) child.kill();
   }
 }
 
@@ -146,7 +112,6 @@ process.on("SIGTERM", () => {
   shutdownChildren();
   process.exit(0);
 });
-
 process.on("SIGINT", () => {
   shutdownChildren();
   process.exit(0);
@@ -164,7 +129,20 @@ function parseJsonOutput(stdout: string) {
   }
 }
 
-function runReleaseCompiler(workspaceId: string, mode: "candidate" | "certified") {
+function releaseCompilerCommand(workspaceId: string, mode: "candidate" | "certified", dryRun = false) {
+  const isWindows = process.platform === "win32";
+  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", isWindows ? "tsx.cmd" : "tsx");
+  const compiler = path.join(process.cwd(), "productize", "release-compiler.mjs");
+  const compilerArgs = [
+    compiler,
+    `--workspace=data/workspaces/${workspaceId}`,
+    `--mode=${mode}`
+  ];
+  if (dryRun) compilerArgs.push("--dry-run");
+  return { isWindows, tsxBin, compilerArgs };
+}
+
+function validateReleaseWorkspace(workspaceId: string) {
   if (!isSafeWorkspaceId(workspaceId)) {
     return { ok: false, statusCode: 400, payload: { status: "failed", reason: "invalid_workspace_id" } };
   }
@@ -172,15 +150,43 @@ function runReleaseCompiler(workspaceId: string, mode: "candidate" | "certified"
   if (!fs.existsSync(workspaceDir)) {
     return { ok: false, statusCode: 404, payload: { status: "failed", reason: "workspace_not_found" } };
   }
+  return { ok: true, statusCode: 200, payload: null };
+}
 
-  const isWindows = process.platform === "win32";
-  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", isWindows ? "tsx.cmd" : "tsx");
-  const compiler = path.join(process.cwd(), "productize", "release-compiler.mjs");
-  const result = spawnSync(tsxBin, [
-    compiler,
-    `--workspace=data/workspaces/${workspaceId}`,
-    `--mode=${mode}`
-  ], {
+function runReleaseStatus(workspaceId: string) {
+  const validation = validateReleaseWorkspace(workspaceId);
+  if (!validation.ok) return validation;
+  const { isWindows, tsxBin, compilerArgs } = releaseCompilerCommand(workspaceId, "certified", true);
+  const result = spawnSync(tsxBin, compilerArgs, {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: process.env,
+    shell: isWindows,
+    timeout: 60_000
+  });
+  const payload = parseJsonOutput(result.stdout || "");
+  if (payload) {
+    // A blocked certified dry-run intentionally exits non-zero, but it is a valid
+    // status response rather than an HTTP failure.
+    return { ok: true, statusCode: 200, payload };
+  }
+  return {
+    ok: false,
+    statusCode: 500,
+    payload: {
+      status: "failed",
+      reason: "release_status_non_json_output",
+      stdout: (result.stdout || "").slice(-4000),
+      stderr: (result.stderr || "").slice(-4000)
+    }
+  };
+}
+
+function runReleaseCompiler(workspaceId: string, mode: "candidate" | "certified") {
+  const validation = validateReleaseWorkspace(workspaceId);
+  if (!validation.ok) return validation;
+  const { isWindows, tsxBin, compilerArgs } = releaseCompilerCommand(workspaceId, mode, false);
+  const result = spawnSync(tsxBin, compilerArgs, {
     cwd: process.cwd(),
     encoding: "utf8",
     env: process.env,
@@ -195,11 +201,7 @@ function runReleaseCompiler(workspaceId: string, mode: "candidate" | "certified"
     stderr: (result.stderr || "").slice(-4000)
   };
   if (result.status !== 0) {
-    return {
-      ok: false,
-      statusCode: payload.status === "blocked" ? 422 : 500,
-      payload
-    };
+    return { ok: false, statusCode: payload.status === "blocked" ? 422 : 500, payload };
   }
 
   const exporterPayload = typeof payload.exporterOutput === "string"
@@ -207,20 +209,12 @@ function runReleaseCompiler(workspaceId: string, mode: "candidate" | "certified"
     : null;
   const artifactRel = exporterPayload?.artifact;
   if (!artifactRel) {
-    return {
-      ok: false,
-      statusCode: 500,
-      payload: { ...payload, reason: "release_compiler_missing_artifact_path" }
-    };
+    return { ok: false, statusCode: 500, payload: { ...payload, reason: "release_compiler_missing_artifact_path" } };
   }
   const artifactPath = path.resolve(process.cwd(), artifactRel);
   const allowedExportsRoot = `${path.resolve(process.cwd(), "productize", "exports")}${path.sep}`;
   if (!`${artifactPath}${path.sep}`.startsWith(allowedExportsRoot) || !fs.existsSync(artifactPath)) {
-    return {
-      ok: false,
-      statusCode: 500,
-      payload: { ...payload, reason: "release_artifact_outside_allowed_root_or_missing" }
-    };
+    return { ok: false, statusCode: 500, payload: { ...payload, reason: "release_artifact_outside_allowed_root_or_missing" } };
   }
   return { ok: true, statusCode: 200, payload, artifactPath };
 }
@@ -228,9 +222,7 @@ function runReleaseCompiler(workspaceId: string, mode: "candidate" | "certified"
 function sendReleaseArtifact(req: express.Request, res: express.Response, mode: "candidate" | "certified") {
   const workspaceId = String(req.params.wsId || "");
   const result = runReleaseCompiler(workspaceId, mode);
-  if (!result.ok || !result.artifactPath) {
-    return res.status(result.statusCode).json(result.payload);
-  }
+  if (!result.ok || !result.artifactPath) return res.status(result.statusCode).json(result.payload);
   const suffix = mode === "certified" ? "certified" : "candidate";
   const filename = `loreweaver-${workspaceId}-${suffix}.zip`;
   res.setHeader("X-LoreWeaver-Release-Mode", mode);
@@ -241,38 +233,25 @@ function sendReleaseArtifact(req: express.Request, res: express.Response, mode: 
   return res.download(result.artifactPath, filename);
 }
 
-// Release routes are intentionally handled here before the generic FastAPI proxy.
-// Both modes use the same Node release compiler/policy; FastAPI does not duplicate
-// release certification logic.
-app.get("/api/workspaces/:wsId/export-candidate", (req, res) => {
-  return sendReleaseArtifact(req, res, "candidate");
+app.get("/api/workspaces/:wsId/release-status", (req, res) => {
+  const result = runReleaseStatus(String(req.params.wsId || ""));
+  return res.status(result.statusCode).json(result.payload);
 });
-app.get("/api/workspaces/:wsId/export-certified", (req, res) => {
-  return sendReleaseArtifact(req, res, "certified");
-});
-// Backward-compatible alias: the old ambiguous release endpoint now means candidate.
-app.get("/api/workspaces/:wsId/export-release", (req, res) => {
-  return sendReleaseArtifact(req, res, "candidate");
-});
+app.get("/api/workspaces/:wsId/export-candidate", (req, res) => sendReleaseArtifact(req, res, "candidate"));
+app.get("/api/workspaces/:wsId/export-certified", (req, res) => sendReleaseArtifact(req, res, "certified"));
+// Backward-compatible alias: old ambiguous release endpoint now means candidate.
+app.get("/api/workspaces/:wsId/export-release", (req, res) => sendReleaseArtifact(req, res, "candidate"));
 
-// Smart Gateway Proxy middleware to direct all remaining APIs to the Python database engine
 app.use("/api", async (req, res) => {
   const targetUrl = `http://127.0.0.1:${PYTHON_BACKEND_PORT}/api${req.url}`;
   try {
     const headers: Record<string, string> = {};
     for (const [key, val] of Object.entries(req.headers)) {
-      if (typeof val === "string") {
-        headers[key] = val;
-      } else if (Array.isArray(val)) {
-        headers[key] = val.join(", ");
-      }
+      if (typeof val === "string") headers[key] = val;
+      else if (Array.isArray(val)) headers[key] = val.join(", ");
     }
 
-    const options: any = {
-      method: req.method,
-      headers,
-    };
-
+    const options: any = { method: req.method, headers };
     const contentType = headers["content-type"] || "";
     const contentLength = Number.parseInt(String(req.headers["content-length"] || "0"), 10);
     const hasReadableBody = Boolean(req.headers["transfer-encoding"]) || contentLength > 0;
@@ -290,23 +269,18 @@ app.use("/api", async (req, res) => {
 
     const proxyRes = await fetch(targetUrl, options);
     res.status(proxyRes.status);
-    
-    proxyRes.headers.forEach((value, name) => {
-      res.setHeader(name, value);
-    });
-
+    proxyRes.headers.forEach((value, name) => res.setHeader(name, value));
     const bodyBuffer = Buffer.from(await proxyRes.arrayBuffer());
     return res.send(bodyBuffer);
   } catch (proxyError: any) {
     console.error("Gateway proxy to Python has failed:", proxyError.message);
-    return res.status(502).json({ 
-      success: false, 
-      error: "FastAPI Backend is still starting up or encounters an exception. Cleaned duplicate express fallbacks." 
+    return res.status(502).json({
+      success: false,
+      error: "FastAPI Backend is still starting up or encounters an exception. Cleaned duplicate express fallbacks."
     });
   }
 });
 
-// Serve and integrate Vite development server
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     tryLaunchViteFrontend();
@@ -332,9 +306,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    app.get("*", (req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
   app.listen(PORT, "0.0.0.0", () => {
