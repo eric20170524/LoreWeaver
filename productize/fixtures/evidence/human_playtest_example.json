@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "loreweaver.human-playtest-evidence.v1",
+  "status": "passed",
+  "cardId": "survivor_horde",
+  "recipeHash": "example-recipe-hash",
+  "contentHash": "example-content-hash",
+  "runtimeVersion": "example-runtime-version",
+  "createdAt": "2026-08-26T00:00:00Z",
+  "identityMatches": true,
+  "freshness": "fresh",
+  "staleReason": null,
+  "sessions": [
+    {
+      "sessionId": "playtest-001",
+      "completed": true,
+      "understoodCoreLoop": true,
+      "wouldReplay": true,
+      "completionSeconds": 360,
+      "difficulty": 3,
+      "fun": 4,
+      "clarity": 4,
+      "blockingIssues": [],
+      "notes": "Example only; replace with real human playtest evidence."
+    }
+  ],
+  "summary": {
+    "sessionCount": 1,
+    "completionRate": 1,
+    "coreLoopUnderstandingRate": 1,
+    "replayIntentRate": 1,
+    "blockingIssueCount": 0,
+    "notes": "Fixture is documentation, not release evidence."
+  }
+}
