@@ -41,7 +41,6 @@
     "check:light-e2e": "node productize/jobs/run-lightweight-e2e.mjs",
     "check:light-soak": "node productize/jobs/run-lightweight-visual-soak.mjs",
     "check:light-batch": "SOAK_SECONDS=90 RELEASE_ELIGIBLE=1 node productize/jobs/certify-lightweight-batch.mjs",
-
     "check:standalone-survivor-e2e": "node productize/jobs/run-standalone-survivor-e2e.mjs",
     "check:survivor-visual-soak": "node productize/jobs/run-survivor-visual-soak.mjs",
     "check:survivor-visual-soak:full": "SOAK_SECONDS=600 node productize/jobs/run-survivor-visual-soak.mjs",
@@ -55,6 +54,10 @@
     "recipe:apply": "node productize/jobs/apply-level-recipe.mjs",
     "recipe:list": "node productize/jobs/apply-level-recipe.mjs --list",
     "check:production-export-gate": "node productize/jobs/check-production-export-gate.mjs",
+    "check:release-maturity": "node productize/jobs/check-release-maturity.mjs",
+    "check:repair-policy": "python3 productize/jobs/check-repair-policy.py",
+    "check:recipe-graph": "node productize/jobs/check-recipe-graph.mjs",
+    "check:convergence-core": "npm run check:release-maturity && npm run check:repair-policy && npm run check:recipe-graph",
     "rebuild:survivor-atlas": "python3 productize/jobs/rebuild-survivor-atlas.py",
     "productize:compile": "node productize/compile-workspace.mjs",
     "productize:export": "tsx productize/export-standalone.mjs",
