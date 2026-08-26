@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "loreweaver.device-verification-evidence.v1",
+  "status": "passed",
+  "cardId": "survivor_horde",
+  "recipeHash": "example-recipe-hash",
+  "contentHash": "example-content-hash",
+  "atlasHash": "example-atlas-hash",
+  "runtimeVersion": "example-runtime-version",
+  "createdAt": "2026-08-26T00:00:00Z",
+  "identityMatches": true,
+  "freshness": "fresh",
+  "staleReason": null,
+  "runs": [
+    {
+      "deviceClass": "mobile-midrange",
+      "os": "example-os",
+      "browser": "example-browser",
+      "viewport": {"width": 720, "height": 1280},
+      "completed": true,
+      "interactionOk": true,
+      "consoleErrors": 0,
+      "fps": {"p50": 60, "p95": 55, "min": 45},
+      "notes": "Example only; replace with real-device verification."
+    }
+  ],
+  "summary": {
+    "runCount": 1,
+    "completedRunCount": 1,
+    "interactionFailureCount": 0,
+    "consoleErrorCount": 0,
+    "meetsPerformanceBudget": true,
+    "notes": "Fixture is documentation, not release evidence."
+  }
+}
