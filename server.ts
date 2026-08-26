@@ -166,8 +166,6 @@ function runReleaseStatus(workspaceId: string) {
   });
   const payload = parseJsonOutput(result.stdout || "");
   if (payload) {
-    // A blocked certified dry-run intentionally exits non-zero, but it is a valid
-    // status response rather than an HTTP failure.
     return { ok: true, statusCode: 200, payload };
   }
   return {
@@ -233,14 +231,77 @@ function sendReleaseArtifact(req: express.Request, res: express.Response, mode: 
   return res.download(result.artifactPath, filename);
 }
 
+function runCreatorRevision(workspaceId: string, body: unknown): Promise<{ statusCode: number; payload: any }> {
+  return new Promise((resolve) => {
+    const validation = validateReleaseWorkspace(workspaceId);
+    if (!validation.ok) {
+      resolve({ statusCode: validation.statusCode, payload: validation.payload });
+      return;
+    }
+    const message = typeof (body as any)?.message === "string" ? (body as any).message.trim() : "";
+    if (!message) {
+      resolve({ statusCode: 400, payload: { status: "blocked", reason: "message_required" } });
+      return;
+    }
+
+    const python = getPythonCommand();
+    const runner = path.join(process.cwd(), "productize", "jobs", "run-creator-revision.py");
+    const child = spawn(python, [runner, `--workspace-id=${workspaceId}`], {
+      cwd: process.cwd(),
+      env: process.env,
+      shell: false
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) child.kill();
+    }, 120_000);
+
+    child.stdout.on("data", (data) => { stdout += data.toString(); });
+    child.stderr.on("data", (data) => { stderr += data.toString(); });
+    child.on("error", (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({
+        statusCode: 500,
+        payload: { status: "failed", reason: "creator_revision_process_error", error: error.message }
+      });
+    });
+    child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      const payload = parseJsonOutput(stdout) || {
+        status: "failed",
+        reason: "creator_revision_non_json_output",
+        stdout: stdout.slice(-4000),
+        stderr: stderr.slice(-4000)
+      };
+      if (code === 0 && payload.status === "applied") {
+        resolve({ statusCode: 200, payload });
+      } else if (payload.status === "blocked" || payload.status === "rolled_back") {
+        resolve({ statusCode: 422, payload });
+      } else {
+        resolve({ statusCode: 500, payload: { ...payload, stderr: stderr.slice(-4000) } });
+      }
+    });
+    child.stdin.end(JSON.stringify({ message }));
+  });
+}
+
 app.get("/api/workspaces/:wsId/release-status", (req, res) => {
   const result = runReleaseStatus(String(req.params.wsId || ""));
   return res.status(result.statusCode).json(result.payload);
 });
 app.get("/api/workspaces/:wsId/export-candidate", (req, res) => sendReleaseArtifact(req, res, "candidate"));
 app.get("/api/workspaces/:wsId/export-certified", (req, res) => sendReleaseArtifact(req, res, "certified"));
-// Backward-compatible alias: old ambiguous release endpoint now means candidate.
 app.get("/api/workspaces/:wsId/export-release", (req, res) => sendReleaseArtifact(req, res, "candidate"));
+app.post("/api/workspaces/:wsId/creator-revise", async (req, res) => {
+  const result = await runCreatorRevision(String(req.params.wsId || ""), req.body);
+  return res.status(result.statusCode).json(result.payload);
+});
 
 app.use("/api", async (req, res) => {
   const targetUrl = `http://127.0.0.1:${PYTHON_BACKEND_PORT}/api${req.url}`;
