@@ -195,7 +195,10 @@ if (mode === "certified") {
     sha256: promoted.sha256,
     payloadHash: promoted.payloadHash,
     sourceCandidate: promoted.sourceCandidate,
-    browserReport: promoted.browserReport
+    browserReport: promoted.browserReport,
+    // Backward-compatible bridge for the existing Express gateway. New callers
+    // should consume the top-level artifact fields directly.
+    exporterOutput: JSON.stringify(promoted)
   });
 }
 
