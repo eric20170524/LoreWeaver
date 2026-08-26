@@ -89,40 +89,41 @@ function evidenceCandidates(kind, cardId) {
   ];
 }
 
-function loadMatchingEvidence({ workspaceReportsDir, sharedReportsDir, kind, cardId, identity }) {
-  const dirs = [workspaceReportsDir, sharedReportsDir].filter(Boolean);
-  for (const dir of dirs) {
-    for (const file of evidenceCandidates(kind, cardId)) {
-      const report = readJsonSafe(path.join(dir, file));
-      if (!report) continue;
-      if (report.cardId && String(report.cardId) !== String(cardId)) continue;
-      const mismatches = [];
-      for (const field of [
-        "specHash",
-        "runtimeVersion",
-        "recipeHash",
-        "contentHash",
-        "atlasHash",
-        "payloadHash",
-        "artifact",
-        "artifactSha256"
-      ]) {
-        const expected = identity?.[field];
-        if (expected == null || expected === "") continue;
-        const actual = report?.[field];
-        if (actual == null || actual === "") {
-          mismatches.push(`${field}: report_missing expected=${expected}`);
-        } else if (String(expected) !== String(actual)) {
-          mismatches.push(`${field}: report=${actual} expected=${expected}`);
-        }
+// Human/device observations are intentionally workspace-local. They refer to a
+// concrete Candidate archive and must never fall back to a shared/global report.
+function loadMatchingEvidence({ workspaceReportsDir, kind, cardId, identity }) {
+  if (!workspaceReportsDir) return null;
+  for (const file of evidenceCandidates(kind, cardId)) {
+    const full = path.join(workspaceReportsDir, file);
+    const report = readJsonSafe(full);
+    if (!report) continue;
+    if (report.cardId && String(report.cardId) !== String(cardId)) continue;
+    const mismatches = [];
+    for (const field of [
+      "specHash",
+      "runtimeVersion",
+      "recipeHash",
+      "contentHash",
+      "atlasHash",
+      "payloadHash",
+      "artifact",
+      "artifactSha256"
+    ]) {
+      const expected = identity?.[field];
+      if (expected == null || expected === "") continue;
+      const actual = report?.[field];
+      if (actual == null || actual === "") {
+        mismatches.push(`${field}: report_missing expected=${expected}`);
+      } else if (String(expected) !== String(actual)) {
+        mismatches.push(`${field}: report=${actual} expected=${expected}`);
       }
-      return {
-        ...report,
-        identityMatches: report.identityMatches === true && mismatches.length === 0,
-        identityMismatches: mismatches,
-        evidenceFile: path.relative(LORE_ROOT, path.join(dir, file)).split(path.sep).join("/")
-      };
     }
+    return {
+      ...report,
+      identityMatches: report.identityMatches === true && mismatches.length === 0,
+      identityMismatches: mismatches,
+      evidenceFile: path.relative(LORE_ROOT, full).split(path.sep).join("/")
+    };
   }
   return null;
 }
@@ -178,14 +179,12 @@ export function evaluateWorkspaceReleasePolicy({
     const expectedIdentity = { ...identity, cardId };
     const humanPlaytest = loadMatchingEvidence({
       workspaceReportsDir,
-      sharedReportsDir: reportsDir,
       kind: "human",
       cardId,
       identity: expectedIdentity
     });
     const deviceVerification = loadMatchingEvidence({
       workspaceReportsDir,
-      sharedReportsDir: reportsDir,
       kind: "device",
       cardId,
       identity: expectedIdentity
