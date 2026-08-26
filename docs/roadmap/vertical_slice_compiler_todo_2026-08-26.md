@@ -10,7 +10,7 @@
 - [x] A1 新增 evidence-derived release maturity evaluator；保留 legacy `production_ready` 兼容。
 - [x] A2 将 maturity evaluator 接入 `production-export-gate` 输出，明确区分 `legacyProductionReady` 与 `certificationTier`。
 - [x] A3 新增 maturity 单测：缺证据、自动证据齐全但无人测/真机、完整认证、waiver、stale/mismatch；并增加 production gate 集成测试。
-- [ ] A4 在发布/导出 UI 中禁止把 legacy `production_ready` 展示为“正式认证”。
+- [x] A4 导出 UI 不再把旧 `production_ready`/`export-release` 表述为正式认证；旧入口明确降级为 `Candidate H5`。
 - [x] A5 定义 `human_playtest` / `device_verification` Evidence schema 与示例报告；fixture 明确不可充当真实发布证据。
 
 ## P0-B：Agent Repair Loop
@@ -37,11 +37,11 @@
 
 ## P1：统一 Release Compiler
 
-- [ ] D1 抽取共享 Release Policy / Evidence identity 模块。
-- [ ] D2 普通 Workspace export 与 Productize standalone export 共享同一 policy。
-- [ ] D3 UI 收敛为 Candidate Export / Certified Export 两种产品语义。
-- [ ] D4 Certified Export 默认只允许 `release_certified`，不能靠手改 card status 绕过。
-- [ ] D5 Candidate Export 清晰写入 missing evidence / waivers / non-release marker。
+- [x] D1 抽取共享 `release-policy.mjs` / Evidence identity；Workspace 级按实际使用到的所有 Gameplay Card 聚合，并以最弱卡成熟度作为整体成熟度。
+- [x] D2 Workbench H5 export 与 CLI productize export 均走 `release-compiler.mjs`；原 `/api/workspaces/{id}/export` 仅保留为源码备份，不再承担 release 语义。
+- [ ] D3 UI 完整收敛为 Candidate Export / Certified Export 两种产品语义；当前 Candidate 已明确，Certified API/CLI 已就绪，UI 按钮与状态面板待接。
+- [x] D4 Certified Export 只允许 evidence-derived `release_certified`，并在底层 exporter 再次校验 Release Decision + spec/runtime identity，不能靠手改 card status 或绕过上层入口。
+- [x] D5 Candidate Export 在 ZIP 内写入 `RELEASE_STATUS.json`、`UNVERIFIED_CANDIDATE`、missing evidence/waiver 决策；`releaseEligible` 永远为 false。
 
 ## P2：黄金链路
 
@@ -64,9 +64,9 @@
 
 ## 当前执行顺序
 
-1. [x] **A1-A3/A5**：建立不破坏兼容的 evidence-derived maturity 和真人/真机证据合同。
-2. [x] **B1-B8（除真实 E2E）**：建立 bounded repair policy/orchestrator 并接现有 Agent ownership。
-3. [x] **C1-C7**：实现 RecipeGraph、legacy round-trip，并解除 WorldBuilder 固定 12 节点假设。
-4. [ ] **CI/回归**：`npm run check:convergence-core` + TypeScript；修复所有失败。
-5. [ ] **A4 + D1-D5**：统一 Release Compiler 与 UI 认证语义。
+1. [x] **A1-A5**：evidence-derived maturity、真人/真机合同与 UI 去误导。
+2. [x] **B1-B8（除真实 E2E）**：bounded repair policy/orchestrator 接现有 Agent ownership。
+3. [x] **C1-C7**：RecipeGraph、legacy round-trip、recipe-aware WorldBuilder。
+4. [x] **D1-D2/D4-D5**：共享 Release Policy + 统一 Candidate/Certified Compiler + 打包器硬门禁。
+5. [ ] **D3**：接 release status 查询和 Certified UI。
 6. [ ] **B9 + E1-E9**：用真实黄金链路证明 fail -> repair -> revalidate -> certified release。
