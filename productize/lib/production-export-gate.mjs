@@ -57,7 +57,6 @@ export const REQUIRED_PRODUCTION_REPORT_SPECS = [
   }
 ];
 
-// Back-compat export name used by older docs/tests
 export const REQUIRED_PRODUCTION_REPORTS = REQUIRED_PRODUCTION_REPORT_SPECS.map((s) => ({
   key: s.key,
   file: s.candidates("CARD")[0],
@@ -100,9 +99,6 @@ function smokeOk(report) {
   return true;
 }
 
-/**
- * Pick first existing report whose cardId matches (when requireCardId) or has no cardId conflict.
- */
 export function resolveCardReport(reportsDir, cardId, candidates, { requireCardId = false } = {}) {
   for (const file of candidates) {
     const filePath = path.join(reportsDir, file);
@@ -111,7 +107,6 @@ export function resolveCardReport(reportsDir, cardId, candidates, { requireCardI
     if (requireCardId) {
       if (report.cardId != null && report.cardId !== cardId) continue;
     } else if (report.cardId != null && cardId && report.cardId !== cardId) {
-      // node smoke is workspace-level — allow missing cardId
       continue;
     }
     return { file, report, path: filePath };
@@ -119,9 +114,6 @@ export function resolveCardReport(reportsDir, cardId, candidates, { requireCardI
   return { file: candidates[0] || null, report: null, path: null };
 }
 
-/**
- * Compare optional identity fields when both sides present.
- */
 export function identityMismatches(report, expectedIdentity) {
   if (!report || !expectedIdentity) return [];
   const mismatches = [];
@@ -143,7 +135,13 @@ export function identityMismatches(report, expectedIdentity) {
   return mismatches;
 }
 
-function withMaturity(result, { card, humanPlaytest, deviceVerification, waivers }) {
+function withMaturity(result, {
+  card,
+  humanPlaytest,
+  deviceVerification,
+  expectedCandidateIdentity,
+  waivers
+}) {
   return {
     ...result,
     maturity: evaluateReleaseMaturity({
@@ -151,19 +149,12 @@ function withMaturity(result, { card, humanPlaytest, deviceVerification, waivers
       productionGate: result,
       humanPlaytest,
       deviceVerification,
+      expectedCandidateIdentity,
       waivers
     })
   };
 }
 
-/**
- * Evaluate legacy production export readiness for a card and expose a stricter
- * evidence-derived maturity result alongside it.
- *
- * `productionExportAllowed` remains backward compatible during migration.
- * Consumers that need a real certified release should require
- * `result.maturity.releaseCertified === true`.
- */
 export function evaluateProductionExportGate({
   card,
   reportsDir,
@@ -172,7 +163,13 @@ export function evaluateProductionExportGate({
   deviceVerification = null,
   waivers = []
 }) {
-  const maturityInput = { card, humanPlaytest, deviceVerification, waivers };
+  const maturityInput = {
+    card,
+    humanPlaytest,
+    deviceVerification,
+    expectedCandidateIdentity: expectedIdentity,
+    waivers
+  };
   const reasons = [];
   const checks = {};
   const cardId = card?.id || null;
@@ -192,9 +189,7 @@ export function evaluateProductionExportGate({
   checks.cardStatus = statusOk;
   checks.exportPolicy = exportOk;
   if (!statusOk) {
-    reasons.push(
-      `Hard Gate Blocker: card status must be production_ready (got '${card.status}')`
-    );
+    reasons.push(`Hard Gate Blocker: card status must be production_ready (got '${card.status}')`);
   }
   if (!exportOk) {
     reasons.push("Hard Gate Blocker: exportPolicy.productionReady must be true");
@@ -213,11 +208,16 @@ export function evaluateProductionExportGate({
 
   const identity = {
     cardId: expectedIdentity?.cardId || cardId,
+    specHash: expectedIdentity?.specHash || null,
     recipeHash: expectedIdentity?.recipeHash || null,
     contentHash: expectedIdentity?.contentHash || null,
     atlasHash: expectedIdentity?.atlasHash || null,
-    runtimeVersion: expectedIdentity?.runtimeVersion || null
+    runtimeVersion: expectedIdentity?.runtimeVersion || null,
+    payloadHash: expectedIdentity?.payloadHash || null,
+    artifact: expectedIdentity?.artifact || null,
+    artifactSha256: expectedIdentity?.artifactSha256 || null
   };
+  maturityInput.expectedCandidateIdentity = identity;
 
   for (const spec of REQUIRED_PRODUCTION_REPORT_SPECS) {
     const candidates = spec.candidates(cardId);
@@ -242,9 +242,7 @@ export function evaluateProductionExportGate({
         checks[spec.key] = check;
         continue;
       }
-      reasons.push(
-        `Hard Gate Blocker: ${candidates.join(" | ")} missing, empty, or cardId mismatch`
-      );
+      reasons.push(`Hard Gate Blocker: ${candidates.join(" | ")} missing, empty, or cardId mismatch`);
       check.ok = false;
       checks[spec.key] = check;
       continue;
@@ -262,18 +260,14 @@ export function evaluateProductionExportGate({
 
     if (spec.key === "nodeSmoke") {
       if (!smokeOk(report)) {
-        reasons.push(
-          `Hard Gate Blocker: E2E smoke report missing, empty, failed, or stale (${resolved.file})`
-        );
+        reasons.push(`Hard Gate Blocker: E2E smoke report missing, empty, failed, or stale (${resolved.file})`);
         check.ok = false;
       } else {
         check.ok = true;
       }
     } else {
       if (!reportPassed(report)) {
-        reasons.push(
-          `Hard Gate Blocker: ${resolved.file} missing, empty, failed, or stale`
-        );
+        reasons.push(`Hard Gate Blocker: ${resolved.file} missing, empty, failed, or stale`);
         check.ok = false;
         checks[spec.key] = check;
         continue;
@@ -290,9 +284,7 @@ export function evaluateProductionExportGate({
       }
       const idMis = identityMismatches(report, identity);
       if (idMis.length) {
-        reasons.push(
-          `Hard Gate Blocker: ${resolved.file} identity mismatch: ${idMis.join("; ")}`
-        );
+        reasons.push(`Hard Gate Blocker: ${resolved.file} identity mismatch: ${idMis.join("; ")}`);
         check.ok = false;
       }
       if (check.ok !== false) check.ok = true;
@@ -301,14 +293,12 @@ export function evaluateProductionExportGate({
     checks[spec.key] = check;
   }
 
-  // Card-scoped companions: stale blocks; wrong-card global companions ignored
   const companionCandidates = [
     `runtime_e2e_${cardId}_latest.json`,
     `runtime_e2e_standalone_${cardId}_latest.json`,
     `${cardId}_c7_readiness_latest.json`,
     `${cardId}_gate_readiness_latest.json`
   ];
-  // Legacy survivor names
   if (cardId === "survivor_horde") {
     companionCandidates.push(
       "runtime_e2e_survivor_horde_latest.json",
@@ -316,18 +306,10 @@ export function evaluateProductionExportGate({
       "survivor_c7_readiness_latest.json"
     );
   }
-  if (cardId === "rhythm_timing") {
-    companionCandidates.push("rhythm_gate_readiness_latest.json");
-  }
-  if (cardId === "drag_collect_grid") {
-    companionCandidates.push("drag_gate_readiness_latest.json");
-  }
-  if (cardId === "turn_based_skill_battle") {
-    companionCandidates.push("tbsb_gate_readiness_latest.json");
-  }
-  if (cardId === "sequence_synthesis") {
-    companionCandidates.push("seq_gate_readiness_latest.json");
-  }
+  if (cardId === "rhythm_timing") companionCandidates.push("rhythm_gate_readiness_latest.json");
+  if (cardId === "drag_collect_grid") companionCandidates.push("drag_gate_readiness_latest.json");
+  if (cardId === "turn_based_skill_battle") companionCandidates.push("tbsb_gate_readiness_latest.json");
+  if (cardId === "sequence_synthesis") companionCandidates.push("seq_gate_readiness_latest.json");
 
   for (const companion of [...new Set(companionCandidates)]) {
     const p = path.join(reportsDir, companion);
