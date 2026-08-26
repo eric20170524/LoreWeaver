@@ -3,7 +3,11 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { evaluateProductionExportGate } from "./production-export-gate.mjs";
-import { evaluateReleaseMaturity, isReleaseCertified } from "./release-maturity.mjs";
+import {
+  evaluateReleaseMaturity,
+  isReleaseCertified,
+  RELEASE_CERTIFICATION_TIERS
+} from "./release-maturity.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "../..");
@@ -23,6 +27,16 @@ function readJsonSafe(filePath) {
 function sha256Json(value) {
   const normalized = JSON.stringify(value ?? null);
   return crypto.createHash("sha256").update(normalized).digest("hex");
+}
+
+function weakestTier(tiers) {
+  if (!tiers?.length) return "experimental";
+  let weakest = RELEASE_CERTIFICATION_TIERS.length - 1;
+  for (const tier of tiers) {
+    const rank = RELEASE_CERTIFICATION_TIERS.indexOf(tier);
+    weakest = Math.min(weakest, rank >= 0 ? rank : 0);
+  }
+  return RELEASE_CERTIFICATION_TIERS[weakest] || "experimental";
 }
 
 export function collectWorkspaceCardIds(gameSpec) {
@@ -182,11 +196,7 @@ export function evaluateWorkspaceReleasePolicy({
     item.maturity.missingEvidence.map((missing) => `${item.cardId}:${missing}`)
   ))];
   const tiers = cardDecisions.map((item) => item.maturity.certificationTier);
-  const certificationTier = allCertified
-    ? "release_certified"
-    : tiers.includes("conditionally_certified")
-      ? "conditionally_certified"
-      : tiers[0] || "experimental";
+  const certificationTier = allCertified ? "release_certified" : weakestTier(tiers);
   const exportAllowed = mode === "candidate" ? true : allCertified;
 
   return {
