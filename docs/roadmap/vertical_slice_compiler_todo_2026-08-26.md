@@ -48,12 +48,12 @@
 - [x] E1 冻结新增 Gameplay Card，黄金主玩法固定为 `survivor_horde`；本阶段只纵向补闭环与证据。
 - [x] E2 建立 `survivor_vertical_slice_3`：Setup -> Escalation -> Climax，全部复用 `survivor_horde`，只通过已实现 Modifier/knobs 增压。
 - [x] E3 黄金链路复用两套已存在 production Theme Content Pack：wasteland / cyber_pulse；二者共享同一 runtime asset/audio source，不复制玩法代码。
-- [ ] E4 完成 browser E2E、VLM、standalone ZIP host E2E、offline/static boot，并把浏览器证据绑定可执行 Payload identity。已完成 Payload identity 合同；Golden Candidate Playwright CI 正在验证三段静态包与零 `/api` 依赖，VLM 仍待真实证据。
+- [ ] E4 Browser/static/offline 子链已完成：统一 Candidate Compiler -> standalone ZIP/static host -> Chromium 三段真实启动 -> Modifier 对齐 -> zero `/api` -> zero console/page/request error，并绑定 `specHash + runtimeVersion + payloadHash + artifactSha256 + screenshotSha256`。真实 VLM 已接入同一 Candidate identity，但 GitHub Actions 当前未配置 `XAI_API_KEY`，因此报告正确为 `unavailable/releaseEligible=false`；只有 `grok/codex` real provider completed 且无 FAIL 才可通过。
 - [ ] E5 完成真实设备 FPS / interaction Evidence；禁止用 headless proxy 冒充真机。
 - [ ] E6 完成真人试玩 Evidence，至少记录可玩性、理解成本、失败原因和修改建议。
-- [x] E7 Recipe/Content identity 变化会从 Level Recipe 单一写路径统一 stale：共享自动化 Gate + Workspace human/device evidence + browser report + release decision + artifact metadata；Convergence Core 已通过回归。
+- [x] E7 Recipe/Content/Asset/Runtime identity 变化统一 stale：共享自动化 Gate + Workspace human/device + browser + generic/card-scoped VLM + release decision + artifact metadata；Convergence Core 已覆盖 generic `visual_audit_latest` 旁路回归。
 - [x] E8 通过 Agent Repair Loop 自动修复一个真实 `golden_slice_gate` 失败：Climax 缺 `boss_phases` -> gameplay L2 patch -> targeted revalidate -> pass。
-- [ ] E9 无 waiver 达到 `release_certified` 并导出 Certified H5；受 E4/E5/E6 真实 Evidence 阻塞，不能伪造。
+- [ ] E9 无 waiver 达到 `release_certified` 并导出 Certified H5；Certified 现在使用“已验证 Candidate 原地晋升”：Browser + real-VLM 必须绑定同一 executable payload / artifact / screenshot，晋升只能改变认证 metadata，payloadHash 不得变化。当前仍受 E4 VLM、E5、E6 真实 Evidence 阻塞，不能伪造。
 
 ## P3：产品层收敛
 
@@ -65,7 +65,8 @@
 ## 当前执行顺序
 
 1. [x] **P0 + P1**：成熟度、Repair Loop、RecipeGraph、统一 Release Compiler/UI 已闭环。
-2. [x] **E1-E3 + E7-E8/B9**：黄金三段 Recipe、双主题复用、证据失效、真实 Gate Repair 已通过自动回归。
-3. [ ] **E4**：完成 Golden Candidate browser/static/offline CI，并把浏览器报告的 `payloadHash` 接入 Certified exporter 硬校验；VLM 仍需真实证据。
-4. [ ] **E5-E6**：收集真机与真人 Evidence。
-5. [ ] **E9**：仅在无 waiver 且所有 Evidence fresh/matched 后导出 Certified H5。
+2. [x] **E1-E3 + E7-E8/B9**：黄金三段 Recipe、双主题复用、完整证据失效、真实 Gate Repair 已通过自动回归。
+3. [x] **E4 Browser/static/offline**：exact Candidate Chromium 三段运行与 payload/artifact/screenshot identity 已闭环。
+4. [ ] **E4 VLM**：配置真实 `XAI_API_KEY`（或可用 Codex CLI provider）后，对 exact Candidate climax screenshot 取得 fresh `passed` Evidence；当前 CI 明确为 `unavailable`，不降级。
+5. [ ] **E5-E6**：收集 exact Candidate 的真机与真人 Evidence。
+6. [ ] **E9**：仅在 Browser + real-VLM + human + device 全部 fresh/matched、无 waiver 后原地晋升 Candidate 为 Certified H5。
