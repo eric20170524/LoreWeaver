@@ -3,19 +3,22 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  buildReleaseIdentity,
   collectWorkspaceCardIds,
   evaluateWorkspaceReleasePolicy
 } from "../lib/release-policy.mjs";
+import {
+  buildDeviceVerificationEvidence,
+  buildHumanPlaytestEvidence
+} from "../lib/observed-release-evidence.mjs";
 
 function assert(cond, msg) {
   if (!cond) throw new Error(msg);
 }
-
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
-
 function seedCard(cardsRoot, cardId) {
   writeJson(path.join(cardsRoot, `${cardId}.json`), {
     schemaVersion: "2.0",
@@ -25,7 +28,6 @@ function seedCard(cardsRoot, cardId) {
     exportPolicy: { productionReady: true }
   });
 }
-
 function seedAutomaticEvidence(reportsDir, cardId) {
   writeJson(path.join(reportsDir, "node_smoke_latest.json"), {
     status: "passed",
@@ -50,53 +52,59 @@ function seedAutomaticEvidence(reportsDir, cardId) {
     releaseEligible: true
   });
 }
-
-function seedHumanAndDevice(workspaceReports, cardId) {
-  writeJson(path.join(workspaceReports, `human_playtest_${cardId}_latest.json`), {
-    schemaVersion: "loreweaver.human-playtest-evidence.v1",
-    status: "passed",
-    cardId,
-    createdAt: new Date().toISOString(),
-    identityMatches: true,
-    freshness: "fresh",
-    sessions: [{
-      sessionId: "s1",
-      completed: true,
-      understoodCoreLoop: true,
-      wouldReplay: true,
-      blockingIssues: []
-    }],
-    summary: {
-      sessionCount: 1,
-      completionRate: 1,
-      coreLoopUnderstandingRate: 1,
-      blockingIssueCount: 0
+function seedHumanAndDevice(workspaceReports, cardId, releaseIdentity, candidateIdentity) {
+  const identity = { ...releaseIdentity, ...candidateIdentity, cardId };
+  const human = buildHumanPlaytestEvidence({
+    identity,
+    input: {
+      kind: "human_playtest",
+      humanObserved: true,
+      fixture: false,
+      synthetic: false,
+      sessions: [{
+        sessionId: `${cardId}-human-1`,
+        completed: true,
+        understoodCoreLoop: true,
+        wouldReplay: true,
+        completionSeconds: 120,
+        understandingSeconds: 8,
+        difficulty: 3,
+        fun: 4,
+        clarity: 4,
+        blockingIssues: [],
+        failureReasons: [],
+        suggestions: []
+      }]
     }
-  });
-  writeJson(path.join(workspaceReports, `device_verification_${cardId}_latest.json`), {
-    schemaVersion: "loreweaver.device-verification-evidence.v1",
-    status: "passed",
-    cardId,
-    createdAt: new Date().toISOString(),
-    identityMatches: true,
-    freshness: "fresh",
-    devices: [{
-      deviceId: "device-1",
-      deviceClass: "desktop",
-      os: "test",
-      browser: "chromium",
-      viewport: { width: 1280, height: 720 },
-      interactionPassed: true,
-      consoleErrorCount: 0,
-      fps: { p50: 60, p95: 55, min: 50 }
-    }],
-    summary: {
-      deviceCount: 1,
-      interactionPassRate: 1,
-      consoleErrorCount: 0,
-      performanceBudgetPassed: true
+  }).report;
+  const device = buildDeviceVerificationEvidence({
+    identity,
+    input: {
+      kind: "device_verification",
+      deviceObserved: true,
+      fixture: false,
+      synthetic: false,
+      headless: false,
+      emulated: false,
+      performanceBudget: { minP50Fps: 50, minMinFps: 30 },
+      runs: [{
+        physicalDevice: true,
+        headless: false,
+        emulated: false,
+        deviceClass: "mobile",
+        deviceModel: `${cardId}-physical-device`,
+        os: "physical-os",
+        browser: "physical-browser",
+        viewport: { width: 720, height: 1280 },
+        completed: true,
+        interactionOk: true,
+        consoleErrors: 0,
+        fps: { p50: 60, p95: 55, min: 40 }
+      }]
     }
-  });
+  }).report;
+  writeJson(path.join(workspaceReports, `human_playtest_${cardId}_latest.json`), human);
+  writeJson(path.join(workspaceReports, `device_verification_${cardId}_latest.json`), device);
 }
 
 function main() {
@@ -110,6 +118,14 @@ function main() {
       { id: 2, gameplay: { cardId: "beta" } },
       { id: 3, gameplay: { cardId: "alpha" } }
     ]
+  };
+  const releaseIdentity = buildReleaseIdentity({ gameSpec });
+  const candidateIdentity = {
+    specHash: releaseIdentity.specHash,
+    runtimeVersion: releaseIdentity.runtimeVersion,
+    payloadHash: "sha256:candidate-payload",
+    artifact: "productize/exports/candidate.zip",
+    artifactSha256: "sha256:candidate-artifact"
   };
 
   assert(JSON.stringify(collectWorkspaceCardIds(gameSpec)) === JSON.stringify(["alpha", "beta"]), "card ids should dedupe and sort");
@@ -125,48 +141,63 @@ function main() {
     mode: "candidate",
     cardsRoot
   });
-  assert(candidate.exportAllowed === true, "candidate export should be allowed without human/device evidence");
+  assert(candidate.exportAllowed === true, "candidate export should be allowed without observed evidence");
   assert(candidate.releaseCertified === false, "candidate should not be certified");
-  assert(candidate.nonReleaseMarker === "UNVERIFIED_CANDIDATE", "candidate needs non-release marker");
 
-  const blocked = evaluateWorkspaceReleasePolicy({
+  const blockedNoCandidateIdentity = evaluateWorkspaceReleasePolicy({
     gameSpec,
     reportsDir,
     workspaceReportsDir,
     mode: "certified",
     cardsRoot
   });
-  assert(blocked.exportAllowed === false, "certified export should block missing human/device evidence");
-  assert(blocked.missingEvidence.some((item) => item.includes("humanPlaytest")), "missing human evidence should be explicit");
+  assert(blockedNoCandidateIdentity.exportAllowed === false, "certified export must require exact Candidate identity");
+  assert(blockedNoCandidateIdentity.missingEvidence.includes("exactCandidateIdentity"));
 
-  seedHumanAndDevice(workspaceReportsDir, "alpha");
+  seedHumanAndDevice(workspaceReportsDir, "alpha", releaseIdentity, candidateIdentity);
   const partiallyReady = evaluateWorkspaceReleasePolicy({
     gameSpec,
     reportsDir,
     workspaceReportsDir,
+    candidateIdentity,
     mode: "certified",
     cardsRoot
   });
   assert(partiallyReady.exportAllowed === false, "all used cards must be certified");
   assert(partiallyReady.blockers.some((item) => item.startsWith("beta:")), "beta blockers should remain visible");
 
-  seedHumanAndDevice(workspaceReportsDir, "beta");
+  seedHumanAndDevice(workspaceReportsDir, "beta", releaseIdentity, candidateIdentity);
   const certified = evaluateWorkspaceReleasePolicy({
     gameSpec,
     reportsDir,
     workspaceReportsDir,
+    candidateIdentity,
     mode: "certified",
     cardsRoot
   });
   assert(certified.exportAllowed === true, `expected certified export, got ${JSON.stringify(certified.blockers)}`);
   assert(certified.releaseCertified === true, "all-card release should certify");
   assert(certified.certificationTier === "release_certified", "tier should be release_certified");
-  assert(certified.nonReleaseMarker === null, "certified release must not carry candidate marker");
+  assert(certified.exactCandidateReady === true, "exact Candidate identity must be recorded");
+
+  const wrongCandidate = evaluateWorkspaceReleasePolicy({
+    gameSpec,
+    reportsDir,
+    workspaceReportsDir,
+    candidateIdentity: { ...candidateIdentity, payloadHash: "sha256:other" },
+    mode: "certified",
+    cardsRoot
+  });
+  assert(wrongCandidate.exportAllowed === false, "old Candidate observed evidence must not certify a new payload");
+  assert(wrongCandidate.cardDecisions.some((item) =>
+    item.maturity.evidenceIdentityMismatches.human.some((mismatch) => mismatch.startsWith("payloadHash:"))
+  ));
 
   const withWaiver = evaluateWorkspaceReleasePolicy({
     gameSpec,
     reportsDir,
     workspaceReportsDir,
+    candidateIdentity,
     mode: "certified",
     cardsRoot,
     waivers: ["temporary_device_exception"]
