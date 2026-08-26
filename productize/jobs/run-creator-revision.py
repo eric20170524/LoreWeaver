@@ -5,6 +5,7 @@ Flow:
   current assembled spec
     -> LLM proposal (no write)
     -> creator revision policy
+    -> pure preflight validators (for example gameplay composition)
     -> temporary workspace write
     -> real node-smoke validation
     -> rollback on failure OR commit + evidence stale on pass
@@ -22,7 +23,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -36,9 +36,11 @@ if str(LORE_ROOT) not in sys.path:
 
 from backend.agents import WorldBuilderAgent  # noqa: E402
 from backend.creator_revision import evaluate_creator_revision, select_creator_agent_role  # noqa: E402
+from backend.gameplay_composition import validate_gameplay_composition  # noqa: E402
 
 WORKSPACES_ROOT = LORE_ROOT / "data" / "workspaces"
 SHARED_REPORTS = LORE_ROOT / "minigame_master" / "capabilities" / "reports"
+CARDS_ROOT = LORE_ROOT / "minigame_master" / "gameplay" / "cards"
 NODE_SMOKE_SCRIPT = LORE_ROOT / "minigame_master" / "capabilities" / "verification" / "run_node_smoke.mjs"
 INVALIDATOR = LORE_ROOT / "productize" / "jobs" / "invalidate-creator-revision-evidence.mjs"
 CATALOG_KEYS = [
@@ -300,6 +302,27 @@ async def run(workspace_id: str, message: str) -> dict[str, Any]:
             "diff": policy.diff,
         }
 
+    validations: list[dict[str, Any]] = []
+    if "gameplay_composition" in policy.validators:
+        composition = validate_gameplay_composition(proposed, cards_root=CARDS_ROOT)
+        composition_result = {
+            "validator": "gameplay_composition",
+            "status": composition.get("status", "failed"),
+            "report": composition,
+        }
+        validations.append(composition_result)
+        if composition.get("status") != "passed":
+            return {
+                "status": "blocked",
+                "reason": "targeted_validation_failed",
+                "message": message,
+                "beforeSpecHash": before_hash,
+                "policy": policy_payload,
+                "diff": policy.diff,
+                "validation": composition_result,
+                "validations": validations,
+            }
+
     proposed_files = split_file_map(workspace, proposed)
     snapshot = snapshot_paths(proposed_files)
     write_file_map(proposed_files)
@@ -314,7 +337,17 @@ async def run(workspace_id: str, message: str) -> dict[str, Any]:
         smoke_report = {"status": "failed", "error": str(exc)}
         exit_code = 2
 
-    if not smoke_passed(smoke_report, exit_code):
+    smoke_result = {
+        "validator": "node_smoke",
+        "status": "passed" if smoke_passed(smoke_report, exit_code) else "failed",
+        "exitCode": exit_code,
+        "report": smoke_report,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
+    validations.append(smoke_result)
+
+    if smoke_result["status"] != "passed":
         restore_snapshot(snapshot)
         return {
             "status": "rolled_back",
@@ -323,22 +356,17 @@ async def run(workspace_id: str, message: str) -> dict[str, Any]:
             "beforeSpecHash": before_hash,
             "policy": policy_payload,
             "diff": policy.diff,
-            "validation": {
-                "validator": "node_smoke",
-                "status": "failed",
-                "exitCode": exit_code,
-                "report": smoke_report,
-                "stdout": stdout,
-                "stderr": stderr,
-            },
+            "validation": smoke_result,
+            "validations": validations,
         }
 
     committed = assembled_manifest(workspace)
     committed_hash = spec_hash(committed)
     invalidation = invalidate_release_evidence(workspace_id, card_ids(committed), committed_hash)
     if not invalidation.get("ok"):
-        # Evidence invalidation is part of the transaction. If it fails we restore
-        # authoring files; we never leave a new spec paired with old release evidence.
+        # Evidence invalidation is fail-closed. Authoring files are restored, while
+        # any evidence already marked stale remains conservatively stale; we never
+        # attempt to resurrect release evidence after a partial invalidation.
         restore_snapshot(snapshot)
         return {
             "status": "rolled_back",
@@ -347,12 +375,14 @@ async def run(workspace_id: str, message: str) -> dict[str, Any]:
             "beforeSpecHash": before_hash,
             "policy": policy_payload,
             "diff": policy.diff,
-            "validation": {"validator": "node_smoke", "status": "passed", "report": smoke_report},
+            "validation": smoke_result,
+            "validations": validations,
             "invalidation": invalidation,
         }
 
     smoke_path = save_fresh_smoke(workspace, smoke_report)
-    jobSynced = sync_latest_job(workspace_id, committed)
+    smoke_result["evidence"] = smoke_path
+    job_synced = sync_latest_job(workspace_id, committed)
     report = {
         "schemaVersion": "loreweaver.creator-revision.v1",
         "status": "applied",
@@ -364,14 +394,10 @@ async def run(workspace_id: str, message: str) -> dict[str, Any]:
         "beforeSpecHash": before_hash,
         "afterSpecHash": committed_hash,
         "diff": policy.diff,
-        "validation": {
-            "validator": "node_smoke",
-            "status": "passed",
-            "report": smoke_report,
-            "evidence": smoke_path,
-        },
+        "validation": smoke_result,
+        "validations": validations,
         "releaseEvidenceInvalidated": True,
-        "jobSynced": jobSynced,
+        "jobSynced": job_synced,
     }
     report_path = workspace / "reports" / "creator_revision_latest.json"
     write_json(report_path, report)
