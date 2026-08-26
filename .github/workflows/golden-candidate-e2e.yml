@@ -84,11 +84,11 @@ jobs:
           printf '%s\n' "$OUTPUT" | grep 'synthetic_evidence_forbidden'
           test ! -f data/workspaces/__golden_survivor_vertical_slice_ci/reports/human_playtest_survivor_horde_latest.json
 
-      - name: Audit exact candidate screenshot with real VLM when available
+      - name: Audit exact candidate screenshot with generic real VLM path when available
         env:
           XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
           XAI_VLM_MODEL: ${{ vars.XAI_VLM_MODEL }}
-        run: python3 productize/jobs/run-golden-vlm-audit.py --allow-unavailable
+        run: python3 productize/jobs/run-workspace-vlm-audit.py --workspace-id=__golden_survivor_vertical_slice_ci --allow-unavailable
 
       - name: Upload golden evidence
         if: always()
