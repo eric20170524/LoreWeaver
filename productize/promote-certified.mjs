@@ -5,11 +5,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { hashExecutablePayloadManifest } from "./lib/executable-payload.mjs";
+import { isTrustedObservedReleaseEvidence } from "./lib/observed-release-evidence.mjs";
+import {
+  exactCandidateIdentityMismatches,
+  isExactCandidateEvidence
+} from "./lib/exact-candidate-evidence.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "..");
 const EXPORTS_ROOT = path.join(LORE_ROOT, "productize/exports");
+const WORKSPACES_ROOT = path.join(LORE_ROOT, "data/workspaces");
 const REAL_VLM_PROVIDERS = new Set(["grok", "codex"]);
+const DECISION_SCHEMAS = new Set([
+  "loreweaver.workspace-release-decision.v1",
+  "loreweaver.workspace-release-decision.v2"
+]);
 const args = process.argv.slice(2);
 const valueArg = (name) => args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
 
@@ -22,6 +32,14 @@ function readJson(file, label = file) {
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
     throw new Error(`Failed to read ${label}: ${error instanceof Error ? error.message : error}`);
+  }
+}
+function readJsonSafe(file) {
+  try {
+    if (!file || !fs.existsSync(file)) return null;
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch {
+    return null;
   }
 }
 function writeJson(file, value) {
@@ -54,6 +72,30 @@ function copyTree(src, dst) {
   fs.rmSync(dst, { recursive: true, force: true });
   fs.cpSync(src, dst, { recursive: true });
 }
+function evidenceCandidates(kind, cardId) {
+  if (kind === "human") {
+    return [
+      `human_playtest_${cardId}_latest.json`,
+      `human_playtest_${cardId}.json`,
+      "human_playtest_latest.json"
+    ];
+  }
+  return [
+    `device_verification_${cardId}_latest.json`,
+    `device_verification_${cardId}.json`,
+    "device_verification_latest.json"
+  ];
+}
+function findObservedEvidence(reportsDir, kind, cardId) {
+  for (const file of evidenceCandidates(kind, cardId)) {
+    const full = path.join(reportsDir, file);
+    const report = readJsonSafe(full);
+    if (!report) continue;
+    if (report.cardId && String(report.cardId) !== String(cardId)) continue;
+    return { file: full, report };
+  }
+  return null;
+}
 
 const workspaceId = valueArg("--workspace-id");
 const decisionArg = valueArg("--release-decision");
@@ -65,7 +107,7 @@ if (!workspaceId || !decisionArg || !browserArg || !visualArg) {
   });
 }
 
-const decisionPath = safeRepoPath(decisionArg, path.join(LORE_ROOT, "data/workspaces"));
+const decisionPath = safeRepoPath(decisionArg, WORKSPACES_ROOT);
 const browserPath = safeRepoPath(browserArg, LORE_ROOT);
 const visualPath = safeRepoPath(visualArg, LORE_ROOT);
 if (!decisionPath || !fs.existsSync(decisionPath)) fail("release_decision_missing_or_outside_workspace_root");
@@ -76,7 +118,7 @@ const decision = readJson(decisionPath, "release decision");
 const browser = readJson(browserPath, "browser report");
 const visual = readJson(visualPath, "visual report");
 if (
-  decision.schemaVersion !== "loreweaver.workspace-release-decision.v1" ||
+  !DECISION_SCHEMAS.has(decision.schemaVersion) ||
   decision.mode !== "certified" ||
   decision.exportAllowed !== true ||
   decision.releaseCertified !== true ||
@@ -125,6 +167,48 @@ if (
   fail("real_vlm_evidence_not_eligible_or_payload_or_screenshot_identity_mismatch");
 }
 
+// Defense in depth: a hand-edited release decision cannot stand in for actual
+// observed human/device evidence. Re-read both evidence files from the workspace
+// and bind them to the same executable Candidate verified above.
+const workspaceReportsDir = path.join(WORKSPACES_ROOT, workspaceId, "reports");
+const cardIds = [...new Set((decision.cardDecisions || []).map((item) => String(item?.cardId || "").trim()).filter(Boolean))];
+if (!cardIds.length) fail("release_decision_missing_card_evidence_scope");
+const observedEvidence = [];
+for (const cardId of cardIds) {
+  const expectedIdentity = {
+    cardId,
+    specHash: browser.specHash,
+    runtimeVersion: browser.runtimeVersion,
+    recipeHash: decision.identity?.recipeHash ?? null,
+    contentHash: decision.identity?.contentHash ?? null,
+    atlasHash: decision.identity?.atlasHash ?? null,
+    payloadHash: browser.payloadHash,
+    artifact: browser.artifact,
+    artifactSha256: browser.artifactSha256
+  };
+  for (const kind of ["human", "device"]) {
+    const found = findObservedEvidence(workspaceReportsDir, kind, cardId);
+    if (!found) {
+      fail("observed_release_evidence_missing", { cardId, kind });
+    }
+    const trusted = isTrustedObservedReleaseEvidence(found.report, kind);
+    const exact = isExactCandidateEvidence(found.report, expectedIdentity);
+    if (!trusted || !exact) {
+      fail("observed_release_evidence_not_eligible_or_candidate_mismatch", {
+        cardId,
+        kind,
+        trusted,
+        identityMismatches: exactCandidateIdentityMismatches(found.report, expectedIdentity)
+      });
+    }
+    observedEvidence.push({
+      cardId,
+      kind,
+      file: path.relative(LORE_ROOT, found.file).split(path.sep).join("/")
+    });
+  }
+}
+
 const candidateZip = safeRepoPath(browser.artifact, EXPORTS_ROOT);
 if (!candidateZip || !fs.existsSync(candidateZip)) fail("candidate_artifact_missing_or_outside_exports");
 const candidateBytes = fs.readFileSync(candidateZip);
@@ -167,11 +251,13 @@ writeJson(statusPath, {
   nonReleaseMarker: null,
   browserVerified: true,
   visualVerified: true,
+  humanDeviceVerified: true,
   payloadHash: browser.payloadHash,
   screenshotSha256: browser.screenshotSha256,
   releaseDecision: decision,
   browserEvidence: browserRel,
-  visualEvidence: visualRel
+  visualEvidence: visualRel,
+  observedEvidence
 });
 writeJson(manifestPath, {
   ...releaseManifest,
@@ -186,11 +272,14 @@ writeJson(manifestPath, {
     ...(releaseManifest.gates || {}),
     browser: "passed",
     visual: "passed",
+    human: "passed",
+    device: "passed",
     evidencePolicy: "passed",
     releaseEligible: true
-  }
+  },
+  observedEvidence
 });
-fs.writeFileSync(readmePath, `# LoreWeaver Certified Standalone\n\nThis artifact contains the exact executable payload validated by the referenced browser and real-VLM evidence. Certification metadata is excluded from the executable payload hash.\n\n- Artifact label: CERTIFIED_RELEASE\n- Release eligible: true\n- Certification tier: release_certified\n- Runtime: ${browser.runtimeVersion}\n- Spec: ${browser.specHash}\n- Executable payload: ${browser.payloadHash}\n- Screenshot SHA-256: ${browser.screenshotSha256}\n- Browser evidence: ${browserRel}\n- Visual evidence: ${visualRel}\n\nSee RELEASE_STATUS.json and release-manifest.json for machine-readable evidence identity.\n`);
+fs.writeFileSync(readmePath, `# LoreWeaver Certified Standalone\n\nThis artifact contains the exact executable payload validated by browser, real-VLM, human playtest and physical-device evidence. Certification metadata is excluded from the executable payload hash.\n\n- Artifact label: CERTIFIED_RELEASE\n- Release eligible: true\n- Certification tier: release_certified\n- Runtime: ${browser.runtimeVersion}\n- Spec: ${browser.specHash}\n- Executable payload: ${browser.payloadHash}\n- Screenshot SHA-256: ${browser.screenshotSha256}\n- Browser evidence: ${browserRel}\n- Visual evidence: ${visualRel}\n- Observed evidence count: ${observedEvidence.length}\n\nSee RELEASE_STATUS.json and release-manifest.json for machine-readable evidence identity.\n`);
 
 const afterIdentity = hashExecutablePayloadManifest(walkFiles(certifiedStage));
 if (afterIdentity.payloadHash !== browser.payloadHash || afterIdentity.payloadHash !== beforeIdentity.payloadHash) {
@@ -225,6 +314,7 @@ console.log(JSON.stringify({
   sourceCandidate: path.relative(LORE_ROOT, candidateZip).split(path.sep).join("/"),
   browserReport: browserRel,
   visualReport: visualRel,
+  observedEvidence,
   artifact: path.relative(LORE_ROOT, certifiedZip).split(path.sep).join("/"),
   stage: certifiedStage,
   sha256: certifiedSha
