@@ -5,6 +5,10 @@ import {
   evaluateReleaseMaturity,
   isReleaseCertified
 } from "../lib/release-maturity.mjs";
+import {
+  buildDeviceVerificationEvidence,
+  buildHumanPlaytestEvidence
+} from "../lib/observed-release-evidence.mjs";
 
 function passingGate() {
   return {
@@ -19,13 +23,75 @@ function passingGate() {
   };
 }
 
-function passingEvidence(extra = {}) {
-  return {
-    status: "passed",
-    freshness: "fresh",
-    identityMatches: true,
-    ...extra
-  };
+const identity = {
+  cardId: "survivor_horde",
+  specHash: "sha256:spec",
+  runtimeVersion: "2.0.0",
+  recipeHash: "sha256:recipe",
+  contentHash: "sha256:content",
+  atlasHash: "sha256:atlas",
+  payloadHash: "sha256:payload",
+  artifact: "productize/exports/candidate.zip",
+  artifactSha256: "sha256:artifact"
+};
+
+function humanEvidence(extra = {}) {
+  const built = buildHumanPlaytestEvidence({
+    identity,
+    createdAt: "2026-08-26T00:00:00Z",
+    input: {
+      kind: "human_playtest",
+      humanObserved: true,
+      fixture: false,
+      synthetic: false,
+      sessions: [{
+        sessionId: "s1",
+        completed: true,
+        understoodCoreLoop: true,
+        wouldReplay: true,
+        completionSeconds: 180,
+        understandingSeconds: 10,
+        difficulty: 3,
+        fun: 4,
+        clarity: 4,
+        blockingIssues: [],
+        failureReasons: [],
+        suggestions: []
+      }]
+    }
+  });
+  return { ...built.report, ...extra };
+}
+
+function deviceEvidence(extra = {}) {
+  const built = buildDeviceVerificationEvidence({
+    identity,
+    createdAt: "2026-08-26T00:00:00Z",
+    input: {
+      kind: "device_verification",
+      deviceObserved: true,
+      fixture: false,
+      synthetic: false,
+      headless: false,
+      emulated: false,
+      performanceBudget: { minP50Fps: 50, minMinFps: 30 },
+      runs: [{
+        physicalDevice: true,
+        headless: false,
+        emulated: false,
+        deviceClass: "mobile",
+        deviceModel: "physical-device",
+        os: "physical-os",
+        browser: "physical-browser",
+        viewport: { width: 720, height: 1280 },
+        completed: true,
+        interactionOk: true,
+        consoleErrors: 0,
+        fps: { p50: 60, p95: 55, min: 40 }
+      }]
+    }
+  });
+  return { ...built.report, ...extra };
 }
 
 function main() {
@@ -35,7 +101,7 @@ function main() {
     runtime: { adapter: "SurvivorHordeAdapter" }
   };
 
-  const noEvidence = evaluateReleaseMaturity({ card, productionGate: null });
+  const noEvidence = evaluateReleaseMaturity({ card, productionGate: null, expectedCandidateIdentity: identity });
   assert.equal(noEvidence.certificationTier, "runtime_supported");
   assert.equal(noEvidence.releaseCertified, false);
   assert(noEvidence.missingEvidence.includes("humanPlaytest"));
@@ -43,7 +109,8 @@ function main() {
 
   const legacyAutomaticOnly = evaluateReleaseMaturity({
     card,
-    productionGate: passingGate()
+    productionGate: passingGate(),
+    expectedCandidateIdentity: identity
   });
   assert.equal(legacyAutomaticOnly.certificationTier, "conditionally_certified");
   assert.equal(legacyAutomaticOnly.legacyProductionReady, true);
@@ -53,7 +120,8 @@ function main() {
   const withHumanOnly = evaluateReleaseMaturity({
     card,
     productionGate: passingGate(),
-    humanPlaytest: passingEvidence()
+    humanPlaytest: humanEvidence(),
+    expectedCandidateIdentity: identity
   });
   assert.equal(withHumanOnly.certificationTier, "conditionally_certified");
   assert.equal(withHumanOnly.evidence.humanPlaytested, true);
@@ -62,36 +130,50 @@ function main() {
   const fullyCertified = evaluateReleaseMaturity({
     card,
     productionGate: passingGate(),
-    humanPlaytest: passingEvidence(),
-    deviceVerification: passingEvidence()
+    humanPlaytest: humanEvidence(),
+    deviceVerification: deviceEvidence(),
+    expectedCandidateIdentity: identity
   });
   assert.equal(fullyCertified.certificationTier, "release_certified");
   assert.equal(fullyCertified.releaseCertified, true);
   assert.equal(isReleaseCertified(fullyCertified), true);
 
+  const noExpectedCandidate = evaluateReleaseMaturity({
+    card,
+    productionGate: passingGate(),
+    humanPlaytest: humanEvidence(),
+    deviceVerification: deviceEvidence()
+  });
+  assert.equal(noExpectedCandidate.releaseCertified, false);
+  assert(noExpectedCandidate.evidenceIdentityMismatches.human.includes("expected_candidate_identity_missing"));
+
   const staleHuman = evaluateReleaseMaturity({
     card,
     productionGate: passingGate(),
-    humanPlaytest: passingEvidence({ stale: true }),
-    deviceVerification: passingEvidence()
+    humanPlaytest: humanEvidence({ stale: true }),
+    deviceVerification: deviceEvidence(),
+    expectedCandidateIdentity: identity
   });
   assert.equal(staleHuman.releaseCertified, false);
-  assert(staleHuman.blockers.includes("human_playtest_missing_or_invalid"));
+  assert(staleHuman.blockers.includes("human_playtest_missing_invalid_or_candidate_mismatch"));
 
   const identityMismatchDevice = evaluateReleaseMaturity({
     card,
     productionGate: passingGate(),
-    humanPlaytest: passingEvidence(),
-    deviceVerification: passingEvidence({ identityMatches: false })
+    humanPlaytest: humanEvidence(),
+    deviceVerification: deviceEvidence({ payloadHash: "sha256:other" }),
+    expectedCandidateIdentity: identity
   });
   assert.equal(identityMismatchDevice.releaseCertified, false);
-  assert(identityMismatchDevice.blockers.includes("device_verification_missing_or_invalid"));
+  assert(identityMismatchDevice.blockers.includes("device_verification_missing_invalid_or_candidate_mismatch"));
+  assert(identityMismatchDevice.evidenceIdentityMismatches.device.some((item) => item.startsWith("payloadHash:")));
 
   const waiverBlocksCertification = evaluateReleaseMaturity({
     card,
     productionGate: passingGate(),
-    humanPlaytest: passingEvidence(),
-    deviceVerification: passingEvidence(),
+    humanPlaytest: humanEvidence(),
+    deviceVerification: deviceEvidence(),
+    expectedCandidateIdentity: identity,
     waivers: ["headless_fps_proxy"]
   });
   assert.equal(waiverBlocksCertification.certificationTier, "conditionally_certified");
@@ -104,8 +186,9 @@ function main() {
   const autoFailure = evaluateReleaseMaturity({
     card,
     productionGate: failedAutomaticGate,
-    humanPlaytest: passingEvidence(),
-    deviceVerification: passingEvidence()
+    humanPlaytest: humanEvidence(),
+    deviceVerification: deviceEvidence(),
+    expectedCandidateIdentity: identity
   });
   assert.equal(autoFailure.releaseCertified, false);
   assert.equal(autoFailure.certificationTier, "browser_verified");
