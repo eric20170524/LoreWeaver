@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import dotenv from "dotenv";
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 
 dotenv.config();
 
@@ -152,7 +152,110 @@ process.on("SIGINT", () => {
   process.exit(0);
 });
 
-// Smart Gateway Proxy middleware to direct all APIs to the Python database engine
+function isSafeWorkspaceId(value: string) {
+  return /^[A-Za-z0-9._-]+$/.test(value) && value !== "." && value !== "..";
+}
+
+function parseJsonOutput(stdout: string) {
+  try {
+    return JSON.parse(stdout.trim());
+  } catch {
+    return null;
+  }
+}
+
+function runReleaseCompiler(workspaceId: string, mode: "candidate" | "certified") {
+  if (!isSafeWorkspaceId(workspaceId)) {
+    return { ok: false, statusCode: 400, payload: { status: "failed", reason: "invalid_workspace_id" } };
+  }
+  const workspaceDir = path.join(process.cwd(), "data", "workspaces", workspaceId);
+  if (!fs.existsSync(workspaceDir)) {
+    return { ok: false, statusCode: 404, payload: { status: "failed", reason: "workspace_not_found" } };
+  }
+
+  const isWindows = process.platform === "win32";
+  const tsxBin = path.join(process.cwd(), "node_modules", ".bin", isWindows ? "tsx.cmd" : "tsx");
+  const compiler = path.join(process.cwd(), "productize", "release-compiler.mjs");
+  const result = spawnSync(tsxBin, [
+    compiler,
+    `--workspace=data/workspaces/${workspaceId}`,
+    `--mode=${mode}`
+  ], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: process.env,
+    shell: isWindows,
+    timeout: 180_000
+  });
+
+  const payload = parseJsonOutput(result.stdout || "") || {
+    status: "failed",
+    reason: "release_compiler_non_json_output",
+    stdout: (result.stdout || "").slice(-4000),
+    stderr: (result.stderr || "").slice(-4000)
+  };
+  if (result.status !== 0) {
+    return {
+      ok: false,
+      statusCode: payload.status === "blocked" ? 422 : 500,
+      payload
+    };
+  }
+
+  const exporterPayload = typeof payload.exporterOutput === "string"
+    ? parseJsonOutput(payload.exporterOutput)
+    : null;
+  const artifactRel = exporterPayload?.artifact;
+  if (!artifactRel) {
+    return {
+      ok: false,
+      statusCode: 500,
+      payload: { ...payload, reason: "release_compiler_missing_artifact_path" }
+    };
+  }
+  const artifactPath = path.resolve(process.cwd(), artifactRel);
+  const allowedExportsRoot = `${path.resolve(process.cwd(), "productize", "exports")}${path.sep}`;
+  if (!`${artifactPath}${path.sep}`.startsWith(allowedExportsRoot) || !fs.existsSync(artifactPath)) {
+    return {
+      ok: false,
+      statusCode: 500,
+      payload: { ...payload, reason: "release_artifact_outside_allowed_root_or_missing" }
+    };
+  }
+  return { ok: true, statusCode: 200, payload, artifactPath };
+}
+
+function sendReleaseArtifact(req: express.Request, res: express.Response, mode: "candidate" | "certified") {
+  const workspaceId = String(req.params.wsId || "");
+  const result = runReleaseCompiler(workspaceId, mode);
+  if (!result.ok || !result.artifactPath) {
+    return res.status(result.statusCode).json(result.payload);
+  }
+  const suffix = mode === "certified" ? "certified" : "candidate";
+  const filename = `loreweaver-${workspaceId}-${suffix}.zip`;
+  res.setHeader("X-LoreWeaver-Release-Mode", mode);
+  res.setHeader("X-LoreWeaver-Certification-Tier", String(result.payload.certificationTier || "unknown"));
+  if (result.payload.nonReleaseMarker) {
+    res.setHeader("X-LoreWeaver-Non-Release-Marker", String(result.payload.nonReleaseMarker));
+  }
+  return res.download(result.artifactPath, filename);
+}
+
+// Release routes are intentionally handled here before the generic FastAPI proxy.
+// Both modes use the same Node release compiler/policy; FastAPI does not duplicate
+// release certification logic.
+app.get("/api/workspaces/:wsId/export-candidate", (req, res) => {
+  return sendReleaseArtifact(req, res, "candidate");
+});
+app.get("/api/workspaces/:wsId/export-certified", (req, res) => {
+  return sendReleaseArtifact(req, res, "certified");
+});
+// Backward-compatible alias: the old ambiguous release endpoint now means candidate.
+app.get("/api/workspaces/:wsId/export-release", (req, res) => {
+  return sendReleaseArtifact(req, res, "candidate");
+});
+
+// Smart Gateway Proxy middleware to direct all remaining APIs to the Python database engine
 app.use("/api", async (req, res) => {
   const targetUrl = `http://127.0.0.1:${PYTHON_BACKEND_PORT}/api${req.url}`;
   try {
