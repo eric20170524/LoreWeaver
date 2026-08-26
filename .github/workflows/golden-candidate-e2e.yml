@@ -41,6 +41,12 @@ jobs:
       - name: Build and verify golden candidate
         run: node productize/jobs/run-golden-candidate-e2e.mjs
 
+      - name: Audit exact candidate screenshot with real VLM when available
+        env:
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          XAI_VLM_MODEL: ${{ vars.XAI_VLM_MODEL }}
+        run: python3 productize/jobs/run-golden-vlm-audit.py --allow-unavailable
+
       - name: Upload golden evidence
         if: always()
         uses: actions/upload-artifact@v4
