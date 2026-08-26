@@ -35,6 +35,15 @@ function parseJsonOutput(stdout) {
   }
 }
 
+function readJsonSafe(filePath) {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
 function resolveMatchingPackageBrowserReport(explicitArg, workspaceReportsDir, resolvedSpec) {
   const candidates = [];
   if (explicitArg) candidates.push(path.resolve(LORE_ROOT, explicitArg));
@@ -43,28 +52,59 @@ function resolveMatchingPackageBrowserReport(explicitArg, workspaceReportsDir, r
     path.join(SHARED_REPORTS, "standalone_browser_report.json")
   );
   for (const candidate of candidates) {
-    if (!candidate || !fs.existsSync(candidate)) continue;
-    try {
-      const report = JSON.parse(fs.readFileSync(candidate, "utf8"));
-      const errors = report.errors || {};
-      const noErrors = ["console", "page", "requests"].every(
-        (key) => Array.isArray(errors[key]) && errors[key].length === 0
-      );
-      if (
-        report.status === "passed" &&
-        report.releaseEligible === true &&
-        report.specHash === resolvedSpec.specHash &&
-        report.runtimeVersion === resolvedSpec.runtimeVersion &&
-        report.zeroApiRequests === true &&
-        typeof report.payloadHash === "string" && report.payloadHash.length > 0 &&
-        typeof report.artifact === "string" && report.artifact.length > 0 &&
-        typeof report.artifactSha256 === "string" && report.artifactSha256.length > 0 &&
-        noErrors
-      ) {
-        return candidate;
-      }
-    } catch {
-      // Continue to next candidate.
+    const report = readJsonSafe(candidate);
+    if (!report) continue;
+    const errors = report.errors || {};
+    const noErrors = ["console", "page", "requests"].every(
+      (key) => Array.isArray(errors[key]) && errors[key].length === 0
+    );
+    if (
+      report.status === "passed" &&
+      report.releaseEligible === true &&
+      report.specHash === resolvedSpec.specHash &&
+      report.runtimeVersion === resolvedSpec.runtimeVersion &&
+      report.zeroApiRequests === true &&
+      typeof report.payloadHash === "string" && report.payloadHash.length > 0 &&
+      typeof report.artifact === "string" && report.artifact.length > 0 &&
+      typeof report.artifactSha256 === "string" && report.artifactSha256.length > 0 &&
+      noErrors
+    ) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function resolveMatchingPackageVisualReport(explicitArg, workspaceReportsDir, resolvedSpec, browserReportPath) {
+  const browser = readJsonSafe(browserReportPath);
+  if (!browser) return null;
+  const candidates = [];
+  if (explicitArg) candidates.push(path.resolve(LORE_ROOT, explicitArg));
+  candidates.push(
+    path.join(workspaceReportsDir, "visual_audit_latest.json"),
+    path.join(workspaceReportsDir, "visual_audit_survivor_horde_latest.json")
+  );
+  for (const candidate of candidates) {
+    const report = readJsonSafe(candidate);
+    if (!report) continue;
+    const checks = report.checks || {};
+    const checkValues = Object.values(checks).map((value) => String(value).toUpperCase());
+    const visualChecksEligible = checkValues.length > 0
+      && checkValues.every((value) => value === "PASS" || value === "WARNING");
+    if (
+      report.status === "passed" &&
+      report.releaseEligible === true &&
+      report.evidenceKind === "real_vlm_exact_candidate" &&
+      typeof report.provider === "string" && report.provider.length > 0 &&
+      report.specHash === resolvedSpec.specHash &&
+      report.runtimeVersion === resolvedSpec.runtimeVersion &&
+      report.payloadHash === browser.payloadHash &&
+      report.artifact === browser.artifact &&
+      report.artifactSha256 === browser.artifactSha256 &&
+      report.identityMatches !== false &&
+      visualChecksEligible
+    ) {
+      return candidate;
     }
   }
   return null;
@@ -73,6 +113,7 @@ function resolveMatchingPackageBrowserReport(explicitArg, workspaceReportsDir, r
 const workspaceArg = valueArg("--workspace");
 const mode = valueArg("--mode") || "candidate";
 const browserReportArg = valueArg("--browser-report");
+const visualReportArg = valueArg("--visual-report");
 const waivers = valuesArg("--waiver");
 const dryRun = args.includes("--dry-run");
 
@@ -121,18 +162,31 @@ const packageBrowserReport = resolveMatchingPackageBrowserReport(
   workspaceReportsDir,
   resolvedSpec
 );
+const packageVisualReport = packageBrowserReport
+  ? resolveMatchingPackageVisualReport(
+      visualReportArg,
+      workspaceReportsDir,
+      resolvedSpec,
+      packageBrowserReport
+    )
+  : null;
 
 const finalBlockers = [...decision.blockers];
 if (mode === "certified" && !packageBrowserReport) {
   finalBlockers.push("standalone_package_browser_report_missing_payload_identity_or_mismatch");
 }
-const finalAllowed = decision.exportAllowed && (mode === "candidate" || Boolean(packageBrowserReport));
+if (mode === "certified" && !packageVisualReport) {
+  finalBlockers.push("standalone_package_real_vlm_report_missing_payload_identity_or_mismatch");
+}
+const exactPackageEvidenceReady = Boolean(packageBrowserReport && packageVisualReport);
+const finalAllowed = decision.exportAllowed && (mode === "candidate" || exactPackageEvidenceReady);
 const finalDecision = {
   ...decision,
   exportAllowed: finalAllowed,
   status: finalAllowed ? decision.status : "blocked",
   blockers: [...new Set(finalBlockers)],
   packageBrowserReport: packageBrowserReport ? relativeRepoPath(packageBrowserReport) : null,
+  packageVisualReport: packageVisualReport ? relativeRepoPath(packageVisualReport) : null,
   artifactLabel: mode === "certified" ? "CERTIFIED_RELEASE" : "UNVERIFIED_CANDIDATE"
 };
 
@@ -166,7 +220,8 @@ if (mode === "certified") {
     promoter,
     `--workspace-id=${path.basename(wsPath)}`,
     `--release-decision=${relativeRepoPath(decisionPath)}`,
-    `--browser-report=${relativeRepoPath(packageBrowserReport)}`
+    `--browser-report=${relativeRepoPath(packageBrowserReport)}`,
+    `--visual-report=${relativeRepoPath(packageVisualReport)}`
   ], {
     cwd: LORE_ROOT,
     encoding: "utf8",
@@ -196,6 +251,7 @@ if (mode === "certified") {
     payloadHash: promoted.payloadHash,
     sourceCandidate: promoted.sourceCandidate,
     browserReport: promoted.browserReport,
+    visualReport: promoted.visualReport,
     // Backward-compatible bridge for the existing Express gateway. New callers
     // should consume the top-level artifact fields directly.
     exporterOutput: JSON.stringify(promoted)
