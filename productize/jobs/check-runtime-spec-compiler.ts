@@ -94,6 +94,20 @@ check("runtime_spec_is_deeply_frozen", () => {
 check("workbench_not_shipped_to_runtime", () => assert.equal(first.gameSpec.workbench, undefined));
 check("catalog_hashes_present", () => assert.equal(Object.keys(first.catalogHashes).length, 6));
 
+check("incomplete_authoring_node_display_contract_is_normalized", () => {
+  const source = sourceSpec() as any;
+  delete source.nodes[0].intro;
+  delete source.nodes[0].taunts;
+  delete source.nodes[0].rewards;
+  const resolved = compileRuntimeSpec(source);
+  assert.equal(resolved.gameSpec.nodes[0].intro, "");
+  assert.deepEqual(resolved.gameSpec.nodes[0].taunts, []);
+  assert.equal(resolved.gameSpec.nodes[0].rewards, "");
+  assert.ok(
+    resolved.migrationWarnings.some((warning) => warning.includes("taunts missing; normalized to []"))
+  );
+});
+
 check("patch_conflict_blocks_compile_strict", () => {
   const source = sourceSpec();
   source.workbench!.patches[0].before = 999;
@@ -114,7 +128,6 @@ check("patch_conflict_soft_skips_by_default", () => {
   delete process.env.LOREWEAVER_STRICT_PATCHES;
   try {
     const resolved = compileRuntimeSpec(source);
-    // duration patch skipped; base stays 30
     assert.equal(getResolvedValue(resolved, "nodes.1.gameplay.knobs.durationSec"), 30);
     assert.ok(
       resolved.migrationWarnings.some((w) => w.includes("stale_applied_patch_skipped:patch_duration"))
