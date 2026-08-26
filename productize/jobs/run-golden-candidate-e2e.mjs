@@ -162,6 +162,7 @@ async function main() {
   const apiRequests = [];
   const stageResults = [];
   let screenshotPath = null;
+  let resolvedContract = [];
   let browser;
 
   try {
@@ -186,7 +187,7 @@ async function main() {
     );
     await page.waitForTimeout(1000);
 
-    const resolvedContract = await page.evaluate(() =>
+    resolvedContract = await page.evaluate(() =>
       (window.__LOREWEAVER_EMBEDDED_SPEC__?.nodes || []).map((node) => ({
         id: node.id,
         title: node.title,
