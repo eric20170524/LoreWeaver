@@ -90,7 +90,6 @@ export function Header({
       
       {/* Workspace Context Display */}
       <div className="shrink-0 flex items-center justify-end gap-2">
-        {/* Light/Dark Mode Toggle Button */}
         <button
           onClick={() => setThemeMode((current) => current === "light" ? "dark" : "light")}
           className="flex items-center gap-1.5 bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-emerald-500/50 text-slate-800 dark:text-slate-300 px-3 py-1.5 rounded transition font-mono text-xs cursor-pointer"
@@ -122,7 +121,7 @@ export function Header({
           onClick={onExportWorkspace}
           disabled={!activeWorkspace || isExporting || isExportingRelease}
           className="flex items-center gap-1.5 bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:border-emerald-500/50 text-slate-800 dark:text-slate-300 px-3 py-1.5 rounded transition font-mono text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-          title={locale === "zh" ? "导出当前工作区的源码备份 ZIP (未编译)" : "Export current workspace raw source ZIP"}
+          title={locale === "zh" ? "导出当前工作区的源码备份 ZIP；这不是发布认证" : "Export current workspace raw source ZIP; this is not release certification"}
         >
           <Download className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           {isExporting ? (locale === "zh" ? "备份中" : "Backing up") : (locale === "zh" ? "备份源码" : "Backup Source")}
@@ -131,11 +130,15 @@ export function Header({
         <button
           onClick={onExportRelease}
           disabled={!activeWorkspace || isExporting || isExportingRelease}
-          className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3.5 py-1.5 rounded font-display font-bold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow hover:scale-[1.01] transition-transform duration-150"
-          title={locale === "zh" ? "编译并导出独立的 H5 游戏发布包 ZIP (支持直接离线试玩/部署发布)" : "Compile and export standalone H5 release ZIP"}
+          className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-500 text-slate-950 px-3.5 py-1.5 rounded font-display font-bold text-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow hover:scale-[1.01] transition-transform duration-150"
+          title={locale === "zh"
+            ? "导出可独立运行的候选 H5。包内会写入 UNVERIFIED_CANDIDATE；只有 Evidence 全部通过后才能走 Certified Export。"
+            : "Export a standalone candidate H5. It is marked UNVERIFIED_CANDIDATE until all release evidence passes."}
         >
           <Sparkles className={`w-4 h-4 text-slate-950 ${isExportingRelease ? "animate-spin" : ""}`} />
-          {isExportingRelease ? (locale === "zh" ? "构建中…" : "Building…") : (locale === "zh" ? "导出发布包" : "Export Release")}
+          {isExportingRelease
+            ? (locale === "zh" ? "构建候选…" : "Building candidate…")
+            : (locale === "zh" ? "导出候选 H5" : "Export Candidate H5")}
         </button>
         
         <WorkspaceSelector 
