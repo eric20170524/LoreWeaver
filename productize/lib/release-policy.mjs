@@ -144,16 +144,19 @@ export function evaluateWorkspaceReleasePolicy({
 
   const cardIds = collectWorkspaceCardIds(gameSpec || resolvedSpec?.gameSpec);
   const specIdentity = buildReleaseIdentity({ resolvedSpec, gameSpec });
-  const candidateSpecMatches = !candidateIdentity?.specHash || candidateIdentity.specHash === specIdentity.specHash;
-  const candidateRuntimeMatches = !candidateIdentity?.runtimeVersion ||
-    !specIdentity.runtimeVersion || candidateIdentity.runtimeVersion === specIdentity.runtimeVersion;
+  const candidateIdentityComplete = expectedCandidateIdentityReady(candidateIdentity);
+  const candidateSpecMatches = candidateIdentityComplete && candidateIdentity.specHash === specIdentity.specHash;
+  const candidateRuntimeMatches = candidateIdentityComplete && (
+    !specIdentity.runtimeVersion || candidateIdentity.runtimeVersion === specIdentity.runtimeVersion
+  );
+  const exactCandidateSourceValid = candidateIdentityComplete && candidateSpecMatches && candidateRuntimeMatches;
   const identity = {
     ...specIdentity,
-    payloadHash: candidateSpecMatches && candidateRuntimeMatches ? candidateIdentity?.payloadHash || null : null,
-    artifact: candidateSpecMatches && candidateRuntimeMatches ? candidateIdentity?.artifact || null : null,
-    artifactSha256: candidateSpecMatches && candidateRuntimeMatches ? candidateIdentity?.artifactSha256 || null : null
+    payloadHash: exactCandidateSourceValid ? candidateIdentity.payloadHash : null,
+    artifact: exactCandidateSourceValid ? candidateIdentity.artifact : null,
+    artifactSha256: exactCandidateSourceValid ? candidateIdentity.artifactSha256 : null
   };
-  const exactCandidateReady = expectedCandidateIdentityReady(identity);
+  const exactCandidateReady = exactCandidateSourceValid && expectedCandidateIdentityReady(identity);
   const cardDecisions = [];
 
   if (!cardIds.length) {
