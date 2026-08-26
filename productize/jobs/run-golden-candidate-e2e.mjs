@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
@@ -42,7 +43,6 @@ function walkFiles(dir, base = dir) {
     if (entry.isDirectory()) files.push(...walkFiles(full, base));
     else if (entry.isFile()) {
       const buffer = fs.readFileSync(full);
-      const crypto = requireCrypto();
       files.push({
         path: path.relative(base, full).split(path.sep).join("/"),
         bytes: buffer.length,
@@ -51,13 +51,6 @@ function walkFiles(dir, base = dir) {
     }
   }
   return files;
-}
-let _crypto = null;
-function requireCrypto() {
-  if (_crypto) return _crypto;
-  // eslint-disable-next-line no-eval
-  _crypto = eval("require")("node:crypto");
-  return _crypto;
 }
 function findOpenPort() {
   return new Promise((resolve, reject) => {
