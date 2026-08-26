@@ -3,34 +3,75 @@
   "$id": "https://loreweaver.local/contracts/human_playtest_evidence.schema.json",
   "title": "LoreWeaver Human Playtest Evidence",
   "type": "object",
-  "required": ["schemaVersion", "status", "cardId", "createdAt", "identityMatches", "freshness", "sessions", "summary"],
+  "required": [
+    "schemaVersion",
+    "status",
+    "releaseEligible",
+    "cardId",
+    "specHash",
+    "payloadHash",
+    "artifact",
+    "artifactSha256",
+    "createdAt",
+    "identityMatches",
+    "freshness",
+    "fixture",
+    "synthetic",
+    "humanObserved",
+    "observationSource",
+    "sessions",
+    "summary"
+  ],
   "properties": {
     "schemaVersion": {"const": "loreweaver.human-playtest-evidence.v1"},
     "status": {"type": "string", "enum": ["passed", "failed", "stale"]},
+    "releaseEligible": {"type": "boolean"},
     "cardId": {"type": "string", "minLength": 1},
+    "specHash": {"type": "string", "minLength": 1},
     "recipeHash": {"type": ["string", "null"]},
     "contentHash": {"type": ["string", "null"]},
+    "atlasHash": {"type": ["string", "null"]},
     "runtimeVersion": {"type": ["string", "null"]},
+    "payloadHash": {"type": "string", "minLength": 1},
+    "artifact": {"type": "string", "minLength": 1},
+    "artifactSha256": {"type": "string", "minLength": 1},
+    "browserReport": {"type": ["string", "null"]},
     "createdAt": {"type": "string", "format": "date-time"},
     "identityMatches": {"type": "boolean"},
     "freshness": {"type": "string", "enum": ["fresh", "stale"]},
     "staleReason": {"type": ["string", "null"]},
+    "fixture": {"type": "boolean"},
+    "synthetic": {"type": "boolean"},
+    "humanObserved": {"type": "boolean"},
+    "observationSource": {"type": "string", "minLength": 1},
     "sessions": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["sessionId", "completed", "understoodCoreLoop", "wouldReplay", "blockingIssues"],
+        "required": [
+          "sessionId",
+          "completed",
+          "understoodCoreLoop",
+          "wouldReplay",
+          "understandingSeconds",
+          "blockingIssues",
+          "failureReasons",
+          "suggestions"
+        ],
         "properties": {
           "sessionId": {"type": "string", "minLength": 1},
           "completed": {"type": "boolean"},
           "understoodCoreLoop": {"type": "boolean"},
           "wouldReplay": {"type": "boolean"},
           "completionSeconds": {"type": ["number", "null"], "minimum": 0},
+          "understandingSeconds": {"type": "number", "minimum": 0},
           "difficulty": {"type": ["integer", "null"], "minimum": 1, "maximum": 5},
           "fun": {"type": ["integer", "null"], "minimum": 1, "maximum": 5},
           "clarity": {"type": ["integer", "null"], "minimum": 1, "maximum": 5},
           "blockingIssues": {"type": "array", "items": {"type": "string"}},
+          "failureReasons": {"type": "array", "items": {"type": "string"}},
+          "suggestions": {"type": "array", "items": {"type": "string"}},
           "notes": {"type": "string"}
         },
         "additionalProperties": true
@@ -38,13 +79,31 @@
     },
     "summary": {
       "type": "object",
-      "required": ["sessionCount", "completionRate", "coreLoopUnderstandingRate", "blockingIssueCount"],
+      "required": [
+        "sessionCount",
+        "completionRate",
+        "coreLoopUnderstandingRate",
+        "blockingIssueCount",
+        "passCriteria"
+      ],
       "properties": {
         "sessionCount": {"type": "integer", "minimum": 1},
         "completionRate": {"type": "number", "minimum": 0, "maximum": 1},
         "coreLoopUnderstandingRate": {"type": "number", "minimum": 0, "maximum": 1},
         "replayIntentRate": {"type": "number", "minimum": 0, "maximum": 1},
         "blockingIssueCount": {"type": "integer", "minimum": 0},
+        "failureReasons": {"type": "array", "items": {"type": "string"}},
+        "suggestions": {"type": "array", "items": {"type": "string"}},
+        "passCriteria": {
+          "type": "object",
+          "required": ["atLeastOneSessionCompleted", "allSessionsUnderstoodCoreLoop", "noBlockingIssues"],
+          "properties": {
+            "atLeastOneSessionCompleted": {"type": "boolean"},
+            "allSessionsUnderstoodCoreLoop": {"type": "boolean"},
+            "noBlockingIssues": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        },
         "notes": {"type": "string"}
       },
       "additionalProperties": true
