@@ -11,6 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "..");
 const WORKSPACES_ROOT = path.join(LORE_ROOT, "data/workspaces");
 const SHARED_REPORTS = path.join(LORE_ROOT, "minigame_master/capabilities/reports");
+const REAL_VLM_PROVIDERS = new Set(["grok", "codex"]);
 const args = process.argv.slice(2);
 const valueArg = (name) => args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
 const valuesArg = (name) => args
@@ -67,6 +68,8 @@ function resolveMatchingPackageBrowserReport(explicitArg, workspaceReportsDir, r
       typeof report.payloadHash === "string" && report.payloadHash.length > 0 &&
       typeof report.artifact === "string" && report.artifact.length > 0 &&
       typeof report.artifactSha256 === "string" && report.artifactSha256.length > 0 &&
+      typeof report.screenshot === "string" && report.screenshot.length > 0 &&
+      typeof report.screenshotSha256 === "string" && report.screenshotSha256.length > 0 &&
       noErrors
     ) {
       return candidate;
@@ -95,12 +98,15 @@ function resolveMatchingPackageVisualReport(explicitArg, workspaceReportsDir, re
       report.status === "passed" &&
       report.releaseEligible === true &&
       report.evidenceKind === "real_vlm_exact_candidate" &&
-      typeof report.provider === "string" && report.provider.length > 0 &&
+      REAL_VLM_PROVIDERS.has(String(report.provider || "")) &&
+      report.criticStatus === "completed" &&
       report.specHash === resolvedSpec.specHash &&
       report.runtimeVersion === resolvedSpec.runtimeVersion &&
       report.payloadHash === browser.payloadHash &&
       report.artifact === browser.artifact &&
       report.artifactSha256 === browser.artifactSha256 &&
+      report.screenshot === browser.screenshot &&
+      report.screenshotSha256 === browser.screenshotSha256 &&
       report.identityMatches !== false &&
       visualChecksEligible
     ) {
@@ -176,7 +182,7 @@ if (mode === "certified" && !packageBrowserReport) {
   finalBlockers.push("standalone_package_browser_report_missing_payload_identity_or_mismatch");
 }
 if (mode === "certified" && !packageVisualReport) {
-  finalBlockers.push("standalone_package_real_vlm_report_missing_payload_identity_or_mismatch");
+  finalBlockers.push("standalone_package_real_vlm_report_missing_payload_or_screenshot_identity_mismatch");
 }
 const exactPackageEvidenceReady = Boolean(packageBrowserReport && packageVisualReport);
 const finalAllowed = decision.exportAllowed && (mode === "candidate" || exactPackageEvidenceReady);
@@ -252,8 +258,6 @@ if (mode === "certified") {
     sourceCandidate: promoted.sourceCandidate,
     browserReport: promoted.browserReport,
     visualReport: promoted.visualReport,
-    // Backward-compatible bridge for the existing Express gateway. New callers
-    // should consume the top-level artifact fields directly.
     exporterOutput: JSON.stringify(promoted)
   });
 }
