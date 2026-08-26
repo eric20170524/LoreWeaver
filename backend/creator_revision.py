@@ -62,8 +62,6 @@ def select_creator_agent_role(message: str) -> str:
     text = str(message or "").lower()
     if any(hint in text for hint in WORLD_HINTS):
         return "world_builder"
-    # Narrative/planning agent already owns node pacing, difficulty, durations,
-    # goal values, gameplay mappings and planning hooks at manifest level.
     return "narrative"
 
 
@@ -179,11 +177,12 @@ def evaluate_creator_revision(before: dict[str, Any], after: dict[str, Any], mes
     if not diff:
         blockers.append("no_effective_change")
 
+    validators = ["gameplay_composition", "node_smoke"] if patch_level == "L2" else ["node_smoke"]
     return RevisionPolicyResult(
         allowed=len(blockers) == 0,
         patch_level=patch_level,
         agent_role=agent_role,
         blockers=blockers,
-        validators=["node_smoke"],
+        validators=validators,
         diff=diff,
     )
