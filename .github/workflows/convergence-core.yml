@@ -1,0 +1,44 @@
+name: Convergence Core
+
+on:
+  push:
+    branches:
+      - feat/vertical-slice-compiler-convergence
+  pull_request:
+    paths:
+      - "backend/**"
+      - "productize/**"
+      - "minigame_master/contracts/**"
+      - "package.json"
+      - ".github/workflows/convergence-core.yml"
+
+jobs:
+  convergence-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Run convergence policy checks
+        run: npm run check:convergence-core
+
+      - name: TypeScript check
+        run: npm run lint
