@@ -4,7 +4,9 @@
  * Fail-closed: missing / failed / stale / identity-mismatched evidence blocks publish.
  * Soft warnings alone are never enough for productionExportAllowed.
  *
- * Multi-card: prefers per-card report filenames, then shared "*_latest" only when cardId matches.
+ * Evidence lookup may receive multiple report roots. The first matching report wins,
+ * so workspace-local exact Candidate evidence can override legacy shared automation
+ * reports without copying workspace-specific artifacts into a global report pool.
  */
 
 import fs from "node:fs";
@@ -99,7 +101,15 @@ function smokeOk(report) {
   return true;
 }
 
+function normalizeReportDirs(reportsDir, reportDirs = null) {
+  const values = [];
+  if (Array.isArray(reportDirs)) values.push(...reportDirs);
+  if (reportsDir) values.push(reportsDir);
+  return [...new Set(values.map((value) => value && path.resolve(value)).filter(Boolean))];
+}
+
 export function resolveCardReport(reportsDir, cardId, candidates, { requireCardId = false } = {}) {
+  if (!reportsDir) return { file: candidates[0] || null, report: null, path: null };
   for (const file of candidates) {
     const filePath = path.join(reportsDir, file);
     const report = parseJsonFileSafe(filePath);
@@ -109,9 +119,33 @@ export function resolveCardReport(reportsDir, cardId, candidates, { requireCardI
     } else if (report.cardId != null && cardId && report.cardId !== cardId) {
       continue;
     }
-    return { file, report, path: filePath };
+    return { file, report, path: filePath, reportsDir };
   }
-  return { file: candidates[0] || null, report: null, path: null };
+  return { file: candidates[0] || null, report: null, path: null, reportsDir };
+}
+
+export function resolveCardReportFromDirs(reportDirs, cardId, candidates, options = {}) {
+  for (const reportsDir of reportDirs || []) {
+    const resolved = resolveCardReport(reportsDir, cardId, candidates, options);
+    if (resolved.report) return resolved;
+  }
+  return {
+    file: candidates[0] || null,
+    report: null,
+    path: null,
+    reportsDir: (reportDirs || [])[0] || null
+  };
+}
+
+function resolveNamedReportFromDirs(reportDirs, file, cardId) {
+  for (const reportsDir of reportDirs || []) {
+    const filePath = path.join(reportsDir, file);
+    const report = parseJsonFileSafe(filePath);
+    if (!report) continue;
+    if (report.cardId && report.cardId !== cardId) continue;
+    return { file, report, path: filePath, reportsDir };
+  }
+  return { file, report: null, path: null, reportsDir: (reportDirs || [])[0] || null };
 }
 
 export function identityMismatches(report, expectedIdentity) {
@@ -158,11 +192,13 @@ function withMaturity(result, {
 export function evaluateProductionExportGate({
   card,
   reportsDir,
+  reportDirs = null,
   expectedIdentity = null,
   humanPlaytest = null,
   deviceVerification = null,
   waivers = []
 }) {
+  const evidenceDirs = normalizeReportDirs(reportsDir, reportDirs);
   const maturityInput = {
     card,
     humanPlaytest,
@@ -221,12 +257,13 @@ export function evaluateProductionExportGate({
 
   for (const spec of REQUIRED_PRODUCTION_REPORT_SPECS) {
     const candidates = spec.candidates(cardId);
-    const resolved = resolveCardReport(reportsDir, cardId, candidates, {
+    const resolved = resolveCardReportFromDirs(evidenceDirs, cardId, candidates, {
       requireCardId: spec.requireCardId
     });
     const report = resolved.report;
     const check = {
       file: resolved.file,
+      sourceDir: resolved.reportsDir || null,
       candidates,
       present: Boolean(report),
       stale: report ? isStaleReport(report) : true,
@@ -312,14 +349,17 @@ export function evaluateProductionExportGate({
   if (cardId === "sequence_synthesis") companionCandidates.push("seq_gate_readiness_latest.json");
 
   for (const companion of [...new Set(companionCandidates)]) {
-    const p = path.join(reportsDir, companion);
-    if (!fs.existsSync(p)) continue;
-    const report = parseJsonFileSafe(p);
+    const resolved = resolveNamedReportFromDirs(evidenceDirs, companion, cardId);
+    const report = resolved.report;
     if (!report) continue;
-    if (report.cardId && report.cardId !== cardId) continue;
     if (isStaleReport(report)) {
       reasons.push(`Hard Gate Blocker: companion report stale (${companion})`);
-      checks[companion] = { present: true, stale: true, ok: false };
+      checks[companion] = {
+        present: true,
+        stale: true,
+        ok: false,
+        sourceDir: resolved.reportsDir || null
+      };
     }
   }
 
@@ -331,6 +371,7 @@ export function evaluateProductionExportGate({
     reasons,
     checks,
     cardId,
-    expectedIdentity: identity
+    expectedIdentity: identity,
+    evidenceDirs
   }, maturityInput);
 }
