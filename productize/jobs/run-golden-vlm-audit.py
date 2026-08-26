@@ -9,6 +9,7 @@ when a supported VLM provider actually completes and returns no FAIL checks.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -24,6 +25,7 @@ from backend.visual_audit import run_visual_critic, vlm_probe  # noqa: E402
 
 DEFAULT_WORKSPACE_ID = "__golden_survivor_vertical_slice_ci"
 CARD_ID = "survivor_horde"
+REAL_VLM_PROVIDERS = {"grok", "codex"}
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -48,6 +50,10 @@ def repo_path(value: str | None) -> Path | None:
     except ValueError:
         return None
     return candidate
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main() -> int:
@@ -88,6 +94,7 @@ def main() -> int:
         and browser.get("payloadHash")
         and browser.get("artifact")
         and browser.get("artifactSha256")
+        and browser.get("screenshotSha256")
     ):
         print(json.dumps({"status": "failed", "reason": "browser_evidence_not_eligible"}))
         return 2
@@ -95,6 +102,15 @@ def main() -> int:
     screenshot_path = repo_path(browser.get("screenshot"))
     if not screenshot_path or not screenshot_path.is_file():
         print(json.dumps({"status": "failed", "reason": "golden_screenshot_missing"}))
+        return 2
+    screenshot_sha256 = sha256_file(screenshot_path)
+    if screenshot_sha256 != browser.get("screenshotSha256"):
+        print(json.dumps({
+            "status": "failed",
+            "reason": "golden_screenshot_sha_mismatch",
+            "expected": browser.get("screenshotSha256"),
+            "actual": screenshot_sha256,
+        }))
         return 2
 
     summary = {
@@ -106,6 +122,7 @@ def main() -> int:
         "payloadHash": browser["payloadHash"],
         "artifact": browser["artifact"],
         "artifactSha256": browser["artifactSha256"],
+        "screenshotSha256": screenshot_sha256,
         "stageResults": browser.get("stageResults") or [],
         "viewport": "720x1280",
     }
@@ -120,7 +137,8 @@ def main() -> int:
     no_fail_checks = bool(normalized_checks) and all(
         value in ("PASS", "WARNING") for value in normalized_checks.values()
     )
-    real_provider_completed = critic.get("status") == "completed" and bool(critic.get("provider"))
+    provider = str(critic.get("provider") or "")
+    real_provider_completed = critic.get("status") == "completed" and provider in REAL_VLM_PROVIDERS
     critic_passed = (
         real_provider_completed
         and result.get("status") == "passed"
@@ -151,6 +169,7 @@ def main() -> int:
         "artifactSha256": browser["artifactSha256"],
         "browserReport": str(browser_path.relative_to(LORE_ROOT)).replace(os.sep, "/"),
         "screenshot": str(screenshot_path.relative_to(LORE_ROOT)).replace(os.sep, "/"),
+        "screenshotSha256": screenshot_sha256,
         "provider": critic.get("provider"),
         "model": critic.get("model"),
         "checks": normalized_checks,
@@ -173,6 +192,7 @@ def main() -> int:
         "specHash": report["specHash"],
         "payloadHash": report["payloadHash"],
         "artifactSha256": report["artifactSha256"],
+        "screenshotSha256": report["screenshotSha256"],
         "report": str(specific.relative_to(LORE_ROOT)).replace(os.sep, "/"),
     }, ensure_ascii=False, indent=2))
 
