@@ -29,14 +29,16 @@ for (const file of [
   `device_verification_${cardId}_latest.json`,
   "release_decision_latest.json",
   "export_artifact_meta.json",
-  "standalone_browser_report.json"
+  "standalone_browser_report.json",
+  "visual_audit_latest.json",
+  `visual_audit_${cardId}_latest.json`
 ]) {
   writeJson(path.join(workspace, file), {
     schemaVersion: "test",
     status: "passed",
     releaseCertified: file === "release_decision_latest.json",
     exportAllowed: file === "release_decision_latest.json",
-    releaseEligible: file === "export_artifact_meta.json",
+    releaseEligible: ["export_artifact_meta.json", "visual_audit_latest.json", `visual_audit_${cardId}_latest.json`].includes(file),
     freshness: "fresh"
   });
 }
@@ -60,14 +62,16 @@ const result = markReleaseEvidenceStale({
   identity
 });
 
-assert(result.workspace.marked.length >= 5, "workspace evidence should be invalidated");
+assert(result.workspace.marked.length >= 7, "workspace evidence including visual evidence should be invalidated");
 assert(result.shared.marked.some((m) => m.file === `runtime_e2e_${cardId}_latest.json`), "shared per-card runtime evidence should be invalidated");
 
 const human = readJson(path.join(workspace, `human_playtest_${cardId}_latest.json`));
 const device = readJson(path.join(workspace, `device_verification_${cardId}_latest.json`));
 const decision = readJson(path.join(workspace, "release_decision_latest.json"));
 const artifact = readJson(path.join(workspace, "export_artifact_meta.json"));
-for (const evidence of [human, device, decision, artifact]) {
+const visualLatest = readJson(path.join(workspace, "visual_audit_latest.json"));
+const visualCard = readJson(path.join(workspace, `visual_audit_${cardId}_latest.json`));
+for (const evidence of [human, device, decision, artifact, visualLatest, visualCard]) {
   assert(evidence.status === "stale", "evidence status must become stale");
   assert(evidence.freshness === "stale", "evidence freshness must become stale");
   assert(evidence.invalidatedBy.recipeHash === identity.recipeHash, "new identity must be recorded");
@@ -76,6 +80,8 @@ assert(decision.exportAllowed === false, "stale release decision cannot export")
 assert(decision.releaseCertified === false, "stale release decision cannot remain certified");
 assert(artifact.releaseEligible === false, "stale artifact metadata cannot remain release eligible");
 assert(targets.includes(`human_playtest_${cardId}_latest.json`), "target helper includes human evidence");
+assert(targets.includes("visual_audit_latest.json"), "target helper includes generic exact VLM evidence");
+assert(targets.includes(`visual_audit_${cardId}_latest.json`), "target helper includes card-scoped exact VLM evidence");
 
 console.log("PASSED release evidence stale propagation checks");
 console.log(JSON.stringify({
