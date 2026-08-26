@@ -1,20 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  Code,
-  Eye,
-  FileText,
-  Layers,
-  Play,
-  Rocket,
-  Terminal,
-  Users,
-  X
-} from "lucide-react";
+import { Code, Eye, FileText, Layers, Play, Rocket, Terminal, Users, X } from "lucide-react";
 import { useWorkbench } from "./store";
 import { synth } from "./utils/AudioSynth";
 import { Header } from "./components/Header";
 import { CreatorJourneyBar, CreatorStep } from "./components/CreatorJourneyBar";
+import { CreatorRevisionPanel } from "./components/CreatorRevisionPanel";
 import { PublishPanel } from "./components/PublishPanel";
 import { PrdPanel } from "./components/PrdPanel";
 import { GameplayPanel } from "./components/GameplayPanel";
@@ -30,49 +21,20 @@ function creatorModeFromStorage() {
 
 export default function CreatorApp() {
   const {
-    themeMode,
-    setThemeMode,
-    themeInput,
-    setThemeInput,
-    activeTab,
-    setActiveTab,
-    isEmulatorWindowOpen,
-    setIsEmulatorWindowOpen,
-    emulatorSize,
-    setEmulatorSize,
-    currentEmuWidth,
-    activeWorkspace,
-    currentJob,
-    isOrchestrating,
-    orchestrationLogs,
-    gameSpec,
-    setGameSpec,
-    pendingPatch,
-    setPendingPatch,
-    playerState,
-    auditReport,
-    isAuditing,
-    isExporting,
-    isExportingRelease,
-    isLogPanelOpen,
-    setIsLogPanelOpen,
-    locale,
-    setLocale,
-    copy,
-    setPhaserContainer,
-    addLog,
-    handleLoadWorkspace,
-    handleExportWorkspace,
-    handleExportRelease,
-    handleRefreshJob,
-    runOrchestrationPipeline,
-    restartGameInstance,
-    triggerVisualAudit,
-    handleResetProgress,
-    handleSaveSpec,
-    queueGameplayPatch,
-    approvePendingPatch,
-    getLogLineClass
+    themeMode, setThemeMode,
+    themeInput, setThemeInput,
+    activeTab, setActiveTab,
+    isEmulatorWindowOpen, setIsEmulatorWindowOpen,
+    emulatorSize, setEmulatorSize, currentEmuWidth,
+    activeWorkspace, currentJob, isOrchestrating, orchestrationLogs,
+    gameSpec, setGameSpec, pendingPatch, setPendingPatch, playerState,
+    auditReport, isAuditing, isExporting, isExportingRelease,
+    isLogPanelOpen, setIsLogPanelOpen,
+    locale, setLocale, copy, setPhaserContainer,
+    addLog, handleLoadWorkspace, handleExportWorkspace, handleExportRelease,
+    handleRefreshJob, runOrchestrationPipeline, restartGameInstance,
+    triggerVisualAudit, handleResetProgress, handleSaveSpec,
+    queueGameplayPatch, approvePendingPatch, getLogLineClass
   } = useWorkbench();
 
   const [expertMode, setExpertMode] = useState(creatorModeFromStorage);
@@ -91,10 +53,7 @@ export default function CreatorApp() {
   }, [expertMode, setIsLogPanelOpen]);
 
   useEffect(() => {
-    if (
-      themeInput === "原创逆天修行传说，主打突破境界与十二重天劫"
-      && !isOrchestrating
-    ) {
+    if (themeInput === "原创逆天修行传说，主打突破境界与十二重天劫" && !isOrchestrating) {
       setThemeInput("紫色星空下，圆滚滚动物守护梦幻花园的竖屏生存游戏");
     }
   }, [themeInput, isOrchestrating, setThemeInput]);
@@ -156,15 +115,10 @@ export default function CreatorApp() {
   };
 
   const renderDesign = () => (
-    <PrdPanel
-      gameSpec={gameSpec}
-      locale={locale}
-      onSaveSpec={handleSaveSpec}
-      addLog={addLog}
-    />
+    <PrdPanel gameSpec={gameSpec} locale={locale} onSaveSpec={handleSaveSpec} addLog={addLog} />
   );
 
-  const renderModify = () => (
+  const renderExpertGameplay = () => (
     <GameplayPanel
       gameSpec={gameSpec}
       locale={locale}
@@ -175,6 +129,17 @@ export default function CreatorApp() {
       onQueueGameplayPatch={queueGameplayPatch}
       addLog={addLog}
       onRecipeApplied={updateRecipeNode}
+    />
+  );
+
+  const renderCreatorModify = () => (
+    <CreatorRevisionPanel
+      workspace={activeWorkspace}
+      gameSpec={gameSpec}
+      locale={locale}
+      onUpdateSpec={(nextSpec) => setGameSpec(nextSpec)}
+      onRevisionApplied={() => setPipelineRefreshKey((value) => value + 1)}
+      addLog={addLog}
     />
   );
 
@@ -249,7 +214,7 @@ export default function CreatorApp() {
     if (creatorStep === "idea") return renderIdea();
     if (creatorStep === "design") return renderDesign();
     if (creatorStep === "play") return renderPlay("embedded");
-    if (creatorStep === "modify") return renderModify();
+    if (creatorStep === "modify") return renderCreatorModify();
     return renderPublish();
   };
 
@@ -260,6 +225,57 @@ export default function CreatorApp() {
     { id: "manifest" as const, label: copy.tabs.manifest, icon: Code },
     { id: "vlm" as const, label: copy.tabs.vlm, icon: Eye }
   ];
+
+  const renderExpertBody = () => {
+    if (expertPublishOpen) return renderPublish();
+    if (activeTab === "prd") return renderDesign();
+    if (activeTab === "gameplay") return renderExpertGameplay();
+    if (activeTab === "departments") {
+      return (
+        <DepartmentPrepPanel
+          workspaceId={activeWorkspace?.id || null}
+          locale={locale}
+          addLog={addLog}
+          jobId={currentJob?.id}
+          jobStatus={currentJob?.status}
+          onRefreshJob={handleRefreshJob}
+          onUpdateSpec={(newSpec) => {
+            setGameSpec(newSpec);
+            restartGameInstance(newSpec);
+          }}
+          onDeskChanged={() => setPipelineRefreshKey((value) => value + 1)}
+        />
+      );
+    }
+    if (activeTab === "manifest") {
+      return gameSpec ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-mono font-bold">manifest.json</h2>
+              <p className="text-xs text-slate-500">{copy.manifest.desc}</p>
+            </div>
+            <span className="rounded border border-emerald-500/20 bg-emerald-50 px-2 py-1 text-[10px] font-mono text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">{copy.manifest.valid}</span>
+          </div>
+          <pre className="max-h-[58vh] overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-[11px] leading-5 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">{JSON.stringify(gameSpec, null, 2)}</pre>
+        </div>
+      ) : <div className="py-10 text-center text-sm text-slate-500">{copy.manifest.empty}</div>;
+    }
+    return (
+      <VlmPanel
+        gameSpec={gameSpec}
+        locale={locale}
+        auditReport={auditReport}
+        isAuditing={isAuditing}
+        triggerVisualAudit={triggerVisualAudit}
+        pendingPatch={pendingPatch}
+        setPendingPatch={setPendingPatch}
+        onApprovePendingPatch={approvePendingPatch}
+        onGoToGameplay={() => setActiveTab("gameplay")}
+        addLog={addLog}
+      />
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 antialiased transition-colors duration-250 dark:bg-slate-950 dark:text-slate-100">
@@ -290,13 +306,7 @@ export default function CreatorApp() {
           />
           <div className="mt-5 min-h-[68vh] rounded-2xl border border-slate-200 bg-white/70 p-4 shadow-sm dark:border-slate-900 dark:bg-slate-900/20 md:p-6">
             <AnimatePresence mode="wait">
-              <motion.div
-                key={creatorStep}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="w-full"
-              >
+              <motion.div key={creatorStep} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="w-full">
                 {renderSimpleContent()}
               </motion.div>
             </AnimatePresence>
@@ -373,47 +383,7 @@ export default function CreatorApp() {
 
             <AnimatePresence mode="wait">
               <motion.div key={expertPublishOpen ? "publish" : activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-                {expertPublishOpen ? renderPublish() : activeTab === "prd" ? renderDesign() : activeTab === "gameplay" ? renderModify() : activeTab === "departments" ? (
-                  <DepartmentPrepPanel
-                    workspaceId={activeWorkspace?.id || null}
-                    locale={locale}
-                    addLog={addLog}
-                    jobId={currentJob?.id}
-                    jobStatus={currentJob?.status}
-                    onRefreshJob={handleRefreshJob}
-                    onUpdateSpec={(newSpec) => {
-                      setGameSpec(newSpec);
-                      restartGameInstance(newSpec);
-                    }}
-                    onDeskChanged={() => setPipelineRefreshKey((value) => value + 1)}
-                  />
-                ) : activeTab === "manifest" ? (
-                  gameSpec ? (
-                    <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
-                      <div className="mb-3 flex items-center justify-between">
-                        <div>
-                          <h2 className="text-sm font-mono font-bold">manifest.json</h2>
-                          <p className="text-xs text-slate-500">{copy.manifest.desc}</p>
-                        </div>
-                        <span className="rounded border border-emerald-500/20 bg-emerald-50 px-2 py-1 text-[10px] font-mono text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">{copy.manifest.valid}</span>
-                      </div>
-                      <pre className="max-h-[58vh] overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-[11px] leading-5 text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">{JSON.stringify(gameSpec, null, 2)}</pre>
-                    </div>
-                  ) : <div className="py-10 text-center text-sm text-slate-500">{copy.manifest.empty}</div>
-                ) : (
-                  <VlmPanel
-                    gameSpec={gameSpec}
-                    locale={locale}
-                    auditReport={auditReport}
-                    isAuditing={isAuditing}
-                    triggerVisualAudit={triggerVisualAudit}
-                    pendingPatch={pendingPatch}
-                    setPendingPatch={setPendingPatch}
-                    onApprovePendingPatch={approvePendingPatch}
-                    onGoToGameplay={() => setActiveTab("gameplay")}
-                    addLog={addLog}
-                  />
-                )}
+                {renderExpertBody()}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -422,12 +392,7 @@ export default function CreatorApp() {
 
       <AnimatePresence>
         {expertMode && isEmulatorWindowOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-            className="fixed bottom-5 right-5 z-[70] max-h-[86vh] w-[min(760px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95"
-          >
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} className="fixed bottom-5 right-5 z-[70] max-h-[86vh] w-[min(760px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
               <div className="flex items-center gap-2 text-xs font-bold"><Play className="h-4 w-4 text-emerald-500" />WebGL H5</div>
               <button onClick={() => setIsEmulatorWindowOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"><X className="h-4 w-4" /></button>
@@ -439,12 +404,8 @@ export default function CreatorApp() {
 
       {expertMode && (
         <div className="fixed bottom-5 left-5 z-[75]">
-          <button
-            onClick={() => setIsLogPanelOpen((open) => !open)}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-4 py-2.5 text-xs font-bold text-slate-600 shadow-lg dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300"
-          >
-            <Terminal className="h-4 w-4" />
-            {copy.logs.button}
+          <button onClick={() => setIsLogPanelOpen((open) => !open)} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-4 py-2.5 text-xs font-bold text-slate-600 shadow-lg dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300">
+            <Terminal className="h-4 w-4" />{copy.logs.button}
             <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] dark:bg-slate-950">{orchestrationLogs.length}</span>
           </button>
           <AnimatePresence>
@@ -463,7 +424,7 @@ export default function CreatorApp() {
 
       <footer className="border-t border-slate-200 bg-white py-4 text-center text-[11px] font-mono text-slate-500 dark:border-slate-900 dark:bg-slate-950">
         {expertMode
-          ? (locale === "zh" ? "LoreWeaver · Expert Mode · Evidence-driven vertical-slice compiler" : "LoreWeaver · Expert Mode · Evidence-driven vertical-slice compiler")
+          ? "LoreWeaver · Expert Mode · Evidence-driven vertical-slice compiler"
           : (locale === "zh" ? "LoreWeaver · 创意 → 设计 → 试玩 → 修改 → 发布" : "LoreWeaver · Idea → Design → Play → Modify → Publish")}
       </footer>
     </div>
