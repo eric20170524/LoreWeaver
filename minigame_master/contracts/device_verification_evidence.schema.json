@@ -3,28 +3,88 @@
   "$id": "https://loreweaver.local/contracts/device_verification_evidence.schema.json",
   "title": "LoreWeaver Device Verification Evidence",
   "type": "object",
-  "required": ["schemaVersion", "status", "cardId", "createdAt", "identityMatches", "freshness", "runs", "summary"],
+  "required": [
+    "schemaVersion",
+    "status",
+    "releaseEligible",
+    "cardId",
+    "specHash",
+    "payloadHash",
+    "artifact",
+    "artifactSha256",
+    "createdAt",
+    "identityMatches",
+    "freshness",
+    "fixture",
+    "synthetic",
+    "deviceObserved",
+    "headless",
+    "emulated",
+    "observationSource",
+    "performanceBudget",
+    "runs",
+    "summary"
+  ],
   "properties": {
     "schemaVersion": {"const": "loreweaver.device-verification-evidence.v1"},
     "status": {"type": "string", "enum": ["passed", "failed", "stale"]},
+    "releaseEligible": {"type": "boolean"},
     "cardId": {"type": "string", "minLength": 1},
+    "specHash": {"type": "string", "minLength": 1},
     "recipeHash": {"type": ["string", "null"]},
     "contentHash": {"type": ["string", "null"]},
     "atlasHash": {"type": ["string", "null"]},
     "runtimeVersion": {"type": ["string", "null"]},
+    "payloadHash": {"type": "string", "minLength": 1},
+    "artifact": {"type": "string", "minLength": 1},
+    "artifactSha256": {"type": "string", "minLength": 1},
+    "browserReport": {"type": ["string", "null"]},
     "createdAt": {"type": "string", "format": "date-time"},
     "identityMatches": {"type": "boolean"},
     "freshness": {"type": "string", "enum": ["fresh", "stale"]},
     "staleReason": {"type": ["string", "null"]},
+    "fixture": {"type": "boolean"},
+    "synthetic": {"type": "boolean"},
+    "deviceObserved": {"type": "boolean"},
+    "headless": {"type": "boolean"},
+    "emulated": {"type": "boolean"},
+    "observationSource": {"type": "string", "minLength": 1},
+    "performanceBudget": {
+      "type": "object",
+      "required": ["minP50Fps", "minMinFps"],
+      "properties": {
+        "minP50Fps": {"type": "number", "exclusiveMinimum": 0},
+        "minMinFps": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "additionalProperties": false
+    },
     "runs": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["deviceClass", "browser", "viewport", "completed", "interactionOk", "consoleErrors", "fps"],
+        "required": [
+          "physicalDevice",
+          "headless",
+          "emulated",
+          "deviceClass",
+          "deviceModel",
+          "os",
+          "browser",
+          "viewport",
+          "completed",
+          "interactionOk",
+          "consoleErrors",
+          "fps",
+          "performanceBudgetMet"
+        ],
         "properties": {
+          "physicalDevice": {"type": "boolean"},
+          "headless": {"type": "boolean"},
+          "emulated": {"type": "boolean"},
           "deviceClass": {"type": "string", "minLength": 1},
-          "os": {"type": "string"},
+          "deviceModel": {"type": "string", "minLength": 1},
+          "os": {"type": "string", "minLength": 1},
           "browser": {"type": "string", "minLength": 1},
           "viewport": {
             "type": "object",
@@ -48,6 +108,7 @@
             },
             "additionalProperties": true
           },
+          "performanceBudgetMet": {"type": "boolean"},
           "notes": {"type": "string"}
         },
         "additionalProperties": true
@@ -55,13 +116,38 @@
     },
     "summary": {
       "type": "object",
-      "required": ["runCount", "completedRunCount", "interactionFailureCount", "consoleErrorCount", "meetsPerformanceBudget"],
+      "required": [
+        "runCount",
+        "completedRunCount",
+        "interactionFailureCount",
+        "consoleErrorCount",
+        "meetsPerformanceBudget",
+        "passCriteria"
+      ],
       "properties": {
         "runCount": {"type": "integer", "minimum": 1},
         "completedRunCount": {"type": "integer", "minimum": 0},
         "interactionFailureCount": {"type": "integer", "minimum": 0},
         "consoleErrorCount": {"type": "integer", "minimum": 0},
         "meetsPerformanceBudget": {"type": "boolean"},
+        "passCriteria": {
+          "type": "object",
+          "required": [
+            "allRunsPhysicalDevices",
+            "allRunsCompleted",
+            "zeroInteractionFailures",
+            "zeroConsoleErrors",
+            "meetsPerformanceBudget"
+          ],
+          "properties": {
+            "allRunsPhysicalDevices": {"type": "boolean"},
+            "allRunsCompleted": {"type": "boolean"},
+            "zeroInteractionFailures": {"type": "boolean"},
+            "zeroConsoleErrors": {"type": "boolean"},
+            "meetsPerformanceBudget": {"type": "boolean"}
+          },
+          "additionalProperties": false
+        },
         "notes": {"type": "string"}
       },
       "additionalProperties": true
