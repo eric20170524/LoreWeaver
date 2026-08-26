@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Download, RefreshCw, ShieldCheck, Sparkles } from "lucide-react";
 import { WorkspaceMeta } from "./WorkspaceSelector";
+import { EvidenceReleaseDecision, ReleaseEvidencePanel } from "./ReleaseEvidencePanel";
 
 interface PublishPanelProps {
   workspace: WorkspaceMeta | null;
@@ -12,7 +13,7 @@ interface PublishPanelProps {
   refreshKey?: number;
 }
 
-type ReleaseDecision = {
+type ReleaseDecision = EvidenceReleaseDecision & {
   exportAllowed?: boolean;
   releaseCertified?: boolean;
   certificationTier?: string;
@@ -122,8 +123,8 @@ export function PublishPanel({
             </h2>
             <p className="mt-1 text-sm text-slate-500">
               {locale === "zh"
-                ? "候选包随时可导出；正式认证包必须通过浏览器、视觉、真人和真机证据。"
-                : "Candidate builds can be exported anytime. Certified builds require browser, visual, human, and physical-device evidence."}
+                ? "先生成并验证一个 exact Candidate，再让视觉模型、真人和真机都绑定这同一个包。"
+                : "Build and verify one exact Candidate first, then bind visual, human, and physical-device evidence to that same artifact."}
             </p>
           </div>
           <button
@@ -155,15 +156,22 @@ export function PublishPanel({
         </div>
 
         {!canCertified && (missing.length > 0 || blockers.length > 0) && (
-          <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/20 p-4 text-xs text-amber-900 dark:text-amber-200">
-            <p className="font-bold">{locale === "zh" ? "正式认证仍缺：" : "Certified release still needs:"}</p>
+          <details className="mt-4 rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/20 p-4 text-xs text-amber-900 dark:text-amber-200">
+            <summary className="cursor-pointer font-bold">{locale === "zh" ? "查看底层阻塞详情" : "Show low-level blockers"}</summary>
             <div className="mt-2 space-y-1 font-mono break-all">
-              {missing.slice(0, 6).map((item) => <div key={`missing-${item}`}>• {item}</div>)}
-              {blockers.slice(0, 4).map((item) => <div key={`blocker-${item}`}>• {item}</div>)}
+              {missing.slice(0, 10).map((item) => <div key={`missing-${item}`}>• {item}</div>)}
+              {blockers.slice(0, 8).map((item) => <div key={`blocker-${item}`}>• {item}</div>)}
             </div>
-          </div>
+          </details>
         )}
       </div>
+
+      <ReleaseEvidencePanel
+        workspace={workspace}
+        locale={locale}
+        decision={decision}
+        onRefresh={() => setManualRefresh((value) => value + 1)}
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <button
@@ -175,11 +183,11 @@ export function PublishPanel({
           <Sparkles className="h-5 w-5 text-amber-600" />
           <div className="mt-3 font-bold text-slate-900 dark:text-slate-100">
             {isExportingCandidate
-              ? (locale === "zh" ? "正在构建候选包…" : "Building candidate…")
-              : (locale === "zh" ? "导出候选 H5" : "Export Candidate H5")}
+              ? (locale === "zh" ? "正在构建快速候选包…" : "Building quick candidate…")
+              : (locale === "zh" ? "快速导出未验证 Candidate" : "Quick export unverified Candidate")}
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            {locale === "zh" ? "可分享试玩，但明确标记 UNVERIFIED_CANDIDATE。" : "Shareable for playtesting, explicitly marked UNVERIFIED_CANDIDATE."}
+            {locale === "zh" ? "仅用于快速分享；正式测试请使用上方“下载同一 Candidate”，避免 artifact 身份变化。" : "For quick sharing only. Formal testing should use “Download exact Candidate” above to avoid artifact identity drift."}
           </p>
         </button>
 
