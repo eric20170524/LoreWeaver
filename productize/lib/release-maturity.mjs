@@ -1,13 +1,12 @@
 /**
  * Evidence-derived release maturity for LoreWeaver.
  *
- * This module intentionally does NOT replace the legacy gameplay-card status yet.
- * `card.status === "production_ready"` remains a catalog compatibility signal,
- * while `certificationTier` expresses what the current evidence actually proves.
- *
- * The evaluator is pure so Workbench, CLI and future release compiler paths can
- * share the exact same policy without copying runtime or export logic.
+ * `card.status === "production_ready"` remains a legacy catalog compatibility
+ * signal only. `release_certified` is derived from current automatic evidence
+ * plus trusted, identity-bound real human/device observations.
  */
+
+import { isTrustedObservedReleaseEvidence } from "./observed-release-evidence.mjs";
 
 export const RELEASE_CERTIFICATION_TIERS = Object.freeze([
   "experimental",
@@ -33,16 +32,6 @@ function bool(value) {
   return value === true;
 }
 
-function isFreshPassedEvidence(report) {
-  if (!report || typeof report !== "object") return false;
-  if (report.status !== "passed") return false;
-  if (report.stale === true) return false;
-  if (report.artifactStatus === "stale") return false;
-  if (report.freshness === "stale") return false;
-  if (report.identityMatches === false) return false;
-  return true;
-}
-
 function checkOk(gate, key) {
   return bool(gate?.checks?.[key]?.ok);
 }
@@ -50,9 +39,7 @@ function checkOk(gate, key) {
 function runtimeSupported(card) {
   if (!card || typeof card !== "object") return false;
   const status = String(card.status || "");
-  if (["runtime_ready", "gate_verified", "production_ready"].includes(status)) {
-    return true;
-  }
+  if (["runtime_ready", "gate_verified", "production_ready"].includes(status)) return true;
   return Boolean(card.runtime?.adapter || card.runtime?.template);
 }
 
@@ -64,16 +51,6 @@ function collectMissingAutomaticEvidence(productionGate) {
   return missing;
 }
 
-/**
- * Derive the highest release maturity proven by current evidence.
- *
- * Inputs:
- * - card: Gameplay Card metadata.
- * - productionGate: result of evaluateProductionExportGate().
- * - humanPlaytest: optional report with status=passed and freshness/identity flags.
- * - deviceVerification: optional report with status=passed and freshness/identity flags.
- * - waivers: explicit release waivers. Any waiver prevents release_certified.
- */
 export function evaluateReleaseMaturity({
   card,
   productionGate,
@@ -90,8 +67,8 @@ export function evaluateReleaseMaturity({
   const browserVerified = runtimeVerified && checkOk(productionGate, "standaloneBrowser");
   const visualVerified = browserVerified && checkOk(productionGate, "visualAudit");
   const performanceVerified = visualVerified && checkOk(productionGate, "performance");
-  const humanPassed = isFreshPassedEvidence(humanPlaytest);
-  const devicePassed = isFreshPassedEvidence(deviceVerification);
+  const humanPassed = isTrustedObservedReleaseEvidence(humanPlaytest, "human");
+  const devicePassed = isTrustedObservedReleaseEvidence(deviceVerification, "device");
   const normalizedWaivers = Array.isArray(waivers) ? waivers.filter(Boolean) : [];
 
   let certificationTier = "experimental";
@@ -142,6 +119,10 @@ export function evaluateReleaseMaturity({
       performanceVerified,
       humanPlaytested: humanPassed,
       deviceVerified: devicePassed
+    },
+    evidencePolicy: {
+      human: "real_observed_exact_candidate",
+      device: "physical_device_observed_exact_candidate"
     },
     missingEvidence: [...new Set(missingEvidence)],
     waivers: normalizedWaivers,
