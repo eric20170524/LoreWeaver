@@ -7,6 +7,10 @@
  */
 
 import { isTrustedObservedReleaseEvidence } from "./observed-release-evidence.mjs";
+import {
+  exactCandidateIdentityMismatches,
+  isExactCandidateEvidence
+} from "./exact-candidate-evidence.mjs";
 
 export const RELEASE_CERTIFICATION_TIERS = Object.freeze([
   "experimental",
@@ -56,6 +60,7 @@ export function evaluateReleaseMaturity({
   productionGate,
   humanPlaytest = null,
   deviceVerification = null,
+  expectedCandidateIdentity = null,
   waivers = []
 } = {}) {
   const legacyProductionReady = card?.status === "production_ready";
@@ -67,8 +72,17 @@ export function evaluateReleaseMaturity({
   const browserVerified = runtimeVerified && checkOk(productionGate, "standaloneBrowser");
   const visualVerified = browserVerified && checkOk(productionGate, "visualAudit");
   const performanceVerified = visualVerified && checkOk(productionGate, "performance");
-  const humanPassed = isTrustedObservedReleaseEvidence(humanPlaytest, "human");
-  const devicePassed = isTrustedObservedReleaseEvidence(deviceVerification, "device");
+
+  const humanObservedTrusted = isTrustedObservedReleaseEvidence(humanPlaytest, "human");
+  const deviceObservedTrusted = isTrustedObservedReleaseEvidence(deviceVerification, "device");
+  const humanIdentityMismatches = humanObservedTrusted
+    ? exactCandidateIdentityMismatches(humanPlaytest, expectedCandidateIdentity)
+    : [];
+  const deviceIdentityMismatches = deviceObservedTrusted
+    ? exactCandidateIdentityMismatches(deviceVerification, expectedCandidateIdentity)
+    : [];
+  const humanPassed = humanObservedTrusted && isExactCandidateEvidence(humanPlaytest, expectedCandidateIdentity);
+  const devicePassed = deviceObservedTrusted && isExactCandidateEvidence(deviceVerification, expectedCandidateIdentity);
   const normalizedWaivers = Array.isArray(waivers) ? waivers.filter(Boolean) : [];
 
   let certificationTier = "experimental";
@@ -100,12 +114,12 @@ export function evaluateReleaseMaturity({
   const blockers = [];
   if (!supported) blockers.push("runtime_not_supported");
   for (const item of automaticMissing) blockers.push(`automatic_evidence:${item}`);
-  if (!humanPassed) blockers.push("human_playtest_missing_or_invalid");
-  if (!devicePassed) blockers.push("device_verification_missing_or_invalid");
+  if (!humanPassed) blockers.push("human_playtest_missing_invalid_or_candidate_mismatch");
+  if (!devicePassed) blockers.push("device_verification_missing_invalid_or_candidate_mismatch");
   if (normalizedWaivers.length) blockers.push(`waivers_present:${normalizedWaivers.length}`);
 
   return {
-    schemaVersion: "loreweaver.release-maturity.v1",
+    schemaVersion: "loreweaver.release-maturity.v2",
     certificationTier,
     releaseCertified,
     conditionallyCertified,
@@ -122,7 +136,12 @@ export function evaluateReleaseMaturity({
     },
     evidencePolicy: {
       human: "real_observed_exact_candidate",
-      device: "physical_device_observed_exact_candidate"
+      device: "physical_device_observed_exact_candidate",
+      expectedCandidateIdentityRequired: true
+    },
+    evidenceIdentityMismatches: {
+      human: humanIdentityMismatches,
+      device: deviceIdentityMismatches
     },
     missingEvidence: [...new Set(missingEvidence)],
     waivers: normalizedWaivers,
