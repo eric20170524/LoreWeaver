@@ -57,19 +57,23 @@ function copyTree(src, dst) {
 const workspaceId = valueArg("--workspace-id");
 const decisionArg = valueArg("--release-decision");
 const browserArg = valueArg("--browser-report");
-if (!workspaceId || !decisionArg || !browserArg) {
+const visualArg = valueArg("--visual-report");
+if (!workspaceId || !decisionArg || !browserArg || !visualArg) {
   fail("missing_required_arguments", {
-    usage: "node productize/promote-certified.mjs --workspace-id=<id> --release-decision=<path> --browser-report=<path>"
+    usage: "node productize/promote-certified.mjs --workspace-id=<id> --release-decision=<path> --browser-report=<path> --visual-report=<path>"
   });
 }
 
 const decisionPath = safeRepoPath(decisionArg, path.join(LORE_ROOT, "data/workspaces"));
 const browserPath = safeRepoPath(browserArg, LORE_ROOT);
+const visualPath = safeRepoPath(visualArg, LORE_ROOT);
 if (!decisionPath || !fs.existsSync(decisionPath)) fail("release_decision_missing_or_outside_workspace_root");
 if (!browserPath || !fs.existsSync(browserPath)) fail("browser_report_missing_or_outside_repo");
+if (!visualPath || !fs.existsSync(visualPath)) fail("visual_report_missing_or_outside_repo");
 
 const decision = readJson(decisionPath, "release decision");
 const browser = readJson(browserPath, "browser report");
+const visual = readJson(visualPath, "visual report");
 if (
   decision.schemaVersion !== "loreweaver.workspace-release-decision.v1" ||
   decision.mode !== "certified" ||
@@ -95,6 +99,24 @@ if (
 const errors = browser.errors || {};
 if (!["console", "page", "requests"].every((key) => Array.isArray(errors[key]) && errors[key].length === 0)) {
   fail("browser_evidence_contains_errors");
+}
+
+const visualChecks = Object.values(visual.checks || {}).map((value) => String(value).toUpperCase());
+if (
+  visual.status !== "passed" ||
+  visual.releaseEligible !== true ||
+  visual.evidenceKind !== "real_vlm_exact_candidate" ||
+  typeof visual.provider !== "string" || visual.provider.length === 0 ||
+  visual.identityMatches === false ||
+  visual.specHash !== browser.specHash ||
+  visual.runtimeVersion !== browser.runtimeVersion ||
+  visual.payloadHash !== browser.payloadHash ||
+  visual.artifact !== browser.artifact ||
+  visual.artifactSha256 !== browser.artifactSha256 ||
+  visualChecks.length === 0 ||
+  !visualChecks.every((value) => value === "PASS" || value === "WARNING")
+) {
+  fail("real_vlm_evidence_not_eligible_or_payload_identity_mismatch");
 }
 
 const candidateZip = safeRepoPath(browser.artifact, EXPORTS_ROOT);
@@ -127,6 +149,8 @@ if (!fs.existsSync(statusPath) || !fs.existsSync(manifestPath)) {
 }
 const releaseStatus = readJson(statusPath);
 const releaseManifest = readJson(manifestPath);
+const browserRel = path.relative(LORE_ROOT, browserPath).split(path.sep).join("/");
+const visualRel = path.relative(LORE_ROOT, visualPath).split(path.sep).join("/");
 writeJson(statusPath, {
   ...releaseStatus,
   createdAt: new Date().toISOString(),
@@ -136,9 +160,11 @@ writeJson(statusPath, {
   certificationTier: "release_certified",
   nonReleaseMarker: null,
   browserVerified: true,
+  visualVerified: true,
   payloadHash: browser.payloadHash,
   releaseDecision: decision,
-  browserEvidence: path.relative(LORE_ROOT, browserPath).split(path.sep).join("/")
+  browserEvidence: browserRel,
+  visualEvidence: visualRel
 });
 writeJson(manifestPath, {
   ...releaseManifest,
@@ -151,11 +177,12 @@ writeJson(manifestPath, {
   gates: {
     ...(releaseManifest.gates || {}),
     browser: "passed",
+    visual: "passed",
     evidencePolicy: "passed",
     releaseEligible: true
   }
 });
-fs.writeFileSync(readmePath, `# LoreWeaver Certified Standalone\n\nThis artifact contains the exact executable payload validated by the referenced browser evidence. Certification metadata is excluded from the executable payload hash.\n\n- Artifact label: CERTIFIED_RELEASE\n- Release eligible: true\n- Certification tier: release_certified\n- Runtime: ${browser.runtimeVersion}\n- Spec: ${browser.specHash}\n- Executable payload: ${browser.payloadHash}\n\nSee RELEASE_STATUS.json and release-manifest.json for machine-readable evidence identity.\n`);
+fs.writeFileSync(readmePath, `# LoreWeaver Certified Standalone\n\nThis artifact contains the exact executable payload validated by the referenced browser and real-VLM evidence. Certification metadata is excluded from the executable payload hash.\n\n- Artifact label: CERTIFIED_RELEASE\n- Release eligible: true\n- Certification tier: release_certified\n- Runtime: ${browser.runtimeVersion}\n- Spec: ${browser.specHash}\n- Executable payload: ${browser.payloadHash}\n- Browser evidence: ${browserRel}\n- Visual evidence: ${visualRel}\n\nSee RELEASE_STATUS.json and release-manifest.json for machine-readable evidence identity.\n`);
 
 const afterIdentity = hashExecutablePayloadManifest(walkFiles(certifiedStage));
 if (afterIdentity.payloadHash !== browser.payloadHash || afterIdentity.payloadHash !== beforeIdentity.payloadHash) {
@@ -187,7 +214,8 @@ console.log(JSON.stringify({
   runtimeVersion: browser.runtimeVersion,
   payloadHash: browser.payloadHash,
   sourceCandidate: path.relative(LORE_ROOT, candidateZip).split(path.sep).join("/"),
-  browserReport: path.relative(LORE_ROOT, browserPath).split(path.sep).join("/"),
+  browserReport: browserRel,
+  visualReport: visualRel,
   artifact: path.relative(LORE_ROOT, certifiedZip).split(path.sep).join("/"),
   stage: certifiedStage,
   sha256: certifiedSha
