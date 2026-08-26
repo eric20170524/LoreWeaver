@@ -58,6 +58,16 @@ def output(payload: dict[str, Any], code: int = 0) -> None:
     raise SystemExit(code)
 
 
+def serialized_path(path: Path) -> str:
+    """Use repo-relative paths in production and stable absolute paths in isolated tests."""
+    resolved = path.resolve()
+    try:
+        value = resolved.relative_to(LORE_ROOT.resolve())
+    except ValueError:
+        value = resolved
+    return str(value).replace(os.sep, "/")
+
+
 def safe_workspace(workspace_id: str) -> Path:
     if not re.fullmatch(r"[A-Za-z0-9._-]+", workspace_id or "") or workspace_id in {".", ".."}:
         output({"status": "blocked", "reason": "invalid_workspace_id"}, 2)
@@ -250,7 +260,7 @@ def save_fresh_smoke(workspace: Path, report: dict[str, Any]) -> str:
     workspace_report = workspace / "reports" / "creator_revision_node_smoke_latest.json"
     write_json(shared, report)
     write_json(workspace_report, report)
-    return str(workspace_report.relative_to(LORE_ROOT)).replace(os.sep, "/")
+    return serialized_path(workspace_report)
 
 
 def sync_latest_job(workspace_id: str, spec: dict[str, Any]) -> bool:
@@ -404,7 +414,7 @@ async def run(workspace_id: str, message: str) -> dict[str, Any]:
     return {
         **report,
         "spec": committed,
-        "report": str(report_path.relative_to(LORE_ROOT)).replace(os.sep, "/"),
+        "report": serialized_path(report_path),
     }
 
 
