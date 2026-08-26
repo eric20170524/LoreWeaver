@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 
-from backend.repair_policy import (
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from backend.repair_policy import (  # noqa: E402
     build_repair_decision,
     build_repair_plan,
     classify_blocker_owner,
