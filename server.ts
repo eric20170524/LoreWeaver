@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import dotenv from "dotenv";
 import { spawn, spawnSync } from "child_process";
 
@@ -129,6 +130,14 @@ function parseJsonOutput(stdout: string) {
   }
 }
 
+function sha256File(filePath: string) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function repoRelative(filePath: string) {
+  return path.relative(process.cwd(), filePath).split(path.sep).join("/");
+}
+
 function releaseCompilerCommand(workspaceId: string, mode: "candidate" | "certified", dryRun = false) {
   const isWindows = process.platform === "win32";
   const tsxBin = path.join(process.cwd(), "node_modules", ".bin", isWindows ? "tsx.cmd" : "tsx");
@@ -150,7 +159,7 @@ function validateReleaseWorkspace(workspaceId: string) {
   if (!fs.existsSync(workspaceDir)) {
     return { ok: false, statusCode: 404, payload: { status: "failed", reason: "workspace_not_found" } };
   }
-  return { ok: true, statusCode: 200, payload: null };
+  return { ok: true, statusCode: 200, payload: null, workspaceDir };
 }
 
 function runReleaseStatus(workspaceId: string) {
@@ -291,6 +300,110 @@ function runCreatorRevision(workspaceId: string, body: unknown): Promise<{ statu
   });
 }
 
+function runWorkspaceCandidateVerification(workspaceId: string) {
+  const validation = validateReleaseWorkspace(workspaceId);
+  if (!validation.ok) return validation;
+  const verifier = path.join(process.cwd(), "productize", "jobs", "verify-workspace-candidate.mjs");
+  const result = spawnSync(process.execPath, [verifier, `--workspace-id=${workspaceId}`], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: process.env,
+    timeout: 240_000
+  });
+  const payload = parseJsonOutput(result.stdout || "") || {
+    status: "failed",
+    reason: "candidate_verifier_non_json_output",
+    stdout: (result.stdout || "").slice(-4000),
+    stderr: (result.stderr || "").slice(-4000)
+  };
+  return {
+    ok: result.status === 0 && payload.status === "passed",
+    statusCode: result.status === 0 && payload.status === "passed" ? 200 : 422,
+    payload
+  };
+}
+
+function resolveVerifiedCandidate(workspaceId: string) {
+  const validation = validateReleaseWorkspace(workspaceId);
+  if (!validation.ok || !validation.workspaceDir) return validation;
+  const reportPath = path.join(validation.workspaceDir, "reports", "standalone_browser_report.json");
+  if (!fs.existsSync(reportPath)) {
+    return { ok: false, statusCode: 404, payload: { status: "failed", reason: "verified_candidate_browser_report_missing" } };
+  }
+  let report: any;
+  try {
+    report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  } catch {
+    return { ok: false, statusCode: 422, payload: { status: "failed", reason: "verified_candidate_browser_report_invalid" } };
+  }
+  if (report.status !== "passed" || report.releaseEligible !== true || !report.artifact || !report.artifactSha256) {
+    return { ok: false, statusCode: 422, payload: { status: "failed", reason: "verified_candidate_not_eligible" } };
+  }
+  const artifactPath = path.resolve(process.cwd(), String(report.artifact));
+  const exportsRoot = `${path.resolve(process.cwd(), "productize", "exports")}${path.sep}`;
+  if (!`${artifactPath}${path.sep}`.startsWith(exportsRoot) || !fs.existsSync(artifactPath)) {
+    return { ok: false, statusCode: 404, payload: { status: "failed", reason: "verified_candidate_artifact_missing" } };
+  }
+  const actualSha = sha256File(artifactPath);
+  if (actualSha !== report.artifactSha256) {
+    return {
+      ok: false,
+      statusCode: 422,
+      payload: { status: "failed", reason: "verified_candidate_artifact_sha_mismatch", expected: report.artifactSha256, actual: actualSha }
+    };
+  }
+  return { ok: true, statusCode: 200, payload: report, artifactPath };
+}
+
+function runObservedEvidenceRecorder(workspaceId: string, kind: string, body: unknown) {
+  const validation = validateReleaseWorkspace(workspaceId);
+  if (!validation.ok || !validation.workspaceDir) return validation;
+  if (kind !== "human" && kind !== "device") {
+    return { ok: false, statusCode: 400, payload: { status: "blocked", reason: "invalid_evidence_kind" } };
+  }
+  if (!body || typeof body !== "object") {
+    return { ok: false, statusCode: 400, payload: { status: "blocked", reason: "observation_body_required" } };
+  }
+
+  const reportsDir = path.join(validation.workspaceDir, "reports");
+  fs.mkdirSync(reportsDir, { recursive: true });
+  const inputPath = path.join(reportsDir, `.observation-input-${kind}-${Date.now()}-${process.pid}.json`);
+  fs.writeFileSync(inputPath, `${JSON.stringify(body, null, 2)}\n`);
+  try {
+    const isWindows = process.platform === "win32";
+    const tsxBin = path.join(process.cwd(), "node_modules", ".bin", isWindows ? "tsx.cmd" : "tsx");
+    const recorder = path.join(process.cwd(), "productize", "record-observed-release-evidence.ts");
+    const recorderArgs = [
+      recorder,
+      `--workspace=data/workspaces/${workspaceId}`,
+      `--kind=${kind}`,
+      `--input=${repoRelative(inputPath)}`
+    ];
+    const cardId = typeof (body as any).cardId === "string" ? (body as any).cardId.trim() : "";
+    if (cardId) recorderArgs.push(`--card-id=${cardId}`);
+    const result = spawnSync(tsxBin, recorderArgs, {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      env: process.env,
+      shell: isWindows,
+      timeout: 60_000
+    });
+    const payload = parseJsonOutput(result.stdout || "") || {
+      status: "failed",
+      reason: "observed_evidence_recorder_non_json_output",
+      stdout: (result.stdout || "").slice(-4000),
+      stderr: (result.stderr || "").slice(-4000)
+    };
+    return {
+      ok: result.status === 0 && payload.status === "passed",
+      statusCode: result.status === 0 && payload.status === "passed" ? 200 : 422,
+      payload
+    };
+  } finally {
+    fs.rmSync(inputPath, { force: true });
+  }
+}
+
 app.get("/api/workspaces/:wsId/release-status", (req, res) => {
   const result = runReleaseStatus(String(req.params.wsId || ""));
   return res.status(result.statusCode).json(result.payload);
@@ -300,6 +413,23 @@ app.get("/api/workspaces/:wsId/export-certified", (req, res) => sendReleaseArtif
 app.get("/api/workspaces/:wsId/export-release", (req, res) => sendReleaseArtifact(req, res, "candidate"));
 app.post("/api/workspaces/:wsId/creator-revise", async (req, res) => {
   const result = await runCreatorRevision(String(req.params.wsId || ""), req.body);
+  return res.status(result.statusCode).json(result.payload);
+});
+app.post("/api/workspaces/:wsId/verify-candidate", (req, res) => {
+  const result = runWorkspaceCandidateVerification(String(req.params.wsId || ""));
+  return res.status(result.statusCode).json(result.payload);
+});
+app.get("/api/workspaces/:wsId/verified-candidate", (req, res) => {
+  const workspaceId = String(req.params.wsId || "");
+  const result = resolveVerifiedCandidate(workspaceId);
+  if (!result.ok || !result.artifactPath) return res.status(result.statusCode).json(result.payload);
+  res.setHeader("X-LoreWeaver-Release-Mode", "candidate");
+  res.setHeader("X-LoreWeaver-Browser-Verified", "true");
+  res.setHeader("X-LoreWeaver-Artifact-Sha256", String(result.payload.artifactSha256 || ""));
+  return res.download(result.artifactPath, `loreweaver-${workspaceId}-verified-candidate.zip`);
+});
+app.post("/api/workspaces/:wsId/record-evidence/:kind", (req, res) => {
+  const result = runObservedEvidenceRecorder(String(req.params.wsId || ""), String(req.params.kind || ""), req.body);
   return res.status(result.statusCode).json(result.payload);
 });
 
