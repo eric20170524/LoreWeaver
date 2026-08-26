@@ -57,16 +57,18 @@
 
 ## P3：产品层收敛
 
-- [ ] F1 默认用户路径收敛为：创意 -> 设计 -> 试玩 -> 修改 -> 发布。
-- [ ] F2 Departments / Manifest / Gate Reports / Patch Trace 放入 Expert Mode。
-- [ ] F3 默认首页不再把内部流水线复杂度暴露给普通创作者。
-- [ ] F4 增加“一句话修改 -> 自动验证 -> 最终 Diff”交互。
+- [x] F1 默认用户路径已收敛为：创意 -> 设计 -> 试玩 -> 修改 -> 发布；新增 `CreatorJourneyBar` 与 `CreatorApp`，旧 `App.tsx` 仅保留入口转发，便于回滚。
+- [x] F2 Departments / Manifest / VLM / Pipeline / Logs 已移入持久化 `Expert Mode`；简单模式不展示部门或内部 Gate 术语。
+- [x] F3 默认首页改为 creator-first：Header 只保留创意输入、生成蓝图、Workspace 与基础设置；发布移动到独立 Publish Step；UI 文案和试玩计数不再固定“修仙 / 12 关 / 6 境界”，节点与成长阶段按当前 Spec 动态显示。Convergence Core + Golden Candidate E2E 已通过。
+- [ ] F4 增加“一句话修改 -> 自动验证 -> 最终 Diff”交互。实现约束已确定：不能直接复用旧 `/refine` 的“LLM 后立即覆盖”语义；必须做旧 Spec 快照、受控修改、targeted node-smoke、失败回滚、成功 Diff，并同步 Manifest/Job 状态。
 
 ## 当前执行顺序
 
 1. [x] **P0 + P1**：成熟度、Repair Loop、RecipeGraph、统一 Release Compiler/UI、Observed Evidence exact-Candidate 防伪链已闭环。
 2. [x] **E1-E3 + E7-E8/B9**：黄金三段 Recipe、双主题复用、完整证据失效、真实 Gate Repair 已通过自动回归。
 3. [x] **E4 Browser/static/offline**：exact Candidate Chromium 三段运行与 payload/artifact/screenshot identity 已闭环。
-4. [ ] **E4 VLM**：配置真实 `XAI_API_KEY`（或可用 Codex CLI provider）后，对 exact Candidate climax screenshot 取得 fresh `passed` Evidence；当前 CI 明确为 `unavailable`，不降级。
-5. [ ] **E5-E6 真实观测**：工程 recorder / policy / promoter 已完成；下一步仅收集 exact Candidate 的物理设备数据与真人试玩 session，禁止 synthetic/headless/emulated 替代。
-6. [ ] **E9**：仅在 Browser + real-VLM + human + device 全部 fresh/matched、无 waiver 后原地晋升 Candidate 为 Certified H5。
+4. [x] **P3 F1-F3**：默认产品壳已变为五步 Creator Flow，工程流水线全部进入 Expert Mode。
+5. [ ] **F4**：实现事务式 Creator Revision（自然语言 -> 受控 Diff -> targeted validation -> commit/rollback）。
+6. [ ] **E4 VLM**：配置真实 `XAI_API_KEY`（或可用 Codex CLI provider）后，对 exact Candidate climax screenshot 取得 fresh `passed` Evidence；当前 CI 明确为 `unavailable`，不降级。
+7. [ ] **E5-E6 真实观测**：工程 recorder / policy / promoter 已完成；下一步仅收集 exact Candidate 的物理设备数据与真人试玩 session，禁止 synthetic/headless/emulated 替代。
+8. [ ] **E9**：仅在 Browser + real-VLM + human + device 全部 fresh/matched、无 waiver 后原地晋升 Candidate 为 Certified H5。
