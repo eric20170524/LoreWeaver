@@ -8,8 +8,9 @@
  * Product semantics:
  * - candidate: may be built with incomplete release evidence, but is explicitly
  *   marked UNVERIFIED_CANDIDATE and is never releaseEligible.
- * - certified: requires a matching evidence-derived Release Decision AND a
- *   matching real-browser package report. Direct invocation cannot bypass this.
+ * - certified: legacy compatibility path only; requires a matching evidence-derived
+ *   Release Decision AND a matching real-browser package report. New Certified
+ *   releases are promoted from an already verified Candidate by release-compiler.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -23,6 +24,10 @@ import { assembleWorkspaceSpec } from "./lib/workspace-spec.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "..");
 const WORKSPACES_ROOT = path.join(LORE_ROOT, "data/workspaces");
+const DECISION_SCHEMAS = new Set([
+  "loreweaver.workspace-release-decision.v1",
+  "loreweaver.workspace-release-decision.v2"
+]);
 const args = process.argv.slice(2);
 const valueArg = (name) => args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
 const allowUnverifiedBrowser = args.includes("--allow-unverified-browser");
@@ -108,7 +113,7 @@ function validateReleaseDecision(decisionPath, resolvedSpec) {
   const absolute = path.resolve(LORE_ROOT, decisionPath);
   if (!fs.existsSync(absolute)) return { valid: false, reason: `release decision missing: ${absolute}`, decision: null };
   const decision = readJson(absolute, "release decision");
-  const valid = decision.schemaVersion === "loreweaver.workspace-release-decision.v1"
+  const valid = DECISION_SCHEMAS.has(decision.schemaVersion)
     && decision.mode === "certified"
     && decision.exportAllowed === true
     && decision.releaseCertified === true
@@ -180,72 +185,52 @@ if (fs.existsSync(assetsSrc)) {
   });
 }
 
-const iframeNodes = resolvedSpec.gameSpec.nodes.filter((node) => node.gameplay?.adapter === "iframe");
-if (iframeNodes.length) {
-  const runtimeNodesDir = path.join(stage, "nodes");
-  fs.mkdirSync(runtimeNodesDir, { recursive: true });
-  for (const node of iframeNodes) {
-    const sourceHtml = path.join(wsPath, "nodes", `node${node.id}.html`);
-    if (!fs.existsSync(sourceHtml)) fail(`Required iframe runtime is missing: nodes/node${node.id}.html`);
-    fs.copyFileSync(sourceHtml, path.join(runtimeNodesDir, `node${node.id}.html`));
-  }
+const nodesDir = path.join(stage, "nodes");
+fs.mkdirSync(nodesDir, { recursive: true });
+for (const node of resolvedSpec.gameSpec.nodes || []) {
+  fs.writeFileSync(path.join(nodesDir, `${node.id}.json`), `${JSON.stringify(node, null, 2)}\n`);
 }
 
 fs.writeFileSync(path.join(stage, "runtime-spec.json"), `${JSON.stringify(resolvedSpec, null, 2)}\n`);
-fs.writeFileSync(path.join(stage, "CREDITS.json"), `${JSON.stringify({
-  schemaVersion: "loreweaver.release-credits.v2",
-  workspaceId: path.basename(wsPath),
-  createdAt: new Date().toISOString(),
-  runtimeVersion: resolvedSpec.runtimeVersion,
-  specHash: resolvedSpec.specHash,
-  licenses: [
-    { path: "assets/audio", license: "original-synth", provider: "local" },
-    { path: "assets/imagegen", license: "original-generated", provider: "local" }
-  ]
-}, null, 2)}\n`);
 
 const browserGate = validateBrowserReport(browserReportArg, resolvedSpec);
-if (releaseMode === "certified" && !browserGate.valid) {
-  fs.rmSync(tempRoot, { recursive: true, force: true });
-  fail(`Certified export blocked: ${browserGate.reason}`);
-}
-
-const releaseEligible = releaseMode === "certified"
-  && releaseDecisionGate.valid
-  && browserGate.valid;
+const releaseEligible = releaseMode === "certified" && releaseDecisionGate.valid && browserGate.valid;
 const releaseStatus = {
   schemaVersion: "loreweaver.release-status.v1",
   createdAt: new Date().toISOString(),
   mode: releaseMode,
   artifactLabel: releaseEligible ? "CERTIFIED_RELEASE" : "UNVERIFIED_CANDIDATE",
   releaseEligible,
-  certificationTier: releaseDecisionGate.decision?.certificationTier || "unverified_candidate",
+  certificationTier: releaseEligible ? "release_certified" : (releaseDecisionGate.decision?.certificationTier || "experimental"),
   nonReleaseMarker: releaseEligible ? null : "UNVERIFIED_CANDIDATE",
-  runtimeVersion: resolvedSpec.runtimeVersion,
+  missingEvidence: releaseDecisionGate.decision?.missingEvidence || [],
+  blockers: releaseDecisionGate.decision?.blockers || [],
+  waivers: releaseDecisionGate.decision?.waivers || [],
   specHash: resolvedSpec.specHash,
-  browserVerified: browserGate.valid,
-  releaseDecision: releaseDecisionGate.decision || null
+  runtimeVersion: resolvedSpec.runtimeVersion
 };
 fs.writeFileSync(path.join(stage, "RELEASE_STATUS.json"), `${JSON.stringify(releaseStatus, null, 2)}\n`);
-fs.writeFileSync(path.join(stage, "README.md"), `# LoreWeaver Standalone\n\nThis package runs the shared LoreWeaver runtime kernel.\n\nServe this directory from any static HTTP server; no IDE or backend is required.\n\n- Release mode: ${releaseMode}\n- Artifact label: ${releaseStatus.artifactLabel}\n- Release eligible: ${releaseEligible}\n- Runtime: ${resolvedSpec.runtimeVersion}\n- Spec: ${resolvedSpec.specHash}\n- Save schema: loreweaver.player-state.v1\n\nSee RELEASE_STATUS.json for machine-readable certification and missing-evidence semantics.\n`);
+if (!releaseEligible) {
+  fs.writeFileSync(path.join(stage, "UNVERIFIED_CANDIDATE"), "This artifact is not release certified.\n");
+}
+
+const readme = `# LoreWeaver Standalone\n\nThis package runs the shared LoreWeaver RuntimeKernel with an embedded resolved runtime spec.\n\n- Artifact label: ${releaseStatus.artifactLabel}\n- Release eligible: ${releaseStatus.releaseEligible}\n- Certification tier: ${releaseStatus.certificationTier}\n- Runtime: ${resolvedSpec.runtimeVersion}\n- Spec: ${resolvedSpec.specHash}\n\nUse ./start.sh, start.bat, or any static web server.\n`;
+fs.writeFileSync(path.join(stage, "README.md"), readme);
 
 const startSh = `#!/usr/bin/env bash
+set -euo pipefail
 cd "$(dirname "$0")"
-echo "Starting local web server..."
 if command -v python3 >/dev/null 2>&1; then
-  echo "Using Python 3... (http://localhost:8080)"
+  echo "Starting at http://localhost:8080"
   python3 -m http.server 8080
 elif command -v python >/dev/null 2>&1; then
-  echo "Using Python... (http://localhost:8080)"
+  echo "Starting at http://localhost:8080"
   python -m http.server 8080
 elif command -v npx >/dev/null 2>&1; then
-  echo "Using Node (npx serve)..."
+  echo "Starting with npx serve"
   npx serve -p 8080
-elif command -v php >/dev/null 2>&1; then
-  echo "Using PHP... (http://localhost:8080)"
-  php -S localhost:8080
 else
-  echo "Error: No supported local server found. Please install Python, Node.js, or PHP."
+  echo "No static web server found (python3/python/npx)." >&2
   exit 1
 fi
 `;
