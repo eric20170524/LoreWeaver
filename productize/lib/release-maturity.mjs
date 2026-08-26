@@ -7,10 +7,7 @@
  */
 
 import { isTrustedObservedReleaseEvidence } from "./observed-release-evidence.mjs";
-import {
-  exactCandidateIdentityMismatches,
-  isExactCandidateEvidence
-} from "./exact-candidate-evidence.mjs";
+import { exactCandidateIdentityMismatches } from "./exact-candidate-evidence.mjs";
 
 export const RELEASE_CERTIFICATION_TIERS = Object.freeze([
   "experimental",
@@ -75,14 +72,17 @@ export function evaluateReleaseMaturity({
 
   const humanObservedTrusted = isTrustedObservedReleaseEvidence(humanPlaytest, "human");
   const deviceObservedTrusted = isTrustedObservedReleaseEvidence(deviceVerification, "device");
-  const humanIdentityMismatches = humanObservedTrusted
+  // Preserve identity mismatch diagnostics even when the loader has already
+  // marked evidence identityMatches=false. Otherwise a rejected old Candidate
+  // report becomes opaque at the policy boundary.
+  const humanIdentityMismatches = humanPlaytest
     ? exactCandidateIdentityMismatches(humanPlaytest, expectedCandidateIdentity)
     : [];
-  const deviceIdentityMismatches = deviceObservedTrusted
+  const deviceIdentityMismatches = deviceVerification
     ? exactCandidateIdentityMismatches(deviceVerification, expectedCandidateIdentity)
     : [];
-  const humanPassed = humanObservedTrusted && isExactCandidateEvidence(humanPlaytest, expectedCandidateIdentity);
-  const devicePassed = deviceObservedTrusted && isExactCandidateEvidence(deviceVerification, expectedCandidateIdentity);
+  const humanPassed = humanObservedTrusted && humanIdentityMismatches.length === 0;
+  const devicePassed = deviceObservedTrusted && deviceIdentityMismatches.length === 0;
   const normalizedWaivers = Array.isArray(waivers) ? waivers.filter(Boolean) : [];
 
   let certificationTier = "experimental";
