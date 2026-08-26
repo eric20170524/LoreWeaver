@@ -404,6 +404,31 @@ function runObservedEvidenceRecorder(workspaceId: string, kind: string, body: un
   }
 }
 
+function runWorkspaceVlmAudit(workspaceId: string) {
+  const validation = validateReleaseWorkspace(workspaceId);
+  if (!validation.ok) return validation;
+  const python = getPythonCommand();
+  const script = path.join(process.cwd(), "productize", "jobs", "run-workspace-vlm-audit.py");
+  const result = spawnSync(python, [script, `--workspace-id=${workspaceId}`], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: process.env,
+    timeout: 120_000
+  });
+  const payload = parseJsonOutput(result.stdout || "") || {
+    status: "failed",
+    reason: "workspace_vlm_audit_non_json_output",
+    stdout: (result.stdout || "").slice(-4000),
+    stderr: (result.stderr || "").slice(-4000)
+  };
+  const passed = result.status === 0 && payload.status === "passed" && payload.releaseEligible === true;
+  return {
+    ok: passed,
+    statusCode: passed ? 200 : 422,
+    payload
+  };
+}
+
 app.get("/api/workspaces/:wsId/release-status", (req, res) => {
   const result = runReleaseStatus(String(req.params.wsId || ""));
   return res.status(result.statusCode).json(result.payload);
@@ -427,6 +452,10 @@ app.get("/api/workspaces/:wsId/verified-candidate", (req, res) => {
   res.setHeader("X-LoreWeaver-Browser-Verified", "true");
   res.setHeader("X-LoreWeaver-Artifact-Sha256", String(result.payload.artifactSha256 || ""));
   return res.download(result.artifactPath, `loreweaver-${workspaceId}-verified-candidate.zip`);
+});
+app.post("/api/workspaces/:wsId/run-vlm-audit", (req, res) => {
+  const result = runWorkspaceVlmAudit(String(req.params.wsId || ""));
+  return res.status(result.statusCode).json(result.payload);
 });
 app.post("/api/workspaces/:wsId/record-evidence/:kind", (req, res) => {
   const result = runObservedEvidenceRecorder(String(req.params.wsId || ""), String(req.params.kind || ""), req.body);
