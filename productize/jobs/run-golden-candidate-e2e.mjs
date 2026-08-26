@@ -52,6 +52,9 @@ function walkFiles(dir, base = dir) {
   }
   return files;
 }
+function sha256File(file) {
+  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
 function findOpenPort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -280,6 +283,9 @@ async function main() {
     && errors.requests.length === 0
     && apiRequests.length === 0
     && stageResults.every((item) => item.passed);
+  const screenshotSha256 = screenshotPath && fs.existsSync(screenshotPath)
+    ? sha256File(screenshotPath)
+    : null;
 
   const report = {
     schemaVersion: "loreweaver.standalone-browser-report.v2",
@@ -300,6 +306,7 @@ async function main() {
     runtimeNodeContract: resolvedContract,
     stageResults,
     screenshot: screenshotPath ? path.relative(LORE_ROOT, screenshotPath).split(path.sep).join("/") : null,
+    screenshotSha256,
     errors,
     apiRequests,
     artifact: exporterResult.artifact,
@@ -317,6 +324,7 @@ async function main() {
     artifact: exporterResult.artifact,
     artifactSha256: exporterResult.sha256,
     payloadHash: report.payloadHash,
+    screenshotSha256: report.screenshotSha256,
     zeroApiRequests: report.zeroApiRequests,
     stageResults,
     report: path.relative(LORE_ROOT, reportPath).split(path.sep).join("/")
