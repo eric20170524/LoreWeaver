@@ -41,6 +41,9 @@ jobs:
       - name: Build and verify golden candidate
         run: node productize/jobs/run-golden-candidate-e2e.mjs
 
+      - name: Verify generic current-workspace Candidate path
+        run: node productize/jobs/verify-workspace-candidate.mjs --workspace-id=__golden_survivor_vertical_slice_ci
+
       - name: Prove observed evidence recorder rejects synthetic sessions
         run: |
           cat > .golden-synthetic-human-observation.json <<'JSON'
