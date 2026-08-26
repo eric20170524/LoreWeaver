@@ -129,7 +129,7 @@ function materializeGoldenWorkspace() {
 }
 
 async function main() {
-  const { nodes } = materializeGoldenWorkspace();
+  const { nodes: authoredNodes } = materializeGoldenWorkspace();
   const tsxBin = path.join(LORE_ROOT, "node_modules/.bin/tsx");
   const compile = spawnSync(tsxBin, [
     path.join(LORE_ROOT, "productize/release-compiler.mjs"),
@@ -179,15 +179,45 @@ async function main() {
 
     await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForFunction(() => window.__LOREWEAVER_GAME__ != null, null, { timeout: 30000 });
+    await page.waitForFunction(
+      () => Array.isArray(window.__LOREWEAVER_EMBEDDED_SPEC__?.nodes),
+      null,
+      { timeout: 10000 }
+    );
     await page.waitForTimeout(1000);
 
-    for (let index = 0; index < nodes.length; index += 1) {
-      await page.evaluate((node) => {
+    const resolvedContract = await page.evaluate(() =>
+      (window.__LOREWEAVER_EMBEDDED_SPEC__?.nodes || []).map((node) => ({
+        id: node.id,
+        title: node.title,
+        introType: typeof node.intro,
+        tauntsIsArray: Array.isArray(node.taunts),
+        cardId: node.gameplay?.cardId || null,
+        modifierIds: (node.gameplay?.modifiers || [])
+          .map((modifier) => typeof modifier === "string" ? modifier : modifier?.id)
+          .filter(Boolean)
+      }))
+    );
+    if (resolvedContract.length !== authoredNodes.length || resolvedContract.some((node) => !node.tauntsIsArray || node.introType !== "string")) {
+      throw new Error(`resolved runtime node contract invalid: ${JSON.stringify(resolvedContract)}`);
+    }
+
+    for (let index = 0; index < authoredNodes.length; index += 1) {
+      const expectedNode = authoredNodes[index];
+      const nodeId = expectedNode.id;
+
+      await page.evaluate((runtimeNodeId) => {
         const game = window.__LOREWEAVER_GAME__;
+        const spec = window.__LOREWEAVER_EMBEDDED_SPEC__;
         if (!game) throw new Error("game missing");
+        if (!spec?.nodes?.length) throw new Error("embedded resolved game spec missing");
+        const node = spec.nodes.find((candidate) => Number(candidate.id) === Number(runtimeNodeId));
+        if (!node) throw new Error(`resolved runtime node missing: ${runtimeNodeId}`);
+        if (!Array.isArray(node.taunts)) throw new Error(`resolved runtime taunts contract missing: ${runtimeNodeId}`);
+        if (typeof node.intro !== "string") throw new Error(`resolved runtime intro contract missing: ${runtimeNodeId}`);
         try { game.scene.stop("LevelActiveScene"); } catch {}
         game.scene.start("LevelActiveScene", { node });
-      }, nodes[index]);
+      }, nodeId);
 
       for (let click = 0; click < 5; click += 1) {
         const running = await page.evaluate(() => {
@@ -213,16 +243,21 @@ async function main() {
           cardId: scene?.node?.gameplay?.cardId || null,
           modifierIds: (scene?.node?.gameplay?.modifiers || []).map((m) => typeof m === "string" ? m : m?.id).filter(Boolean),
           status: hooks.status || scene?.adapter?.status || null,
-          adapterId: hooks.adapterId || null
+          adapterId: hooks.adapterId || null,
+          runtimeContract: {
+            introType: typeof scene?.node?.intro,
+            tauntsIsArray: Array.isArray(scene?.node?.taunts)
+          }
         };
       });
-      const expectedMods = (nodes[index].gameplay.modifiers || []).map((m) => typeof m === "string" ? m : m.id);
+      const expectedMods = (expectedNode.gameplay?.modifiers || []).map((m) => typeof m === "string" ? m : m.id);
       const modsMatch = expectedMods.every((id) => observed.modifierIds.includes(id));
-      const passed = observed.active && observed.cardId === "survivor_horde" && modsMatch;
-      stageResults.push({ stage: index + 1, passed, expectedModifiers: expectedMods, observed });
+      const contractValid = observed.runtimeContract.introType === "string" && observed.runtimeContract.tauntsIsArray;
+      const passed = observed.active && observed.cardId === "survivor_horde" && modsMatch && contractValid;
+      stageResults.push({ stage: index + 1, nodeId, passed, expectedModifiers: expectedMods, observed });
       if (!passed) throw new Error(`stage ${index + 1} failed: ${JSON.stringify(stageResults.at(-1))}`);
 
-      if (index === nodes.length - 1) {
+      if (index === authoredNodes.length - 1) {
         screenshotPath = path.join(GOLDEN_WORKSPACE, "reports/golden_candidate_climax.png");
         await page.screenshot({ path: screenshotPath, fullPage: true });
       }
@@ -261,6 +296,7 @@ async function main() {
     zeroApiRequests: apiRequests.length === 0,
     staticHostOnly: true,
     offlineBackendRequired: false,
+    runtimeNodeContract: resolvedContract,
     stageResults,
     screenshot: screenshotPath ? path.relative(LORE_ROOT, screenshotPath).split(path.sep).join("/") : null,
     errors,
