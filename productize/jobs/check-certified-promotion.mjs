@@ -99,6 +99,10 @@ function main() {
   const artifactSha256 = crypto.createHash("sha256").update(fs.readFileSync(CANDIDATE_ZIP)).digest("hex");
   const specHash = "sha256:certified-promotion-contract-fixture";
   const runtimeVersion = "2.0.0";
+  const screenshotPath = path.join(REPORTS, "fixture.png");
+  fs.mkdirSync(REPORTS, { recursive: true });
+  fs.writeFileSync(screenshotPath, "fixture screenshot bytes\n");
+  const screenshotSha256 = crypto.createHash("sha256").update(fs.readFileSync(screenshotPath)).digest("hex");
 
   writeJson(path.join(REPORTS, "release_decision_latest.json"), {
     schemaVersion: "loreweaver.workspace-release-decision.v1",
@@ -120,6 +124,8 @@ function main() {
     payloadHash: payloadIdentity.payloadHash,
     artifact: rel(CANDIDATE_ZIP),
     artifactSha256,
+    screenshot: rel(screenshotPath),
+    screenshotSha256,
     errors: { console: [], page: [], requests: [] }
   });
 
@@ -129,52 +135,61 @@ function main() {
   assert(missing.status !== 0, "missing visual report must block promotion");
   assert(missingPayload?.reason === "visual_report_missing_or_outside_repo", `unexpected missing reason: ${missing.stdout}`);
 
-  writeJson(visualPath, {
+  const baseVisual = {
     schemaVersion: "loreweaver.visual-audit.v2",
     status: "passed",
     releaseEligible: true,
     evidenceKind: "real_vlm_exact_candidate",
-    provider: "fixture_provider_not_real_evidence",
-    identityMatches: true,
-    specHash,
-    runtimeVersion,
-    payloadHash: "wrong-payload",
-    artifact: rel(CANDIDATE_ZIP),
-    artifactSha256,
-    checks: { vlm_hud_occlusion: "PASS" }
-  });
-  const mismatch = runPromoter(visualPath);
-  const mismatchPayload = parse(mismatch.stdout);
-  assert(mismatch.status !== 0, "visual payload mismatch must block promotion");
-  assert(
-    mismatchPayload?.reason === "real_vlm_evidence_not_eligible_or_payload_identity_mismatch",
-    `unexpected mismatch reason: ${mismatch.stdout}`
-  );
-
-  writeJson(visualPath, {
-    schemaVersion: "loreweaver.visual-audit.v2",
-    status: "passed",
-    releaseEligible: true,
-    evidenceKind: "real_vlm_exact_candidate",
-    provider: "fixture_provider_not_real_evidence",
+    provider: "grok",
+    criticStatus: "completed",
     identityMatches: true,
     specHash,
     runtimeVersion,
     payloadHash: payloadIdentity.payloadHash,
     artifact: rel(CANDIDATE_ZIP),
     artifactSha256,
+    screenshot: rel(screenshotPath),
+    screenshotSha256,
     checks: {
       vlm_hud_occlusion: "PASS",
       vlm_button_overlap: "WARNING",
       vlm_text_overflow: "PASS",
       vlm_touch_readability: "PASS"
     }
-  });
+  };
+
+  writeJson(visualPath, { ...baseVisual, provider: "fixture_provider" });
+  const fakeProvider = runPromoter(visualPath);
+  assert(fakeProvider.status !== 0, "non-real VLM provider must block promotion");
+  assert(
+    parse(fakeProvider.stdout)?.reason === "real_vlm_evidence_not_eligible_or_payload_or_screenshot_identity_mismatch",
+    `unexpected fake-provider reason: ${fakeProvider.stdout}`
+  );
+
+  writeJson(visualPath, { ...baseVisual, criticStatus: "failed" });
+  const incomplete = runPromoter(visualPath);
+  assert(incomplete.status !== 0, "non-completed VLM must block promotion");
+
+  writeJson(visualPath, { ...baseVisual, payloadHash: "wrong-payload" });
+  const mismatch = runPromoter(visualPath);
+  const mismatchPayload = parse(mismatch.stdout);
+  assert(mismatch.status !== 0, "visual payload mismatch must block promotion");
+  assert(
+    mismatchPayload?.reason === "real_vlm_evidence_not_eligible_or_payload_or_screenshot_identity_mismatch",
+    `unexpected payload mismatch reason: ${mismatch.stdout}`
+  );
+
+  writeJson(visualPath, { ...baseVisual, screenshotSha256: "wrong-screenshot" });
+  const screenshotMismatch = runPromoter(visualPath);
+  assert(screenshotMismatch.status !== 0, "visual screenshot mismatch must block promotion");
+
+  writeJson(visualPath, baseVisual);
   const success = runPromoter(visualPath);
   const successPayload = parse(success.stdout);
   assert(success.status === 0, `matching evidence should promote: ${success.stdout}\n${success.stderr}`);
   assert(successPayload?.status === "release_certified", `unexpected success payload: ${success.stdout}`);
   assert(successPayload?.payloadHash === payloadIdentity.payloadHash, "promoted payload hash must stay identical");
+  assert(successPayload?.screenshotSha256 === screenshotSha256, "promoted screenshot identity must stay bound");
   const promotedStageIdentity = hashExecutablePayloadManifest(walkFiles(successPayload.stage));
   assert(promotedStageIdentity.payloadHash === payloadIdentity.payloadHash, "certification metadata changed executable payload");
 
@@ -184,15 +199,19 @@ function main() {
   fs.rmSync(CANDIDATE_ZIP, { force: true });
 
   console.log(JSON.stringify({
-    schemaVersion: "loreweaver.certified-promotion-contract-check.v1",
+    schemaVersion: "loreweaver.certified-promotion-contract-check.v2",
     status: "passed",
     checks: [
       "missing_exact_vlm_blocks",
+      "non_real_vlm_provider_blocks",
+      "non_completed_vlm_blocks",
       "vlm_payload_mismatch_blocks",
+      "vlm_screenshot_mismatch_blocks",
       "matching_browser_and_vlm_promotes",
       "certification_metadata_preserves_payload_hash"
     ],
-    payloadHash: payloadIdentity.payloadHash
+    payloadHash: payloadIdentity.payloadHash,
+    screenshotSha256
   }, null, 2));
 }
 
