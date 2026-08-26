@@ -11,7 +11,7 @@
 - [x] A2 将 maturity evaluator 接入 `production-export-gate` 输出，明确区分 `legacyProductionReady` 与 `certificationTier`。
 - [x] A3 新增 maturity 单测：缺证据、自动证据齐全但无人测/真机、完整认证、waiver、stale/mismatch；并增加 production gate 集成测试。
 - [ ] A4 在发布/导出 UI 中禁止把 legacy `production_ready` 展示为“正式认证”。
-- [ ] A5 定义 `human_playtest` / `device_verification` Evidence schema 与示例报告。
+- [x] A5 定义 `human_playtest` / `device_verification` Evidence schema 与示例报告；fixture 明确不可充当真实发布证据。
 
 ## P0-B：Agent Repair Loop
 
@@ -19,19 +19,19 @@
 - [x] B2 新增 Retry Policy：L0/L1 <= 3，L2 <= 2，L3/L4 自动升级人工。
 - [x] B3 新增 blocker -> targeted validators 映射，避免每次修正重跑全量 Gate。
 - [x] B4 新增 Repair Decision 数据合同：owner、attempt、budget、allowedPatchLevels、validators、escalationReason。
-- [ ] B5 将 Repair Decision 接入现有 department agent，不引入第二套 Agent framework。
-- [ ] B6 Gate 失败后自动形成 repair context，并触发负责部门生成 structured patch。
-- [ ] B7 Patch 后重跑 targeted validators；通过后继续流程，失败则在预算内下一轮。
-- [ ] B8 达到预算或需要 L3/L4 时 fail-closed + HITL，不无限循环。
-- [ ] B9 至少用一个真实 Gate failure 做 E2E：fail -> repair -> revalidate -> pass。
+- [x] B5 新增 `repair_orchestrator.py`，复用现有 `WorldBuilderAgent`、`LEGACY_ROLE`、department allowlist 与 `apply_controlled_patches`，未引入第二套 Agent framework。
+- [x] B6 Gate blocker 可形成 repair context，并由负责角色生成候选修改；候选结果会缩减为 ownership 内的 structured patch。
+- [x] B7 `run_repair_loop` 支持注入 targeted validator runner；验证失败继续消耗同一 blocker 的 retry budget。
+- [x] B8 L3/L4、未知跨域 blocker、预算耗尽、无安全 patch 均 fail-closed 并返回 escalation，不无限循环。
+- [ ] B9 至少用一个真实 Gate failure 做 E2E：fail -> repair -> revalidate -> pass；当前只有 deterministic/injected-validator 回归。
 
 ## P0-C：RecipeGraph 与去固定 12 节点
 
 - [x] C1 新增 `loreweaver.recipe-graph.v1` schema。
 - [x] C2 新增 `legacy nodes[] -> linear RecipeGraph` normalizer，保证旧 Manifest 无损兼容。
 - [x] C3 增加 RecipeGraph validator：entry、edge refs、reachability、completion rules、cycle policy。
-- [ ] C4 将固定“12 节点修仙”迁移为 `cultivation_journey_12` Recipe 示例。
-- [ ] C5 修改 WorldBuilder Agent：不再强制 12 节点/修仙；根据 recipe intent 生成可变结构。
+- [x] C4 将固定“12 节点修仙”迁移为 `cultivation_journey_12` Recipe fixture；明确它是 authoring recipe，不是 core constraint。
+- [x] C5 WorldBuilder Agent 改为 recipe-aware：支持 `vertical_slice_3`、`adaptive_linear`、`cultivation_journey_12`，不再全局强制修仙/12 节点；默认仍保持 legacy recipe 兼容。
 - [x] C6 保持 RuntimeKernel 第一阶段仍消费 resolved linear runtime nodes，不在本轮重写执行器。
 - [x] C7 增加 legacy -> RecipeGraph -> legacy round-trip 回归，确保旧线性节点 payload 无损。
 
@@ -64,9 +64,9 @@
 
 ## 当前执行顺序
 
-1. [x] **A1-A3**：建立不破坏兼容的 evidence-derived maturity。
-2. [x] **B1-B4**：实现纯函数 Repair Loop 骨架并测试。
-3. [x] **C1-C3/C6-C7**：实现 RecipeGraph 合同、legacy normalizer 与 round-trip 回归。
-4. [ ] **A5 + B5-B8**：定义真人/真机 evidence 并把 Repair Decision 接入现有 department pipeline。
-5. [ ] **C4-C5**：把修仙 12 节点迁移为 Recipe，并解除 WorldBuilder 固定结构。
-6. [ ] 运行现有 build / productize gate 回归，再接 UI 和发布路径。
+1. [x] **A1-A3/A5**：建立不破坏兼容的 evidence-derived maturity 和真人/真机证据合同。
+2. [x] **B1-B8（除真实 E2E）**：建立 bounded repair policy/orchestrator 并接现有 Agent ownership。
+3. [x] **C1-C7**：实现 RecipeGraph、legacy round-trip，并解除 WorldBuilder 固定 12 节点假设。
+4. [ ] **CI/回归**：`npm run check:convergence-core` + TypeScript；修复所有失败。
+5. [ ] **A4 + D1-D5**：统一 Release Compiler 与 UI 认证语义。
+6. [ ] **B9 + E1-E9**：用真实黄金链路证明 fail -> repair -> revalidate -> certified release。
