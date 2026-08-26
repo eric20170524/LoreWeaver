@@ -155,7 +155,8 @@ if (packageBrowserReport) {
   exporterArgs.push("--allow-unverified-browser");
 }
 
-const build = spawnSync("node", ["--import", "tsx", ...exporterArgs], {
+const tsxBin = path.join(LORE_ROOT, "node_modules/.bin/tsx");
+const build = spawnSync(tsxBin, exporterArgs, {
   cwd: LORE_ROOT,
   encoding: "utf8",
   env: process.env
