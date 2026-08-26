@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { compileRuntimeSpec } from "../src/runtime/compileRuntimeSpec.ts";
 import { assembleWorkspaceSpec } from "./lib/workspace-spec.mjs";
 import { evaluateWorkspaceReleasePolicy, RELEASE_MODES } from "./lib/release-policy.mjs";
+import { candidateIdentityFromBrowserReport } from "./lib/exact-candidate-evidence.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "..");
@@ -155,19 +156,27 @@ try {
 
 const workspaceReportsDir = path.join(wsPath, "reports");
 fs.mkdirSync(workspaceReportsDir, { recursive: true });
-const decision = evaluateWorkspaceReleasePolicy({
-  gameSpec: resolvedSpec.gameSpec,
-  resolvedSpec,
-  reportsDir: SHARED_REPORTS,
-  workspaceReportsDir,
-  mode,
-  waivers
-});
+
+// Resolve the exact executable Candidate before maturity evaluation. Human/device
+// evidence is only trusted when it binds to these exact package hashes.
 const packageBrowserReport = resolveMatchingPackageBrowserReport(
   browserReportArg,
   workspaceReportsDir,
   resolvedSpec
 );
+const browserEvidence = readJsonSafe(packageBrowserReport);
+const candidateIdentity = candidateIdentityFromBrowserReport(browserEvidence);
+
+const decision = evaluateWorkspaceReleasePolicy({
+  gameSpec: resolvedSpec.gameSpec,
+  resolvedSpec,
+  reportsDir: SHARED_REPORTS,
+  workspaceReportsDir,
+  candidateIdentity,
+  mode,
+  waivers
+});
+
 const packageVisualReport = packageBrowserReport
   ? resolveMatchingPackageVisualReport(
       visualReportArg,
@@ -184,7 +193,7 @@ if (mode === "certified" && !packageBrowserReport) {
 if (mode === "certified" && !packageVisualReport) {
   finalBlockers.push("standalone_package_real_vlm_report_missing_payload_or_screenshot_identity_mismatch");
 }
-const exactPackageEvidenceReady = Boolean(packageBrowserReport && packageVisualReport);
+const exactPackageEvidenceReady = Boolean(packageBrowserReport && packageVisualReport && candidateIdentity);
 const finalAllowed = decision.exportAllowed && (mode === "candidate" || exactPackageEvidenceReady);
 const finalDecision = {
   ...decision,
