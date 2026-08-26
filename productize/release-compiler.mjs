@@ -27,6 +27,14 @@ function relativeRepoPath(absolutePath) {
   return path.relative(LORE_ROOT, absolutePath).split(path.sep).join("/");
 }
 
+function parseJsonOutput(stdout) {
+  try {
+    return JSON.parse(String(stdout || "").trim());
+  } catch {
+    return null;
+  }
+}
+
 function resolveMatchingPackageBrowserReport(explicitArg, workspaceReportsDir, resolvedSpec) {
   const candidates = [];
   if (explicitArg) candidates.push(path.resolve(LORE_ROOT, explicitArg));
@@ -38,15 +46,25 @@ function resolveMatchingPackageBrowserReport(explicitArg, workspaceReportsDir, r
     if (!candidate || !fs.existsSync(candidate)) continue;
     try {
       const report = JSON.parse(fs.readFileSync(candidate, "utf8"));
+      const errors = report.errors || {};
+      const noErrors = ["console", "page", "requests"].every(
+        (key) => Array.isArray(errors[key]) && errors[key].length === 0
+      );
       if (
         report.status === "passed" &&
+        report.releaseEligible === true &&
         report.specHash === resolvedSpec.specHash &&
-        report.runtimeVersion === resolvedSpec.runtimeVersion
+        report.runtimeVersion === resolvedSpec.runtimeVersion &&
+        report.zeroApiRequests === true &&
+        typeof report.payloadHash === "string" && report.payloadHash.length > 0 &&
+        typeof report.artifact === "string" && report.artifact.length > 0 &&
+        typeof report.artifactSha256 === "string" && report.artifactSha256.length > 0 &&
+        noErrors
       ) {
         return candidate;
       }
     } catch {
-      // Continue to next candidate. The exporter performs the full validation.
+      // Continue to next candidate.
     }
   }
   return null;
@@ -106,7 +124,7 @@ const packageBrowserReport = resolveMatchingPackageBrowserReport(
 
 const finalBlockers = [...decision.blockers];
 if (mode === "certified" && !packageBrowserReport) {
-  finalBlockers.push("standalone_package_browser_report_missing_or_identity_mismatch");
+  finalBlockers.push("standalone_package_browser_report_missing_payload_identity_or_mismatch");
 }
 const finalAllowed = decision.exportAllowed && (mode === "candidate" || Boolean(packageBrowserReport));
 const finalDecision = {
@@ -142,19 +160,53 @@ if (!finalAllowed) {
   }, 2);
 }
 
+if (mode === "certified") {
+  const promoter = path.join(LORE_ROOT, "productize/promote-certified.mjs");
+  const promote = spawnSync(process.execPath, [
+    promoter,
+    `--workspace-id=${path.basename(wsPath)}`,
+    `--release-decision=${relativeRepoPath(decisionPath)}`,
+    `--browser-report=${relativeRepoPath(packageBrowserReport)}`
+  ], {
+    cwd: LORE_ROOT,
+    encoding: "utf8",
+    env: process.env
+  });
+  const promoted = parseJsonOutput(promote.stdout);
+  if (promote.status !== 0 || !promoted || promoted.status !== "release_certified") {
+    outputAndExit({
+      status: "blocked",
+      mode,
+      reason: promoted?.reason || "candidate_promotion_failed",
+      releaseDecision: relativeRepoPath(decisionPath),
+      promotion: promoted,
+      stdout: (promote.stdout || "").slice(-4000),
+      stderr: (promote.stderr || "").slice(-4000)
+    }, promote.status || 2);
+  }
+  outputAndExit({
+    status: "release_certified",
+    mode,
+    releaseDecision: relativeRepoPath(decisionPath),
+    certificationTier: "release_certified",
+    nonReleaseMarker: null,
+    artifact: promoted.artifact,
+    stage: promoted.stage,
+    sha256: promoted.sha256,
+    payloadHash: promoted.payloadHash,
+    sourceCandidate: promoted.sourceCandidate,
+    browserReport: promoted.browserReport
+  });
+}
+
 const exporter = path.join(LORE_ROOT, "productize/export-standalone.mjs");
 const exporterArgs = [
   exporter,
   `--workspace=${workspaceArg}`,
-  `--release-mode=${mode}`,
-  `--release-decision=${relativeRepoPath(decisionPath)}`
+  "--release-mode=candidate",
+  `--release-decision=${relativeRepoPath(decisionPath)}`,
+  "--allow-unverified-browser"
 ];
-if (packageBrowserReport) {
-  exporterArgs.push(`--browser-report=${relativeRepoPath(packageBrowserReport)}`);
-} else {
-  exporterArgs.push("--allow-unverified-browser");
-}
-
 const tsxBin = path.join(LORE_ROOT, "node_modules/.bin/tsx");
 const build = spawnSync(tsxBin, exporterArgs, {
   cwd: LORE_ROOT,
@@ -173,7 +225,7 @@ if (build.status !== 0) {
 }
 
 outputAndExit({
-  status: mode === "certified" ? "release_certified" : "candidate_built",
+  status: "candidate_built",
   mode,
   releaseDecision: relativeRepoPath(decisionPath),
   certificationTier: finalDecision.certificationTier,
