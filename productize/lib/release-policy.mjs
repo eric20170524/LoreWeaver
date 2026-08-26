@@ -177,6 +177,11 @@ export function evaluateWorkspaceReleasePolicy({
     };
   }
 
+  // Workspace-local automatic evidence (browser, visual, etc.) must win over
+  // shared legacy reports. Shared reports are fallback only when the workspace
+  // has no matching report at all.
+  const automaticEvidenceDirs = [workspaceReportsDir, reportsDir].filter(Boolean);
+
   for (const cardId of cardIds) {
     const card = loadGameplayCard(cardId, cardsRoot);
     const expectedIdentity = { ...identity, cardId };
@@ -195,6 +200,7 @@ export function evaluateWorkspaceReleasePolicy({
     const productionGate = evaluateProductionExportGate({
       card,
       reportsDir,
+      reportDirs: automaticEvidenceDirs,
       expectedIdentity,
       humanPlaytest,
       deviceVerification,
