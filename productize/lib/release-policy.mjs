@@ -8,6 +8,7 @@ import {
   isReleaseCertified,
   RELEASE_CERTIFICATION_TIERS
 } from "./release-maturity.mjs";
+import { expectedCandidateIdentityReady } from "./exact-candidate-evidence.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "../..");
@@ -96,17 +97,30 @@ function loadMatchingEvidence({ workspaceReportsDir, sharedReportsDir, kind, car
       if (!report) continue;
       if (report.cardId && String(report.cardId) !== String(cardId)) continue;
       const mismatches = [];
-      for (const field of ["runtimeVersion", "recipeHash", "contentHash"]) {
+      for (const field of [
+        "specHash",
+        "runtimeVersion",
+        "recipeHash",
+        "contentHash",
+        "atlasHash",
+        "payloadHash",
+        "artifact",
+        "artifactSha256"
+      ]) {
         const expected = identity?.[field];
+        if (expected == null || expected === "") continue;
         const actual = report?.[field];
-        if (expected && actual && String(expected) !== String(actual)) {
+        if (actual == null || actual === "") {
+          mismatches.push(`${field}: report_missing expected=${expected}`);
+        } else if (String(expected) !== String(actual)) {
           mismatches.push(`${field}: report=${actual} expected=${expected}`);
         }
       }
       return {
         ...report,
-        identityMatches: report.identityMatches !== false && mismatches.length === 0,
-        identityMismatches: mismatches
+        identityMatches: report.identityMatches === true && mismatches.length === 0,
+        identityMismatches: mismatches,
+        evidenceFile: path.relative(LORE_ROOT, path.join(dir, file)).split(path.sep).join("/")
       };
     }
   }
@@ -118,6 +132,7 @@ export function evaluateWorkspaceReleasePolicy({
   resolvedSpec = null,
   reportsDir,
   workspaceReportsDir = null,
+  candidateIdentity = null,
   mode = "candidate",
   waivers = [],
   cardsRoot = CARDS_ROOT
@@ -127,18 +142,29 @@ export function evaluateWorkspaceReleasePolicy({
   }
 
   const cardIds = collectWorkspaceCardIds(gameSpec || resolvedSpec?.gameSpec);
-  const identity = buildReleaseIdentity({ resolvedSpec, gameSpec });
+  const specIdentity = buildReleaseIdentity({ resolvedSpec, gameSpec });
+  const candidateSpecMatches = !candidateIdentity?.specHash || candidateIdentity.specHash === specIdentity.specHash;
+  const candidateRuntimeMatches = !candidateIdentity?.runtimeVersion ||
+    !specIdentity.runtimeVersion || candidateIdentity.runtimeVersion === specIdentity.runtimeVersion;
+  const identity = {
+    ...specIdentity,
+    payloadHash: candidateSpecMatches && candidateRuntimeMatches ? candidateIdentity?.payloadHash || null : null,
+    artifact: candidateSpecMatches && candidateRuntimeMatches ? candidateIdentity?.artifact || null : null,
+    artifactSha256: candidateSpecMatches && candidateRuntimeMatches ? candidateIdentity?.artifactSha256 || null : null
+  };
+  const exactCandidateReady = expectedCandidateIdentityReady(identity);
   const cardDecisions = [];
 
   if (!cardIds.length) {
     return {
-      schemaVersion: "loreweaver.workspace-release-decision.v1",
+      schemaVersion: "loreweaver.workspace-release-decision.v2",
       mode,
       status: mode === "candidate" ? "candidate_allowed" : "blocked",
       exportAllowed: mode === "candidate",
       releaseCertified: false,
       certificationTier: "experimental",
       identity,
+      exactCandidateReady,
       cardDecisions: [],
       blockers: ["no_gameplay_cards_resolved"],
       missingEvidence: ["gameplayCard"],
@@ -150,30 +176,34 @@ export function evaluateWorkspaceReleasePolicy({
   for (const cardId of cardIds) {
     const card = loadGameplayCard(cardId, cardsRoot);
     const expectedIdentity = { ...identity, cardId };
-    const productionGate = evaluateProductionExportGate({
-      card,
-      reportsDir,
-      expectedIdentity
-    });
     const humanPlaytest = loadMatchingEvidence({
       workspaceReportsDir,
       sharedReportsDir: reportsDir,
       kind: "human",
       cardId,
-      identity
+      identity: expectedIdentity
     });
     const deviceVerification = loadMatchingEvidence({
       workspaceReportsDir,
       sharedReportsDir: reportsDir,
       kind: "device",
       cardId,
-      identity
+      identity: expectedIdentity
     });
-    const maturity = evaluateReleaseMaturity({
+    const productionGate = evaluateProductionExportGate({
+      card,
+      reportsDir,
+      expectedIdentity,
+      humanPlaytest,
+      deviceVerification,
+      waivers
+    });
+    const maturity = productionGate.maturity || evaluateReleaseMaturity({
       card,
       productionGate,
       humanPlaytest,
       deviceVerification,
+      expectedCandidateIdentity: expectedIdentity,
       waivers
     });
     cardDecisions.push({
@@ -184,23 +214,31 @@ export function evaluateWorkspaceReleasePolicy({
       evidenceFilesPresent: {
         humanPlaytest: Boolean(humanPlaytest),
         deviceVerification: Boolean(deviceVerification)
+      },
+      evidenceFiles: {
+        humanPlaytest: humanPlaytest?.evidenceFile || null,
+        deviceVerification: deviceVerification?.evidenceFile || null
       }
     });
   }
 
-  const allCertified = cardDecisions.every((item) => isReleaseCertified(item.maturity));
+  const allCertified = exactCandidateReady && cardDecisions.every((item) => isReleaseCertified(item.maturity));
   const blockers = [...new Set(cardDecisions.flatMap((item) =>
     item.maturity.blockers.map((blocker) => `${item.cardId}:${blocker}`)
   ))];
+  if (mode === "certified" && !exactCandidateReady) {
+    blockers.push("exact_candidate_identity_missing_or_spec_runtime_mismatch");
+  }
   const missingEvidence = [...new Set(cardDecisions.flatMap((item) =>
     item.maturity.missingEvidence.map((missing) => `${item.cardId}:${missing}`)
   ))];
+  if (mode === "certified" && !exactCandidateReady) missingEvidence.push("exactCandidateIdentity");
   const tiers = cardDecisions.map((item) => item.maturity.certificationTier);
   const certificationTier = allCertified ? "release_certified" : weakestTier(tiers);
   const exportAllowed = mode === "candidate" ? true : allCertified;
 
   return {
-    schemaVersion: "loreweaver.workspace-release-decision.v1",
+    schemaVersion: "loreweaver.workspace-release-decision.v2",
     mode,
     status: exportAllowed
       ? (allCertified ? "release_certified" : "candidate_allowed")
@@ -209,9 +247,10 @@ export function evaluateWorkspaceReleasePolicy({
     releaseCertified: allCertified,
     certificationTier,
     identity,
+    exactCandidateReady,
     cardDecisions,
-    blockers,
-    missingEvidence,
+    blockers: [...new Set(blockers)],
+    missingEvidence: [...new Set(missingEvidence)],
     waivers: Array.isArray(waivers) ? waivers.filter(Boolean) : [],
     nonReleaseMarker: allCertified ? null : "UNVERIFIED_CANDIDATE"
   };
