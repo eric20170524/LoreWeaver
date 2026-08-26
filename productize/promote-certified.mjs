@@ -9,6 +9,7 @@ import { hashExecutablePayloadManifest } from "./lib/executable-payload.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "..");
 const EXPORTS_ROOT = path.join(LORE_ROOT, "productize/exports");
+const REAL_VLM_PROVIDERS = new Set(["grok", "codex"]);
 const args = process.argv.slice(2);
 const valueArg = (name) => args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
 
@@ -91,6 +92,8 @@ if (
   !browser.payloadHash ||
   !browser.artifact ||
   !browser.artifactSha256 ||
+  !browser.screenshot ||
+  !browser.screenshotSha256 ||
   browser.specHash !== decision.identity?.specHash ||
   (decision.identity?.runtimeVersion && browser.runtimeVersion !== decision.identity.runtimeVersion)
 ) {
@@ -106,17 +109,20 @@ if (
   visual.status !== "passed" ||
   visual.releaseEligible !== true ||
   visual.evidenceKind !== "real_vlm_exact_candidate" ||
-  typeof visual.provider !== "string" || visual.provider.length === 0 ||
+  !REAL_VLM_PROVIDERS.has(String(visual.provider || "")) ||
+  visual.criticStatus !== "completed" ||
   visual.identityMatches === false ||
   visual.specHash !== browser.specHash ||
   visual.runtimeVersion !== browser.runtimeVersion ||
   visual.payloadHash !== browser.payloadHash ||
   visual.artifact !== browser.artifact ||
   visual.artifactSha256 !== browser.artifactSha256 ||
+  visual.screenshot !== browser.screenshot ||
+  visual.screenshotSha256 !== browser.screenshotSha256 ||
   visualChecks.length === 0 ||
   !visualChecks.every((value) => value === "PASS" || value === "WARNING")
 ) {
-  fail("real_vlm_evidence_not_eligible_or_payload_identity_mismatch");
+  fail("real_vlm_evidence_not_eligible_or_payload_or_screenshot_identity_mismatch");
 }
 
 const candidateZip = safeRepoPath(browser.artifact, EXPORTS_ROOT);
@@ -162,6 +168,7 @@ writeJson(statusPath, {
   browserVerified: true,
   visualVerified: true,
   payloadHash: browser.payloadHash,
+  screenshotSha256: browser.screenshotSha256,
   releaseDecision: decision,
   browserEvidence: browserRel,
   visualEvidence: visualRel
@@ -174,6 +181,7 @@ writeJson(manifestPath, {
   certificationTier: "release_certified",
   nonReleaseMarker: null,
   payloadHash: browser.payloadHash,
+  screenshotSha256: browser.screenshotSha256,
   gates: {
     ...(releaseManifest.gates || {}),
     browser: "passed",
@@ -182,7 +190,7 @@ writeJson(manifestPath, {
     releaseEligible: true
   }
 });
-fs.writeFileSync(readmePath, `# LoreWeaver Certified Standalone\n\nThis artifact contains the exact executable payload validated by the referenced browser and real-VLM evidence. Certification metadata is excluded from the executable payload hash.\n\n- Artifact label: CERTIFIED_RELEASE\n- Release eligible: true\n- Certification tier: release_certified\n- Runtime: ${browser.runtimeVersion}\n- Spec: ${browser.specHash}\n- Executable payload: ${browser.payloadHash}\n- Browser evidence: ${browserRel}\n- Visual evidence: ${visualRel}\n\nSee RELEASE_STATUS.json and release-manifest.json for machine-readable evidence identity.\n`);
+fs.writeFileSync(readmePath, `# LoreWeaver Certified Standalone\n\nThis artifact contains the exact executable payload validated by the referenced browser and real-VLM evidence. Certification metadata is excluded from the executable payload hash.\n\n- Artifact label: CERTIFIED_RELEASE\n- Release eligible: true\n- Certification tier: release_certified\n- Runtime: ${browser.runtimeVersion}\n- Spec: ${browser.specHash}\n- Executable payload: ${browser.payloadHash}\n- Screenshot SHA-256: ${browser.screenshotSha256}\n- Browser evidence: ${browserRel}\n- Visual evidence: ${visualRel}\n\nSee RELEASE_STATUS.json and release-manifest.json for machine-readable evidence identity.\n`);
 
 const afterIdentity = hashExecutablePayloadManifest(walkFiles(certifiedStage));
 if (afterIdentity.payloadHash !== browser.payloadHash || afterIdentity.payloadHash !== beforeIdentity.payloadHash) {
@@ -213,6 +221,7 @@ console.log(JSON.stringify({
   specHash: browser.specHash,
   runtimeVersion: browser.runtimeVersion,
   payloadHash: browser.payloadHash,
+  screenshotSha256: browser.screenshotSha256,
   sourceCandidate: path.relative(LORE_ROOT, candidateZip).split(path.sep).join("/"),
   browserReport: browserRel,
   visualReport: visualRel,
