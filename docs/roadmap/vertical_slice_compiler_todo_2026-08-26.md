@@ -7,18 +7,18 @@
 ## P0-A：成熟度与 Evidence 模型
 
 - [x] A0 建立最佳实践与迁移方案文档。
-- [ ] A1 新增 evidence-derived release maturity evaluator；保留 legacy `production_ready` 兼容。
-- [ ] A2 将 maturity evaluator 接入 `production-export-gate` 输出，明确区分 `legacyProductionReady` 与 `certificationTier`。
-- [ ] A3 新增 maturity 单测：缺证据、自动证据齐全但无人测/真机、完整认证、waiver、stale/mismatch。
+- [x] A1 新增 evidence-derived release maturity evaluator；保留 legacy `production_ready` 兼容。
+- [x] A2 将 maturity evaluator 接入 `production-export-gate` 输出，明确区分 `legacyProductionReady` 与 `certificationTier`。
+- [x] A3 新增 maturity 单测：缺证据、自动证据齐全但无人测/真机、完整认证、waiver、stale/mismatch；并增加 production gate 集成测试。
 - [ ] A4 在发布/导出 UI 中禁止把 legacy `production_ready` 展示为“正式认证”。
 - [ ] A5 定义 `human_playtest` / `device_verification` Evidence schema 与示例报告。
 
 ## P0-B：Agent Repair Loop
 
-- [ ] B1 新增纯函数 `classifyBlockerOwner(blocker)`，统一 schema/gameplay/runtime/art/audio/qa/compliance/director ownership。
-- [ ] B2 新增 Retry Policy：L0/L1 <= 3，L2 <= 2，L3/L4 自动升级人工。
-- [ ] B3 新增 blocker -> targeted validators 映射，避免每次修正重跑全量 Gate。
-- [ ] B4 新增 Repair Decision 数据合同：owner、attempt、budget、allowedPatchLevels、validators、escalationReason。
+- [x] B1 新增纯函数 `classifyBlockerOwner(blocker)`，统一 schema/gameplay/runtime/art/audio/qa/compliance/director ownership。
+- [x] B2 新增 Retry Policy：L0/L1 <= 3，L2 <= 2，L3/L4 自动升级人工。
+- [x] B3 新增 blocker -> targeted validators 映射，避免每次修正重跑全量 Gate。
+- [x] B4 新增 Repair Decision 数据合同：owner、attempt、budget、allowedPatchLevels、validators、escalationReason。
 - [ ] B5 将 Repair Decision 接入现有 department agent，不引入第二套 Agent framework。
 - [ ] B6 Gate 失败后自动形成 repair context，并触发负责部门生成 structured patch。
 - [ ] B7 Patch 后重跑 targeted validators；通过后继续流程，失败则在预算内下一轮。
@@ -27,13 +27,13 @@
 
 ## P0-C：RecipeGraph 与去固定 12 节点
 
-- [ ] C1 新增 `loreweaver.recipe-graph.v1` schema。
-- [ ] C2 新增 `legacy nodes[] -> linear RecipeGraph` normalizer，保证旧 Manifest 无损兼容。
-- [ ] C3 增加 RecipeGraph validator：entry、edge refs、reachability、completion rules、cycle policy。
+- [x] C1 新增 `loreweaver.recipe-graph.v1` schema。
+- [x] C2 新增 `legacy nodes[] -> linear RecipeGraph` normalizer，保证旧 Manifest 无损兼容。
+- [x] C3 增加 RecipeGraph validator：entry、edge refs、reachability、completion rules、cycle policy。
 - [ ] C4 将固定“12 节点修仙”迁移为 `cultivation_journey_12` Recipe 示例。
 - [ ] C5 修改 WorldBuilder Agent：不再强制 12 节点/修仙；根据 recipe intent 生成可变结构。
-- [ ] C6 保持 RuntimeKernel 第一阶段仍消费 resolved linear runtime nodes，不在本轮重写执行器。
-- [ ] C7 加回归测试：旧 12-node Manifest 编译结果保持一致。
+- [x] C6 保持 RuntimeKernel 第一阶段仍消费 resolved linear runtime nodes，不在本轮重写执行器。
+- [x] C7 增加 legacy -> RecipeGraph -> legacy round-trip 回归，确保旧线性节点 payload 无损。
 
 ## P1：统一 Release Compiler
 
@@ -64,8 +64,9 @@
 
 ## 当前执行顺序
 
-1. **A1-A3**：先建立不破坏兼容的 evidence-derived maturity。
-2. **B1-B4**：实现纯函数 Repair Loop 骨架并测试。
-3. **C1-C3**：实现 RecipeGraph 合同和 legacy normalizer。
-4. 运行现有 build / productize gate 回归。
-5. 再接 Agent、UI 和发布路径。
+1. [x] **A1-A3**：建立不破坏兼容的 evidence-derived maturity。
+2. [x] **B1-B4**：实现纯函数 Repair Loop 骨架并测试。
+3. [x] **C1-C3/C6-C7**：实现 RecipeGraph 合同、legacy normalizer 与 round-trip 回归。
+4. [ ] **A5 + B5-B8**：定义真人/真机 evidence 并把 Repair Decision 接入现有 department pipeline。
+5. [ ] **C4-C5**：把修仙 12 节点迁移为 Recipe，并解除 WorldBuilder 固定结构。
+6. [ ] 运行现有 build / productize gate 回归，再接 UI 和发布路径。
