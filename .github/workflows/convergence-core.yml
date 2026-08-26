@@ -40,5 +40,8 @@ jobs:
       - name: Run convergence policy checks
         run: npm run check:convergence-core
 
+      - name: Verify creator revision transaction
+        run: python3 productize/jobs/check-creator-revision-transaction.py
+
       - name: TypeScript check
         run: npm run lint
