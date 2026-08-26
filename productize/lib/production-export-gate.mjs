@@ -9,13 +9,14 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { evaluateReleaseMaturity } from "./release-maturity.mjs";
 
 export const REQUIRED_PRODUCTION_REPORT_SPECS = [
   {
     key: "nodeSmoke",
     requireCardId: false,
     requireReleaseEligible: false,
-    candidates: (cardId) => ["node_smoke_latest.json"]
+    candidates: () => ["node_smoke_latest.json"]
   },
   {
     key: "standaloneBrowser",
@@ -142,22 +143,48 @@ export function identityMismatches(report, expectedIdentity) {
   return mismatches;
 }
 
+function withMaturity(result, { card, humanPlaytest, deviceVerification, waivers }) {
+  return {
+    ...result,
+    maturity: evaluateReleaseMaturity({
+      card,
+      productionGate: result,
+      humanPlaytest,
+      deviceVerification,
+      waivers
+    })
+  };
+}
+
 /**
- * Evaluate production export readiness for a card.
+ * Evaluate legacy production export readiness for a card and expose a stricter
+ * evidence-derived maturity result alongside it.
+ *
+ * `productionExportAllowed` remains backward compatible during migration.
+ * Consumers that need a real certified release should require
+ * `result.maturity.releaseCertified === true`.
  */
-export function evaluateProductionExportGate({ card, reportsDir, expectedIdentity = null }) {
+export function evaluateProductionExportGate({
+  card,
+  reportsDir,
+  expectedIdentity = null,
+  humanPlaytest = null,
+  deviceVerification = null,
+  waivers = []
+}) {
+  const maturityInput = { card, humanPlaytest, deviceVerification, waivers };
   const reasons = [];
   const checks = {};
   const cardId = card?.id || null;
 
   if (!card || typeof card !== "object") {
-    return {
+    return withMaturity({
       productionExportAllowed: false,
       status: "failed",
       reasons: ["Hard Gate Blocker: card object missing"],
       checks,
       cardId: null
-    };
+    }, maturityInput);
   }
 
   const statusOk = card.status === "production_ready";
@@ -175,13 +202,13 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
 
   const needsEvidence = statusOk || exportOk;
   if (!needsEvidence) {
-    return {
+    return withMaturity({
       productionExportAllowed: false,
       status: reasons.length ? "failed" : "passed",
       reasons,
       checks,
       cardId
-    };
+    }, maturityInput);
   }
 
   const identity = {
@@ -316,12 +343,12 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
 
   const productionExportAllowed = statusOk && exportOk && reasons.length === 0;
 
-  return {
+  return withMaturity({
     productionExportAllowed,
     status: productionExportAllowed ? "passed" : "failed",
     reasons,
     checks,
     cardId,
     expectedIdentity: identity
-  };
+  }, maturityInput);
 }
