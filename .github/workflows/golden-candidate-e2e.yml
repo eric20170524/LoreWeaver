@@ -1,0 +1,48 @@
+name: Golden Candidate E2E
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "backend/**"
+      - "productize/**"
+      - "minigame_master/**"
+      - "vite.config.standalone.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/golden-candidate-e2e.yml"
+  workflow_dispatch:
+
+jobs:
+  golden-candidate-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build and verify golden candidate
+        run: node productize/jobs/run-golden-candidate-e2e.mjs
+
+      - name: Upload golden evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-candidate-evidence
+          if-no-files-found: ignore
+          path: |
+            data/workspaces/__golden_survivor_vertical_slice_ci/reports/**
+            productize/exports/standalone-__golden_survivor_vertical_slice_ci-*/release-manifest.json
+            productize/exports/standalone-__golden_survivor_vertical_slice_ci-*/RELEASE_STATUS.json
