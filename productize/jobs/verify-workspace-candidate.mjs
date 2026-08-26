@@ -103,11 +103,6 @@ function startStaticServer(root, port) {
 function repoRelative(file) {
   return path.relative(LORE_ROOT, file).split(path.sep).join("/");
 }
-function modifierIds(node) {
-  return (node?.gameplay?.modifiers || [])
-    .map((modifier) => typeof modifier === "string" ? modifier : modifier?.id)
-    .filter(Boolean);
-}
 
 async function main() {
   const workspaceId = String(valueArg("--workspace-id") || "").trim();
@@ -220,7 +215,7 @@ async function main() {
           const hooks = window.__LOREWEAVER_TEST_HOOKS__ || {};
           const active = Boolean(game?.scene?.isActive?.("LevelActiveScene"));
           const cardMatches = scene?.node?.gameplay?.cardId === expectedCardId;
-          const runtimeReady = hooks?.status === "running" || scene?.adapter?.status === "running" || active;
+          const runtimeReady = hooks?.status === "running" || scene?.adapter?.status === "running";
           return active && cardMatches && runtimeReady;
         }, expected.cardId);
         if (ready) break;
@@ -247,7 +242,8 @@ async function main() {
       });
       const modsMatch = expected.modifierIds.every((id) => observed.modifierIds.includes(id));
       const contractValid = observed.runtimeContract.introType === "string" && observed.runtimeContract.tauntsIsArray;
-      const passed = observed.active && observed.cardId === expected.cardId && modsMatch && contractValid;
+      const runtimeRunning = observed.status === "running";
+      const passed = observed.active && observed.cardId === expected.cardId && modsMatch && contractValid && runtimeRunning;
       stageResults.push({ stage: index + 1, nodeId: expected.id, cardId: expected.cardId, passed, expectedModifiers: expected.modifierIds, observed });
       if (!passed) throw new Error(`stage_${index + 1}_failed:${JSON.stringify(stageResults.at(-1))}`);
 
