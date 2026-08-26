@@ -88,17 +88,40 @@ def main():
         assert duplicate["status"] == "failed", duplicate
         assert any(issue["code"] == "duplicate_modifier" for issue in duplicate["issues"])
 
-        print(json.dumps({
-            "schemaVersion": "loreweaver.gameplay-composition-check.v1",
-            "status": "passed",
-            "checks": [
-                "valid_base_modifier_composition_passes",
-                "engine_target_mismatch_blocks",
-                "modifier_incompatibility_blocks",
-                "missing_catalog_reference_blocks",
-                "duplicate_modifier_blocks",
-            ],
-        }, ensure_ascii=False, indent=2))
+    # Validate the actual shipped golden vertical slice against the real catalog.
+    golden_path = ROOT / "productize" / "fixtures" / "recipes" / "survivor_vertical_slice_3.recipe-graph.json"
+    golden = json.loads(golden_path.read_text(encoding="utf-8"))
+    golden_spec = {
+        "nodes": [
+            node["payload"]
+            for node in golden.get("nodes", [])
+            if isinstance(node, dict) and isinstance(node.get("payload"), dict)
+        ]
+    }
+    golden_result = validate_gameplay_composition(
+        golden_spec,
+        cards_root=ROOT / "minigame_master" / "gameplay" / "cards",
+    )
+    assert golden_result["status"] == "passed", golden_result
+    assert golden_result["checkedNodes"] == 3, golden_result
+    assert golden_result["checkedModifiers"] == 4, golden_result
+
+    print(json.dumps({
+        "schemaVersion": "loreweaver.gameplay-composition-check.v2",
+        "status": "passed",
+        "checks": [
+            "valid_base_modifier_composition_passes",
+            "engine_target_mismatch_blocks",
+            "modifier_incompatibility_blocks",
+            "missing_catalog_reference_blocks",
+            "duplicate_modifier_blocks",
+            "real_golden_vertical_slice_catalog_contract_passes",
+        ],
+        "golden": {
+            "checkedNodes": golden_result["checkedNodes"],
+            "checkedModifiers": golden_result["checkedModifiers"],
+        },
+    }, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
