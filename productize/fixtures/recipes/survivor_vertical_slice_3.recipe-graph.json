@@ -1,0 +1,119 @@
+{
+  "schemaVersion": "loreweaver.recipe-graph.v1",
+  "entryNodeId": "stage:setup",
+  "sessionTargetMinutes": 6,
+  "cyclePolicy": "forbid",
+  "nodes": [
+    {
+      "id": "stage:setup",
+      "kind": "gameplay",
+      "title": "Setup / Learn the Loop",
+      "recipeRef": "survivor_horde_golden_production_v1",
+      "sourceNodeId": 1,
+      "payload": {
+        "id": 1,
+        "title": "生存试炼 · 起势",
+        "intro": "先掌握移动、自动攻击与收集节奏，在较低压力下建立核心循环。",
+        "mechanics": "survivor_horde",
+        "durationLimit": 90,
+        "goalValue": 40,
+        "difficulty": 1,
+        "gameplay": {
+          "adapter": "phaser",
+          "cardId": "survivor_horde",
+          "modifiers": [],
+          "knobs": {
+            "durationSec": 90,
+            "goalValue": 40,
+            "difficulty": 1,
+            "enemySpawnRateSec": 1.4,
+            "allowPause": true,
+            "allowQuit": true,
+            "victoryMode": "survive"
+          }
+        }
+      },
+      "metadata": {"beat": "setup", "pressure": "low"}
+    },
+    {
+      "id": "stage:escalation",
+      "kind": "gameplay",
+      "title": "Escalation / Spatial Pressure",
+      "recipeRef": "survivor_horde_golden_production_v1",
+      "sourceNodeId": 2,
+      "payload": {
+        "id": 2,
+        "title": "生存试炼 · 压境",
+        "intro": "敌潮加速，并加入明确预警的危险区域，迫使玩家在输出与走位之间做取舍。",
+        "mechanics": "survivor_horde",
+        "durationLimit": 105,
+        "goalValue": 70,
+        "difficulty": 2,
+        "gameplay": {
+          "adapter": "phaser",
+          "cardId": "survivor_horde",
+          "modifiers": [
+            {"id": "hazard_telegraph", "knobs": {"intervalMs": 3600, "warningDelayMs": 900, "radius": 54, "damage": 18}},
+            {"id": "defend_core", "knobs": {"coreHp": 160}}
+          ],
+          "knobs": {
+            "durationSec": 105,
+            "goalValue": 70,
+            "difficulty": 2,
+            "enemySpawnRateSec": 1.0,
+            "allowPause": true,
+            "allowQuit": true,
+            "victoryMode": "survive"
+          }
+        }
+      },
+      "metadata": {"beat": "escalation", "pressure": "medium"}
+    },
+    {
+      "id": "stage:climax",
+      "kind": "gameplay",
+      "title": "Climax / Boss Read",
+      "recipeRef": "survivor_horde_cyber_pulse_production_v1",
+      "sourceNodeId": 3,
+      "payload": {
+        "id": 3,
+        "title": "生存试炼 · 首领",
+        "intro": "最终阶段把前两段的走位压力收束到首领战：读预警、躲激光、处理阶段变化并完成终局。",
+        "mechanics": "survivor_horde",
+        "durationLimit": 120,
+        "goalValue": 100,
+        "difficulty": 3,
+        "gameplay": {
+          "adapter": "phaser",
+          "cardId": "survivor_horde",
+          "modifiers": [
+            {"id": "boss_phases", "knobs": {"phaseThresholds": [0.66, 0.33]}},
+            {"id": "laser_warning", "knobs": {"intervalMs": 2800, "warningDelayMs": 700, "damage": 20}}
+          ],
+          "knobs": {
+            "durationSec": 120,
+            "goalValue": 100,
+            "difficulty": 3,
+            "enemySpawnRateSec": 0.8,
+            "allowPause": true,
+            "allowQuit": true,
+            "victoryMode": "survive"
+          }
+        }
+      },
+      "metadata": {"beat": "climax", "pressure": "high"}
+    }
+  ],
+  "edges": [
+    {"from": "stage:setup", "to": "stage:escalation", "when": "success"},
+    {"from": "stage:escalation", "to": "stage:climax", "when": "success"}
+  ],
+  "completionRules": {"type": "reach_any", "nodeIds": ["stage:climax"]},
+  "metadata": {
+    "recipeId": "survivor_vertical_slice_3",
+    "baseCardId": "survivor_horde",
+    "intent": "golden_vertical_slice",
+    "stageModel": ["setup", "escalation", "climax"],
+    "runtimeCompatibility": "resolved_linear_nodes"
+  }
+}
