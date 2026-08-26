@@ -26,6 +26,7 @@ export function releaseEvidenceTargets(cardIds = []) {
     "human_playtest_latest.json",
     "device_verification_latest.json",
     "standalone_browser_report.json",
+    "visual_audit_latest.json",
     "release_decision_latest.json",
     "export_smoke_latest.json",
     "export_artifact_meta.json"
