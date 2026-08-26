@@ -1,26 +1,40 @@
 {
   "schemaVersion": "loreweaver.human-playtest-evidence.v1",
-  "status": "passed",
+  "status": "failed",
+  "releaseEligible": false,
   "cardId": "survivor_horde",
+  "specHash": "example-spec-hash",
   "recipeHash": "example-recipe-hash",
   "contentHash": "example-content-hash",
+  "atlasHash": null,
   "runtimeVersion": "example-runtime-version",
+  "payloadHash": "example-payload-hash",
+  "artifact": "productize/exports/example-candidate.zip",
+  "artifactSha256": "example-artifact-sha256",
+  "browserReport": "data/workspaces/example/reports/standalone_browser_report.json",
   "createdAt": "2026-08-26T00:00:00Z",
-  "identityMatches": true,
+  "identityMatches": false,
   "freshness": "fresh",
   "staleReason": null,
+  "fixture": true,
+  "synthetic": true,
+  "humanObserved": false,
+  "observationSource": "documentation_fixture_not_release_evidence",
   "sessions": [
     {
-      "sessionId": "playtest-001",
+      "sessionId": "example-only-001",
       "completed": true,
       "understoodCoreLoop": true,
       "wouldReplay": true,
       "completionSeconds": 360,
+      "understandingSeconds": 20,
       "difficulty": 3,
       "fun": 4,
       "clarity": 4,
       "blockingIssues": [],
-      "notes": "Example only; replace with real human playtest evidence."
+      "failureReasons": [],
+      "suggestions": ["Replace this fixture with observations from a real human session."],
+      "notes": "Documentation example only."
     }
   ],
   "summary": {
@@ -29,6 +43,13 @@
     "coreLoopUnderstandingRate": 1,
     "replayIntentRate": 1,
     "blockingIssueCount": 0,
-    "notes": "Fixture is documentation, not release evidence."
+    "failureReasons": [],
+    "suggestions": ["Use productize:evidence to bind real observations to the exact Candidate."],
+    "passCriteria": {
+      "atLeastOneSessionCompleted": true,
+      "allSessionsUnderstoodCoreLoop": true,
+      "noBlockingIssues": true
+    },
+    "notes": "Fixture is intentionally releaseEligible=false and cannot satisfy release certification."
   }
 }
