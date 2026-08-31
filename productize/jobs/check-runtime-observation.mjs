@@ -16,6 +16,10 @@ function assert(value, message) {
   if (!value) throw new Error(message);
 }
 
+function approx(actual, expected, tolerance = 0.02) {
+  return Math.abs(Number(actual) - Number(expected)) <= tolerance;
+}
+
 const schema = JSON.parse(fs.readFileSync(SCHEMA, "utf8"));
 assert(schema.$id, "runtime observation schema must declare $id");
 
@@ -94,8 +98,8 @@ const blocked = standalone.invoke("unknownControl");
 assert(blocked.status === "blocked", "unknown controls are blocked rather than guessed");
 assert(standalone.capabilities().exactFrameAdvance === false, "standalone port also fails closed");
 
-// Shared adapter controls: prove pause/resume/semantic input are backed by a
-// real adapter/scene surface rather than enabled by configuration alone.
+// Shared adapter controls: prove pause/resume/semantic input are backed by an
+// immediate Phaser Systems surface rather than the queued ScenePlugin API.
 const adapterHooks = new TestHooks("__ADAPTER_TEST_HOOKS__", {
   observationGlobalKey: "__ADAPTER_OBSERVATION__",
   maxTraceEntries: 32
@@ -105,21 +109,20 @@ let scenePaused = false;
 let scenePauseCalls = 0;
 let sceneResumeCalls = 0;
 let adapterEndResult = null;
-const fakeScene = {
-  sys: { settings: { key: "SyntheticAdapterScene" } },
-  scene: {
-    pause(key) {
-      assert(key === "SyntheticAdapterScene", "pause targets the owning scene");
-      scenePaused = true;
-      scenePauseCalls += 1;
-    },
-    resume(key) {
-      assert(key === "SyntheticAdapterScene", "resume targets the owning scene");
-      scenePaused = false;
-      sceneResumeCalls += 1;
-    }
+const fakeSystems = {
+  settings: { key: "SyntheticAdapterScene" },
+  pause(payload) {
+    assert(payload?.reason === "inspect" || payload?.reason === undefined, "pause payload remains explicit");
+    scenePaused = true;
+    scenePauseCalls += 1;
+  },
+  resume(payload) {
+    assert(payload?.reason === "continue" || payload?.reason === undefined, "resume payload remains explicit");
+    scenePaused = false;
+    sceneResumeCalls += 1;
   }
 };
+const fakeScene = { sys: fakeSystems };
 const adapter = new GameplayAdapter({
   testHooks: adapterHooks,
   onEnd: (result) => { adapterEndResult = result; }
@@ -137,9 +140,9 @@ adapter.readPlayabilityKnobs(adapter.payload, "survivor_horde");
 assert(adapterApi.capabilities().pause === false, "adapter controls are unavailable before create");
 adapter.create(fakeScene);
 const adapterCaps = adapterApi.capabilities();
-assert(adapterCaps.pause === true && adapterCaps.resume === true, "adapter create registers real scene pause/resume controls");
+assert(adapterCaps.pause === true && adapterCaps.resume === true, "adapter create registers real Systems pause/resume controls");
 assert(adapterCaps.semanticInput === true, "adapter create registers semantic input when a real action surface exists");
-assert(adapterCaps.exactFrameAdvance === false, "shared adapter controls do not fake exact-frame advance");
+assert(adapterCaps.exactFrameAdvance === false, "adapter without Phaser TimeStep cannot claim exact-frame advance");
 assert(adapterApi.snapshot().state === null || adapterApi.snapshot().sessionId, "adapter observation session remains valid");
 
 const semanticMove = adapterApi.input({ action: "move", x: 125, y: 250 });
@@ -153,16 +156,16 @@ const unsupportedPrimary = adapterApi.input({ action: "primary" });
 assert(unsupportedPrimary.status === "failed" && unsupportedPrimary.error.includes("semantic_action_unsupported"), "undeclared semantic actions fail closed");
 
 const adapterPause = adapterApi.pause({ reason: "inspect" });
-assert(adapterPause.status === "passed" && scenePaused === true, "pause executes the owning scene pause surface");
+assert(adapterPause.status === "passed" && scenePaused === true, "pause executes the immediate owning Systems surface");
 assert(adapter.status === "paused" && scenePauseCalls === 1, "adapter status follows paused scene");
 assert(adapterApi.snapshot().state.status === "paused", "pause state is observable in the same session");
 const adapterResume = adapterApi.resume({ reason: "continue" });
-assert(adapterResume.status === "passed" && scenePaused === false, "resume executes the owning scene resume surface");
+assert(adapterResume.status === "passed" && scenePaused === false, "resume executes the immediate owning Systems surface");
 assert(adapter.status === "running" && sceneResumeCalls === 1, "adapter status returns to running");
 assert(adapterApi.snapshot().state.status === "running", "resume state is observable in the same session");
 
 const frameAdvance = adapterApi.advanceFrames({ frames: 1 });
-assert(frameAdvance.status === "unsupported", "advanceFrames stays unsupported without a deterministic runtime clock");
+assert(frameAdvance.status === "unsupported", "advanceFrames stays unsupported without a Phaser TimeStep surface");
 assert(adapterApi.capabilities().exactFrameAdvance === false, "unsupported frame advance never changes capability truth");
 
 const retreat = adapterApi.input({ action: "retreat" });
@@ -178,8 +181,112 @@ const adapterTrace = adapterApi.trace();
 assert(adapterTrace.sessionId === adapterApi.snapshot().sessionId, "semantic controls remain in one observation session");
 assert(adapterTrace.entries.some((entry) => entry.type === "control_passed"), "control results are retained in the observation trace");
 
+// Exact-frame harness: model the canonical Phaser TimeStep -> Game.step -> scene
+// update chain and prove the adapter receives exactly N fixed-delta updates while
+// the RAF loop is sleeping and the target scene returns to paused afterwards.
+class CountingAdapter extends GameplayAdapter {
+  constructor(context) {
+    super(context);
+    this.updateDeltas = [];
+    this.updateTimes = [];
+  }
+  update(time, delta) {
+    if (this.status !== "running") return;
+    this.updateTimes.push(time);
+    this.updateDeltas.push(delta);
+  }
+}
+
+const exactHooks = new TestHooks("__EXACT_TEST_HOOKS__", {
+  observationGlobalKey: "__EXACT_OBSERVATION__",
+  maxTraceEntries: 64
+});
+const exactApi = window.__EXACT_OBSERVATION__;
+let exactAdapter = null;
+const exactSystems = {
+  settings: { key: "ExactFrameScene" },
+  active: true,
+  pause() { this.active = false; },
+  resume() { this.active = true; },
+  game: null
+};
+const exactLoop = {
+  running: true,
+  targetFps: 60,
+  hasFpsLimit: false,
+  fpsLimit: 0,
+  smoothStep: true,
+  _coolDown: 0,
+  frame: 10,
+  time: 1000,
+  now: 1000,
+  lastTime: 1000,
+  delta: 1000 / 60,
+  rawDelta: 1000 / 60,
+  callback(time, delta) {
+    if (exactSystems.active) exactAdapter?.update(time, delta);
+  },
+  sleep() { this.running = false; },
+  wake() { this.running = true; },
+  step(time) {
+    this.now = time;
+    const delta = Math.max(0, time - this.lastTime);
+    this.rawDelta = delta;
+    this.time += delta;
+    this.delta = delta;
+    this.callback(time, delta);
+    this.lastTime = time;
+    this.frame += 1;
+  }
+};
+exactSystems.game = { isPaused: false, loop: exactLoop };
+const exactScene = { sys: exactSystems, game: exactSystems.game };
+exactAdapter = new CountingAdapter({ testHooks: exactHooks });
+exactAdapter.targetPoint = { x: 0, y: 0 };
+exactAdapter.init({
+  nodeId: "node_exact_frame",
+  nodeConfig: {
+    duration: 30,
+    goalValue: 1,
+    gameplay: { cardId: "survivor_horde", knobs: { allowQuit: true } }
+  }
+});
+exactAdapter.readPlayabilityKnobs(exactAdapter.payload, "survivor_horde");
+exactAdapter.create(exactScene);
+assert(exactApi.capabilities().exactFrameAdvance === true, "real TimeStep-compatible surface enables exact-frame capability");
+const exactPause = exactApi.pause({ reason: "exact_frame_probe" });
+assert(exactPause.status === "passed" && exactAdapter.status === "paused" && exactSystems.active === false, "exact-frame contract starts from an immediate paused scene");
+const beforeExact = exactApi.snapshot();
+const beforeFrame = exactLoop.frame;
+const beforeLoopTime = exactLoop.time;
+const exactAdvance = exactApi.advanceFrames({ frames: 3 });
+assert(exactAdvance.status === "passed", JSON.stringify(exactAdvance));
+assert(exactAdvance.result.frames === 3, "exact-frame result reports requested frame count");
+assert(exactAdvance.result.finalFrame === beforeFrame + 3, "Phaser TimeStep frame counter advances exactly N frames");
+assert(approx(exactAdvance.result.simulatedDeltaMs, 50), "three 60fps frames equal 50ms simulated delta");
+assert(approx(exactLoop.time - beforeLoopTime, 50), "TimeStep internal time advances by exactly N fixed deltas");
+assert(exactAdapter.updateDeltas.length === 3, "target scene update runs exactly N times");
+assert(exactAdapter.updateDeltas.every((delta) => approx(delta, 1000 / 60)), "each exact frame receives the configured fixed delta");
+assert(exactAdapter.status === "paused" && exactSystems.active === false, "target scene is re-paused before RAF loop restoration");
+assert(exactLoop.running === true && exactAdvance.result.loopRestored === true, "RAF running state is restored after exact stepping");
+const afterExact = exactApi.snapshot();
+assert(afterExact.sessionId === beforeExact.sessionId && afterExact.sequence > beforeExact.sequence, "exact-frame evidence stays in one monotonic observation session");
+assert(afterExact.state.exactFrameAdvance.frames === 3, "same-session snapshot records exact frame evidence");
+assert(afterExact.capabilities.exactFrameAdvance === true, "exact-frame capability remains truthful after execution");
+
+const exactInvalid = exactApi.advanceFrames({ frames: 0 });
+assert(exactInvalid.status === "failed" && exactInvalid.error.includes("exact_frame_count_invalid"), "invalid exact frame count fails closed");
+exactLoop._coolDown = 1;
+const exactCooldown = exactApi.advanceFrames({ frames: 1 });
+assert(exactCooldown.status === "failed" && exactCooldown.error.includes("timestep_cooldown_active"), "TimeStep cooldown cannot be mislabeled exact");
+exactLoop._coolDown = 0;
+const exactResume = exactApi.resume({ reason: "exact_frame_probe_complete" });
+assert(exactResume.status === "passed" && exactAdapter.status === "running" && exactSystems.active === true, "normal runtime can resume after exact stepping");
+exactAdapter.destroy();
+assert(exactApi.capabilities().exactFrameAdvance === false, "destroy unregisters exact-frame authority with the owning adapter");
+
 console.log(JSON.stringify({
-  schemaVersion: "loreweaver.runtime-observation-check.v2",
+  schemaVersion: "loreweaver.runtime-observation-check.v3",
   status: "passed",
   sessionId: api.snapshot().sessionId,
   traceEntries: api.trace().entryCount,
@@ -187,6 +294,8 @@ console.log(JSON.stringify({
   adapterSessionId: adapterApi.snapshot().sessionId,
   adapterTraceEntries: adapterTrace.entryCount,
   adapterCapabilitiesAfterDestroy: afterDestroyCaps,
+  exactFrameSessionId: afterExact.sessionId,
+  exactFrameResult: exactAdvance.result,
   checks: [
     "legacy_test_hook_compatibility",
     "immutable_snapshot_and_trace",
@@ -194,11 +303,15 @@ console.log(JSON.stringify({
     "bounded_monotonic_trace",
     "unsupported_controls_fail_closed",
     "control_capability_only_after_real_registration",
-    "shared_adapter_pause_resume_controls",
+    "immediate_phaser_systems_pause_resume_controls",
     "shared_adapter_semantic_move_and_retreat",
     "invalid_or_undeclared_semantic_actions_fail_closed",
+    "exact_frame_capability_requires_real_timestep_surface",
+    "exact_frame_runs_exactly_n_fixed_delta_scene_updates",
+    "exact_frame_advances_timestep_internal_time_and_frame_counter",
+    "exact_frame_repauses_scene_before_raf_restore",
+    "exact_frame_timestep_cooldown_fails_closed",
     "adapter_controls_unregister_on_destroy",
-    "exact_frame_advance_not_falsely_claimed",
     "runtime_authority_remains_LoreWeaverRuntimeKernel"
   ]
 }, null, 2));
