@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "loreweaver.blueprint-catalog.v1",
+  "updatedAt": "2026-08-31",
+  "policy": {
+    "runtimeAuthority": "LoreWeaverRuntimeKernel",
+    "candidateMeaning": "Conceptual alignment only. An alignment_candidate is not compilable and is not a runtime support claim.",
+    "promotionRule": "A candidate becomes runtime_supported only after all missing capabilities map to shipped LoreWeaver Cards/Modifiers/RuntimeFeaturePack entries and pass Blueprint compilation plus runtime evidence."
+  },
+  "entries": [
+    {
+      "id": "survivor_vertical_slice_3",
+      "title": "Survivor Vertical Slice · Three Beats",
+      "origin": "LoreWeaver",
+      "status": "runtime_verified",
+      "blueprintRef": "productize/fixtures/blueprints/survivor_vertical_slice_3.blueprint.json",
+      "designRecipeId": "vertical_slice_3",
+      "availableCapabilities": [
+        "gameplay_card:survivor_horde",
+        "modifier:hazard_telegraph",
+        "modifier:defend_core",
+        "modifier:boss_phases",
+        "modifier:laser_warning"
+      ],
+      "missingCapabilities": [],
+      "source": {
+        "url": "https://github.com/eric20170524/LoreWeaver",
+        "license": "LoreWeaver Personal Use License 1.0",
+        "adaptation": "Existing LoreWeaver golden path formalized as the first Blueprint."
+      }
+    },
+    {
+      "id": "action_boss_fight_2d_alignment",
+      "title": "2D Action Boss Fight",
+      "origin": "VibeGame concept alignment",
+      "status": "alignment_candidate",
+      "blueprintRef": null,
+      "designRecipeId": "vertical_slice_3",
+      "availableCapabilities": [
+        "modifier:boss_phases",
+        "modifier:laser_warning",
+        "runtime:LoreWeaverRuntimeKernel"
+      ],
+      "missingCapabilities": [
+        "gameplay_card:precision_action_boss",
+        "capability:frame_accurate_melee_state",
+        "capability:boss_pattern_runtime_contract"
+      ],
+      "source": {
+        "url": "https://github.com/tettethu/VibeGame/tree/main/src/skeletons/2d-action-boss-fight",
+        "license": "Apache-2.0",
+        "adaptation": "Only the reusable subtype intent and acceptance shape are recorded. No VibeGame SceneTree or gameplay script is imported."
+      }
+    },
+    {
+      "id": "roguelike_deckbuilder_alignment",
+      "title": "Roguelike Deckbuilder",
+      "origin": "VibeGame concept alignment",
+      "status": "alignment_candidate",
+      "blueprintRef": null,
+      "designRecipeId": "adaptive_linear",
+      "availableCapabilities": [
+        "gameplay_card:turn_based_skill_battle",
+        "compiler:RecipeGraph"
+      ],
+      "missingCapabilities": [
+        "gameplay_card:deckbuilder_combat",
+        "capability:card_zone_state",
+        "capability:deck_draw_discard_exhaust",
+        "capability:map_node_choice"
+      ],
+      "source": {
+        "url": "https://github.com/tettethu/VibeGame/tree/main/src/skeletons/roguelike-deckbuilder",
+        "license": "Apache-2.0",
+        "adaptation": "Maps the subtype to future Cards and state contracts; no skeleton code is copied."
+      }
+    },
+    {
+      "id": "dungeon_shooter_alignment",
+      "title": "Room-based Dungeon Shooter",
+      "origin": "VibeGame concept alignment",
+      "status": "alignment_candidate",
+      "blueprintRef": null,
+      "designRecipeId": "adaptive_linear",
+      "availableCapabilities": [
+        "gameplay_card:survivor_horde",
+        "modifier:boss_phases"
+      ],
+      "missingCapabilities": [
+        "gameplay_card:room_shooter",
+        "capability:room_transition",
+        "capability:aim_and_projectile_contract",
+        "capability:minimap_runtime"
+      ],
+      "source": {
+        "url": "https://github.com/tettethu/VibeGame/tree/main/src/skeletons/dungeon-shooter",
+        "license": "Apache-2.0",
+        "adaptation": "Records room-flow and combat-intent requirements without importing VibeGame's engine or scene files."
+      }
+    },
+    {
+      "id": "swipe_slice_arcade_alignment",
+      "title": "Swipe Slice Arcade",
+      "origin": "VibeGame concept alignment",
+      "status": "alignment_candidate",
+      "blueprintRef": null,
+      "designRecipeId": "vertical_slice_3",
+      "availableCapabilities": [
+        "runtime:LoreWeaverRuntimeKernel"
+      ],
+      "missingCapabilities": [
+        "gameplay_card:swipe_slice",
+        "capability:gesture_polyline_collision",
+        "capability:combo_and_miss_contract"
+      ],
+      "source": {
+        "url": "https://github.com/tettethu/VibeGame/tree/main/src/skeletons/swipe-slice-arcade",
+        "license": "Apache-2.0",
+        "adaptation": "Captures gesture gameplay requirements only; SwipeSlashModule implementation is not copied."
+      }
+    },
+    {
+      "id": "bounce_parkour_alignment",
+      "title": "Bounce Parkour",
+      "origin": "VibeGame concept alignment",
+      "status": "alignment_candidate",
+      "blueprintRef": null,
+      "designRecipeId": "vertical_slice_3",
+      "availableCapabilities": [
+        "runtime:LoreWeaverRuntimeKernel"
+      ],
+      "missingCapabilities": [
+        "gameplay_card:bounce_parkour",
+        "capability:platformer_grounding_contract",
+        "capability:camera_follow_and_checkpoint",
+        "capability:precision_collision_runtime_evidence"
+      ],
+      "source": {
+        "url": "https://github.com/tettethu/VibeGame/tree/main/src/skeletons/bounce-parkour",
+        "license": "Apache-2.0",
+        "adaptation": "Records the subtype as a future Blueprint candidate; no VibeGame SceneTree or physics code is imported."
+      }
+    }
+  ]
+}
