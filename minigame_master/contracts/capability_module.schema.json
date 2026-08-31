@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/capability_module.schema.json",
+  "title": "LoreWeaver Capability Module Descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "kind",
+    "status",
+    "sourceRef",
+    "runtimeBinding",
+    "publicInterface",
+    "config",
+    "requiredSystems",
+    "patchAuthority",
+    "checks",
+    "provenance",
+    "fit",
+    "knownRisks",
+    "maturity"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "loreweaver.capability-module.v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["gameplay_card", "modifier", "runtime_feature", "presentation"] },
+    "status": { "type": "string", "minLength": 1 },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "path"],
+      "properties": {
+        "type": { "enum": ["gameplay_card", "modifier", "runtime_feature_pack", "presentation_contract"] },
+        "path": { "type": "string", "minLength": 1 }
+      }
+    },
+    "runtimeBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "adapter", "engineTargets"],
+      "properties": {
+        "authority": { "const": "LoreWeaverRuntimeKernel" },
+        "adapter": { "type": ["string", "null"] },
+        "engineTargets": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "publicInterface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "outputs", "compatibleWith"],
+      "properties": {
+        "inputs": { "type": "array", "items": {}, "uniqueItems": true },
+        "outputs": { "type": "array", "items": {}, "uniqueItems": true },
+        "compatibleWith": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "config": { "type": "object" },
+    "requiredSystems": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "patchAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultAllowedLevels", "requiresReview"],
+      "properties": {
+        "defaultAllowedLevels": {
+          "type": "array",
+          "items": { "enum": ["L0", "L1", "L2"] },
+          "uniqueItems": true
+        },
+        "requiresReview": {
+          "type": "array",
+          "items": { "enum": ["L3", "L4"] },
+          "uniqueItems": true
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "ref"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["static", "runtime", "browser", "visual", "performance", "release"] },
+          "ref": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "fit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["goodFor", "poorFor"],
+      "properties": {
+        "goodFor": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "poorFor": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "knownRisks": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "maturity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["legacyStatus", "productionReady", "notes"],
+      "properties": {
+        "legacyStatus": { "type": "string", "minLength": 1 },
+        "productionReady": { "type": "boolean" },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
