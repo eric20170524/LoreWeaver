@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/vertical_slice_blueprint.schema.json",
+  "title": "LoreWeaver Vertical Slice Blueprint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "summary",
+    "status",
+    "source",
+    "whenToUse",
+    "whenNotToUse",
+    "designRecipeId",
+    "runtime",
+    "stages",
+    "requiredCapabilities",
+    "missingCapabilities",
+    "acceptanceGates",
+    "promotion"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "loreweaver.vertical-slice-blueprint.v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": ["alignment_candidate", "runtime_supported", "runtime_verified", "promoted"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "url", "license", "adaptation"],
+      "properties": {
+        "project": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "sourceRevision": { "type": ["string", "null"] },
+        "adaptation": { "type": "string", "minLength": 1 }
+      }
+    },
+    "whenToUse": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "whenNotToUse": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "designRecipeId": { "type": "string", "minLength": 1 },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["orientation", "viewport", "inputActions", "requiredEvidence"],
+      "properties": {
+        "orientation": { "enum": ["portrait", "landscape", "any"] },
+        "viewport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "inputActions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "requiredEvidence": {
+          "type": "array",
+          "items": {
+            "enum": ["static", "runtime", "browser", "visual", "feel", "performance"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "capabilityIntent", "acceptance"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9:_-]*$" },
+          "title": { "type": "string", "minLength": 1 },
+          "capabilityIntent": { "type": "string", "minLength": 1 },
+          "node": { "$ref": "#/$defs/nodeSpec" },
+          "acceptance": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "requiredCapabilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "missingCapabilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "acceptanceGates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "evidenceRefs", "approvedBy", "approvedAt"],
+      "properties": {
+        "state": { "enum": ["observed", "candidate", "verified", "approved", "promoted", "rejected"] },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "approvedBy": { "type": ["string", "null"] },
+        "approvedAt": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "$defs": {
+    "modifier": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "knobs": { "type": "object" }
+          }
+        }
+      ]
+    },
+    "nodeSpec": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "title", "intro", "mechanics", "durationLimit", "goalValue", "difficulty", "gameplay"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "intro": { "type": "string" },
+        "taunts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "mechanics": { "type": "string", "minLength": 1 },
+        "rewards": { "type": "string" },
+        "durationLimit": { "type": "number", "exclusiveMinimum": 0 },
+        "goalValue": { "type": "number", "minimum": 0 },
+        "resourceMultiplier": { "type": "number" },
+        "difficulty": { "type": "number", "minimum": 0 },
+        "gameplay": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["adapter", "cardId", "modifiers", "knobs"],
+          "properties": {
+            "adapter": { "type": "string", "minLength": 1 },
+            "cardId": { "type": "string", "minLength": 1 },
+            "modifiers": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/modifier" }
+            },
+            "knobs": { "type": "object" },
+            "patchLevel": { "enum": ["L0", "L1", "L2"] }
+          }
+        }
+      }
+    }
+  }
+}
