@@ -8,8 +8,11 @@ on:
     paths:
       - "backend/task_contract.py"
       - "backend/task_repository.py"
+      - "backend/task_repair_bridge.py"
       - "backend/department_task_bridge.py"
       - "backend/department_task_sync.py"
+      - "backend/repair_orchestrator.py"
+      - "backend/repair_policy.py"
       - "productize/task-contract.py"
       - "productize/bridge-department-task.py"
       - "productize/sync-department-task.py"
@@ -21,6 +24,7 @@ on:
       - "productize/lib/legacy-asset-recipe.mjs"
       - "productize/jobs/check-task-contract.py"
       - "productize/jobs/check-task-api.mjs"
+      - "productize/jobs/check-task-repair-bridge.py"
       - "productize/jobs/check-department-task-bridge.py"
       - "productize/jobs/check-department-task-sync.py"
       - "productize/jobs/check-vertical-slice-blueprint.mjs"
@@ -79,6 +83,9 @@ jobs:
 
       - name: Verify TaskContract Gateway API
         run: npx tsx productize/jobs/check-task-api.mjs
+
+      - name: Verify bounded Repair Loop rework integration
+        run: python3 productize/jobs/check-task-repair-bridge.py
 
       - name: Verify Department-to-Task bridge and confirmation sync
         run: |
