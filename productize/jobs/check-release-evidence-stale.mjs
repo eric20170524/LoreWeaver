@@ -168,7 +168,7 @@ const noChangeTargets = candidateReselectionEvidenceTargets([cardId], {
   candidateChanged: false,
   screenshotChanged: false
 });
-assert(JSON.stringify(noChangeTargets) === JSON.stringify(["release_decision_latest.json"]), "target helper remains deterministic");
+assert(noChangeTargets.length === 0, "no-op reselection must have zero stale targets");
 const noChange = markCandidateReselectionEvidenceStale({
   workspaceReportsDir: reselect,
   cardIds: [cardId],
