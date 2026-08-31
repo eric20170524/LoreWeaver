@@ -52,6 +52,21 @@ function seedAutomaticEvidence(reportsDir, cardId) {
     releaseEligible: true
   });
 }
+function seedWorkspaceAutomaticEvidence(workspaceReports, cardId, { browser = "passed", visual = "passed" } = {}) {
+  writeJson(path.join(workspaceReports, `standalone_browser_report_${cardId}.json`), {
+    status: browser,
+    stale: browser === "stale",
+    freshness: browser === "stale" ? "stale" : "fresh",
+    cardId,
+    releaseEligible: browser === "passed"
+  });
+  writeJson(path.join(workspaceReports, `visual_audit_${cardId}_latest.json`), {
+    status: visual,
+    stale: visual === "stale",
+    freshness: visual === "stale" ? "stale" : "fresh",
+    cardId
+  });
+}
 function seedHumanAndDevice(workspaceReports, cardId, releaseIdentity, candidateIdentity) {
   const identity = { ...releaseIdentity, ...candidateIdentity, cardId };
   const human = buildHumanPlaytestEvidence({
@@ -180,6 +195,66 @@ function main() {
   assert(certified.certificationTier === "release_certified", "tier should be release_certified");
   assert(certified.exactCandidateReady === true, "exact Candidate identity must be recorded");
 
+  // Workspace exact-Candidate browser/visual evidence must override stale/failed
+  // shared reports. This is the normal publish-UI path.
+  for (const cardId of ["alpha", "beta"]) {
+    seedWorkspaceAutomaticEvidence(workspaceReportsDir, cardId);
+    writeJson(path.join(reportsDir, `standalone_browser_report_${cardId}.json`), {
+      status: "failed",
+      cardId,
+      releaseEligible: false
+    });
+    writeJson(path.join(reportsDir, `visual_audit_${cardId}_latest.json`), {
+      status: "stale",
+      stale: true,
+      freshness: "stale",
+      cardId,
+      staleReason: "shared_report_must_not_override_workspace"
+    });
+  }
+  const workspaceWins = evaluateWorkspaceReleasePolicy({
+    gameSpec,
+    reportsDir,
+    workspaceReportsDir,
+    candidateIdentity,
+    mode: "certified",
+    cardsRoot
+  });
+  assert(workspaceWins.exportAllowed === true, `workspace evidence should override shared stale/failed reports: ${JSON.stringify(workspaceWins.blockers)}`);
+  for (const item of workspaceWins.cardDecisions) {
+    assert(item.productionGate.checks.standaloneBrowser.sourceDir === path.resolve(workspaceReportsDir), `${item.cardId} browser must come from workspace reports`);
+    assert(item.productionGate.checks.visualAudit.sourceDir === path.resolve(workspaceReportsDir), `${item.cardId} visual must come from workspace reports`);
+  }
+
+  // Conversely, a local stale report is authoritative. Never bypass it with a
+  // shared PASS report, otherwise re-verified Candidate identity can be escaped.
+  writeJson(path.join(workspaceReportsDir, "visual_audit_alpha_latest.json"), {
+    status: "stale",
+    stale: true,
+    freshness: "stale",
+    staleReason: "new_candidate_selected",
+    cardId: "alpha"
+  });
+  writeJson(path.join(reportsDir, "visual_audit_alpha_latest.json"), {
+    status: "passed",
+    cardId: "alpha"
+  });
+  const workspaceStaleBlocks = evaluateWorkspaceReleasePolicy({
+    gameSpec,
+    reportsDir,
+    workspaceReportsDir,
+    candidateIdentity,
+    mode: "certified",
+    cardsRoot
+  });
+  assert(workspaceStaleBlocks.exportAllowed === false, "workspace stale evidence must block even when shared fallback passes");
+  const alphaDecision = workspaceStaleBlocks.cardDecisions.find((item) => item.cardId === "alpha");
+  assert(alphaDecision?.productionGate.checks.visualAudit.sourceDir === path.resolve(workspaceReportsDir), "stale local visual report must remain authoritative");
+  assert(alphaDecision?.productionGate.checks.visualAudit.stale === true, "local stale visual evidence must be visible in gate checks");
+
+  // Restore local visual PASS for the remaining identity tests.
+  seedWorkspaceAutomaticEvidence(workspaceReportsDir, "alpha");
+
   const wrongCandidate = evaluateWorkspaceReleasePolicy({
     gameSpec,
     reportsDir,
@@ -204,7 +279,19 @@ function main() {
   });
   assert(withWaiver.exportAllowed === false, "waiver must prevent strict certified export");
 
-  console.log("PASSED workspace release policy checks");
+  console.log(JSON.stringify({
+    schemaVersion: "loreweaver.release-policy-check.v2",
+    status: "passed",
+    checks: [
+      "multi_card_candidate_policy",
+      "exact_candidate_required",
+      "all_cards_require_observed_evidence",
+      "workspace_automatic_evidence_overrides_shared_stale_or_failed",
+      "workspace_stale_evidence_does_not_fallback_to_shared_pass",
+      "observed_evidence_candidate_identity_match",
+      "waiver_prevents_strict_certification"
+    ]
+  }, null, 2));
 }
 
 try {
