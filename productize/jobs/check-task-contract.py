@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,6 +22,10 @@ from backend.task_contract import (  # noqa: E402
     next_required_role,
     validate_task_contract,
 )
+from backend.task_repository import (  # noqa: E402
+    TaskRepository,
+    TaskRepositoryError,
+)
 
 SCHEMA = ROOT / "minigame_master/contracts/task_contract.schema.json"
 
@@ -33,10 +38,10 @@ def assert_true(value, message: str = "assertion failed") -> None:
 def expect_error(fn, contains: str) -> None:
     try:
         fn()
-    except TaskContractError as exc:
+    except (TaskContractError, TaskRepositoryError) as exc:
         assert_true(contains in str(exc), f"expected '{contains}' in '{exc}'")
         return
-    raise AssertionError(f"expected TaskContractError containing: {contains}")
+    raise AssertionError(f"expected contract/repository error containing: {contains}")
 
 
 def evidence(evidence_id: str, kind: str, *criteria: str) -> dict:
@@ -243,6 +248,76 @@ def run_rework_path() -> None:
     assert_true(evaluate_task_acceptance(task)["accepted"], "rework requires full revalidation")
 
 
+def run_repository_checks() -> None:
+    with tempfile.TemporaryDirectory(prefix="lw-task-repository-") as tmp:
+        root = Path(tmp)
+        workspace = root / "workspace-a"
+        workspace.mkdir(parents=True)
+        repo = TaskRepository(root)
+        created = repo.create("workspace-a", new_contract())
+        assert_true(created["status"] == "draft", "repository creates exact contract")
+        assert_true(len(repo.list("workspace-a")) == 1, "repository lists created task")
+        assert_true(
+            (workspace / "tasks/history/boss-readability/round-0000-created.json").is_file(),
+            "repository writes creation history",
+        )
+
+        before_bytes = (workspace / "tasks/boss-readability.json").read_bytes()
+        expect_error(
+            lambda: repo.append(
+                "workspace-a",
+                "boss-readability",
+                role="programmer",
+                verdict="passed",
+                summary="illegal jump",
+                evidence_refs=[evidence("repo-illegal", "implementation")],
+            ),
+            "role_out_of_order",
+        )
+        assert_true(
+            (workspace / "tasks/boss-readability.json").read_bytes() == before_bytes,
+            "failed transition performs zero writes",
+        )
+
+        updated = repo.append(
+            "workspace-a",
+            "boss-readability",
+            role="architect",
+            verdict="passed",
+            summary="repository plan",
+            evidence_refs=[evidence("repo-plan", "plan")],
+        )
+        first_hash = repo.last_round_hash(updated)
+        assert_true(first_hash is not None, "repository exposes last round hash")
+        expect_error(
+            lambda: repo.append(
+                "workspace-a",
+                "boss-readability",
+                role="programmer",
+                verdict="passed",
+                summary="stale writer",
+                evidence_refs=[evidence("repo-stale", "implementation")],
+                expected_last_round_hash="stale-hash",
+            ),
+            "task_concurrency_conflict",
+        )
+        updated = repo.append(
+            "workspace-a",
+            "boss-readability",
+            role="programmer",
+            verdict="passed",
+            summary="repository implementation",
+            evidence_refs=[evidence("repo-impl", "implementation")],
+            expected_last_round_hash=first_hash,
+        )
+        assert_true(updated["status"] == "implemented", "optimistic append succeeds with current hash")
+        history = sorted((workspace / "tasks/history/boss-readability").glob("round-*.json"))
+        assert_true(len(history) == 3, "creation plus two handoffs are journaled")
+        assert_true(repo.read("workspace-a", "boss-readability") == updated, "read returns persisted contract")
+        expect_error(lambda: repo.create("workspace-a", new_contract()), "task_already_exists")
+        expect_error(lambda: repo.list("../escape"), "workspace_id_invalid")
+
+
 def run_adversarial_checks(accepted: dict) -> None:
     l3 = new_contract("L3")
     assert_true(l3["status"] == "escalated", "L3 task must escalate")
@@ -293,6 +368,7 @@ def main() -> None:
     assert_true(schema.get("$id"), "task contract schema must have an id")
     accepted = run_happy_path()
     run_rework_path()
+    run_repository_checks()
     run_adversarial_checks(accepted)
     print(json.dumps({
         "schemaVersion": "loreweaver.task-contract-check.v1",
@@ -304,7 +380,10 @@ def main() -> None:
             "append_only_hash_chain",
             "bounded_rework_round",
             "L3_L4_escalation",
-            "role_specific_context"
+            "role_specific_context",
+            "atomic_workspace_persistence",
+            "optimistic_concurrency",
+            "failed_transition_zero_writes"
         ]
     }, ensure_ascii=False, indent=2))
 
