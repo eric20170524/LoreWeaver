@@ -5,9 +5,14 @@ from __future__ import annotations
 
 import copy
 import json
+import sys
 from pathlib import Path
 
-from backend.task_contract import (
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from backend.task_contract import (  # noqa: E402
     TaskContractError,
     append_handoff,
     context_for_role,
@@ -17,8 +22,6 @@ from backend.task_contract import (
     validate_task_contract,
 )
 
-
-ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = ROOT / "minigame_master/contracts/task_contract.schema.json"
 
 
@@ -88,6 +91,45 @@ def new_contract(requested_patch_level: str = "L2") -> dict:
     )
 
 
+def advance_to_implemented(task: dict, suffix: str = "v1") -> dict:
+    task = append_handoff(
+        task,
+        role="architect",
+        verdict="passed",
+        summary="Bounded plan completed.",
+        evidence_refs=[evidence(f"plan-{suffix}", "plan")],
+    )
+    return append_handoff(
+        task,
+        role="programmer",
+        verdict="passed",
+        summary="Implementation completed within L2 authority.",
+        evidence_refs=[evidence(f"implementation-{suffix}", "implementation")],
+    )
+
+
+def advance_verification(task: dict, suffix: str = "v1") -> dict:
+    task = append_handoff(
+        task,
+        role="auditor",
+        verdict="passed",
+        summary="Static contract alignment passed.",
+        evidence_refs=[evidence(f"static-{suffix}", "static", "AC1")],
+    )
+    task = append_handoff(
+        task,
+        role="player",
+        verdict="passed",
+        summary="One runtime session proved state, pixels and interaction feel.",
+        evidence_refs=[
+            evidence(f"runtime-{suffix}", "runtime", "AC1"),
+            evidence(f"visual-{suffix}", "visual", "AC2"),
+            evidence(f"feel-{suffix}", "feel", "AC2"),
+        ],
+    )
+    return task
+
+
 def run_happy_path() -> dict:
     task = new_contract()
     assert_true(task["status"] == "draft", "new L0-L2 task starts draft")
@@ -114,21 +156,7 @@ def run_happy_path() -> dict:
         "role_evidence_boundary_violation",
     )
 
-    task = append_handoff(
-        task,
-        role="architect",
-        verdict="passed",
-        summary="Bounded plan and Runtime State Contract completed.",
-        evidence_refs=[evidence("plan-v1", "plan")],
-    )
-    task = append_handoff(
-        task,
-        role="programmer",
-        verdict="passed",
-        summary="Implementation completed within L2 composition authority.",
-        evidence_refs=[evidence("implementation-v1", "implementation")],
-    )
-
+    task = advance_to_implemented(task)
     expect_error(
         lambda: append_handoff(
             task,
@@ -146,7 +174,6 @@ def run_happy_path() -> dict:
         summary="Static contract and implementation alignment passed.",
         evidence_refs=[evidence("static-ac1", "static", "AC1")],
     )
-
     expect_error(
         lambda: append_handoff(
             task,
@@ -164,7 +191,7 @@ def run_happy_path() -> dict:
         task,
         role="player",
         verdict="passed",
-        summary="One runtime session proved state, pixels and interaction feel.",
+        summary="Runtime verification passed.",
         evidence_refs=[
             evidence("runtime-ac1", "runtime", "AC1"),
             evidence("visual-ac2", "visual", "AC2"),
@@ -175,14 +202,14 @@ def run_happy_path() -> dict:
         task,
         role="reviewer",
         verdict="passed",
-        summary="Independent final review accepted the current implementation evidence.",
+        summary="Independent final review accepted the evidence.",
         evidence_refs=[evidence("independent-review", "review")],
     )
     task = append_handoff(
         task,
         role="orchestrator",
         verdict="passed",
-        summary="Product intent and all acceptance criteria are satisfied.",
+        summary="Product intent and acceptance criteria are satisfied.",
         evidence_refs=[evidence("product-acceptance", "acceptance")],
     )
 
@@ -195,21 +222,7 @@ def run_happy_path() -> dict:
 
 
 def run_rework_path() -> None:
-    task = new_contract()
-    task = append_handoff(
-        task,
-        role="architect",
-        verdict="passed",
-        summary="plan",
-        evidence_refs=[evidence("rework-plan", "plan")],
-    )
-    task = append_handoff(
-        task,
-        role="programmer",
-        verdict="passed",
-        summary="implementation round one",
-        evidence_refs=[evidence("rework-impl-1", "implementation")],
-    )
+    task = advance_to_implemented(new_contract(), "rework-1")
     task = append_handoff(
         task,
         role="auditor",
@@ -227,24 +240,7 @@ def run_rework_path() -> None:
         evidence_refs=[evidence("rework-impl-2", "implementation")],
     )
     assert_true(task["status"] == "implemented", "rework restarts verification chain")
-    task = append_handoff(
-        task,
-        role="auditor",
-        verdict="passed",
-        summary="static pass after rework",
-        evidence_refs=[evidence("rework-static", "static", "AC1")],
-    )
-    task = append_handoff(
-        task,
-        role="player",
-        verdict="passed",
-        summary="runtime pass after rework",
-        evidence_refs=[
-            evidence("rework-runtime", "runtime", "AC1"),
-            evidence("rework-visual", "visual", "AC2"),
-            evidence("rework-feel", "feel", "AC2"),
-        ],
-    )
+    task = advance_verification(task, "rework-2")
     task = append_handoff(
         task,
         role="reviewer",
@@ -316,25 +312,19 @@ def main() -> None:
     accepted = run_happy_path()
     run_rework_path()
     run_adversarial_checks(accepted)
-    print(
-        json.dumps(
-            {
-                "schemaVersion": "loreweaver.task-contract-check.v1",
-                "status": "passed",
-                "checks": [
-                    "ordered_role_pipeline",
-                    "static_runtime_role_separation",
-                    "criterion_evidence_coverage",
-                    "append_only_hash_chain",
-                    "bounded_rework_round",
-                    "L3_L4_escalation",
-                    "role_specific_context",
-                ],
-            },
-            ensure_ascii=False,
-            indent=2,
-        )
-    )
+    print(json.dumps({
+        "schemaVersion": "loreweaver.task-contract-check.v1",
+        "status": "passed",
+        "checks": [
+            "ordered_role_pipeline",
+            "static_runtime_role_separation",
+            "criterion_evidence_coverage",
+            "append_only_hash_chain",
+            "bounded_rework_round",
+            "L3_L4_escalation",
+            "role_specific_context"
+        ]
+    }, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
