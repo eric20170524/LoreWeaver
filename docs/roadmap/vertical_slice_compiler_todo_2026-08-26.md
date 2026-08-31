@@ -48,10 +48,10 @@
 - [x] E1 冻结新增 Gameplay Card，黄金主玩法固定为 `survivor_horde`；本阶段只纵向补闭环与证据。
 - [x] E2 建立 `survivor_vertical_slice_3`：Setup -> Escalation -> Climax，全部复用 `survivor_horde`，只通过已实现 Modifier/knobs 增压。
 - [x] E3 黄金链路复用两套已存在 production Theme Content Pack：wasteland / cyber_pulse；二者共享同一 runtime asset/audio source，不复制玩法代码。
-- [ ] E4 Browser/static/offline 子链已完成：统一 Candidate Compiler -> standalone ZIP/static host -> Chromium 三段真实启动 -> Modifier 对齐 -> zero `/api` -> zero console/page/request error，并绑定 `specHash + runtimeVersion + payloadHash + artifactSha256 + screenshotSha256`。真实 VLM 已接入同一 Candidate identity，但 GitHub Actions 当前未配置 `XAI_API_KEY`，因此报告正确为 `unavailable/releaseEligible=false`；只有 `grok/codex` real provider completed 且无 FAIL 才可通过。
-- [ ] E5 完成真实设备 FPS / interaction Evidence。工程链路已完成：`productize:evidence` 会重新校验当前 Workspace、Browser Report、Candidate ZIP SHA 与 executable `payloadHash`，只接受 `physicalDevice=true / headless=false / emulated=false` 的观测并按显式 FPS budget 判定；仍缺真实物理设备运行数据，因此本项不打勾。
-- [ ] E6 完成真人试玩 Evidence。工程链路已完成：同一 recorder 只接受 `humanObserved=true / fixture=false / synthetic=false` 的真实 session，并要求记录理解耗时、完成情况、失败原因、blocking issue、重玩意愿与修改建议；仍缺真实试玩 session，因此本项不打勾。
-- [x] E7 Recipe/Content/Asset/Runtime identity 变化统一 stale：共享自动化 Gate + Workspace human/device + browser + generic/card-scoped VLM + release decision + artifact metadata；Human/Device 正式证据只允许 workspace-local，不再回退 shared reports。
+- [ ] E4 Browser/static/offline 子链已完成并产品化：发布页调用通用 `verify-workspace-candidate.mjs`，统一 Candidate Compiler -> standalone ZIP/static host -> Chromium 逐节点真实进入 adapter `running` -> Modifier 对齐 -> zero `/api` -> zero console/page/request error，并绑定 `specHash + runtimeVersion + payloadHash + artifactSha256 + screenshotSha256`；失败 reverify 不覆盖上一个 Browser anchor，成功选择新 Candidate 才使旧下游 Evidence stale。真实 VLM 也已改为发布页/Golden 共用 `run-workspace-vlm-audit.py`，但 GitHub Actions 当前未配置 `XAI_API_KEY`，因此真实 VLM Evidence 仍正确为 `unavailable/releaseEligible=false`；只有 `grok/codex` real provider completed 且无 FAIL 才可通过。
+- [ ] E5 完成真实设备 FPS / interaction Evidence。工程链路与产品入口均完成：发布页可下载 Browser-verified 的同一个 exact Candidate，并录入真实设备型号、OS、Browser、Viewport、FPS p50/p95/min、console/interaction；Gateway 只转交原始观测，`productize:evidence` 会重新校验 Workspace、Browser Report、Candidate ZIP SHA 与 executable `payloadHash`，只接受 `physicalDevice=true / headless=false / emulated=false`。仍缺真实物理设备运行数据，因此本项不打勾。
+- [ ] E6 完成真人试玩 Evidence。工程链路与产品入口均完成：发布页可录入真实 session 的理解耗时、完成情况、趣味/清晰/难度、失败原因、blocking issue、重玩意愿与修改建议，并要求人工确认真实观察；recorder 只接受 `humanObserved=true / fixture=false / synthetic=false` 且重新绑定 exact Candidate。仍缺真实试玩 session，因此本项不打勾。
+- [x] E7 Evidence 生命周期已闭环：Recipe/Content/Asset/Runtime authoring identity 变化统一 stale 全量发布证据；成功 reverify 新 exact Candidate 只失效 package-bound downstream VLM/Human/Device/release state，不失效新的 Browser anchor；仅 screenshot 变化只失效 VLM/release decision；失败 reverify 保留旧已验证 Candidate。Workspace-local Browser/VLM Evidence 优先于 shared legacy reports，shared 只在 Workspace 缺失时 fallback；若 Workspace 本地报告已 stale/failed，则禁止绕过到 shared PASS。Human/Device 永远只允许 workspace-local。
 - [x] E8 通过 Agent Repair Loop 自动修复一个真实 `golden_slice_gate` 失败：Climax 缺 `boss_phases` -> gameplay L2 patch -> targeted revalidate -> pass。
 - [ ] E9 无 waiver 达到 `release_certified` 并导出 Certified H5；Certified 使用“已验证 Candidate 原地晋升”：Browser + real-VLM + Human + Device 必须绑定同一 executable payload / artifact，VLM 额外绑定 screenshot；晋升只能改变认证 metadata，payloadHash 不得变化。当前仍受 E4 VLM、E5、E6 真实 Evidence 阻塞，不能伪造。
 
@@ -61,13 +61,15 @@
 - [x] F2 Departments / Manifest / VLM / Pipeline / Logs 已移入持久化 `Expert Mode`；简单模式不展示部门或内部 Gate 术语。
 - [x] F3 默认首页改为 creator-first：Header 只保留创意输入、生成蓝图、Workspace 与基础设置；发布移动到独立 Publish Step；UI 文案和试玩计数不再固定“修仙 / 12 关 / 6 境界”，节点与成长阶段按当前 Spec 动态显示。Convergence Core + Golden Candidate E2E 已通过。
 - [x] F4 已完成事务式“一句话修改 -> 自动验证 -> 最终 Diff”：Agent 只生成 Proposal，不直接覆盖；Creator Policy 限制 Simple Mode 为 L1/L2，Topology/Recipe/Adapter/Runtime 自动升级 Expert；L2 先跑 `gameplay_composition` 目录合同，合法后才暂存并跑真实 `node_smoke`；目录预检失败零写入，运行态失败恢复原 authoring bytes，成功才 Commit/同步 Job/失效旧 Release Evidence，并在 UI 展示完整 validation chain + Diff。真实 `survivor_vertical_slice_3` 三段/4 Modifier 组合已通过同一 composition validator；Convergence Core 的事务回归、TypeScript 与 Golden Candidate Chromium 均全绿。
+- [x] F5 发布页已形成普通用户可执行的 Evidence Checklist：`1 Browser -> 2 Real VLM -> 3 Human -> 4 Physical Device -> Certified`。Browser 按钮构建并验证一个 exact Candidate，下载按钮返回同一 verified ZIP；VLM 按钮调用通用 real-provider audit；Human/Device 表单不能直接制造 PASS，只提交真实观测给严格 recorder。Release Policy 以 Workspace-local exact Candidate Evidence 为最高优先级，所有步骤共享同一 payload/artifact identity。Convergence Core + Golden Candidate E2E 已全绿。
 
 ## 当前执行顺序
 
 1. [x] **P0 + P1**：成熟度、Repair Loop、RecipeGraph、统一 Release Compiler/UI、Observed Evidence exact-Candidate 防伪链已闭环。
-2. [x] **E1-E3 + E7-E8/B9**：黄金三段 Recipe、双主题复用、完整证据失效、真实 Gate Repair 已通过自动回归。
-3. [x] **E4 Browser/static/offline**：exact Candidate Chromium 三段运行与 payload/artifact/screenshot identity 已闭环。
-4. [x] **P3 F1-F4**：默认产品壳已变为五步 Creator Flow；一句话修改走受控 Proposal -> targeted validation -> commit/rollback -> final Diff，工程流水线全部进入 Expert Mode。
-5. [ ] **E4 VLM**：配置真实 `XAI_API_KEY`（或可用 Codex CLI provider）后，对 exact Candidate climax screenshot 取得 fresh `passed` Evidence；当前 CI 明确为 `unavailable`，不降级。
-6. [ ] **E5-E6 真实观测**：工程 recorder / policy / promoter 已完成；下一步仅收集 exact Candidate 的物理设备数据与真人试玩 session，禁止 synthetic/headless/emulated 替代。
-7. [ ] **E9**：仅在 Browser + real-VLM + human + device 全部 fresh/matched、无 waiver 后原地晋升 Candidate 为 Certified H5。
+2. [x] **E1-E3 + E7-E8/B9**：黄金三段 Recipe、双主题复用、完整证据生命周期、真实 Gate Repair 已通过自动回归。
+3. [x] **E4 Browser/static/offline 工程链**：发布页与 Golden 共用 generic current-workspace verifier；exact Candidate Chromium 三段运行与 payload/artifact/screenshot identity 已闭环，失败 reverify 保留旧 anchor。
+4. [x] **P3 F1-F5**：默认产品壳已变为五步 Creator Flow；一句话修改与发布 Evidence Checklist 均走受控、可回滚、exact-Candidate 绑定链路，工程流水线全部进入 Expert Mode。
+5. [ ] **E4 Real VLM 真实观测**：在实际运行环境配置真实 `XAI_API_KEY`（或可用 Codex CLI provider），在发布页点击 Real VLM，对当前 exact Candidate screenshot 取得 fresh `passed` Evidence；当前 CI 明确为 `unavailable`，不降级。
+6. [ ] **E5 Physical Device 真实观测**：下载发布页同一个 verified Candidate，在真实手机/平板/目标设备运行并记录设备、交互与 FPS 数据，再通过发布页提交。
+7. [ ] **E6 Human Playtest 真实观测**：让真实玩家试玩同一个 verified Candidate，通过发布页记录 session 结果与反馈。
+8. [ ] **E9**：仅在 Browser + real-VLM + human + device 全部 fresh/matched、无 waiver 后原地晋升 Candidate 为 Certified H5。
