@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import path from "path";
 import { spawn } from "child_process";
+import { registerDepartmentTaskSyncRoutes } from "./departmentTaskSyncRoutes";
 
 export type WorkspaceValidation = {
   ok: boolean;
@@ -220,5 +221,13 @@ export function registerTaskContractRoutes({
       `--task-id=${taskId}`
     ]);
     return res.status(result.statusCode).json(result.payload);
+  });
+
+  registerDepartmentTaskSyncRoutes({
+    app,
+    cwd,
+    getPythonCommand,
+    validateWorkspace,
+    timeoutMs
   });
 }
