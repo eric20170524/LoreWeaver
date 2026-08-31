@@ -22,6 +22,19 @@ function readJson(file) {
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
+function stable(value) {
+  if (Array.isArray(value)) return value.map(stable);
+  if (value && typeof value === "object") {
+    return Object.keys(value).sort().reduce((result, key) => {
+      result[key] = stable(value[key]);
+      return result;
+    }, {});
+  }
+  return value;
+}
+function equalJson(left, right) {
+  return JSON.stringify(stable(left)) === JSON.stringify(stable(right));
+}
 function assert(value, message) {
   if (!value) throw new Error(message);
 }
@@ -47,19 +60,20 @@ const compiled = compileVerticalSliceBlueprint(blueprint);
 const graphValidation = validateRecipeGraph(compiled.recipeGraph);
 assert(graphValidation.valid, JSON.stringify(graphValidation));
 assert(compiled.nodes.length === 3, "compiled blueprint must preserve three runtime nodes");
-assert(JSON.stringify(compiled.gameplayCards) === JSON.stringify(["survivor_horde"]), "one shared base card expected");
+assert(equalJson(compiled.gameplayCards, ["survivor_horde"]), "one shared base card expected");
 assert(compiled.recipeGraph.metadata.runtimeCompatibility === "resolved_linear_nodes", "must target existing runtime compiler");
 assert(compiled.recipeGraph.metadata.blueprintId === blueprint.id, "compiled graph retains blueprint identity");
 
 const legacy = readJson(LEGACY_GRAPH);
+const normalizedLegacyNodes = legacy.nodes.map((node) => ({
+  ...node.payload,
+  taunts: node.payload.taunts || [],
+  rewards: node.payload.rewards || "",
+  resourceMultiplier: node.payload.resourceMultiplier ?? 1,
+  gameplay: { ...node.payload.gameplay, patchLevel: node.payload.gameplay.patchLevel || "L2" }
+}));
 assert(
-  JSON.stringify(compiled.nodes) === JSON.stringify(legacy.nodes.map((node) => ({
-    ...node.payload,
-    taunts: node.payload.taunts || [],
-    rewards: node.payload.rewards || "",
-    resourceMultiplier: node.payload.resourceMultiplier ?? 1,
-    gameplay: { ...node.payload.gameplay, patchLevel: node.payload.gameplay.patchLevel || "L2" }
-  }))),
+  equalJson(compiled.nodes, normalizedLegacyNodes),
   "Blueprint must preserve the existing golden node contract while adding explicit runtime defaults"
 );
 
@@ -89,9 +103,6 @@ const alignmentCandidate = clone(blueprint);
 alignmentCandidate.id = "candidate-only";
 alignmentCandidate.status = "alignment_candidate";
 alignmentCandidate.missingCapabilities = ["gameplay_card:missing_future_card"];
-alignmentCandidate.requiredCapabilities = alignmentCandidate.requiredCapabilities.filter(
-  (item) => item !== "gameplay_card:missing_future_card"
-);
 alignmentCandidate.promotion = {
   state: "candidate",
   evidenceRefs: [],
