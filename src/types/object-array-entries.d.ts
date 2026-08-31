@@ -1,8 +1,15 @@
 export {};
 
+type LoreWeaverRoleContextEntry = {
+  file: string;
+  reason: string;
+};
+
 declare global {
   interface ObjectConstructor {
-    /** Preserve the array element type for dictionary-style UI rendering. */
-    entries<T>(value: Record<string, T[]>): Array<[string, T[]]>;
+    /** Keep TaskContract role-context entries strongly typed under TS 5.8. */
+    entries(
+      value: Record<string, LoreWeaverRoleContextEntry[]>
+    ): Array<[string, LoreWeaverRoleContextEntry[]]>;
   }
 }
