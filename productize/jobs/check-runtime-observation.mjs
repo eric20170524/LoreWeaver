@@ -6,6 +6,7 @@ import {
   RuntimeObservationPort,
   TestHooks
 } from "../../minigame_master/core/lib/contracts/index.js";
+import GameplayAdapter from "../../minigame_master/core/lib/gameplay/GameplayAdapter.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -68,6 +69,7 @@ const pauseResult = api.pause({ reason: "player_inspection" });
 assert(pauseResult.status === "passed", "registered control can execute");
 assert(pauseCalls === 1 && pauseResult.result.paused === true, "control result is returned");
 assert(api.capabilities().exactFrameAdvance === false, "pause registration cannot imply exact-frame support");
+hooks.unregisterControl("pause");
 
 const unsupportedInput = api.input({ action: "move", x: 1, y: 0 });
 assert(unsupportedInput.status === "unsupported", "semantic input remains unsupported without handler");
@@ -92,12 +94,99 @@ const blocked = standalone.invoke("unknownControl");
 assert(blocked.status === "blocked", "unknown controls are blocked rather than guessed");
 assert(standalone.capabilities().exactFrameAdvance === false, "standalone port also fails closed");
 
+// Shared adapter controls: prove pause/resume/semantic input are backed by a
+// real adapter/scene surface rather than enabled by configuration alone.
+const adapterHooks = new TestHooks("__ADAPTER_TEST_HOOKS__", {
+  observationGlobalKey: "__ADAPTER_OBSERVATION__",
+  maxTraceEntries: 32
+});
+const adapterApi = window.__ADAPTER_OBSERVATION__;
+let scenePaused = false;
+let scenePauseCalls = 0;
+let sceneResumeCalls = 0;
+let adapterEndResult = null;
+const fakeScene = {
+  sys: { settings: { key: "SyntheticAdapterScene" } },
+  scene: {
+    pause(key) {
+      assert(key === "SyntheticAdapterScene", "pause targets the owning scene");
+      scenePaused = true;
+      scenePauseCalls += 1;
+    },
+    resume(key) {
+      assert(key === "SyntheticAdapterScene", "resume targets the owning scene");
+      scenePaused = false;
+      sceneResumeCalls += 1;
+    }
+  }
+};
+const adapter = new GameplayAdapter({
+  testHooks: adapterHooks,
+  onEnd: (result) => { adapterEndResult = result; }
+});
+adapter.targetPoint = { x: 0, y: 0 };
+adapter.init({
+  nodeId: "node_semantic_control",
+  nodeConfig: {
+    duration: 30,
+    goalValue: 1,
+    gameplay: { cardId: "survivor_horde", knobs: { allowQuit: true } }
+  }
+});
+adapter.readPlayabilityKnobs(adapter.payload, "survivor_horde");
+assert(adapterApi.capabilities().pause === false, "adapter controls are unavailable before create");
+adapter.create(fakeScene);
+const adapterCaps = adapterApi.capabilities();
+assert(adapterCaps.pause === true && adapterCaps.resume === true, "adapter create registers real scene pause/resume controls");
+assert(adapterCaps.semanticInput === true, "adapter create registers semantic input when a real action surface exists");
+assert(adapterCaps.exactFrameAdvance === false, "shared adapter controls do not fake exact-frame advance");
+assert(adapterApi.snapshot().state === null || adapterApi.snapshot().sessionId, "adapter observation session remains valid");
+
+const semanticMove = adapterApi.input({ action: "move", x: 125, y: 250 });
+assert(semanticMove.status === "passed", "semantic move executes through the adapter contract");
+assert(adapter.targetPoint.x === 125 && adapter.targetPoint.y === 250, "semantic move mutates the real adapter target point");
+assert(adapterApi.snapshot().state.semanticAction.action === "move", "semantic action is captured in the same observation session");
+
+const invalidMove = adapterApi.input({ action: "move", x: "bad", y: 1 });
+assert(invalidMove.status === "failed" && invalidMove.error.includes("finite_x_y"), "invalid semantic move fails closed");
+const unsupportedPrimary = adapterApi.input({ action: "primary" });
+assert(unsupportedPrimary.status === "failed" && unsupportedPrimary.error.includes("semantic_action_unsupported"), "undeclared semantic actions fail closed");
+
+const adapterPause = adapterApi.pause({ reason: "inspect" });
+assert(adapterPause.status === "passed" && scenePaused === true, "pause executes the owning scene pause surface");
+assert(adapter.status === "paused" && scenePauseCalls === 1, "adapter status follows paused scene");
+assert(adapterApi.snapshot().state.status === "paused", "pause state is observable in the same session");
+const adapterResume = adapterApi.resume({ reason: "continue" });
+assert(adapterResume.status === "passed" && scenePaused === false, "resume executes the owning scene resume surface");
+assert(adapter.status === "running" && sceneResumeCalls === 1, "adapter status returns to running");
+assert(adapterApi.snapshot().state.status === "running", "resume state is observable in the same session");
+
+const frameAdvance = adapterApi.advanceFrames({ frames: 1 });
+assert(frameAdvance.status === "unsupported", "advanceFrames stays unsupported without a deterministic runtime clock");
+assert(adapterApi.capabilities().exactFrameAdvance === false, "unsupported frame advance never changes capability truth");
+
+const retreat = adapterApi.input({ action: "retreat" });
+assert(retreat.status === "passed", "semantic retreat uses the existing adapter retreat contract");
+assert(adapterEndResult?.reason === "retreated", "semantic retreat reaches the host result path");
+assert(adapter.status === "ended", "semantic retreat ends the adapter");
+
+adapter.destroy();
+const afterDestroyCaps = adapterApi.capabilities();
+assert(afterDestroyCaps.pause === false && afterDestroyCaps.resume === false && afterDestroyCaps.semanticInput === false, "destroy unregisters adapter-owned controls");
+assert(afterDestroyCaps.exactFrameAdvance === false, "destroy does not alter exact-frame policy");
+const adapterTrace = adapterApi.trace();
+assert(adapterTrace.sessionId === adapterApi.snapshot().sessionId, "semantic controls remain in one observation session");
+assert(adapterTrace.entries.some((entry) => entry.type === "control_passed"), "control results are retained in the observation trace");
+
 console.log(JSON.stringify({
-  schemaVersion: "loreweaver.runtime-observation-check.v1",
+  schemaVersion: "loreweaver.runtime-observation-check.v2",
   status: "passed",
   sessionId: api.snapshot().sessionId,
   traceEntries: api.trace().entryCount,
   capabilities: api.capabilities(),
+  adapterSessionId: adapterApi.snapshot().sessionId,
+  adapterTraceEntries: adapterTrace.entryCount,
+  adapterCapabilitiesAfterDestroy: afterDestroyCaps,
   checks: [
     "legacy_test_hook_compatibility",
     "immutable_snapshot_and_trace",
@@ -105,6 +194,10 @@ console.log(JSON.stringify({
     "bounded_monotonic_trace",
     "unsupported_controls_fail_closed",
     "control_capability_only_after_real_registration",
+    "shared_adapter_pause_resume_controls",
+    "shared_adapter_semantic_move_and_retreat",
+    "invalid_or_undeclared_semantic_actions_fail_closed",
+    "adapter_controls_unregister_on_destroy",
     "exact_frame_advance_not_falsely_claimed",
     "runtime_authority_remains_LoreWeaverRuntimeKernel"
   ]
