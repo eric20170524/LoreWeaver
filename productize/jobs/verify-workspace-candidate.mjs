@@ -241,6 +241,28 @@ async function main() {
         const game = window.__LOREWEAVER_GAME__;
         const scene = game?.scene?.keys?.LevelActiveScene;
         const hooks = window.__LOREWEAVER_TEST_HOOKS__ || {};
+        const observationApi = window.__LOREWEAVER_RUNTIME_OBSERVATION__;
+        const observationSnapshot = typeof observationApi?.snapshot === "function"
+          ? observationApi.snapshot()
+          : null;
+        const observationTrace = typeof observationApi?.trace === "function"
+          ? observationApi.trace()
+          : null;
+        const observation = observationSnapshot && observationTrace
+          ? {
+              schemaVersion: observationApi.schemaVersion || null,
+              runtimeAuthority: observationSnapshot.runtimeAuthority || null,
+              snapshotSessionId: observationSnapshot.sessionId || null,
+              traceSessionId: observationTrace.sessionId || null,
+              sequence: observationSnapshot.sequence ?? null,
+              traceEntryCount: observationTrace.entryCount ?? null,
+              traceFirstSequence: observationTrace.firstSequence ?? null,
+              traceLastSequence: observationTrace.lastSequence ?? null,
+              sourceHooksKey: observationSnapshot.sourceHooksKey || null,
+              capabilities: observationSnapshot.capabilities || null,
+              state: observationSnapshot.state || null
+            }
+          : null;
         return {
           active: Boolean(game?.scene?.isActive?.("LevelActiveScene")),
           cardId: scene?.node?.gameplay?.cardId || null,
@@ -250,14 +272,40 @@ async function main() {
           runtimeContract: {
             introType: typeof scene?.node?.intro,
             tauntsIsArray: Array.isArray(scene?.node?.taunts)
-          }
+          },
+          observation
         };
       });
       const modsMatch = expected.modifierIds.every((id) => observed.modifierIds.includes(id));
       const contractValid = observed.runtimeContract.introType === "string" && observed.runtimeContract.tauntsIsArray;
       const runtimeRunning = observed.status === "running";
-      const stagePassed = observed.active && observed.cardId === expected.cardId && modsMatch && contractValid && runtimeRunning;
-      stageResults.push({ stage: index + 1, nodeId: expected.id, cardId: expected.cardId, passed: stagePassed, expectedModifiers: expected.modifierIds, observed });
+      const observationValid = Boolean(
+        observed.observation
+        && observed.observation.schemaVersion === "loreweaver.runtime-observation.v1"
+        && observed.observation.runtimeAuthority === "LoreWeaverRuntimeKernel"
+        && observed.observation.snapshotSessionId
+        && observed.observation.snapshotSessionId === observed.observation.traceSessionId
+        && Number(observed.observation.sequence) >= 1
+        && Number(observed.observation.traceEntryCount) >= 1
+        && observed.observation.capabilities?.snapshot === true
+        && observed.observation.capabilities?.trace === true
+        && observed.observation.sourceHooksKey === "__LOREWEAVER_TEST_HOOKS__"
+      );
+      const stagePassed = observed.active
+        && observed.cardId === expected.cardId
+        && modsMatch
+        && contractValid
+        && runtimeRunning
+        && observationValid;
+      stageResults.push({
+        stage: index + 1,
+        nodeId: expected.id,
+        cardId: expected.cardId,
+        passed: stagePassed,
+        expectedModifiers: expected.modifierIds,
+        assertions: { modsMatch, contractValid, runtimeRunning, observationValid },
+        observed
+      });
       if (!stagePassed) throw new Error(`stage_${index + 1}_failed:${JSON.stringify(stageResults.at(-1))}`);
 
       if (index === resolvedContract.length - 1) await page.screenshot({ path: attemptScreenshotPath, fullPage: true });
@@ -285,13 +333,23 @@ async function main() {
     && fs.existsSync(attemptScreenshotPath);
   const screenshotSha256 = fs.existsSync(attemptScreenshotPath) ? sha256File(attemptScreenshotPath) : null;
   const cardIds = [...new Set(resolvedContract.map((node) => node.cardId).filter(Boolean))].sort();
+  const observationSessions = stageResults.map((result) => ({
+    stage: result.stage,
+    nodeId: result.nodeId,
+    cardId: result.cardId,
+    sessionId: result.observed?.observation?.snapshotSessionId || null,
+    sequence: result.observed?.observation?.sequence ?? null,
+    traceEntryCount: result.observed?.observation?.traceEntryCount ?? null,
+    runtimeAuthority: result.observed?.observation?.runtimeAuthority || null,
+    capabilities: result.observed?.observation?.capabilities || null
+  }));
   const common = {
-    schemaVersion: "loreweaver.standalone-browser-report.v2",
+    schemaVersion: "loreweaver.standalone-browser-report.v3",
     status: passed ? "passed" : "failed",
     createdAt: new Date().toISOString(),
     workspaceId,
     releaseEligible: passed,
-    evidenceMeaning: "exact Candidate executable payload passed static-host browser validation; this does not itself certify the artifact",
+    evidenceMeaning: "exact Candidate executable payload passed static-host browser validation; runtime state and trace are captured from the same TestHooks session while screenshot remains host-owned",
     specHash: releaseManifest.specHash,
     runtimeVersion: releaseManifest.runtimeVersion,
     payloadHash: payloadIdentity.payloadHash,
@@ -300,6 +358,13 @@ async function main() {
     zeroApiRequests: apiRequests.length === 0,
     staticHostOnly: true,
     offlineBackendRequired: false,
+    runtimeObservation: {
+      schemaVersion: "loreweaver.runtime-observation-bundle.v1",
+      runtimeAuthority: "LoreWeaverRuntimeKernel",
+      sessionCount: observationSessions.length,
+      sessions: observationSessions,
+      screenshotOwner: "PlaywrightHost"
+    },
     runtimeNodeContract: resolvedContract,
     stageResults,
     screenshot: repoRelative(canonicalScreenshotPath),
@@ -360,6 +425,7 @@ async function main() {
     screenshot: common.screenshot,
     screenshotSha256,
     zeroApiRequests: common.zeroApiRequests,
+    runtimeObservationSessions: observationSessions,
     cardIds,
     stageResults,
     report: repoRelative(genericPath),
