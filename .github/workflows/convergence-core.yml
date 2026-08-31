@@ -10,6 +10,9 @@ on:
       - "productize/**"
       - "minigame_master/contracts/**"
       - "minigame_master/capabilities/**"
+      - "minigame_master/core/**"
+      - "src/**"
+      - "tsconfig.json"
       - "package.json"
       - ".github/workflows/convergence-core.yml"
 
@@ -43,6 +46,9 @@ jobs:
 
       - name: Verify production contracts
         run: node productize/jobs/check-production-contract.mjs
+
+      - name: Verify runtime observation contract
+        run: node productize/jobs/check-runtime-observation.mjs
 
       - name: Verify creator revision transaction
         run: python3 productize/jobs/check-creator-revision-transaction.py
