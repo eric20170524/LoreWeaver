@@ -142,7 +142,11 @@ export function CapabilityLibrarySummary({ locale }: { locale: Locale }) {
               {zh ? "Blueprint / 可运行骨架" : "Blueprint / runnable skeleton"}
             </div>
             <div className="space-y-2">
-              {verifiedBlueprints.map((entry) => <CapabilityEntry key={entry.id} entry={entry} zh={zh} />)}
+              {verifiedBlueprints.map((entry) => (
+                <div key={entry.id}>
+                  <CapabilityEntry entry={entry} zh={zh} />
+                </div>
+              ))}
             </div>
           </section>
 
@@ -177,7 +181,11 @@ export function CapabilityLibrarySummary({ locale }: { locale: Locale }) {
               {zh ? "Production Contract / 跨角色合同" : "Production Contract / cross-role contract"}
             </div>
             <div className="space-y-2">
-              {contracts.map((entry) => <CapabilityEntry key={entry.id} entry={entry} zh={zh} />)}
+              {contracts.map((entry) => (
+                <div key={entry.id}>
+                  <CapabilityEntry entry={entry} zh={zh} />
+                </div>
+              ))}
             </div>
           </section>
 
@@ -186,7 +194,11 @@ export function CapabilityLibrarySummary({ locale }: { locale: Locale }) {
               {zh ? "VibeGame 类型对齐候选" : "VibeGame subtype candidates"}
             </div>
             <div className="space-y-2">
-              {alignmentCandidates.map((entry) => <CapabilityEntry key={entry.id} entry={entry} zh={zh} />)}
+              {alignmentCandidates.map((entry) => (
+                <div key={entry.id}>
+                  <CapabilityEntry entry={entry} zh={zh} />
+                </div>
+              ))}
             </div>
           </section>
 
