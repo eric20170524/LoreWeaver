@@ -9,6 +9,7 @@ on:
       - "backend/**"
       - "productize/**"
       - "minigame_master/contracts/**"
+      - "minigame_master/capabilities/**"
       - "package.json"
       - ".github/workflows/convergence-core.yml"
 
@@ -39,6 +40,9 @@ jobs:
 
       - name: Run convergence policy checks
         run: npm run check:convergence-core
+
+      - name: Verify production contracts
+        run: node productize/jobs/check-production-contract.mjs
 
       - name: Verify creator revision transaction
         run: python3 productize/jobs/check-creator-revision-transaction.py
