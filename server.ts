@@ -4,6 +4,7 @@ import fs from "fs";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import { spawn, spawnSync } from "child_process";
+import { registerTaskContractRoutes } from "./server/taskContractRoutes";
 
 dotenv.config();
 
@@ -323,6 +324,32 @@ function runWorkspaceCandidateVerification(workspaceId: string) {
   };
 }
 
+function runWorkspaceVlmAudit(workspaceId: string) {
+  const validation = validateReleaseWorkspace(workspaceId);
+  if (!validation.ok) return validation;
+  const python = getPythonCommand();
+  const runner = path.join(process.cwd(), "productize", "jobs", "run-workspace-vlm-audit.py");
+  const result = spawnSync(python, [runner, `--workspace-id=${workspaceId}`], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: process.env,
+    timeout: 120_000
+  });
+  const payload = parseJsonOutput(result.stdout || "") || {
+    status: "failed",
+    reason: "workspace_vlm_audit_non_json_output",
+    stdout: (result.stdout || "").slice(-4000),
+    stderr: (result.stderr || "").slice(-4000)
+  };
+  const passed = result.status === 0 && payload.status === "passed" && payload.releaseEligible === true;
+  const unavailable = payload.status === "unavailable";
+  return {
+    ok: passed,
+    statusCode: passed ? 200 : unavailable ? 424 : 422,
+    payload
+  };
+}
+
 function resolveVerifiedCandidate(workspaceId: string) {
   const validation = validateReleaseWorkspace(workspaceId);
   if (!validation.ok || !validation.workspaceDir) return validation;
@@ -404,31 +431,6 @@ function runObservedEvidenceRecorder(workspaceId: string, kind: string, body: un
   }
 }
 
-function runWorkspaceVlmAudit(workspaceId: string) {
-  const validation = validateReleaseWorkspace(workspaceId);
-  if (!validation.ok) return validation;
-  const python = getPythonCommand();
-  const script = path.join(process.cwd(), "productize", "jobs", "run-workspace-vlm-audit.py");
-  const result = spawnSync(python, [script, `--workspace-id=${workspaceId}`], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-    env: process.env,
-    timeout: 120_000
-  });
-  const payload = parseJsonOutput(result.stdout || "") || {
-    status: "failed",
-    reason: "workspace_vlm_audit_non_json_output",
-    stdout: (result.stdout || "").slice(-4000),
-    stderr: (result.stderr || "").slice(-4000)
-  };
-  const passed = result.status === 0 && payload.status === "passed" && payload.releaseEligible === true;
-  return {
-    ok: passed,
-    statusCode: passed ? 200 : 422,
-    payload
-  };
-}
-
 app.get("/api/workspaces/:wsId/release-status", (req, res) => {
   const result = runReleaseStatus(String(req.params.wsId || ""));
   return res.status(result.statusCode).json(result.payload);
@@ -460,6 +462,13 @@ app.post("/api/workspaces/:wsId/run-vlm-audit", (req, res) => {
 app.post("/api/workspaces/:wsId/record-evidence/:kind", (req, res) => {
   const result = runObservedEvidenceRecorder(String(req.params.wsId || ""), String(req.params.kind || ""), req.body);
   return res.status(result.statusCode).json(result.payload);
+});
+
+registerTaskContractRoutes({
+  app,
+  cwd: process.cwd(),
+  getPythonCommand,
+  validateWorkspace: validateReleaseWorkspace
 });
 
 app.use("/api", async (req, res) => {
