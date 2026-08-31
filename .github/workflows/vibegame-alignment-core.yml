@@ -1,0 +1,95 @@
+name: VibeGame Alignment Core
+
+on:
+  push:
+    branches:
+      - feat/vertical-slice-compiler-convergence
+  pull_request:
+    paths:
+      - "backend/task_contract.py"
+      - "backend/task_repository.py"
+      - "backend/department_task_bridge.py"
+      - "productize/task-contract.py"
+      - "productize/bridge-department-task.py"
+      - "productize/lib/vertical-slice-blueprint.mjs"
+      - "productize/lib/capability-module.mjs"
+      - "productize/lib/capability-promotion.mjs"
+      - "productize/lib/asset-recipe.mjs"
+      - "productize/lib/legacy-asset-recipe.mjs"
+      - "productize/jobs/check-task-contract.py"
+      - "productize/jobs/check-task-api.mjs"
+      - "productize/jobs/check-department-task-bridge.py"
+      - "productize/jobs/check-vertical-slice-blueprint.mjs"
+      - "productize/jobs/check-capability-module.mjs"
+      - "productize/jobs/check-capability-promotion.mjs"
+      - "productize/jobs/check-production-contract.mjs"
+      - "productize/jobs/check-runtime-observation.mjs"
+      - "productize/jobs/check-asset-recipe.mjs"
+      - "productize/jobs/check-legacy-asset-recipe.mjs"
+      - "minigame_master/contracts/**"
+      - "minigame_master/capabilities/blueprints/**"
+      - "minigame_master/capabilities/contracts/**"
+      - "minigame_master/core/lib/contracts/**"
+      - "server/taskContractRoutes.ts"
+      - "server.ts"
+      - "src/components/CapabilityLibrarySummary.tsx"
+      - "src/components/TaskContractPanel.tsx"
+      - "src/components/PipelinePanel.tsx"
+      - "tsconfig.json"
+      - "package.json"
+      - ".github/workflows/vibegame-alignment-core.yml"
+  workflow_dispatch:
+
+jobs:
+  alignment-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          python -m pip install -r backend/requirements.txt
+
+      - name: Verify TaskContract state and repository
+        run: python3 productize/jobs/check-task-contract.py
+
+      - name: Verify TaskContract Gateway API
+        run: npx tsx productize/jobs/check-task-api.mjs
+
+      - name: Verify Department-to-Task bridge
+        run: python3 productize/jobs/check-department-task-bridge.py
+
+      - name: Verify Blueprint and CapabilityModule
+        run: |
+          node productize/jobs/check-vertical-slice-blueprint.mjs
+          node productize/jobs/check-capability-module.mjs
+
+      - name: Verify evidence-gated Promotion and ProductionContract
+        run: |
+          node productize/jobs/check-capability-promotion.mjs
+          node productize/jobs/check-production-contract.mjs
+
+      - name: Verify Runtime Observation
+        run: node productize/jobs/check-runtime-observation.mjs
+
+      - name: Verify AssetRecipe and legacy migration
+        run: |
+          node productize/jobs/check-asset-recipe.mjs
+          node productize/jobs/check-legacy-asset-recipe.mjs
+
+      - name: TypeScript check
+        run: npm run lint
