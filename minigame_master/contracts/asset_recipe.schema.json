@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/asset_recipe.schema.json",
+  "title": "LoreWeaver Asset Recipe",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "status",
+    "assetKind",
+    "source",
+    "operations",
+    "outputs",
+    "verification",
+    "promotion"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "loreweaver.asset-recipe.v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["observed", "candidate", "verified", "approved", "promoted", "rejected"] },
+    "assetKind": { "enum": ["image", "sprite_sheet", "atlas", "audio", "mixed"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "provider", "model", "license", "rawPrompt", "references", "rawArtifacts"],
+      "properties": {
+        "mode": { "enum": ["generated", "reference_guided", "procedural", "imported", "mixed"] },
+        "provider": { "type": "string", "minLength": 1 },
+        "model": { "type": ["string", "null"] },
+        "license": { "type": "string", "minLength": 1 },
+        "rawPrompt": { "type": ["string", "null"] },
+        "negativePrompt": { "type": ["string", "null"] },
+        "references": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceArtifact" }
+        },
+        "rawArtifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/sourceArtifact" }
+        },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "port", "inputs", "outputs", "parameters"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "type": {
+            "enum": [
+              "analyze",
+              "remove_background",
+              "decompose",
+              "cut_frames",
+              "concatenate",
+              "build_atlas",
+              "edge_cleanup",
+              "alpha_cleanup",
+              "label",
+              "upscale",
+              "convert",
+              "normalize_audio",
+              "trim_audio",
+              "mix_audio",
+              "manual_review"
+            ]
+          },
+          "port": { "type": "string", "minLength": 1 },
+          "provider": { "type": ["string", "null"] },
+          "model": { "type": ["string", "null"] },
+          "inputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "outputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "parameters": { "type": "object" }
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifestPath", "finalAssets", "finalManifestKeys"],
+      "properties": {
+        "manifestPath": { "type": "string", "minLength": 1 },
+        "finalAssets": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "path", "sha256", "bytes", "usedByRuntime", "usageRefs"],
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "path": { "type": "string", "minLength": 1 },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "bytes": { "type": "integer", "minimum": 1 },
+              "mime": { "type": ["string", "null"] },
+              "usedByRuntime": { "type": "boolean" },
+              "usageRefs": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "uniqueItems": true
+              }
+            }
+          }
+        },
+        "finalManifestKeys": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "verification": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "status", "report", "real", "fixture", "synthetic", "stale", "outputHashes"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["integrity", "transparency", "edges", "atlas", "audio", "vlm", "runtime_usage", "license"] },
+          "status": { "enum": ["passed", "failed", "unavailable", "stale"] },
+          "report": { "type": "string", "minLength": 1 },
+          "real": { "type": "boolean" },
+          "fixture": { "type": "boolean" },
+          "synthetic": { "type": "boolean" },
+          "stale": { "type": "boolean" },
+          "outputHashes": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approvedBy", "approvedAt", "destination", "conflictChecked"],
+      "properties": {
+        "approvedBy": { "type": ["string", "null"] },
+        "approvedAt": { "type": ["string", "null"] },
+        "destination": { "type": ["string", "null"] },
+        "conflictChecked": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "sourceArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "sha256", "license"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "license": { "type": "string", "minLength": 1 },
+        "mime": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
