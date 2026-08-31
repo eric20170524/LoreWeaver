@@ -49,6 +49,133 @@ export function releaseEvidenceTargets(cardIds = []) {
 }
 
 /**
+ * Downstream evidence bound to a selected exact Candidate.
+ * Browser reports are intentionally excluded: the newly verified Browser report
+ * becomes the fresh identity anchor. A changed Candidate invalidates human/device
+ * observations; a changed screenshot invalidates VLM even when the ZIP is identical.
+ */
+export function candidateReselectionEvidenceTargets(cardIds = [], {
+  candidateChanged = true,
+  screenshotChanged = true
+} = {}) {
+  const targets = ["release_decision_latest.json"];
+
+  if (candidateChanged) {
+    targets.push(
+      "human_playtest_latest.json",
+      "device_verification_latest.json",
+      "export_artifact_meta.json"
+    );
+    for (const raw of cardIds || []) {
+      const cardId = String(raw || "").trim();
+      if (!cardId) continue;
+      targets.push(
+        `human_playtest_${cardId}_latest.json`,
+        `human_playtest_${cardId}.json`,
+        `device_verification_${cardId}_latest.json`,
+        `device_verification_${cardId}.json`
+      );
+    }
+  }
+
+  if (candidateChanged || screenshotChanged) {
+    targets.push("visual_audit_latest.json");
+    for (const raw of cardIds || []) {
+      const cardId = String(raw || "").trim();
+      if (!cardId) continue;
+      targets.push(`visual_audit_${cardId}_latest.json`);
+    }
+  }
+
+  return dedupe(targets);
+}
+
+function changed(previous, next, field) {
+  const left = previous?.[field] ?? null;
+  const right = next?.[field] ?? null;
+  return String(left ?? "") !== String(right ?? "");
+}
+
+/**
+ * Invalidate only package-bound downstream evidence after a newly verified
+ * Candidate becomes the selected Browser anchor.
+ *
+ * No previous Browser report => no reselection, so nothing is invalidated.
+ * Same Candidate + same screenshot => idempotent re-verification, no invalidation.
+ */
+export function markCandidateReselectionEvidenceStale({
+  workspaceReportsDir,
+  cardIds = [],
+  previousBrowserReport = null,
+  nextBrowserReport = null,
+  dryRun = false
+}) {
+  const candidateFields = [
+    "specHash",
+    "runtimeVersion",
+    "payloadHash",
+    "artifact",
+    "artifactSha256"
+  ];
+  const candidateChanged = Boolean(previousBrowserReport) && candidateFields.some((field) =>
+    changed(previousBrowserReport, nextBrowserReport, field)
+  );
+  const screenshotChanged = Boolean(previousBrowserReport) && changed(
+    previousBrowserReport,
+    nextBrowserReport,
+    "screenshotSha256"
+  );
+
+  if (!workspaceReportsDir || !previousBrowserReport || (!candidateChanged && !screenshotChanged)) {
+    return {
+      changed: false,
+      candidateChanged,
+      screenshotChanged,
+      targets: [],
+      result: null
+    };
+  }
+
+  const targets = candidateReselectionEvidenceTargets(cardIds, {
+    candidateChanged,
+    screenshotChanged
+  });
+  const identity = {
+    mutation: "candidate_reselected",
+    previous: {
+      specHash: previousBrowserReport.specHash ?? null,
+      runtimeVersion: previousBrowserReport.runtimeVersion ?? null,
+      payloadHash: previousBrowserReport.payloadHash ?? null,
+      artifact: previousBrowserReport.artifact ?? null,
+      artifactSha256: previousBrowserReport.artifactSha256 ?? null,
+      screenshotSha256: previousBrowserReport.screenshotSha256 ?? null
+    },
+    next: {
+      specHash: nextBrowserReport?.specHash ?? null,
+      runtimeVersion: nextBrowserReport?.runtimeVersion ?? null,
+      payloadHash: nextBrowserReport?.payloadHash ?? null,
+      artifact: nextBrowserReport?.artifact ?? null,
+      artifactSha256: nextBrowserReport?.artifactSha256 ?? null,
+      screenshotSha256: nextBrowserReport?.screenshotSha256 ?? null
+    }
+  };
+  const result = markGateReportsStale({
+    reportsDir: workspaceReportsDir,
+    reason: candidateChanged ? "exact_candidate_reselected" : "candidate_screenshot_reselected",
+    identity,
+    targets,
+    dryRun
+  });
+  return {
+    changed: true,
+    candidateChanged,
+    screenshotChanged,
+    targets,
+    result
+  };
+}
+
+/**
  * @param {object} opts
  * @param {string} opts.reportsDir
  * @param {string} opts.reason
