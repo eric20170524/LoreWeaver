@@ -237,6 +237,100 @@ async function main() {
         await page.waitForTimeout(400);
       }
 
+      const exactFrameRequired = expected.cardId === "survivor_horde";
+      const exactFrameProbe = await page.evaluate(({ required, frames }) => {
+        const api = window.__LOREWEAVER_RUNTIME_OBSERVATION__;
+        const capabilities = typeof api?.capabilities === "function" ? api.capabilities() : null;
+        const probe = {
+          schemaVersion: "loreweaver.exact-frame-browser-probe.v1",
+          required,
+          requestedFrames: frames,
+          capability: capabilities?.exactFrameAdvance === true,
+          passed: !required,
+          reason: null,
+          before: null,
+          paused: null,
+          advance: null,
+          after: null,
+          trace: null,
+          resume: null,
+          final: null
+        };
+        if (!api || typeof api.snapshot !== "function" || typeof api.trace !== "function") {
+          probe.passed = false;
+          probe.reason = "runtime_observation_api_missing";
+          return probe;
+        }
+        if (!probe.capability) {
+          probe.reason = required ? "exact_frame_capability_missing" : "exact_frame_optional_and_unavailable";
+          return probe;
+        }
+
+        let pauseSucceeded = false;
+        try {
+          probe.before = api.snapshot();
+          probe.paused = api.pause({ reason: "candidate_exact_frame_probe" });
+          pauseSucceeded = probe.paused?.status === "passed";
+          if (!pauseSucceeded) {
+            probe.reason = `pause_${probe.paused?.status || "missing"}`;
+          } else {
+            const pausedSnapshot = api.snapshot();
+            probe.advance = api.advanceFrames({ frames });
+            probe.after = api.snapshot();
+            probe.trace = api.trace();
+            const result = probe.advance?.result || {};
+            const sameSession = Boolean(
+              probe.before?.sessionId
+              && probe.before.sessionId === pausedSnapshot?.sessionId
+              && probe.before.sessionId === probe.after?.sessionId
+              && probe.before.sessionId === probe.trace?.sessionId
+            );
+            const frameDelta = Number(result.finalFrame) - Number(result.initialFrame);
+            const exactCount = probe.advance?.status === "passed"
+              && result.frames === frames
+              && frameDelta === frames;
+            const exactDelta = Number(result.simulatedDeltaMs) > 0
+              && Math.abs(Number(result.simulatedDeltaMs) - Number(result.deltaMs) * frames) <= 0.05;
+            const remainedPaused = result.targetSceneStatus === "paused"
+              && probe.after?.state?.status === "paused";
+            const observationAdvanced = Number(probe.after?.sequence) > Number(probe.before?.sequence);
+            probe.passed = Boolean(
+              pauseSucceeded
+              && sameSession
+              && exactCount
+              && exactDelta
+              && remainedPaused
+              && observationAdvanced
+            );
+            if (!probe.passed) {
+              probe.reason = `exact_frame_assertion_failed:${JSON.stringify({ sameSession, exactCount, exactDelta, remainedPaused, observationAdvanced, frameDelta })}`;
+            }
+          }
+        } catch (error) {
+          probe.passed = false;
+          probe.reason = error?.message || String(error);
+        } finally {
+          if (pauseSucceeded) {
+            try {
+              probe.resume = api.resume({ reason: "candidate_exact_frame_probe_complete" });
+              if (probe.resume?.status !== "passed") {
+                probe.passed = false;
+                probe.reason = probe.reason || `resume_${probe.resume?.status || "missing"}`;
+              }
+            } catch (error) {
+              probe.passed = false;
+              probe.reason = probe.reason || `resume_error:${error?.message || String(error)}`;
+            }
+          }
+          try { probe.final = api.snapshot(); } catch {}
+          if (pauseSucceeded && probe.final?.state?.status !== "running") {
+            probe.passed = false;
+            probe.reason = probe.reason || `final_runtime_status_not_running:${probe.final?.state?.status}`;
+          }
+        }
+        return probe;
+      }, { required: exactFrameRequired, frames: 2 });
+
       const observed = await page.evaluate(() => {
         const game = window.__LOREWEAVER_GAME__;
         const scene = game?.scene?.keys?.LevelActiveScene;
@@ -291,19 +385,25 @@ async function main() {
         && observed.observation.capabilities?.trace === true
         && observed.observation.sourceHooksKey === "__LOREWEAVER_TEST_HOOKS__"
       );
+      const exactFrameValid = Boolean(
+        exactFrameProbe?.passed === true
+        && (!exactFrameRequired || exactFrameProbe.capability === true)
+      );
       const stagePassed = observed.active
         && observed.cardId === expected.cardId
         && modsMatch
         && contractValid
         && runtimeRunning
-        && observationValid;
+        && observationValid
+        && exactFrameValid;
       stageResults.push({
         stage: index + 1,
         nodeId: expected.id,
         cardId: expected.cardId,
         passed: stagePassed,
         expectedModifiers: expected.modifierIds,
-        assertions: { modsMatch, contractValid, runtimeRunning, observationValid },
+        assertions: { modsMatch, contractValid, runtimeRunning, observationValid, exactFrameValid },
+        exactFrameProbe,
         observed
       });
       if (!stagePassed) throw new Error(`stage_${index + 1}_failed:${JSON.stringify(stageResults.at(-1))}`);
@@ -341,15 +441,16 @@ async function main() {
     sequence: result.observed?.observation?.sequence ?? null,
     traceEntryCount: result.observed?.observation?.traceEntryCount ?? null,
     runtimeAuthority: result.observed?.observation?.runtimeAuthority || null,
-    capabilities: result.observed?.observation?.capabilities || null
+    capabilities: result.observed?.observation?.capabilities || null,
+    exactFrameProbe: result.exactFrameProbe || null
   }));
   const common = {
-    schemaVersion: "loreweaver.standalone-browser-report.v3",
+    schemaVersion: "loreweaver.standalone-browser-report.v4",
     status: passed ? "passed" : "failed",
     createdAt: new Date().toISOString(),
     workspaceId,
     releaseEligible: passed,
-    evidenceMeaning: "exact Candidate executable payload passed static-host browser validation; runtime state and trace are captured from the same TestHooks session while screenshot remains host-owned",
+    evidenceMeaning: "exact Candidate executable payload passed static-host browser validation; runtime state, trace, and required survivor exact-frame probe are captured from the same RuntimeObservation session while screenshot remains host-owned",
     specHash: releaseManifest.specHash,
     runtimeVersion: releaseManifest.runtimeVersion,
     payloadHash: payloadIdentity.payloadHash,
@@ -359,10 +460,11 @@ async function main() {
     staticHostOnly: true,
     offlineBackendRequired: false,
     runtimeObservation: {
-      schemaVersion: "loreweaver.runtime-observation-bundle.v1",
+      schemaVersion: "loreweaver.runtime-observation-bundle.v2",
       runtimeAuthority: "LoreWeaverRuntimeKernel",
       sessionCount: observationSessions.length,
       sessions: observationSessions,
+      exactFrameRequiredCards: ["survivor_horde"],
       screenshotOwner: "PlaywrightHost"
     },
     runtimeNodeContract: resolvedContract,
