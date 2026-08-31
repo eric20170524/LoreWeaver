@@ -115,27 +115,121 @@ export default class GameplayAdapter {
         throw new Error(`semantic_action_unsupported:${action}`);
     }
 
+    runtimeFrameSurface() {
+        const systems = this.scene?.sys;
+        const game = systems?.game || this.scene?.game;
+        const loop = game?.loop;
+        const valid = Boolean(
+            systems &&
+            typeof systems.pause === 'function' &&
+            typeof systems.resume === 'function' &&
+            game &&
+            game.isPaused !== true &&
+            loop &&
+            typeof loop.sleep === 'function' &&
+            typeof loop.wake === 'function' &&
+            typeof loop.step === 'function' &&
+            Number.isFinite(Number(loop.targetFps)) &&
+            Number(loop.targetFps) > 0
+        );
+        return valid ? { systems, game, loop } : null;
+    }
+
+    advanceExactFrames(payload = {}) {
+        const surface = this.runtimeFrameSurface();
+        if (!surface) throw new Error('exact_frame_surface_unavailable');
+        if (this.status !== 'paused') {
+            throw new Error(`exact_frame_requires_paused_adapter:${this.status}`);
+        }
+        const frames = Number(payload?.frames);
+        if (!Number.isInteger(frames) || frames < 1 || frames > 600) {
+            throw new Error(`exact_frame_count_invalid:${payload?.frames}`);
+        }
+
+        const { systems, game, loop } = surface;
+        const fps = loop.hasFpsLimit && Number(loop.fpsLimit) > 0
+            ? Number(loop.fpsLimit)
+            : Number(loop.targetFps);
+        const deltaMs = 1000 / fps;
+        const wasRunning = Boolean(loop.running);
+        const previousSmoothStep = loop.smoothStep;
+        const initialFrame = Number(loop.frame || 0);
+        const initialLastTime = Number.isFinite(Number(loop.lastTime))
+            ? Number(loop.lastTime)
+            : (Number.isFinite(Number(loop.now)) ? Number(loop.now) : 0);
+        let virtualTime = initialLastTime;
+        let manuallyResumed = false;
+
+        try {
+            if (wasRunning) loop.sleep();
+            // Use Systems directly rather than the queued ScenePlugin API. This
+            // makes the pause boundary synchronous before manual TimeStep steps.
+            systems.resume({ source: 'runtime_observation_exact_frame' });
+            this.resume();
+            manuallyResumed = true;
+
+            // TimeStep.step normally smooths browser RAF jitter. For an exact
+            // manual frame contract we temporarily disable smoothing and advance by
+            // the configured engine frame interval. TimeStep.step itself updates
+            // its time/frame counters and invokes the canonical Game.step callback.
+            loop.smoothStep = false;
+            for (let index = 0; index < frames; index += 1) {
+                virtualTime += deltaMs;
+                loop.step(virtualTime);
+            }
+        } finally {
+            loop.smoothStep = previousSmoothStep;
+            if (manuallyResumed && this.status === 'running') {
+                systems.pause({ source: 'runtime_observation_exact_frame' });
+                this.pause();
+            }
+            if (wasRunning && !loop.running) {
+                // The target scene is paused again before waking RAF, so the
+                // TimeStep wake tick cannot add an uncounted target-scene update.
+                loop.wake(true);
+            }
+        }
+
+        const result = {
+            frames,
+            fps,
+            deltaMs,
+            initialFrame,
+            finalFrame: Number(loop.frame || initialFrame),
+            initialTime: initialLastTime,
+            finalTime: Number(loop.lastTime || virtualTime),
+            targetSceneStatus: this.status,
+            loopRestored: wasRunning ? Boolean(loop.running) : !loop.running,
+            method: 'Phaser.TimeStep.step -> Phaser.Game.step'
+        };
+        this.updateObservationState({ exactFrameAdvance: result, paused: this.status === 'paused' });
+        return result;
+    }
+
     registerObservationControls() {
         const hooks = this.context?.testHooks;
         if (!hooks?.registerControl || !this.scene) return;
         const sceneKey = this.scene?.sys?.settings?.key || null;
-        const scenePlugin = this.scene?.scene;
+        const systems = this.scene?.sys;
 
-        if (scenePlugin?.pause && scenePlugin?.resume) {
-            hooks.registerControl('pause', () => {
+        if (typeof systems?.pause === 'function' && typeof systems?.resume === 'function') {
+            hooks.registerControl('pause', (payload = {}) => {
                 if (this.status !== 'running') {
                     throw new Error(`adapter_not_running:${this.status}`);
                 }
+                // Systems.pause is immediate. ScenePlugin.pause queues an operation
+                // for the next SceneManager step, which is too weak for exact-frame
+                // observation because another RAF could otherwise slip through.
+                systems.pause(payload);
                 this.pause();
                 this.updateObservationState({ paused: true });
-                scenePlugin.pause(sceneKey || undefined);
                 return { sceneKey, status: this.status };
             });
-            hooks.registerControl('resume', () => {
+            hooks.registerControl('resume', (payload = {}) => {
                 if (this.status !== 'paused') {
                     throw new Error(`adapter_not_paused:${this.status}`);
                 }
-                scenePlugin.resume(sceneKey || undefined);
+                systems.resume(payload);
                 this.resume();
                 this.updateObservationState({ paused: false });
                 return { sceneKey, status: this.status };
@@ -148,9 +242,11 @@ export default class GameplayAdapter {
             hooks.registerControl('semanticInput', (payload) => this.handleSemanticInput(payload || {}));
             this.observationControls.add('semanticInput');
         }
-        // exact-frame advance is deliberately NOT registered here. It requires a
-        // runtime clock that advances update + physics + timers + tweens + animation
-        // deterministically as one authority; ordinary waits are not sufficient.
+
+        if (this.runtimeFrameSurface()) {
+            hooks.registerControl('advanceFrames', (payload) => this.advanceExactFrames(payload || {}));
+            this.observationControls.add('advanceFrames');
+        }
     }
 
     unregisterObservationControls() {
