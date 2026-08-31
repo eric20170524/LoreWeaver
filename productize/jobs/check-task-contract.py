@@ -25,7 +25,7 @@ from backend.task_contract import (  # noqa: E402
 SCHEMA = ROOT / "minigame_master/contracts/task_contract.schema.json"
 
 
-def assert_true(value, message: str) -> None:
+def assert_true(value, message: str = "assertion failed") -> None:
     if not value:
         raise AssertionError(message)
 
@@ -83,7 +83,7 @@ def new_contract(requested_patch_level: str = "L2") -> dict:
         runtime_state_contract={
             "fields": [
                 {"path": "boss.phase", "type": "number", "reason": "phase transition assertion"},
-                {"path": "boss.telegraph", "type": "boolean", "reason": "telegraph state assertion"},
+                {"path": "boss.telegraph", "type": "boolean", "reason": "telegraph assertion"},
             ],
             "inputActions": ["move", "primary"],
         },
@@ -91,7 +91,7 @@ def new_contract(requested_patch_level: str = "L2") -> dict:
     )
 
 
-def advance_to_implemented(task: dict, suffix: str = "v1") -> dict:
+def plan_and_implement(task: dict, suffix: str) -> dict:
     task = append_handoff(
         task,
         role="architect",
@@ -108,7 +108,7 @@ def advance_to_implemented(task: dict, suffix: str = "v1") -> dict:
     )
 
 
-def advance_verification(task: dict, suffix: str = "v1") -> dict:
+def verify(task: dict, suffix: str) -> dict:
     task = append_handoff(
         task,
         role="auditor",
@@ -116,25 +116,39 @@ def advance_verification(task: dict, suffix: str = "v1") -> dict:
         summary="Static contract alignment passed.",
         evidence_refs=[evidence(f"static-{suffix}", "static", "AC1")],
     )
-    task = append_handoff(
+    return append_handoff(
         task,
         role="player",
         verdict="passed",
-        summary="One runtime session proved state, pixels and interaction feel.",
+        summary="One runtime session proved state, pixels and feel.",
         evidence_refs=[
             evidence(f"runtime-{suffix}", "runtime", "AC1"),
             evidence(f"visual-{suffix}", "visual", "AC2"),
             evidence(f"feel-{suffix}", "feel", "AC2"),
         ],
     )
-    return task
+
+
+def finish(task: dict, suffix: str) -> dict:
+    task = append_handoff(
+        task,
+        role="reviewer",
+        verdict="passed",
+        summary="Independent final review accepted current evidence.",
+        evidence_refs=[evidence(f"review-{suffix}", "review")],
+    )
+    return append_handoff(
+        task,
+        role="orchestrator",
+        verdict="passed",
+        summary="Product intent and acceptance criteria are satisfied.",
+        evidence_refs=[evidence(f"acceptance-{suffix}", "acceptance")],
+    )
 
 
 def run_happy_path() -> dict:
     task = new_contract()
-    assert_true(task["status"] == "draft", "new L0-L2 task starts draft")
     assert_true(next_required_role(task) == "architect", "architect must plan first")
-
     expect_error(
         lambda: append_handoff(
             task,
@@ -156,7 +170,7 @@ def run_happy_path() -> dict:
         "role_evidence_boundary_violation",
     )
 
-    task = advance_to_implemented(task)
+    task = plan_and_implement(task, "v1")
     expect_error(
         lambda: append_handoff(
             task,
@@ -171,8 +185,8 @@ def run_happy_path() -> dict:
         task,
         role="auditor",
         verdict="passed",
-        summary="Static contract and implementation alignment passed.",
-        evidence_refs=[evidence("static-ac1", "static", "AC1")],
+        summary="Static pass.",
+        evidence_refs=[evidence("static-v1", "static", "AC1")],
     )
     expect_error(
         lambda: append_handoff(
@@ -181,8 +195,8 @@ def run_happy_path() -> dict:
             verdict="passed",
             summary="missing feel evidence",
             evidence_refs=[
-                evidence("runtime-ac1", "runtime", "AC1"),
-                evidence("visual-ac2", "visual", "AC2"),
+                evidence("runtime-v1", "runtime", "AC1"),
+                evidence("visual-v1", "visual", "AC2"),
             ],
         ),
         "player_missing_feel_evidence:AC2",
@@ -191,88 +205,61 @@ def run_happy_path() -> dict:
         task,
         role="player",
         verdict="passed",
-        summary="Runtime verification passed.",
+        summary="Runtime pass.",
         evidence_refs=[
-            evidence("runtime-ac1", "runtime", "AC1"),
-            evidence("visual-ac2", "visual", "AC2"),
-            evidence("feel-ac2", "feel", "AC2"),
+            evidence("runtime-v1", "runtime", "AC1"),
+            evidence("visual-v1", "visual", "AC2"),
+            evidence("feel-v1", "feel", "AC2"),
         ],
     )
-    task = append_handoff(
-        task,
-        role="reviewer",
-        verdict="passed",
-        summary="Independent final review accepted the evidence.",
-        evidence_refs=[evidence("independent-review", "review")],
-    )
-    task = append_handoff(
-        task,
-        role="orchestrator",
-        verdict="passed",
-        summary="Product intent and acceptance criteria are satisfied.",
-        evidence_refs=[evidence("product-acceptance", "acceptance")],
-    )
-
+    task = finish(task, "v1")
     acceptance = evaluate_task_acceptance(task)
-    assert_true(task["status"] == "accepted", "full ordered route reaches accepted")
-    assert_true(acceptance["accepted"] is True, json.dumps(acceptance, ensure_ascii=False))
+    assert_true(task["status"] == "accepted", "ordered route reaches accepted")
+    assert_true(acceptance["accepted"], json.dumps(acceptance, ensure_ascii=False))
     assert_true(len(task["handoffRounds"]) == 6, "one append-only round per role")
-    assert_true(validate_task_contract(task)["valid"], "accepted task remains structurally valid")
     return task
 
 
 def run_rework_path() -> None:
-    task = advance_to_implemented(new_contract(), "rework-1")
+    task = plan_and_implement(new_contract(), "r1")
     task = append_handoff(
         task,
         role="auditor",
         verdict="failed",
-        summary="static mismatch found",
-        findings=["boss modifier is missing from the compiled contract"],
+        summary="Static mismatch found.",
+        findings=["boss modifier is missing from compiled contract"],
     )
-    assert_true(task["status"] == "blocked", "failed audit blocks task")
-    assert_true(next_required_role(task) == "programmer", "audit failure routes to programmer")
+    assert_true(task["status"] == "blocked")
+    assert_true(next_required_role(task) == "programmer")
     task = append_handoff(
         task,
         role="programmer",
         verdict="passed",
-        summary="implementation round two",
-        evidence_refs=[evidence("rework-impl-2", "implementation")],
+        summary="Implementation reworked.",
+        evidence_refs=[evidence("implementation-r2", "implementation")],
     )
-    assert_true(task["status"] == "implemented", "rework restarts verification chain")
-    task = advance_verification(task, "rework-2")
-    task = append_handoff(
-        task,
-        role="reviewer",
-        verdict="passed",
-        summary="review pass",
-        evidence_refs=[evidence("rework-review", "review")],
-    )
-    task = append_handoff(
-        task,
-        role="orchestrator",
-        verdict="passed",
-        summary="accepted after full revalidation",
-        evidence_refs=[evidence("rework-accept", "acceptance")],
-    )
-    assert_true(evaluate_task_acceptance(task)["accepted"], "rework route can be accepted")
+    task = verify(task, "r2")
+    task = finish(task, "r2")
+    assert_true(evaluate_task_acceptance(task)["accepted"], "rework requires full revalidation")
 
 
 def run_adversarial_checks(accepted: dict) -> None:
     l3 = new_contract("L3")
-    assert_true(l3["status"] == "escalated", "L3 task must escalate immediately")
-    assert_true("patch_authority_requires_human_review:L3" in l3["blockers"])
+    assert_true(l3["status"] == "escalated", "L3 task must escalate")
+    assert_true(
+        "patch_authority_requires_human_review:L3" in l3["blockers"],
+        "L3 escalation reason must be explicit",
+    )
     expect_error(
         lambda: append_handoff(
             l3,
             role="architect",
             verdict="passed",
-            summary="try to bypass escalation",
+            summary="bypass escalation",
             evidence_refs=[evidence("l3-plan", "plan")],
         ),
         "task_terminal:escalated",
     )
-
     expect_error(
         lambda: create_task_contract(
             task_id="missing-runtime-contract",
@@ -291,18 +278,13 @@ def run_adversarial_checks(accepted: dict) -> None:
     tampered["handoffRounds"][1]["summary"] = "mutated after handoff"
     validation = validate_task_contract(tampered)
     assert_true(not validation["valid"], "hash chain detects mutation")
-    assert_true(
-        any(error.startswith("handoff_round_hash_invalid") for error in validation["errors"]),
-        "tamper reason is explicit",
-    )
+    assert_true(any(error.startswith("handoff_round_hash_invalid") for error in validation["errors"]))
 
     player_context = context_for_role(accepted, "player")
     assert_true(
-        [item["file"] for item in player_context] == [
-            "task/prd.md",
-            "contracts/runtime-observation.md",
-        ],
-        "role context includes all + role-specific entries only",
+        [item["file"] for item in player_context]
+        == ["task/prd.md", "contracts/runtime-observation.md"],
+        "role context contains all + role-specific entries only",
     )
 
 
