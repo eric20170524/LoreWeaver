@@ -129,6 +129,7 @@ export default class GameplayAdapter {
             typeof loop.sleep === 'function' &&
             typeof loop.wake === 'function' &&
             typeof loop.step === 'function' &&
+            typeof loop.callback === 'function' &&
             Number.isFinite(Number(loop.targetFps)) &&
             Number(loop.targetFps) > 0
         );
@@ -146,7 +147,13 @@ export default class GameplayAdapter {
             throw new Error(`exact_frame_count_invalid:${payload?.frames}`);
         }
 
-        const { systems, game, loop } = surface;
+        const { systems, loop } = surface;
+        if (Number(loop._coolDown || 0) > 0) {
+            // Phaser's TimeStep intentionally substitutes its moving average while
+            // cooling down after visibility/sleep transitions. Do not call that an
+            // exact frame. The caller can retry after the normal loop stabilizes.
+            throw new Error(`exact_frame_timestep_cooldown_active:${loop._coolDown}`);
+        }
         const fps = loop.hasFpsLimit && Number(loop.fpsLimit) > 0
             ? Number(loop.fpsLimit)
             : Number(loop.targetFps);
@@ -154,29 +161,46 @@ export default class GameplayAdapter {
         const wasRunning = Boolean(loop.running);
         const previousSmoothStep = loop.smoothStep;
         const initialFrame = Number(loop.frame || 0);
+        const initialLoopTime = Number(loop.time || 0);
         const initialLastTime = Number.isFinite(Number(loop.lastTime))
             ? Number(loop.lastTime)
             : (Number.isFinite(Number(loop.now)) ? Number(loop.now) : 0);
-        let virtualTime = initialLastTime;
+        const readWallClock = () => {
+            if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+                return performance.now();
+            }
+            return Date.now();
+        };
+        // Keep callback timestamps on the real RAF clock. The fixed frame duration
+        // is injected through lastTime, so future RAF timestamps never jump
+        // backwards after a long manual advance. Scene systems still receive the
+        // exact fixed delta from Phaser.TimeStep.step.
+        const wallClockBase = Math.max(initialLastTime, readWallClock());
+        let manualFinalFrame = initialFrame;
+        let manualFinalLoopTime = initialLoopTime;
+        let manualFinalCallbackTime = wallClockBase;
         let manuallyResumed = false;
 
         try {
             if (wasRunning) loop.sleep();
-            // Use Systems directly rather than the queued ScenePlugin API. This
-            // makes the pause boundary synchronous before manual TimeStep steps.
             systems.resume({ source: 'runtime_observation_exact_frame' });
             this.resume();
             manuallyResumed = true;
 
-            // TimeStep.step normally smooths browser RAF jitter. For an exact
-            // manual frame contract we temporarily disable smoothing and advance by
-            // the configured engine frame interval. TimeStep.step itself updates
-            // its time/frame counters and invokes the canonical Game.step callback.
             loop.smoothStep = false;
             for (let index = 0; index < frames; index += 1) {
-                virtualTime += deltaMs;
-                loop.step(virtualTime);
+                const stepTime = wallClockBase + (index + 1) * 0.001;
+                loop.lastTime = stepTime - deltaMs;
+                loop.step(stepTime);
+                if (Math.abs(Number(loop.delta) - deltaMs) > 0.01) {
+                    throw new Error(
+                        `exact_frame_delta_not_honored:expected=${deltaMs}:actual=${loop.delta}`
+                    );
+                }
             }
+            manualFinalFrame = Number(loop.frame || initialFrame);
+            manualFinalLoopTime = Number(loop.time || initialLoopTime);
+            manualFinalCallbackTime = Number(loop.lastTime || wallClockBase);
         } finally {
             loop.smoothStep = previousSmoothStep;
             if (manuallyResumed && this.status === 'running') {
@@ -184,8 +208,15 @@ export default class GameplayAdapter {
                 this.pause();
             }
             if (wasRunning && !loop.running) {
-                // The target scene is paused again before waking RAF, so the
-                // TimeStep wake tick cannot add an uncounted target-scene update.
+                // Real TimeStep.wake performs an immediate tick. Reset only its RAF
+                // baseline (not internal accumulated `time`) so this wake tick is
+                // non-negative and the target scene, already paused, receives no
+                // extra gameplay update.
+                const resumeBaseline = readWallClock();
+                if (Number(loop.lastTime) > resumeBaseline) {
+                    loop.lastTime = resumeBaseline;
+                    loop.now = resumeBaseline;
+                }
                 loop.wake(true);
             }
         }
@@ -194,13 +225,17 @@ export default class GameplayAdapter {
             frames,
             fps,
             deltaMs,
+            simulatedDeltaMs: frames * deltaMs,
             initialFrame,
-            finalFrame: Number(loop.frame || initialFrame),
-            initialTime: initialLastTime,
-            finalTime: Number(loop.lastTime || virtualTime),
+            finalFrame: manualFinalFrame,
+            initialLoopTime,
+            finalLoopTime: manualFinalLoopTime,
+            initialCallbackTime: initialLastTime,
+            finalCallbackTime: manualFinalCallbackTime,
             targetSceneStatus: this.status,
             loopRestored: wasRunning ? Boolean(loop.running) : !loop.running,
-            method: 'Phaser.TimeStep.step -> Phaser.Game.step'
+            method: 'Phaser.TimeStep.step -> Phaser.Game.step',
+            wallClockPolicy: 'pinned_monotonic_callback_time_with_fixed_timestep_delta'
         };
         this.updateObservationState({ exactFrameAdvance: result, paused: this.status === 'paused' });
         return result;
