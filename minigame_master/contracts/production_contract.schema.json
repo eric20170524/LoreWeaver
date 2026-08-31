@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/production_contract.schema.json",
+  "title": "LoreWeaver Production Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "status",
+    "summary",
+    "whenToUse",
+    "whenNotToUse",
+    "inputs",
+    "stages",
+    "evidenceContract",
+    "failureModes",
+    "source"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "loreweaver.production-contract.v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "title": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["planned", "runtime_supported", "verified", "promoted"] },
+    "summary": { "type": "string", "minLength": 1 },
+    "whenToUse": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "whenNotToUse": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "required"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "required": { "type": "boolean" }
+        }
+      }
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "owner",
+          "purpose",
+          "implementationRefs",
+          "validatorRefs",
+          "requiredEvidenceKinds",
+          "onFailure"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "owner": {
+            "enum": ["orchestrator", "architect", "programmer", "auditor", "player", "reviewer", "human_tester", "device_tester", "visual_critic"]
+          },
+          "purpose": { "type": "string", "minLength": 1 },
+          "implementationRefs": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "validatorRefs": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "requiredEvidenceKinds": {
+            "type": "array",
+            "items": {
+              "enum": ["static", "runtime", "browser", "visual", "human", "device", "integrity", "release"]
+            },
+            "uniqueItems": true
+          },
+          "onFailure": { "enum": ["block", "rollback", "repair_then_revalidate", "escalate"] },
+          "notes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "evidenceContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identityFields", "freshnessRequired", "realEvidenceOnly", "waiversAllowed"],
+      "properties": {
+        "identityFields": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "freshnessRequired": { "type": "boolean" },
+        "realEvidenceOnly": { "type": "boolean" },
+        "waiversAllowed": { "type": "boolean" }
+      }
+    },
+    "failureModes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "description", "requiredResponse"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "requiredResponse": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "license", "adaptation", "evidenceRefs"],
+      "properties": {
+        "project": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "adaptation": { "type": "string", "minLength": 1 },
+        "evidenceRefs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}
