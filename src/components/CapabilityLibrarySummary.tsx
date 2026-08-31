@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronRight,
   FileCheck2,
+  Link2,
   ShieldCheck
 } from "lucide-react";
 import blueprintCatalog from "../../minigame_master/capabilities/blueprints/catalog.json";
@@ -17,13 +18,20 @@ import bossPhases from "../../minigame_master/gameplay/cards/modifiers/boss_phas
 import laserWarning from "../../minigame_master/gameplay/cards/modifiers/laser_warning.json";
 import { Locale } from "../types";
 
+type SourceAttribution = {
+  url?: string;
+  license?: string;
+  adaptation?: string;
+};
+
 type CatalogEntry = {
   id: string;
   title: string;
   status: string;
+  origin?: string;
   summary?: string;
   missingCapabilities?: string[];
-  source?: { license?: string; adaptation?: string };
+  source?: SourceAttribution;
 };
 
 type ModuleSource = {
@@ -34,6 +42,14 @@ type ModuleSource = {
   compatibleBaseCards?: string[];
   modifierFor?: string[];
   runtime?: { adapter?: string };
+};
+
+type ModuleEntry = {
+  kind: "Gameplay Card" | "Modifier";
+  source: ModuleSource;
+  sourceRef: string;
+  origin: string;
+  license: string;
 };
 
 function StatusBadge({ status, zh }: { status: string; zh: boolean }) {
@@ -55,6 +71,41 @@ function StatusBadge({ status, zh }: { status: string; zh: boolean }) {
   return <span className={`rounded-full border px-2 py-0.5 text-[9px] font-mono ${className}`}>{label}</span>;
 }
 
+function SourceAttributionBox({
+  source,
+  origin,
+  zh
+}: {
+  source?: SourceAttribution;
+  origin?: string;
+  zh: boolean;
+}) {
+  if (!source && !origin) return null;
+  return (
+    <div className="mt-2 rounded border border-indigo-100 bg-indigo-50/50 px-2 py-1.5 text-[9px] leading-4 text-slate-500 dark:border-indigo-950 dark:bg-indigo-950/20">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        {origin && <span><strong>{zh ? "来源" : "Origin"}:</strong> {origin}</span>}
+        {source?.license && <span><strong>{zh ? "许可" : "License"}:</strong> {source.license}</span>}
+        {source?.url && (
+          <a
+            href={source.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:underline dark:text-indigo-300"
+          >
+            <Link2 className="h-3 w-3" />{zh ? "查看来源" : "Source"}
+          </a>
+        )}
+      </div>
+      {source?.adaptation && (
+        <p className="mt-1 text-slate-500">
+          <strong>{zh ? "适配边界" : "Adaptation"}:</strong> {source.adaptation}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function CapabilityEntry({ entry, zh }: { entry: CatalogEntry; zh: boolean }) {
   const missing = entry.missingCapabilities || [];
   return (
@@ -67,6 +118,7 @@ function CapabilityEntry({ entry, zh }: { entry: CatalogEntry; zh: boolean }) {
         <StatusBadge status={entry.status} zh={zh} />
       </div>
       {entry.summary && <p className="mt-2 text-[10px] leading-4 text-slate-500">{entry.summary}</p>}
+      <SourceAttributionBox source={entry.source} origin={entry.origin} zh={zh} />
       {missing.length > 0 && (
         <div className="mt-2 rounded border border-amber-200 bg-amber-50/60 px-2 py-1.5 text-[9px] leading-4 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-300">
           <AlertTriangle className="mr-1 inline h-3 w-3" />
@@ -82,13 +134,43 @@ export function CapabilityLibrarySummary({ locale }: { locale: Locale }) {
   const [open, setOpen] = useState(false);
   const blueprints = (blueprintCatalog.entries || []) as CatalogEntry[];
   const contracts = (contractCatalog.entries || []) as CatalogEntry[];
-  const modules = useMemo(
+  const modules = useMemo<ModuleEntry[]>(
     () => [
-      { kind: "Gameplay Card", source: survivorHorde as ModuleSource },
-      { kind: "Modifier", source: hazardTelegraph as ModuleSource },
-      { kind: "Modifier", source: defendCore as ModuleSource },
-      { kind: "Modifier", source: bossPhases as ModuleSource },
-      { kind: "Modifier", source: laserWarning as ModuleSource }
+      {
+        kind: "Gameplay Card",
+        source: survivorHorde as ModuleSource,
+        sourceRef: "minigame_master/gameplay/cards/survivor_horde.json",
+        origin: "LoreWeaver native capability",
+        license: "LoreWeaver Personal Use License 1.0"
+      },
+      {
+        kind: "Modifier",
+        source: hazardTelegraph as ModuleSource,
+        sourceRef: "minigame_master/gameplay/cards/modifiers/hazard_telegraph.json",
+        origin: "LoreWeaver native capability",
+        license: "LoreWeaver Personal Use License 1.0"
+      },
+      {
+        kind: "Modifier",
+        source: defendCore as ModuleSource,
+        sourceRef: "minigame_master/gameplay/cards/modifiers/defend_core.json",
+        origin: "LoreWeaver native capability",
+        license: "LoreWeaver Personal Use License 1.0"
+      },
+      {
+        kind: "Modifier",
+        source: bossPhases as ModuleSource,
+        sourceRef: "minigame_master/gameplay/cards/modifiers/boss_phases.json",
+        origin: "LoreWeaver native capability",
+        license: "LoreWeaver Personal Use License 1.0"
+      },
+      {
+        kind: "Modifier",
+        source: laserWarning as ModuleSource,
+        sourceRef: "minigame_master/gameplay/cards/modifiers/laser_warning.json",
+        origin: "LoreWeaver native capability",
+        license: "LoreWeaver Personal Use License 1.0"
+      }
     ],
     []
   );
@@ -111,8 +193,8 @@ export function CapabilityLibrarySummary({ locale }: { locale: Locale }) {
             </div>
             <p className="mt-1 text-[10px] leading-4 text-slate-500">
               {zh
-                ? "骨架已映射为 Blueprint，模块复用现有 Card/Modifier，生产方法沉淀为 Contract。"
-                : "Skeletons map to Blueprints, modules reuse Cards/Modifiers, and production methods become Contracts."}
+                ? "骨架已映射为 Blueprint，模块复用现有 Card/Modifier，生产方法沉淀为 Contract；来源、许可和适配边界保持可追溯。"
+                : "Skeletons map to Blueprints, modules reuse Cards/Modifiers, production methods become Contracts, and provenance remains visible."}
             </p>
           </div>
         </div>
@@ -156,7 +238,7 @@ export function CapabilityLibrarySummary({ locale }: { locale: Locale }) {
               {zh ? "Capability Module / 现有执行能力" : "Capability Module / existing runtime capability"}
             </div>
             <div className="space-y-2">
-              {modules.map(({ kind, source }) => (
+              {modules.map(({ kind, source, sourceRef, origin, license }) => (
                 <div key={source.id} className="rounded-lg border border-slate-200 bg-white/70 p-3 dark:border-slate-800 dark:bg-slate-950/40">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
@@ -170,6 +252,14 @@ export function CapabilityLibrarySummary({ locale }: { locale: Locale }) {
                       ? `${zh ? "唯一运行时" : "Runtime authority"}: LoreWeaverRuntimeKernel · ${source.runtime?.adapter || "adapter"}`
                       : `${zh ? "兼容" : "Compatible"}: ${(source.compatibleBaseCards || source.modifierFor || []).join(", ")}`}
                   </p>
+                  <SourceAttributionBox
+                    zh={zh}
+                    origin={origin}
+                    source={{
+                      license,
+                      adaptation: `${zh ? "仓库内原生能力定义" : "Native repository capability"}: ${sourceRef}`
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -205,8 +295,8 @@ export function CapabilityLibrarySummary({ locale }: { locale: Locale }) {
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-[10px] leading-4 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-300">
             <ShieldCheck className="mr-1 inline h-3.5 w-3.5" />
             {zh
-              ? "边界：唯一 RuntimeKernel；Blueprint 不嵌入脚本；L3/L4 只能人工审查；alignment_candidate 不代表已支持。"
-              : "Boundary: one RuntimeKernel; no scripts in Blueprints; L3/L4 require human review; alignment_candidate is not a support claim."}
+              ? "边界：唯一 RuntimeKernel；Blueprint 不嵌入脚本；L3/L4 只能人工审查；alignment_candidate 不代表已支持；VibeGame 对齐项保留 Apache-2.0 来源和‘仅概念适配’说明。"
+              : "Boundary: one RuntimeKernel; no scripts in Blueprints; L3/L4 require human review; alignment candidates are not support claims; VibeGame-aligned entries retain Apache-2.0 provenance and concept-only adaptation notes."}
           </div>
         </div>
       )}
