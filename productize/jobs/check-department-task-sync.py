@@ -104,7 +104,11 @@ def main():
             triggering_department_id="code",
             reports_root=reports,
         )
-        assert_true(noop["action"] == "noop" and "architect" in noop["reason"], json.dumps(noop))
+        assert_true(
+            noop["action"] == "noop" and noop["reason"] == "no_task_waiting_for_role:programmer",
+            json.dumps(noop),
+        )
+        assert_true(repo.read("ws", "sync-task")["status"] == "draft", "department sync cannot advance a draft Task before Architect")
         assert_true(len(repo.read("ws", "sync-task")["handoffRounds"]) == len(before["handoffRounds"]), "draft task must not be mutated")
 
         planned = repo.append(
