@@ -23,4 +23,10 @@ export {
     TRACE_SCHEMA_VERSION,
     SUPPORTED_CONTROLS
 } from './RuntimeObservationPort.js';
+export {
+    runRuntimeScenario,
+    validateRuntimeScenario,
+    RUNTIME_SCENARIO_SCHEMA_VERSION,
+    RUNTIME_SCENARIO_RESULT_VERSION
+} from './RuntimeScenarioRunner.js';
 export { default as SceneLifecycle, SCENE_LIFECYCLE_STATES } from './SceneLifecycle.js';
