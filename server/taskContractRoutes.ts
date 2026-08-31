@@ -1,4 +1,4 @@
-import type express from "express";
+import type { Express } from "express";
 import path from "path";
 import { spawn } from "child_process";
 
@@ -10,7 +10,7 @@ export type WorkspaceValidation = {
 };
 
 type RegisterTaskContractRoutesOptions = {
-  app: express.Express;
+  app: Express;
   cwd: string;
   getPythonCommand: () => string;
   validateWorkspace: (workspaceId: string) => WorkspaceValidation;
