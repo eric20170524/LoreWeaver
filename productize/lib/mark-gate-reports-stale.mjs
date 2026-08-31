@@ -58,6 +58,7 @@ export function candidateReselectionEvidenceTargets(cardIds = [], {
   candidateChanged = true,
   screenshotChanged = true
 } = {}) {
+  if (!candidateChanged && !screenshotChanged) return [];
   const targets = ["release_decision_latest.json"];
 
   if (candidateChanged) {
