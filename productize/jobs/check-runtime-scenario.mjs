@@ -28,13 +28,12 @@ function createHarness(suffix) {
   });
   let paused = false;
   let ended = null;
-  const scene = {
-    sys: { settings: { key: `ScenarioScene${suffix}` } },
-    scene: {
-      pause() { paused = true; },
-      resume() { paused = false; }
-    }
+  const systems = {
+    settings: { key: `ScenarioScene${suffix}` },
+    pause() { paused = true; },
+    resume() { paused = false; }
   };
+  const scene = { sys: systems };
   const adapter = new GameplayAdapter({
     testHooks: hooks,
     onEnd: (result) => { ended = result; }
@@ -102,6 +101,8 @@ const validation = validateRuntimeScenario(scenario);
 assert(validation.valid, JSON.stringify(validation));
 
 const first = createHarness("A");
+assert(first.api.capabilities().pause === true && first.api.capabilities().resume === true, "scenario harness must expose immediate Systems pause/resume");
+assert(first.api.capabilities().exactFrameAdvance === false, "scenario harness has no TimeStep and cannot claim exact frames");
 const firstResult = await runRuntimeScenario({ scenario, observation: first.api });
 assert(firstResult.status === "passed", JSON.stringify(firstResult));
 assert(firstResult.runtimeAuthority === "LoreWeaverRuntimeKernel", "scenario never creates a second runtime authority");
@@ -181,7 +182,7 @@ second.adapter.destroy();
 assertionHarness.adapter.destroy();
 
 console.log(JSON.stringify({
-  schemaVersion: "loreweaver.runtime-scenario-check.v1",
+  schemaVersion: "loreweaver.runtime-scenario-check.v2",
   status: "passed",
   scenarioId: scenario.id,
   scenarioHash: firstResult.scenarioHash,
@@ -189,11 +190,12 @@ console.log(JSON.stringify({
   replaySessionId: secondResult.sessionId,
   checks: [
     "semantic_scenario_runs_only_through_runtime_observation_port",
+    "scenario_harness_uses_immediate_phaser_systems_controls",
     "scenario_and_replay_bind_distinct_real_session_ids",
     "scenario_identity_is_stable_across_replay",
     "move_pause_resume_retreat_use_real_adapter_controls",
     "assertions_bind_observed_same_session_state",
-    "exact_frame_requirement_blocks_when_capability_is_missing",
+    "exact_frame_requirement_blocks_when_timestep_capability_is_missing",
     "host_wall_clock_settle_requires_explicit_host_callback",
     "unknown_step_types_are_rejected_before_execution",
     "failed_assertions_fail_the_scenario"
