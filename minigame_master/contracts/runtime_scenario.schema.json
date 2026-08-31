@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/runtime_scenario.schema.json",
+  "title": "LoreWeaver Runtime Scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "title", "steps"],
+  "properties": {
+    "schemaVersion": { "const": "loreweaver.runtime-scenario.v1" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": ["string", "null"] },
+    "requiredCapabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["pause", "resume", "semanticInput", "exactFrameAdvance"] },
+      "default": []
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "minLength": 1 },
+          "type": { "enum": ["input", "pause", "resume", "advance_frames", "assert"] },
+          "payload": { "type": ["object", "null"] },
+          "frames": { "type": "integer", "minimum": 1, "maximum": 600 },
+          "settleMs": { "type": "integer", "minimum": 0, "maximum": 10000, "default": 0 },
+          "assertions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "operator"],
+              "properties": {
+                "path": { "type": "string", "minLength": 1 },
+                "operator": { "enum": ["exists", "eq", "neq", "gt", "gte", "lt", "lte", "includes"] },
+                "value": {}
+              }
+            },
+            "default": []
+          }
+        }
+      }
+    },
+    "metadata": { "type": "object", "additionalProperties": true }
+  }
+}
