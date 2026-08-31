@@ -15,4 +15,12 @@ export {
     validatePlayabilityContract
 } from './PlayabilityContract.js';
 export { default as TestHooks, DEFAULT_GLOBAL_KEY } from './TestHooks.js';
+export {
+    default as RuntimeObservationPort,
+    DEFAULT_OBSERVATION_GLOBAL_KEY,
+    OBSERVATION_SCHEMA_VERSION,
+    SNAPSHOT_SCHEMA_VERSION,
+    TRACE_SCHEMA_VERSION,
+    SUPPORTED_CONTROLS
+} from './RuntimeObservationPort.js';
 export { default as SceneLifecycle, SCENE_LIFECYCLE_STATES } from './SceneLifecycle.js';
