@@ -183,7 +183,15 @@ try {
   });
   assert(acceptance.statusCode === 200, JSON.stringify(acceptance));
   assert(acceptance.payload.acceptance.accepted === false, "implementation alone is not final acceptance");
-  assert(acceptance.payload.acceptance.blockers.some((item) => item.startsWith("missing_role:auditor")), "remaining role blockers stay visible");
+  assert(
+    acceptance.payload.acceptance.blockers.includes("task_not_accepted:implemented"),
+    "acceptance reports the exact unfinished task state"
+  );
+  assert(
+    acceptance.payload.acceptance.blockers.includes("criterion_evidence_missing:AC1:static")
+      && acceptance.payload.acceptance.blockers.includes("criterion_evidence_missing:AC1:runtime"),
+    "acceptance reports the remaining static and runtime evidence gaps"
+  );
 
   const invalidTask = await call(app, "GET", "/api/workspaces/:wsId/tasks/:taskId", {
     params: { wsId: workspaceId, taskId: "../escape" }
@@ -211,6 +219,7 @@ try {
       "create_list_show_and_acceptance_routes",
       "illegal_role_jump_is_blocked",
       "optimistic_concurrency_conflict_maps_to_409",
+      "unfinished_acceptance_reports_exact_state_and_evidence_gaps",
       "successful_handoffs_are_hash_chained_and_persisted",
       "unsafe_ids_and_missing_workspaces_fail_before_spawn",
       "failed_transitions_do_not_append_history"
