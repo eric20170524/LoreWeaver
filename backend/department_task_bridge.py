@@ -1,9 +1,13 @@
 """Bridge existing Department outputs into ordered TaskContract handoffs.
 
-The bridge deliberately does not map department completion to Player, Reviewer or
-Orchestrator acceptance. Department agents can contribute bounded planning,
-implementation or static-audit rounds only. Runtime play, feel, independent
-review and final acceptance remain separate evidence roles.
+TaskContract roles are task-level responsibilities, not a mirror of the film-style
+Department topology. In particular, the production `architecture` department is
+an implementation department because it runs after world/gameplay/ability prep;
+it must not impersonate the Task Architect, which plans before implementation.
+
+Department agents can therefore contribute bounded implementation or static-audit
+rounds only. Runtime play, feel, independent review and final acceptance remain
+separate evidence roles.
 """
 
 from __future__ import annotations
@@ -19,11 +23,12 @@ from backend.task_contract import (
 from backend.task_repository import TaskRepository, TaskRepositoryError
 
 
-ARCHITECT_DEPARTMENTS = frozenset({
-    "architecture",
-    "architect",
-    "runtime_architecture",
-    "system_architecture",
+# These are task-level planner aliases only. No current production Department id
+# belongs here. `architecture` is deliberately a Programmer/implementation dept.
+TASK_ARCHITECT_SOURCES = frozenset({
+    "task_architect",
+    "task_planner",
+    "solution_architect",
 })
 
 PROGRAMMER_DEPARTMENTS = frozenset({
@@ -32,6 +37,9 @@ PROGRAMMER_DEPARTMENTS = frozenset({
     "narrative",
     "gameplay",
     "ability",
+    "architecture",
+    "runtime_architecture",
+    "system_architecture",
     "code",
     "programming",
     "art",
@@ -120,8 +128,14 @@ def _unique_strings(values: Iterable[Any] | None) -> tuple[str, ...]:
 
 
 def department_role(department_id: str) -> str | None:
+    """Map an existing production source to a Task role.
+
+    The current Department registry never auto-fills Task Architect. A dedicated
+    task planner may use a task-level source alias, while production departments
+    contribute implementation or static-audit evidence.
+    """
     normalized = _text(department_id).lower().replace("-", "_")
-    if normalized in ARCHITECT_DEPARTMENTS:
+    if normalized in TASK_ARCHITECT_SOURCES:
         return "architect"
     if normalized in PROGRAMMER_DEPARTMENTS:
         return "programmer"
@@ -194,7 +208,8 @@ def _normalize_evidence(
             raise DepartmentTaskBridgeError(
                 f"department_evidence_not_passed:{evidence_id}:{status or 'missing'}"
             )
-        if not path or path.startswith(("/", "\\")) or ".." in path.replace("\\", "/").split("/"):
+        normalized_path = path.replace("\\", "/")
+        if not path or path.startswith(("/", "\\")) or ".." in normalized_path.split("/"):
             raise DepartmentTaskBridgeError(
                 f"department_evidence_path_unsafe:{evidence_id}"
             )
