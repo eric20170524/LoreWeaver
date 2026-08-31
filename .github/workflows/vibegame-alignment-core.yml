@@ -9,32 +9,40 @@ on:
       - "backend/task_contract.py"
       - "backend/task_repository.py"
       - "backend/department_task_bridge.py"
+      - "backend/department_task_sync.py"
       - "productize/task-contract.py"
       - "productize/bridge-department-task.py"
+      - "productize/sync-department-task.py"
       - "productize/lib/vertical-slice-blueprint.mjs"
       - "productize/lib/capability-module.mjs"
       - "productize/lib/capability-promotion.mjs"
       - "productize/lib/asset-recipe.mjs"
+      - "productize/lib/asset-operation-executor.mjs"
       - "productize/lib/legacy-asset-recipe.mjs"
       - "productize/jobs/check-task-contract.py"
       - "productize/jobs/check-task-api.mjs"
       - "productize/jobs/check-department-task-bridge.py"
+      - "productize/jobs/check-department-task-sync.py"
       - "productize/jobs/check-vertical-slice-blueprint.mjs"
       - "productize/jobs/check-capability-module.mjs"
       - "productize/jobs/check-capability-promotion.mjs"
       - "productize/jobs/check-production-contract.mjs"
       - "productize/jobs/check-runtime-observation.mjs"
       - "productize/jobs/check-asset-recipe.mjs"
+      - "productize/jobs/check-asset-operation-executor.mjs"
       - "productize/jobs/check-legacy-asset-recipe.mjs"
       - "minigame_master/contracts/**"
       - "minigame_master/capabilities/blueprints/**"
       - "minigame_master/capabilities/contracts/**"
       - "minigame_master/core/lib/contracts/**"
+      - "minigame_master/core/lib/gameplay/GameplayAdapter.js"
       - "server/taskContractRoutes.ts"
+      - "server/departmentTaskSyncRoutes.ts"
       - "server.ts"
       - "src/components/CapabilityLibrarySummary.tsx"
       - "src/components/TaskContractPanel.tsx"
       - "src/components/PipelinePanel.tsx"
+      - "src/utils/departmentPrep.ts"
       - "tsconfig.json"
       - "package.json"
       - ".github/workflows/vibegame-alignment-core.yml"
@@ -70,8 +78,10 @@ jobs:
       - name: Verify TaskContract Gateway API
         run: npx tsx productize/jobs/check-task-api.mjs
 
-      - name: Verify Department-to-Task bridge
-        run: python3 productize/jobs/check-department-task-bridge.py
+      - name: Verify Department-to-Task bridge and confirmation sync
+        run: |
+          python3 productize/jobs/check-department-task-bridge.py
+          python3 productize/jobs/check-department-task-sync.py
 
       - name: Verify Blueprint and CapabilityModule
         run: |
@@ -86,9 +96,10 @@ jobs:
       - name: Verify Runtime Observation
         run: node productize/jobs/check-runtime-observation.mjs
 
-      - name: Verify AssetRecipe and legacy migration
+      - name: Verify AssetRecipe execution and legacy migration
         run: |
           node productize/jobs/check-asset-recipe.mjs
+          node productize/jobs/check-asset-operation-executor.mjs
           node productize/jobs/check-legacy-asset-recipe.mjs
 
       - name: TypeScript check
