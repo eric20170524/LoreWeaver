@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "loreweaver.production-contract.v1",
+  "id": "candidate-certification",
+  "title": "Exact Candidate Certification",
+  "status": "verified",
+  "summary": "Build one immutable Candidate, verify its executable payload in a static browser host, attach real visual, human and physical-device evidence to the same identity, then promote only certification metadata without changing payloadHash.",
+  "whenToUse": [
+    "A playable Workspace is ready to produce an externally shared release candidate.",
+    "A Candidate must be promoted to Certified H5 without rebuilding or changing executable bytes.",
+    "Browser, VLM, human and device claims must refer to exactly the same artifact."
+  ],
+  "whenNotToUse": [
+    "Early design exploration before a stable playable Candidate exists.",
+    "Source backup export.",
+    "A workflow that allows fixture, synthetic, stale or emulated evidence to stand in for real release evidence."
+  ],
+  "inputs": [
+    {
+      "id": "workspace",
+      "description": "A LoreWeaver Workspace compilable by the existing RuntimeSpec compiler.",
+      "required": true
+    },
+    {
+      "id": "candidate-identity",
+      "description": "specHash, runtimeVersion, payloadHash, artifact path and artifactSha256 from the selected Candidate.",
+      "required": true
+    },
+    {
+      "id": "candidate-screenshot",
+      "description": "Screenshot and screenshotSha256 captured from the same browser verification session.",
+      "required": true
+    }
+  ],
+  "stages": [
+    {
+      "id": "compile-candidate",
+      "owner": "programmer",
+      "purpose": "Compile the Workspace through the one Release Compiler and mark the artifact UNVERIFIED_CANDIDATE.",
+      "implementationRefs": [
+        "productize/release-compiler.mjs",
+        "productize/export-standalone.mjs"
+      ],
+      "validatorRefs": [
+        "productize/jobs/check-executable-payload.mjs",
+        "productize/lib/release-policy.mjs"
+      ],
+      "requiredEvidenceKinds": ["static", "integrity"],
+      "onFailure": "block",
+      "notes": [
+        "Candidate export is shareable for testing but releaseEligible remains false.",
+        "The executable payload hash excludes certification metadata."
+      ]
+    },
+    {
+      "id": "verify-runtime",
+      "owner": "player",
+      "purpose": "Run the exact Candidate from a static host, enter every resolved node, verify Card and Modifier wiring, capture runtime errors and a final screenshot.",
+      "implementationRefs": [
+        "productize/jobs/verify-workspace-candidate.mjs"
+      ],
+      "validatorRefs": [
+        "productize/jobs/run-golden-candidate-e2e.mjs",
+        ".github/workflows/golden-candidate-e2e.yml"
+      ],
+      "requiredEvidenceKinds": ["runtime", "browser", "integrity"],
+      "onFailure": "rollback",
+      "notes": [
+        "The previous verified Browser anchor remains intact when a new attempt fails.",
+        "A newly selected Candidate invalidates package-bound downstream evidence."
+      ]
+    },
+    {
+      "id": "verify-visual",
+      "owner": "visual_critic",
+      "purpose": "Review the exact browser screenshot with a real visual provider and bind the result to Candidate and screenshot identity.",
+      "implementationRefs": [
+        "productize/jobs/run-workspace-vlm-audit.py"
+      ],
+      "validatorRefs": [
+        "backend/visual_audit.py",
+        "productize/release-compiler.mjs"
+      ],
+      "requiredEvidenceKinds": ["visual"],
+      "onFailure": "repair_then_revalidate",
+      "notes": [
+        "Only completed grok/codex real providers can produce release-eligible visual evidence.",
+        "Unavailable providers never degrade to a pass."
+      ]
+    },
+    {
+      "id": "verify-human",
+      "owner": "human_tester",
+      "purpose": "Record a real player's completion, understanding, replay intent, clarity, difficulty, failures and suggestions against the same Candidate.",
+      "implementationRefs": [
+        "productize/record-observed-release-evidence.ts",
+        "src/components/ReleaseEvidencePanel.tsx"
+      ],
+      "validatorRefs": [
+        "productize/lib/observed-release-evidence.mjs",
+        "minigame_master/contracts/human_playtest_evidence.schema.json"
+      ],
+      "requiredEvidenceKinds": ["human"],
+      "onFailure": "repair_then_revalidate",
+      "notes": [
+        "fixture=false, synthetic=false and humanObserved=true are mandatory.",
+        "A failed playtest is recorded honestly and does not certify."
+      ]
+    },
+    {
+      "id": "verify-device",
+      "owner": "device_tester",
+      "purpose": "Run the same Candidate on a real physical target device and record interaction, console and FPS observations against an explicit budget.",
+      "implementationRefs": [
+        "productize/record-observed-release-evidence.ts",
+        "src/components/ReleaseEvidencePanel.tsx"
+      ],
+      "validatorRefs": [
+        "productize/lib/observed-release-evidence.mjs",
+        "minigame_master/contracts/device_verification_evidence.schema.json"
+      ],
+      "requiredEvidenceKinds": ["device"],
+      "onFailure": "repair_then_revalidate",
+      "notes": [
+        "physicalDevice=true, headless=false, emulated=false and synthetic=false are mandatory."
+      ]
+    },
+    {
+      "id": "independent-release-review",
+      "owner": "reviewer",
+      "purpose": "Evaluate all used Gameplay Cards, evidence freshness, identity matching and waiver state before allowing promotion.",
+      "implementationRefs": [
+        "productize/lib/release-maturity.mjs",
+        "productize/lib/production-export-gate.mjs",
+        "productize/lib/release-policy.mjs"
+      ],
+      "validatorRefs": [
+        "productize/jobs/check-release-maturity.mjs",
+        "productize/jobs/check-production-maturity-integration.mjs",
+        "productize/jobs/check-release-policy.mjs"
+      ],
+      "requiredEvidenceKinds": ["static", "runtime", "browser", "visual", "human", "device", "integrity"],
+      "onFailure": "block",
+      "notes": [
+        "The weakest used Card determines aggregate maturity.",
+        "Any waiver prevents strict release_certified."
+      ]
+    },
+    {
+      "id": "promote-certified",
+      "owner": "orchestrator",
+      "purpose": "Promote the already verified Candidate by changing certification metadata only and proving payloadHash remains unchanged.",
+      "implementationRefs": [
+        "productize/promote-certified.mjs",
+        "productize/release-compiler.mjs"
+      ],
+      "validatorRefs": [
+        "productize/jobs/check-certified-promotion.mjs"
+      ],
+      "requiredEvidenceKinds": ["integrity", "release"],
+      "onFailure": "block",
+      "notes": [
+        "The Candidate is promoted in place conceptually; the executable payload is not rebuilt.",
+        "The Certified artifact must preserve source Candidate payloadHash."
+      ]
+    }
+  ],
+  "evidenceContract": {
+    "identityFields": [
+      "specHash",
+      "runtimeVersion",
+      "payloadHash",
+      "artifact",
+      "artifactSha256",
+      "screenshot",
+      "screenshotSha256"
+    ],
+    "freshnessRequired": true,
+    "realEvidenceOnly": true,
+    "waiversAllowed": false
+  },
+  "failureModes": [
+    {
+      "id": "identity-mismatch",
+      "description": "An evidence report refers to another spec, payload, artifact or screenshot.",
+      "requiredResponse": "Block certification, select or rebuild the intended Candidate, and recollect all affected downstream evidence."
+    },
+    {
+      "id": "stale-evidence",
+      "description": "Authoring, recipe, content, asset or runtime identity changed after evidence collection.",
+      "requiredResponse": "Mark old reports stale and rerun the affected verification stages."
+    },
+    {
+      "id": "candidate-reselection",
+      "description": "A new Candidate ZIP becomes the browser verification anchor.",
+      "requiredResponse": "Keep the new Browser report fresh while invalidating VLM, human, device and release state tied to the prior artifact."
+    },
+    {
+      "id": "visual-provider-unavailable",
+      "description": "No supported real VLM provider completed the review.",
+      "requiredResponse": "Keep status unavailable and releaseEligible=false; do not substitute a fixture or synthetic pass."
+    },
+    {
+      "id": "payload-mutated-during-promotion",
+      "description": "Certification metadata processing changed executable payload bytes.",
+      "requiredResponse": "Abort promotion and investigate the promoter/export boundary."
+    }
+  ],
+  "source": {
+    "project": "LoreWeaver",
+    "license": "LoreWeaver Personal Use License 1.0",
+    "adaptation": "Formalizes the already implemented exact-Candidate release chain using VibeGame's cross-role Contract pattern. No VibeGame implementation source is copied.",
+    "evidenceRefs": [
+      "productize/jobs/check-release-policy.mjs",
+      "productize/jobs/check-release-evidence-stale.mjs",
+      "productize/jobs/check-observed-release-evidence.mjs",
+      "productize/jobs/check-certified-promotion.mjs",
+      ".github/workflows/golden-candidate-e2e.yml"
+    ]
+  }
+}
