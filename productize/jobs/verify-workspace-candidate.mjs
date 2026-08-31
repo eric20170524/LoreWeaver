@@ -7,6 +7,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { hashExecutablePayloadManifest } from "../lib/executable-payload.mjs";
+import { markCandidateReselectionEvidenceStale } from "../lib/mark-gate-reports-stale.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "../..");
@@ -23,6 +24,13 @@ function safeWorkspaceId(value) {
 }
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+function readJsonSafe(file) {
+  try {
+    return fs.existsSync(file) ? readJson(file) : null;
+  } catch {
+    return null;
+  }
 }
 function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -110,6 +118,14 @@ async function main() {
   const workspace = path.join(WORKSPACES_ROOT, workspaceId);
   if (!fs.existsSync(workspace) || !fs.statSync(workspace).isDirectory()) fail("workspace_not_found");
 
+  const reportsDir = path.join(workspace, "reports");
+  fs.mkdirSync(reportsDir, { recursive: true });
+  const genericPath = path.join(reportsDir, "standalone_browser_report.json");
+  const previousBrowserReport = readJsonSafe(genericPath);
+  const canonicalScreenshotPath = path.join(reportsDir, "candidate_final_stage.png");
+  const attemptScreenshotPath = path.join(reportsDir, `.candidate_final_stage_attempt_${process.pid}_${Date.now()}.png`);
+  const attemptReportPath = path.join(reportsDir, "candidate_verification_attempt_latest.json");
+
   const tsxBin = path.join(LORE_ROOT, "node_modules/.bin/tsx");
   const compile = spawnSync(tsxBin, [
     path.join(LORE_ROOT, "productize/release-compiler.mjs"),
@@ -156,9 +172,6 @@ async function main() {
   const errors = { console: [], page: [], requests: [] };
   const apiRequests = [];
   const stageResults = [];
-  const reportsDir = path.join(workspace, "reports");
-  fs.mkdirSync(reportsDir, { recursive: true });
-  const screenshotPath = path.join(reportsDir, "candidate_final_stage.png");
   let resolvedContract = [];
   let browser = null;
 
@@ -243,11 +256,11 @@ async function main() {
       const modsMatch = expected.modifierIds.every((id) => observed.modifierIds.includes(id));
       const contractValid = observed.runtimeContract.introType === "string" && observed.runtimeContract.tauntsIsArray;
       const runtimeRunning = observed.status === "running";
-      const passed = observed.active && observed.cardId === expected.cardId && modsMatch && contractValid && runtimeRunning;
-      stageResults.push({ stage: index + 1, nodeId: expected.id, cardId: expected.cardId, passed, expectedModifiers: expected.modifierIds, observed });
-      if (!passed) throw new Error(`stage_${index + 1}_failed:${JSON.stringify(stageResults.at(-1))}`);
+      const stagePassed = observed.active && observed.cardId === expected.cardId && modsMatch && contractValid && runtimeRunning;
+      stageResults.push({ stage: index + 1, nodeId: expected.id, cardId: expected.cardId, passed: stagePassed, expectedModifiers: expected.modifierIds, observed });
+      if (!stagePassed) throw new Error(`stage_${index + 1}_failed:${JSON.stringify(stageResults.at(-1))}`);
 
-      if (index === resolvedContract.length - 1) await page.screenshot({ path: screenshotPath, fullPage: true });
+      if (index === resolvedContract.length - 1) await page.screenshot({ path: attemptScreenshotPath, fullPage: true });
 
       await page.evaluate(() => {
         const scene = window.__LOREWEAVER_GAME__?.scene?.keys?.LevelActiveScene;
@@ -268,8 +281,9 @@ async function main() {
     && errors.requests.length === 0
     && apiRequests.length === 0
     && stageResults.length === resolvedContract.length
-    && stageResults.every((item) => item.passed);
-  const screenshotSha256 = fs.existsSync(screenshotPath) ? sha256File(screenshotPath) : null;
+    && stageResults.every((item) => item.passed)
+    && fs.existsSync(attemptScreenshotPath);
+  const screenshotSha256 = fs.existsSync(attemptScreenshotPath) ? sha256File(attemptScreenshotPath) : null;
   const cardIds = [...new Set(resolvedContract.map((node) => node.cardId).filter(Boolean))].sort();
   const common = {
     schemaVersion: "loreweaver.standalone-browser-report.v2",
@@ -288,7 +302,7 @@ async function main() {
     offlineBackendRequired: false,
     runtimeNodeContract: resolvedContract,
     stageResults,
-    screenshot: fs.existsSync(screenshotPath) ? repoRelative(screenshotPath) : null,
+    screenshot: repoRelative(canonicalScreenshotPath),
     screenshotSha256,
     errors,
     apiRequests,
@@ -297,14 +311,48 @@ async function main() {
     candidateMarker: releaseStatus.nonReleaseMarker,
     cardIds
   };
-  const genericPath = path.join(reportsDir, "standalone_browser_report.json");
-  writeJson(genericPath, { ...common, cardId: cardIds.length === 1 ? cardIds[0] : null });
+
+  if (!passed) {
+    fs.rmSync(attemptScreenshotPath, { force: true });
+    const attempt = {
+      ...common,
+      screenshot: null,
+      screenshotSha256: null,
+      reason: "candidate_browser_validation_failed",
+      preservedPreviousVerifiedCandidate: Boolean(previousBrowserReport?.status === "passed")
+    };
+    writeJson(attemptReportPath, attempt);
+    console.log(JSON.stringify({
+      status: "failed",
+      reason: attempt.reason,
+      workspaceId,
+      stageResults,
+      errors,
+      preservedPreviousVerifiedCandidate: attempt.preservedPreviousVerifiedCandidate,
+      attemptReport: repoRelative(attemptReportPath)
+    }, null, 2));
+    process.exit(2);
+  }
+
+  // Commit the new verified Browser anchor only after the entire runtime validation
+  // has succeeded. A failed re-verification never overwrites the previous anchor.
+  fs.renameSync(attemptScreenshotPath, canonicalScreenshotPath);
+  const nextGenericReport = { ...common, cardId: cardIds.length === 1 ? cardIds[0] : null };
+  writeJson(genericPath, nextGenericReport);
   for (const cardId of cardIds) {
     writeJson(path.join(reportsDir, `standalone_browser_report_${cardId}.json`), { ...common, cardId });
   }
 
+  const invalidation = markCandidateReselectionEvidenceStale({
+    workspaceReportsDir: reportsDir,
+    cardIds,
+    previousBrowserReport,
+    nextBrowserReport: nextGenericReport
+  });
+  fs.rmSync(attemptReportPath, { force: true });
+
   const result = {
-    status: passed ? "passed" : "failed",
+    status: "passed",
     workspaceId,
     artifact: repoRelative(artifactPath),
     artifactSha256,
@@ -315,10 +363,10 @@ async function main() {
     cardIds,
     stageResults,
     report: repoRelative(genericPath),
-    downloadReady: passed
+    downloadReady: true,
+    downstreamEvidenceInvalidation: invalidation
   };
   console.log(JSON.stringify(result, null, 2));
-  if (!passed) process.exit(2);
 }
 
 main().catch((error) => fail("workspace_candidate_verifier_error", { error: error?.stack || error?.message || String(error) }));
