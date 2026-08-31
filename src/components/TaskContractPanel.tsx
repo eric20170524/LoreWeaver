@@ -65,7 +65,7 @@ type TaskContract = {
   };
   acceptanceCriteria: AcceptanceCriterion[];
   dependencies?: string[];
-  context?: Record<string, Array<{ file: string; reason: string }>>;
+  context: Record<string, Array<{ file: string; reason: string }>>;
   runtimeStateContract?: {
     fields?: Array<{ path: string; type: string; reason: string }>;
     inputActions?: string[];
@@ -408,7 +408,7 @@ export function TaskContractPanel({
                   <section>
                     <div className="text-[10px] font-mono font-bold uppercase text-slate-500">Role Context</div>
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      {Object.entries(task.context || {}).filter(([, entries]) => entries.length > 0).map(([role, entries]) => (
+                      {Object.entries(task.context).filter(([, entries]) => entries.length > 0).map(([role, entries]) => (
                         <div key={role} className="rounded border border-slate-200 p-2 dark:border-slate-800">
                           <div className="text-[9px] font-bold text-slate-600 dark:text-slate-300">{roleLabel(role, zh)}</div>
                           {entries.map((entry) => (
