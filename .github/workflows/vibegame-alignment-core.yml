@@ -9,6 +9,7 @@ on:
       - "backend/task_contract.py"
       - "backend/task_repository.py"
       - "backend/task_bootstrap.py"
+      - "backend/release_task_sync.py"
       - "backend/task_repair_bridge.py"
       - "backend/department_task_bridge.py"
       - "backend/department_task_sync.py"
@@ -17,6 +18,7 @@ on:
       - "productize/task-contract.py"
       - "productize/bridge-department-task.py"
       - "productize/sync-department-task.py"
+      - "productize/sync-release-task.py"
       - "productize/promote-capability.mjs"
       - "productize/run-asset-job.mjs"
       - "productize/run-asset-recipe.mjs"
@@ -38,6 +40,7 @@ on:
       - "productize/jobs/check-task-api.mjs"
       - "productize/jobs/check-task-ui.mjs"
       - "productize/jobs/check-task-bootstrap.py"
+      - "productize/jobs/check-release-task-sync.py"
       - "productize/jobs/check-task-repair-bridge.py"
       - "productize/jobs/check-department-task-bridge.py"
       - "productize/jobs/check-department-task-sync.py"
@@ -106,10 +109,11 @@ jobs:
           npm ci
           python -m pip install -r backend/requirements.txt
 
-      - name: Verify TaskContract state, bootstrap, repository, Gateway API and Expert audit UI
+      - name: Verify TaskContract state, bootstrap, release-evidence sync, repository, Gateway API and Expert audit UI
         run: |
           python3 productize/jobs/check-task-contract.py
           python3 productize/jobs/check-task-bootstrap.py
+          python3 productize/jobs/check-release-task-sync.py
           npx tsx productize/jobs/check-task-api.mjs
           node productize/jobs/check-task-ui.mjs
 
