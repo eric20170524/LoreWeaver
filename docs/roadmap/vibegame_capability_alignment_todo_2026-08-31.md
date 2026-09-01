@@ -46,7 +46,7 @@
 - [x] Add explicit two-phase write transaction: preview diff → candidate validation → approval token → re-check conflict → atomic create-only write.
 - [x] Bind approval token to candidate hash, destination, source revision and approval identity; candidate changes invalidate approval.
 - [x] Add CLI `productize/promote-capability.mjs` for preview/commit.
-- [ ] Add Expert Mode approval UI/Gateway surface for the two-phase transaction; do not auto-submit the approval token.
+- [x] Add Expert Mode approval UI/Gateway surface; preview and commit are separate user actions and the approval token is never auto-submitted.
 - [ ] Add real repository usage examples that reach `promoted` only after empirical evidence closure.
 
 ## G5 — ProductionContract
@@ -77,7 +77,7 @@
 - [x] Bind Golden Candidate browser state/trace/screenshot evidence to the same runtime session.
 - [x] Keep screenshot/console/network explicitly host-owned rather than falsely claimed as RuntimeKernel controls.
 - [x] Keep unsupported `activate` unadvertised.
-- [ ] Close the current real-browser exact-frame readiness regression and restore Golden Candidate E2E green; verifier now performs a bounded wait for Phaser TimeStep cooldown=0 while the Adapter itself remains fail-closed during cooldown.
+- [x] Close real-browser exact-frame readiness: generic Candidate verifier waits boundedly for Phaser TimeStep cooldown=0 while the Adapter remains fail-closed during cooldown; latest Golden Candidate E2E is green in real Chromium.
 - [ ] Add cross-build deterministic replay evidence only after seed/time/input sources are fully controlled.
 
 ## G8 — AssetRecipe / art pipeline
@@ -88,7 +88,7 @@
 - [x] Bind execution outputs and verification to exact hashes.
 - [x] Add conservative legacy asset migration: historical assets become candidate, never silently verified/promoted.
 - [x] Migrate legacy `atlas_verify` to execute a real registered `asset.convert` operation, emit execution evidence and rebind the migration candidate to the actual output hash.
-- [ ] Implement deterministic audio operation ports before migrating `audio_verify`; it currently reports `pending_port` rather than faking support.
+- [x] Add deterministic PCM16 WAV normalize/trim/mix operation ports and migrate `audio_verify` to real `asset.normalize_audio` execution for WAV sources; MP3/OGG remain explicit unsupported/pending inputs.
 - [ ] Register real `asset.vlm` only when an actual VLM provider is present; do not create a synthetic implementation.
 - [ ] Promote AssetRecipes only after real runtime-usage + visual/VLM + integrity/license evidence closes.
 
@@ -96,19 +96,20 @@
 
 - [x] Add dedicated `VibeGame Alignment Core` workflow.
 - [x] Gate TaskContract, Task API, Department sync, bounded repair, Blueprint, Module, Promotion, ProductionContract, RuntimeObservation, RuntimeScenario and AssetRecipe checks.
-- [x] Add explicit promotion-transaction adversarial checks.
-- [x] Add legacy asset-job operation-migration check.
+- [x] Add explicit promotion transaction/Gateway/Expert-UI adversarial checks.
+- [x] Add legacy atlas and PCM-WAV asset-job operation-migration checks.
 - [x] Keep Convergence Core and TypeScript checks green through the alignment work.
-- [ ] Require latest Golden Candidate E2E green before this branch is considered merge-ready.
+- [x] Require latest Golden Candidate E2E green before this branch is considered merge-ready at the engineering/browser layer.
 - [ ] Require real VLM + human playtest + physical-device evidence for strict Certified release; CI cannot synthesize these.
 
 ## Current execution order
 
-1. [ ] Restore Golden Candidate E2E after exact-frame TimeStep stabilization change.
-2. [ ] Add deterministic audio AssetRecipe ports and migrate `audio_verify`.
-3. [ ] Add Expert Mode approval UI/Gateway for two-phase CapabilityPromotion.
+1. [ ] Add fail-closed cross-build determinism readiness/evidence contract; do not claim deterministic replay while RNG/time/presentation sources remain uncontrolled.
+2. [ ] Remove only the remaining Department UI/path duplication that conflicts with TaskContract source of truth.
+3. [ ] Register real `asset.vlm` only with an actual provider session.
 4. [ ] Collect real VLM / human / device evidence for a no-waiver Certified golden slice.
-5. [ ] Only then implement one of the five alignment-candidate genres end-to-end; do not expand all five horizontally.
+5. [ ] Add one real evidence-backed Promotion example after empirical closure.
+6. [ ] Only then implement one of the five alignment-candidate genres end-to-end; do not expand all five horizontally.
 
 ## Explicitly prohibited
 
@@ -118,4 +119,4 @@
 - Automatically creating L3 adapters or modifying L4 runtime core.
 - Automatically promoting candidates into the global catalog without an explicit second-phase approval action.
 - Treating `alignment_candidate` as runtime support.
-- Faking VLM, human, device, semantic-input or exact-frame evidence.
+- Faking VLM, human, device, semantic-input, exact-frame or cross-build deterministic evidence.
