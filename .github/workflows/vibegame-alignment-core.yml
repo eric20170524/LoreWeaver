@@ -1,0 +1,167 @@
+name: VibeGame Alignment Core
+
+on:
+  push:
+    branches:
+      - feat/vertical-slice-compiler-convergence
+  pull_request:
+    paths:
+      - "backend/task_contract.py"
+      - "backend/task_repository.py"
+      - "backend/task_bootstrap.py"
+      - "backend/release_task_sync.py"
+      - "backend/task_repair_bridge.py"
+      - "backend/department_task_bridge.py"
+      - "backend/department_task_sync.py"
+      - "backend/repair_orchestrator.py"
+      - "backend/repair_policy.py"
+      - "productize/task-contract.py"
+      - "productize/bridge-department-task.py"
+      - "productize/sync-department-task.py"
+      - "productize/sync-release-task.py"
+      - "productize/record-observed-release-evidence.ts"
+      - "productize/promote-capability.mjs"
+      - "productize/run-asset-job.mjs"
+      - "productize/run-asset-recipe.mjs"
+      - "productize/jobs/run-workspace-vlm-audit.py"
+      - "productize/lib/vertical-slice-blueprint.mjs"
+      - "productize/lib/capability-module.mjs"
+      - "productize/lib/capability-promotion.mjs"
+      - "productize/lib/capability-promotion-transaction.mjs"
+      - "productize/lib/asset-recipe.mjs"
+      - "productize/lib/asset-operation-executor.mjs"
+      - "productize/lib/asset-operation-registry.mjs"
+      - "productize/lib/png-asset-operations.mjs"
+      - "productize/lib/wav-asset-operations.mjs"
+      - "productize/lib/real-asset-vlm-operation.mjs"
+      - "productize/lib/legacy-asset-recipe.mjs"
+      - "productize/jobs/run-asset-vlm-operation.py"
+      - "productize/jobs/check-real-asset-vlm-operation.mjs"
+      - "productize/jobs/check-asset-recipe-runner.mjs"
+      - "productize/jobs/check-task-contract.py"
+      - "productize/jobs/check-task-api.mjs"
+      - "productize/jobs/check-task-ui.mjs"
+      - "productize/jobs/check-task-bootstrap.py"
+      - "productize/jobs/check-release-task-sync.py"
+      - "productize/jobs/check-release-task-sync-wiring.mjs"
+      - "productize/jobs/check-task-repair-bridge.py"
+      - "productize/jobs/check-department-task-bridge.py"
+      - "productize/jobs/check-department-task-sync.py"
+      - "productize/jobs/check-vertical-slice-blueprint.mjs"
+      - "productize/jobs/check-capability-module.mjs"
+      - "productize/jobs/check-capability-promotion.mjs"
+      - "productize/jobs/check-capability-promotion-transaction.mjs"
+      - "productize/jobs/check-capability-promotion-api.mjs"
+      - "productize/jobs/check-capability-promotion-ui.mjs"
+      - "productize/jobs/check-production-contract.mjs"
+      - "productize/jobs/check-runtime-observation.mjs"
+      - "productize/jobs/check-runtime-scenario.mjs"
+      - "productize/jobs/check-runtime-determinism.mjs"
+      - "productize/jobs/run-golden-cross-build-determinism.mjs"
+      - "productize/jobs/check-action-boss-alignment-runtime.mjs"
+      - "productize/jobs/check-asset-recipe.mjs"
+      - "productize/jobs/check-asset-operation-executor.mjs"
+      - "productize/jobs/check-png-asset-operations.mjs"
+      - "productize/jobs/check-wav-asset-operations.mjs"
+      - "productize/jobs/check-legacy-asset-recipe.mjs"
+      - "productize/jobs/check-legacy-asset-job-operation-migration.mjs"
+      - "productize/jobs/check-legacy-audio-job-operation-migration.mjs"
+      - "minigame_master/contracts/**"
+      - "minigame_master/capabilities/blueprints/**"
+      - "minigame_master/capabilities/contracts/**"
+      - "minigame_master/core/lib/contracts/**"
+      - "minigame_master/core/lib/gameplay/GameplayAdapter.js"
+      - "minigame_master/core/lib/gameplay/survivor_horde/DeterministicSurvivorHordeAdapter.js"
+      - "minigame_master/core/lib/gameplay/dodge_counter_boss/**"
+      - "minigame_master/core/lib/gameplay/index.js"
+      - "minigame_master/core/lib/utils/DeterministicRandom.js"
+      - "server/capabilityPromotionRoutes.ts"
+      - "server/taskContractRoutes.ts"
+      - "server/departmentTaskSyncRoutes.ts"
+      - "server.ts"
+      - "src/components/CapabilityLibrarySummary.tsx"
+      - "src/components/CapabilityPromotionPanel.tsx"
+      - "src/components/TaskContractPanel.tsx"
+      - "src/components/PipelinePanel.tsx"
+      - "src/utils/departmentPrep.ts"
+      - "src/types/**"
+      - "tsconfig.json"
+      - "package.json"
+      - ".github/workflows/vibegame-alignment-core.yml"
+  workflow_dispatch:
+
+jobs:
+  alignment-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          python -m pip install -r backend/requirements.txt
+
+      - name: Verify TaskContract state, bootstrap, release-evidence sync, repository, Gateway API and Expert audit UI
+        run: |
+          python3 productize/jobs/check-task-contract.py
+          python3 productize/jobs/check-task-bootstrap.py
+          python3 productize/jobs/check-release-task-sync.py
+          node productize/jobs/check-release-task-sync-wiring.mjs
+          npx tsx productize/jobs/check-task-api.mjs
+          node productize/jobs/check-task-ui.mjs
+
+      - name: Verify bounded Repair Loop rework integration
+        run: python3 productize/jobs/check-task-repair-bridge.py
+
+      - name: Verify Department-to-Task bridge and confirmation sync
+        run: |
+          python3 productize/jobs/check-department-task-bridge.py
+          python3 productize/jobs/check-department-task-sync.py
+
+      - name: Verify Blueprint and CapabilityModule
+        run: |
+          node productize/jobs/check-vertical-slice-blueprint.mjs
+          node productize/jobs/check-capability-module.mjs
+          node productize/jobs/check-action-boss-alignment-runtime.mjs
+
+      - name: Verify evidence-gated Promotion, write transaction, Gateway, Expert UI and ProductionContract
+        run: |
+          node productize/jobs/check-capability-promotion.mjs
+          node productize/jobs/check-capability-promotion-transaction.mjs
+          npx tsx productize/jobs/check-capability-promotion-api.mjs
+          node productize/jobs/check-capability-promotion-ui.mjs
+          node productize/jobs/check-production-contract.mjs
+
+      - name: Verify Runtime Observation, semantic replay and determinism readiness
+        run: |
+          node productize/jobs/check-runtime-observation.mjs
+          node productize/jobs/check-runtime-scenario.mjs
+          node productize/jobs/check-runtime-determinism.mjs
+
+      - name: Verify AssetRecipe execution, canonical runner, real-only VLM registry and legacy migration
+        run: |
+          node productize/jobs/check-asset-recipe.mjs
+          node productize/jobs/check-asset-operation-executor.mjs
+          node productize/jobs/check-png-asset-operations.mjs
+          node productize/jobs/check-wav-asset-operations.mjs
+          node productize/jobs/check-real-asset-vlm-operation.mjs
+          node productize/jobs/check-asset-recipe-runner.mjs
+          node productize/jobs/check-legacy-asset-recipe.mjs
+          node productize/jobs/check-legacy-asset-job-operation-migration.mjs
+          node productize/jobs/check-legacy-audio-job-operation-migration.mjs
+
+      - name: TypeScript check
+        run: npm run lint

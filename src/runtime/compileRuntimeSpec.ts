@@ -238,8 +238,6 @@ function materializeAppliedPatches(spec: GameSpec): {
         throw new Error(`Applied patch target is missing: ${patch.id} -> ${patch.target}`);
       }
       if (patch.before !== undefined && !valuesEqual(current.value, patch.before)) {
-        // Base already diverged from patch lineage (recipe apply / L1 knobs / multi-session).
-        // Prefer current base over hard-crashing the workbench emulator.
         const msg =
           `Applied patch conflict: ${patch.id} expected ${patch.target} to match before` +
           ` (base diverged; ${strictAppliedPatches() ? "strict" : "soft-skip"})`;
@@ -264,6 +262,55 @@ function stripWorkbench(spec: GameSpec): GameSpec {
   return copy;
 }
 
+/**
+ * Authoring sources (RecipeGraph, imports, agent patches) may intentionally omit
+ * presentational node fields. Runtime code consumes a stronger NodeSpec contract,
+ * so resolve those omissions once at the compiler boundary instead of scattering
+ * null guards through every scene.
+ */
+function normalizeRuntimeNodeContract(spec: GameSpec): GameSpec {
+  const copy = cloneJson(spec) as GameSpec;
+  copy.nodes = copy.nodes.map((node, index) => {
+    const raw = node as any;
+    const nodeId = Number.isFinite(Number(raw.id)) ? Number(raw.id) : index + 1;
+    return {
+      ...node,
+      id: nodeId,
+      title:
+        typeof raw.title === "string" && raw.title.trim()
+          ? raw.title
+          : `Node ${nodeId}`,
+      intro: typeof raw.intro === "string" ? raw.intro : "",
+      taunts: Array.isArray(raw.taunts)
+        ? raw.taunts.filter((item: unknown) => typeof item === "string" && item.trim().length > 0)
+        : [],
+      rewards: typeof raw.rewards === "string" ? raw.rewards : ""
+    };
+  });
+  return copy;
+}
+
+function runtimeNodeContractWarnings(source: GameSpec): string[] {
+  const warnings: string[] = [];
+  source.nodes.forEach((node, index) => {
+    const raw = node as any;
+    const nodeId = raw.id ?? index + 1;
+    if (typeof raw.title !== "string" || !raw.title.trim()) {
+      warnings.push(`node:${nodeId}: title missing; normalized to runtime fallback`);
+    }
+    if (typeof raw.intro !== "string") {
+      warnings.push(`node:${nodeId}: intro missing; normalized to empty string`);
+    }
+    if (!Array.isArray(raw.taunts)) {
+      warnings.push(`node:${nodeId}: taunts missing; normalized to []`);
+    }
+    if (typeof raw.rewards !== "string") {
+      warnings.push(`node:${nodeId}: rewards missing; normalized to empty string`);
+    }
+  });
+  return warnings;
+}
+
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === "object" && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -276,7 +323,8 @@ export function compileRuntimeSpec(source: GameSpec): ResolvedRuntimeSpec {
   if (!source || typeof source !== "object") throw new Error("Runtime spec source must be an object");
   if (!Array.isArray(source.nodes) || source.nodes.length === 0) throw new Error("Runtime spec requires nodes[]");
 
-  const normalized = ensureGameplayManifest(cloneJson(source));
+  const contractWarnings = runtimeNodeContractWarnings(source);
+  const normalized = normalizeRuntimeNodeContract(ensureGameplayManifest(cloneJson(source)));
   const duplicateNodeIds = normalized.nodes
     .map((node) => node.id)
     .filter((id, index, all) => all.indexOf(id) !== index);
@@ -287,8 +335,10 @@ export function compileRuntimeSpec(source: GameSpec): ResolvedRuntimeSpec {
     appliedPatchIds,
     patchWarnings
   } = materializeAppliedPatches(normalized);
-  const gameSpec = stripWorkbench(ensureGameplayManifest(patched));
-  const migrationWarnings: string[] = [...patchWarnings];
+  const gameSpec = stripWorkbench(
+    normalizeRuntimeNodeContract(ensureGameplayManifest(patched))
+  );
+  const migrationWarnings: string[] = [...contractWarnings, ...patchWarnings];
   for (const node of gameSpec.nodes) {
     if (!node.gameplay?.cardId) migrationWarnings.push(`node:${node.id}: gameplay card inferred from legacy mechanics`);
   }

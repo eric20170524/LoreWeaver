@@ -4,18 +4,21 @@
  * Fail-closed: missing / failed / stale / identity-mismatched evidence blocks publish.
  * Soft warnings alone are never enough for productionExportAllowed.
  *
- * Multi-card: prefers per-card report filenames, then shared "*_latest" only when cardId matches.
+ * Evidence lookup may receive multiple report roots. The first matching report wins,
+ * so workspace-local exact Candidate evidence can override legacy shared automation
+ * reports without copying workspace-specific artifacts into a global report pool.
  */
 
 import fs from "node:fs";
 import path from "node:path";
+import { evaluateReleaseMaturity } from "./release-maturity.mjs";
 
 export const REQUIRED_PRODUCTION_REPORT_SPECS = [
   {
     key: "nodeSmoke",
     requireCardId: false,
     requireReleaseEligible: false,
-    candidates: (cardId) => ["node_smoke_latest.json"]
+    candidates: () => ["node_smoke_latest.json"]
   },
   {
     key: "standaloneBrowser",
@@ -56,7 +59,6 @@ export const REQUIRED_PRODUCTION_REPORT_SPECS = [
   }
 ];
 
-// Back-compat export name used by older docs/tests
 export const REQUIRED_PRODUCTION_REPORTS = REQUIRED_PRODUCTION_REPORT_SPECS.map((s) => ({
   key: s.key,
   file: s.candidates("CARD")[0],
@@ -99,10 +101,15 @@ function smokeOk(report) {
   return true;
 }
 
-/**
- * Pick first existing report whose cardId matches (when requireCardId) or has no cardId conflict.
- */
+function normalizeReportDirs(reportsDir, reportDirs = null) {
+  const values = [];
+  if (Array.isArray(reportDirs)) values.push(...reportDirs);
+  if (reportsDir) values.push(reportsDir);
+  return [...new Set(values.map((value) => value && path.resolve(value)).filter(Boolean))];
+}
+
 export function resolveCardReport(reportsDir, cardId, candidates, { requireCardId = false } = {}) {
+  if (!reportsDir) return { file: candidates[0] || null, report: null, path: null };
   for (const file of candidates) {
     const filePath = path.join(reportsDir, file);
     const report = parseJsonFileSafe(filePath);
@@ -110,17 +117,37 @@ export function resolveCardReport(reportsDir, cardId, candidates, { requireCardI
     if (requireCardId) {
       if (report.cardId != null && report.cardId !== cardId) continue;
     } else if (report.cardId != null && cardId && report.cardId !== cardId) {
-      // node smoke is workspace-level — allow missing cardId
       continue;
     }
-    return { file, report, path: filePath };
+    return { file, report, path: filePath, reportsDir };
   }
-  return { file: candidates[0] || null, report: null, path: null };
+  return { file: candidates[0] || null, report: null, path: null, reportsDir };
 }
 
-/**
- * Compare optional identity fields when both sides present.
- */
+export function resolveCardReportFromDirs(reportDirs, cardId, candidates, options = {}) {
+  for (const reportsDir of reportDirs || []) {
+    const resolved = resolveCardReport(reportsDir, cardId, candidates, options);
+    if (resolved.report) return resolved;
+  }
+  return {
+    file: candidates[0] || null,
+    report: null,
+    path: null,
+    reportsDir: (reportDirs || [])[0] || null
+  };
+}
+
+function resolveNamedReportFromDirs(reportDirs, file, cardId) {
+  for (const reportsDir of reportDirs || []) {
+    const filePath = path.join(reportsDir, file);
+    const report = parseJsonFileSafe(filePath);
+    if (!report) continue;
+    if (report.cardId && report.cardId !== cardId) continue;
+    return { file, report, path: filePath, reportsDir };
+  }
+  return { file, report: null, path: null, reportsDir: (reportDirs || [])[0] || null };
+}
+
 export function identityMismatches(report, expectedIdentity) {
   if (!report || !expectedIdentity) return [];
   const mismatches = [];
@@ -142,22 +169,55 @@ export function identityMismatches(report, expectedIdentity) {
   return mismatches;
 }
 
-/**
- * Evaluate production export readiness for a card.
- */
-export function evaluateProductionExportGate({ card, reportsDir, expectedIdentity = null }) {
+function withMaturity(result, {
+  card,
+  humanPlaytest,
+  deviceVerification,
+  expectedCandidateIdentity,
+  waivers
+}) {
+  return {
+    ...result,
+    maturity: evaluateReleaseMaturity({
+      card,
+      productionGate: result,
+      humanPlaytest,
+      deviceVerification,
+      expectedCandidateIdentity,
+      waivers
+    })
+  };
+}
+
+export function evaluateProductionExportGate({
+  card,
+  reportsDir,
+  reportDirs = null,
+  expectedIdentity = null,
+  humanPlaytest = null,
+  deviceVerification = null,
+  waivers = []
+}) {
+  const evidenceDirs = normalizeReportDirs(reportsDir, reportDirs);
+  const maturityInput = {
+    card,
+    humanPlaytest,
+    deviceVerification,
+    expectedCandidateIdentity: expectedIdentity,
+    waivers
+  };
   const reasons = [];
   const checks = {};
   const cardId = card?.id || null;
 
   if (!card || typeof card !== "object") {
-    return {
+    return withMaturity({
       productionExportAllowed: false,
       status: "failed",
       reasons: ["Hard Gate Blocker: card object missing"],
       checks,
       cardId: null
-    };
+    }, maturityInput);
   }
 
   const statusOk = card.status === "production_ready";
@@ -165,9 +225,7 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
   checks.cardStatus = statusOk;
   checks.exportPolicy = exportOk;
   if (!statusOk) {
-    reasons.push(
-      `Hard Gate Blocker: card status must be production_ready (got '${card.status}')`
-    );
+    reasons.push(`Hard Gate Blocker: card status must be production_ready (got '${card.status}')`);
   }
   if (!exportOk) {
     reasons.push("Hard Gate Blocker: exportPolicy.productionReady must be true");
@@ -175,31 +233,37 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
 
   const needsEvidence = statusOk || exportOk;
   if (!needsEvidence) {
-    return {
+    return withMaturity({
       productionExportAllowed: false,
       status: reasons.length ? "failed" : "passed",
       reasons,
       checks,
       cardId
-    };
+    }, maturityInput);
   }
 
   const identity = {
     cardId: expectedIdentity?.cardId || cardId,
+    specHash: expectedIdentity?.specHash || null,
     recipeHash: expectedIdentity?.recipeHash || null,
     contentHash: expectedIdentity?.contentHash || null,
     atlasHash: expectedIdentity?.atlasHash || null,
-    runtimeVersion: expectedIdentity?.runtimeVersion || null
+    runtimeVersion: expectedIdentity?.runtimeVersion || null,
+    payloadHash: expectedIdentity?.payloadHash || null,
+    artifact: expectedIdentity?.artifact || null,
+    artifactSha256: expectedIdentity?.artifactSha256 || null
   };
+  maturityInput.expectedCandidateIdentity = identity;
 
   for (const spec of REQUIRED_PRODUCTION_REPORT_SPECS) {
     const candidates = spec.candidates(cardId);
-    const resolved = resolveCardReport(reportsDir, cardId, candidates, {
+    const resolved = resolveCardReportFromDirs(evidenceDirs, cardId, candidates, {
       requireCardId: spec.requireCardId
     });
     const report = resolved.report;
     const check = {
       file: resolved.file,
+      sourceDir: resolved.reportsDir || null,
       candidates,
       present: Boolean(report),
       stale: report ? isStaleReport(report) : true,
@@ -215,9 +279,7 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
         checks[spec.key] = check;
         continue;
       }
-      reasons.push(
-        `Hard Gate Blocker: ${candidates.join(" | ")} missing, empty, or cardId mismatch`
-      );
+      reasons.push(`Hard Gate Blocker: ${candidates.join(" | ")} missing, empty, or cardId mismatch`);
       check.ok = false;
       checks[spec.key] = check;
       continue;
@@ -235,18 +297,14 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
 
     if (spec.key === "nodeSmoke") {
       if (!smokeOk(report)) {
-        reasons.push(
-          `Hard Gate Blocker: E2E smoke report missing, empty, failed, or stale (${resolved.file})`
-        );
+        reasons.push(`Hard Gate Blocker: E2E smoke report missing, empty, failed, or stale (${resolved.file})`);
         check.ok = false;
       } else {
         check.ok = true;
       }
     } else {
       if (!reportPassed(report)) {
-        reasons.push(
-          `Hard Gate Blocker: ${resolved.file} missing, empty, failed, or stale`
-        );
+        reasons.push(`Hard Gate Blocker: ${resolved.file} missing, empty, failed, or stale`);
         check.ok = false;
         checks[spec.key] = check;
         continue;
@@ -263,9 +321,7 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
       }
       const idMis = identityMismatches(report, identity);
       if (idMis.length) {
-        reasons.push(
-          `Hard Gate Blocker: ${resolved.file} identity mismatch: ${idMis.join("; ")}`
-        );
+        reasons.push(`Hard Gate Blocker: ${resolved.file} identity mismatch: ${idMis.join("; ")}`);
         check.ok = false;
       }
       if (check.ok !== false) check.ok = true;
@@ -274,14 +330,12 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
     checks[spec.key] = check;
   }
 
-  // Card-scoped companions: stale blocks; wrong-card global companions ignored
   const companionCandidates = [
     `runtime_e2e_${cardId}_latest.json`,
     `runtime_e2e_standalone_${cardId}_latest.json`,
     `${cardId}_c7_readiness_latest.json`,
     `${cardId}_gate_readiness_latest.json`
   ];
-  // Legacy survivor names
   if (cardId === "survivor_horde") {
     companionCandidates.push(
       "runtime_e2e_survivor_horde_latest.json",
@@ -289,39 +343,35 @@ export function evaluateProductionExportGate({ card, reportsDir, expectedIdentit
       "survivor_c7_readiness_latest.json"
     );
   }
-  if (cardId === "rhythm_timing") {
-    companionCandidates.push("rhythm_gate_readiness_latest.json");
-  }
-  if (cardId === "drag_collect_grid") {
-    companionCandidates.push("drag_gate_readiness_latest.json");
-  }
-  if (cardId === "turn_based_skill_battle") {
-    companionCandidates.push("tbsb_gate_readiness_latest.json");
-  }
-  if (cardId === "sequence_synthesis") {
-    companionCandidates.push("seq_gate_readiness_latest.json");
-  }
+  if (cardId === "rhythm_timing") companionCandidates.push("rhythm_gate_readiness_latest.json");
+  if (cardId === "drag_collect_grid") companionCandidates.push("drag_gate_readiness_latest.json");
+  if (cardId === "turn_based_skill_battle") companionCandidates.push("tbsb_gate_readiness_latest.json");
+  if (cardId === "sequence_synthesis") companionCandidates.push("seq_gate_readiness_latest.json");
 
   for (const companion of [...new Set(companionCandidates)]) {
-    const p = path.join(reportsDir, companion);
-    if (!fs.existsSync(p)) continue;
-    const report = parseJsonFileSafe(p);
+    const resolved = resolveNamedReportFromDirs(evidenceDirs, companion, cardId);
+    const report = resolved.report;
     if (!report) continue;
-    if (report.cardId && report.cardId !== cardId) continue;
     if (isStaleReport(report)) {
       reasons.push(`Hard Gate Blocker: companion report stale (${companion})`);
-      checks[companion] = { present: true, stale: true, ok: false };
+      checks[companion] = {
+        present: true,
+        stale: true,
+        ok: false,
+        sourceDir: resolved.reportsDir || null
+      };
     }
   }
 
   const productionExportAllowed = statusOk && exportOk && reasons.length === 0;
 
-  return {
+  return withMaturity({
     productionExportAllowed,
     status: productionExportAllowed ? "passed" : "failed",
     reasons,
     checks,
     cardId,
-    expectedIdentity: identity
-  };
+    expectedIdentity: identity,
+    evidenceDirs
+  }, maturityInput);
 }

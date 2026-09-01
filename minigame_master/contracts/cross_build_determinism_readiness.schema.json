@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/cross_build_determinism_readiness.schema.json",
+  "title": "LoreWeaver Cross-Build Determinism Readiness",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "status",
+    "ready",
+    "replayReady",
+    "crossBuildDeterministicClaimAllowed",
+    "releaseEligible",
+    "claim",
+    "scope",
+    "runtimeAuthority",
+    "scenarioId",
+    "expectedIdentity",
+    "matrix",
+    "evidence",
+    "blockers",
+    "warnings"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "loreweaver.cross-build-determinism-readiness.v1"
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "blocked"
+      ]
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "replayReady": {
+      "type": "boolean"
+    },
+    "crossBuildDeterministicClaimAllowed": {
+      "type": "boolean"
+    },
+    "releaseEligible": {
+      "const": false
+    },
+    "claim": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "adapter_state_cross_build",
+        "full_visual_cross_build",
+        null
+      ]
+    },
+    "scope": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "adapter_state_trace",
+        "full_visual_frame",
+        null
+      ]
+    },
+    "runtimeAuthority": {
+      "const": "LoreWeaverRuntimeKernel"
+    },
+    "scenarioId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "expectedIdentity": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    },
+    "matrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredBrowsers",
+        "requiredBuildCount",
+        "coveredBrowsers",
+        "coveredBuildIds",
+        "complete"
+      ],
+      "properties": {
+        "requiredBrowsers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "chromium",
+              "firefox",
+              "webkit"
+            ]
+          }
+        },
+        "requiredBuildCount": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "coveredBrowsers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "coveredBuildIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidence": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    },
+    "blockers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ready"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "ready": {
+            "const": true
+          },
+          "replayReady": {
+            "const": true
+          },
+          "crossBuildDeterministicClaimAllowed": {
+            "const": true
+          },
+          "matrix": {
+            "properties": {
+              "complete": {
+                "const": true
+              }
+            }
+          },
+          "blockers": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "blocked"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "ready": {
+            "const": false
+          },
+          "replayReady": {
+            "const": false
+          },
+          "crossBuildDeterministicClaimAllowed": {
+            "const": false
+          },
+          "claim": {
+            "const": null
+          }
+        }
+      }
+    }
+  ]
+}

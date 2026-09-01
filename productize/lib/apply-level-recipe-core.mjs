@@ -1,6 +1,6 @@
 /**
  * Shared Level Recipe apply logic used by CLI and workbench API.
- * Single write path: mutates workspace node JSON; marks gate reports stale on write.
+ * Single write path: mutates workspace node JSON; marks dependent evidence stale on write.
  */
 
 import crypto from "node:crypto";
@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { markGateReportsStale } from "./mark-gate-reports-stale.mjs";
+import { markReleaseEvidenceStale } from "./mark-gate-reports-stale.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const LORE_ROOT = path.resolve(__dirname, "../..");
@@ -46,9 +46,6 @@ export function compileRecipe(recipePath, loreRoot = LORE_ROOT) {
   };
 }
 
-/**
- * Apply recipe fields onto a node object (pure mutation of provided node).
- */
 export function applyRecipeToNode(node, recipe, content, locale) {
   const pickLoc = (obj) => {
     if (!obj || typeof obj !== "object") return null;
@@ -84,19 +81,6 @@ export function applyRecipeToNode(node, recipe, content, locale) {
   return { before, node };
 }
 
-/**
- * Full apply path: compile → mutate node → optional write → mark reports stale.
- *
- * @param {object} opts
- * @param {string} opts.recipePath absolute or relative to lore root
- * @param {string} opts.workspaceId
- * @param {string|number} opts.nodeId
- * @param {boolean} [opts.dryRun=false]
- * @param {string} [opts.loreRoot]
- * @param {string} [opts.reportsDir]
- * @param {boolean} [opts.markStale=true] mark gate reports stale on successful write
- * @param {boolean} [opts.skipCompile=false]
- */
 export function applyLevelRecipe(opts) {
   const loreRoot = opts.loreRoot || LORE_ROOT;
   const reportsDir = opts.reportsDir || DEFAULT_REPORTS;
@@ -127,12 +111,8 @@ export function applyLevelRecipe(opts) {
   }
 
   const recipe = readJson(recipePath);
-  const nodesDir = path.join(
-    loreRoot,
-    "data/workspaces",
-    workspaceId,
-    "loreweaver/nodes"
-  );
+  const workspaceRoot = path.join(loreRoot, "data/workspaces", workspaceId);
+  const nodesDir = path.join(workspaceRoot, "loreweaver/nodes");
   if (!fs.existsSync(nodesDir)) {
     return { ok: false, status: "failed", reasons: [`nodes dir missing: ${nodesDir}`] };
   }
@@ -163,7 +143,6 @@ export function applyLevelRecipe(opts) {
       .digest("hex");
   }
 
-  // Prefer recipeHash from compile report if present
   let recipeHash = null;
   const compileReportPath = path.join(reportsDir, "level_recipe_compile_latest.json");
   if (fs.existsSync(compileReportPath)) {
@@ -179,6 +158,14 @@ export function applyLevelRecipe(opts) {
     }
   }
 
+  const identity = {
+    recipeId: recipe.recipeId,
+    cardId: recipe.cardId,
+    recipeHash,
+    contentHash,
+    workspaceId,
+    nodeId: String(nodeId)
+  };
   const applied = {
     schemaVersion: "loreweaver.level-recipe-apply.v1",
     status: "passed",
@@ -217,22 +204,20 @@ export function applyLevelRecipe(opts) {
   if (!dryRun) {
     fs.writeFileSync(found.path, `${JSON.stringify(node, null, 2)}\n`);
     if (markStale) {
-      const stale = markGateReportsStale({
-        reportsDir,
+      const stale = markReleaseEvidenceStale({
+        sharedReportsDir: reportsDir,
+        workspaceReportsDir: path.join(workspaceRoot, "reports"),
+        cardIds: [recipe.cardId],
         reason: `level_recipe_apply:${recipe.recipeId}`,
-        identity: {
-          recipeId: recipe.recipeId,
-          cardId: recipe.cardId,
-          recipeHash,
-          contentHash,
-          workspaceId,
-          nodeId: String(nodeId)
-        }
+        identity
       });
       applied.staleMarked = {
-        count: stale.marked.length,
-        files: stale.marked.map((m) => m.file),
-        skipped: stale.skipped
+        shared: stale.shared
+          ? { count: stale.shared.marked.length, files: stale.shared.marked.map((m) => m.file), skipped: stale.shared.skipped }
+          : null,
+        workspace: stale.workspace
+          ? { count: stale.workspace.marked.length, files: stale.workspace.marked.map((m) => m.file), skipped: stale.workspace.skipped }
+          : null
       };
     }
   }

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "loreweaver.device-verification-evidence.v1",
+  "status": "failed",
+  "releaseEligible": false,
+  "cardId": "survivor_horde",
+  "specHash": "example-spec-hash",
+  "recipeHash": "example-recipe-hash",
+  "contentHash": "example-content-hash",
+  "atlasHash": "example-atlas-hash",
+  "runtimeVersion": "example-runtime-version",
+  "payloadHash": "example-payload-hash",
+  "artifact": "productize/exports/example-candidate.zip",
+  "artifactSha256": "example-artifact-sha256",
+  "browserReport": "data/workspaces/example/reports/standalone_browser_report.json",
+  "createdAt": "2026-08-26T00:00:00Z",
+  "identityMatches": false,
+  "freshness": "fresh",
+  "staleReason": null,
+  "fixture": true,
+  "synthetic": true,
+  "deviceObserved": false,
+  "headless": true,
+  "emulated": true,
+  "observationSource": "documentation_fixture_not_release_evidence",
+  "performanceBudget": {
+    "minP50Fps": 50,
+    "minMinFps": 30
+  },
+  "runs": [
+    {
+      "physicalDevice": false,
+      "headless": true,
+      "emulated": true,
+      "deviceClass": "example-mobile-midrange",
+      "deviceModel": "documentation-fixture",
+      "os": "example-os",
+      "browser": "example-browser",
+      "viewport": {"width": 720, "height": 1280},
+      "completed": true,
+      "interactionOk": true,
+      "consoleErrors": 0,
+      "fps": {"p50": 60, "p95": 55, "min": 45},
+      "performanceBudgetMet": true,
+      "notes": "Documentation example only; not a physical device run."
+    }
+  ],
+  "summary": {
+    "runCount": 1,
+    "completedRunCount": 1,
+    "interactionFailureCount": 0,
+    "consoleErrorCount": 0,
+    "meetsPerformanceBudget": true,
+    "passCriteria": {
+      "allRunsPhysicalDevices": false,
+      "allRunsCompleted": true,
+      "zeroInteractionFailures": true,
+      "zeroConsoleErrors": true,
+      "meetsPerformanceBudget": true
+    },
+    "notes": "Fixture is intentionally releaseEligible=false; headless/emulated data cannot satisfy device verification."
+  }
+}

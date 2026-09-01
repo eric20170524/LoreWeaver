@@ -84,6 +84,20 @@ export interface DepartmentDeskPayload {
   handoffs: DepartmentHandoff[];
 }
 
+export interface DepartmentTaskSyncResult {
+  schemaVersion?: string;
+  status: "passed" | "blocked" | "failed" | string;
+  action?: "noop" | "handoff_appended" | string;
+  reason?: string;
+  departmentId?: string;
+  taskId?: string | null;
+  mappedRole?: string;
+  taskStatus?: string;
+  lastRoundHash?: string;
+  missingDepartments?: string[];
+  evidenceGaps?: string[];
+}
+
 const API_BASE = "";
 
 export async function fetchDepartmentDesk(workspaceId: string): Promise<DepartmentDeskPayload> {
@@ -91,6 +105,41 @@ export async function fetchDepartmentDesk(workspaceId: string): Promise<Departme
   if (!res.ok) throw new Error(await res.text());
   const json = await res.json();
   return json.data as DepartmentDeskPayload;
+}
+
+async function syncConfirmedDepartmentTask(
+  workspaceId: string,
+  deptId: string
+): Promise<DepartmentTaskSyncResult> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/tasks/sync-departments`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ departmentId: deptId })
+      }
+    );
+    const text = await res.text();
+    try {
+      return JSON.parse(text) as DepartmentTaskSyncResult;
+    } catch {
+      return {
+        status: "failed",
+        action: "noop",
+        reason: text || `department_task_sync_http_${res.status}`
+      };
+    }
+  } catch (error: any) {
+    // Department confirmation already succeeded. Task sync is deliberately
+    // best-effort and fail-closed: a bridge failure must never roll back a human
+    // Department confirmation or fabricate a Task handoff.
+    return {
+      status: "failed",
+      action: "noop",
+      reason: error?.message || String(error)
+    };
+  }
 }
 
 export async function confirmDepartment(
@@ -108,6 +157,7 @@ export async function confirmDepartment(
   reprepLog?: AutoPrepResult["runLog"];
   reprepPatches?: AutoPrepResult["patchesApplied"];
   patchesSaved?: boolean;
+  taskSync?: DepartmentTaskSyncResult;
 }> {
   const res = await fetch(
     `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/departments/${encodeURIComponent(deptId)}/confirm`,
@@ -119,12 +169,14 @@ export async function confirmDepartment(
   );
   if (!res.ok) throw new Error(await res.text());
   const json = await res.json();
+  const taskSync = await syncConfirmedDepartmentTask(workspaceId, deptId);
   return {
     state: json.data as DepartmentDeskState,
     staleDownstream: json.staleDownstream || [],
     reprepLog: json.reprepLog || [],
     reprepPatches: json.reprepPatches || [],
-    patchesSaved: json.patchesSaved
+    patchesSaved: json.patchesSaved,
+    taskSync
   };
 }
 

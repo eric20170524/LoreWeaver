@@ -1,0 +1,180 @@
+{
+  "schemaVersion": "loreweaver.vertical-slice-blueprint.v1",
+  "id": "survivor_vertical_slice_3",
+  "title": "Survivor Vertical Slice · Three Beats",
+  "summary": "A portrait three-stage survival slice that teaches the loop, adds spatial pressure, and closes with readable boss phases.",
+  "status": "runtime_verified",
+  "source": {
+    "project": "LoreWeaver",
+    "url": "https://github.com/eric20170524/LoreWeaver",
+    "license": "LoreWeaver Personal Use License 1.0",
+    "sourceRevision": "feat/vertical-slice-compiler-convergence",
+    "adaptation": "Formalizes the existing golden RecipeGraph as a reusable Blueprint after aligning with VibeGame's Skeleton concept; no VibeGame runtime implementation is copied."
+  },
+  "whenToUse": [
+    "Validate a portrait action-survival core loop before expanding content.",
+    "Need a compact setup-escalation-climax structure with one shared runtime card.",
+    "Need a release-evidence golden path for Card and Modifier composition."
+  ],
+  "whenNotToUse": [
+    "Dialogue-only experiences.",
+    "Precision platforming.",
+    "Branching narrative graphs before graph-aware runtime compilation is available."
+  ],
+  "designRecipeId": "vertical_slice_3",
+  "runtime": {
+    "orientation": "portrait",
+    "viewport": { "width": 720, "height": 1280 },
+    "inputActions": ["pointer_move", "keyboard_move", "pause", "retreat"],
+    "requiredEvidence": ["static", "runtime", "browser", "visual", "performance"]
+  },
+  "stages": [
+    {
+      "id": "stage:setup",
+      "title": "Setup / Learn the Loop",
+      "capabilityIntent": "Teach movement, automatic attacks and collection at low pressure.",
+      "node": {
+        "id": 1,
+        "title": "生存试炼 · 起势",
+        "intro": "先掌握移动、自动攻击与收集节奏，在较低压力下建立核心循环。",
+        "taunts": [],
+        "mechanics": "survivor_horde",
+        "rewards": "",
+        "resourceMultiplier": 1,
+        "durationLimit": 90,
+        "goalValue": 40,
+        "difficulty": 1,
+        "gameplay": {
+          "adapter": "phaser",
+          "cardId": "survivor_horde",
+          "modifiers": [],
+          "knobs": {
+            "durationSec": 90,
+            "goalValue": 40,
+            "difficulty": 1,
+            "enemySpawnRateSec": 1.4,
+            "allowPause": true,
+            "allowQuit": true,
+            "victoryMode": "survive"
+          },
+          "patchLevel": "L2"
+        }
+      },
+      "acceptance": [
+        "The survivor_horde adapter reaches running state.",
+        "Movement, automatic attack and collection are readable before pressure rises."
+      ],
+      "metadata": { "beat": "setup", "pressure": "low" }
+    },
+    {
+      "id": "stage:escalation",
+      "title": "Escalation / Spatial Pressure",
+      "capabilityIntent": "Add telegraphed hazards and a defend objective without changing the base runtime card.",
+      "node": {
+        "id": 2,
+        "title": "生存试炼 · 压境",
+        "intro": "敌潮加速，并加入明确预警的危险区域，迫使玩家在输出与走位之间做取舍。",
+        "taunts": [],
+        "mechanics": "survivor_horde",
+        "rewards": "",
+        "resourceMultiplier": 1,
+        "durationLimit": 105,
+        "goalValue": 70,
+        "difficulty": 2,
+        "gameplay": {
+          "adapter": "phaser",
+          "cardId": "survivor_horde",
+          "modifiers": [
+            { "id": "hazard_telegraph", "knobs": { "intervalMs": 3600, "warningDelayMs": 900, "radius": 54, "damage": 18 } },
+            { "id": "defend_core", "knobs": { "coreHp": 160 } }
+          ],
+          "knobs": {
+            "durationSec": 105,
+            "goalValue": 70,
+            "difficulty": 2,
+            "enemySpawnRateSec": 1,
+            "allowPause": true,
+            "allowQuit": true,
+            "victoryMode": "survive"
+          },
+          "patchLevel": "L2"
+        }
+      },
+      "acceptance": [
+        "Both modifiers are compatible with survivor_horde.",
+        "Hazards provide a warning window before damage.",
+        "The defend objective creates a visible spatial tradeoff."
+      ],
+      "metadata": { "beat": "escalation", "pressure": "medium" }
+    },
+    {
+      "id": "stage:climax",
+      "title": "Climax / Boss Read",
+      "capabilityIntent": "Close the slice with deterministic boss phases and a readable laser warning.",
+      "node": {
+        "id": 3,
+        "title": "生存试炼 · 首领",
+        "intro": "最终阶段把前两段的走位压力收束到首领战：读预警、躲激光、处理阶段变化并完成终局。",
+        "taunts": [],
+        "mechanics": "survivor_horde",
+        "rewards": "",
+        "resourceMultiplier": 1,
+        "durationLimit": 120,
+        "goalValue": 100,
+        "difficulty": 3,
+        "gameplay": {
+          "adapter": "phaser",
+          "cardId": "survivor_horde",
+          "modifiers": [
+            { "id": "boss_phases", "knobs": { "phaseThresholds": [0.66, 0.33] } },
+            { "id": "laser_warning", "knobs": { "intervalMs": 2800, "warningDelayMs": 700, "damage": 20 } }
+          ],
+          "knobs": {
+            "durationSec": 120,
+            "goalValue": 100,
+            "difficulty": 3,
+            "enemySpawnRateSec": 0.8,
+            "allowPause": true,
+            "allowQuit": true,
+            "victoryMode": "survive"
+          },
+          "patchLevel": "L2"
+        }
+      },
+      "acceptance": [
+        "Boss phase transitions occur once at declared thresholds.",
+        "Laser warning precedes its damage window.",
+        "The final stage reaches running state without console, page or request errors."
+      ],
+      "metadata": { "beat": "climax", "pressure": "high" }
+    }
+  ],
+  "requiredCapabilities": [
+    "gameplay_card:survivor_horde",
+    "modifier:hazard_telegraph",
+    "modifier:defend_core",
+    "modifier:boss_phases",
+    "modifier:laser_warning",
+    "runtime:LoreWeaverRuntimeKernel",
+    "compiler:RecipeGraph"
+  ],
+  "missingCapabilities": [],
+  "acceptanceGates": [
+    "gameplay_composition",
+    "golden_slice_gate",
+    "node_smoke",
+    "standalone_browser_e2e",
+    "visual_audit",
+    "performance"
+  ],
+  "promotion": {
+    "state": "verified",
+    "evidenceRefs": [
+      "productize/jobs/check-golden-vertical-slice.py",
+      "productize/jobs/check-golden-slice-repair.py",
+      "productize/jobs/run-golden-candidate-e2e.mjs"
+    ],
+    "approvedBy": null,
+    "approvedAt": null
+  }
+}

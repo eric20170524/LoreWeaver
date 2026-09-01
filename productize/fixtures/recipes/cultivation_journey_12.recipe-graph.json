@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "loreweaver.recipe-graph.v1",
+  "entryNodeId": "node:1",
+  "sessionTargetMinutes": 30,
+  "cyclePolicy": "forbid",
+  "nodes": [
+    {"id": "node:1", "kind": "gameplay", "title": "凡尘启程", "recipeRef": null, "sourceNodeId": 1},
+    {"id": "node:2", "kind": "gameplay", "title": "初识灵机", "recipeRef": null, "sourceNodeId": 2},
+    {"id": "node:3", "kind": "gameplay", "title": "山门试炼", "recipeRef": null, "sourceNodeId": 3},
+    {"id": "node:4", "kind": "gameplay", "title": "秘境寻踪", "recipeRef": null, "sourceNodeId": 4},
+    {"id": "node:5", "kind": "gameplay", "title": "道途抉择", "recipeRef": null, "sourceNodeId": 5},
+    {"id": "node:6", "kind": "gameplay", "title": "破境前夜", "recipeRef": null, "sourceNodeId": 6},
+    {"id": "node:7", "kind": "gameplay", "title": "同道争锋", "recipeRef": null, "sourceNodeId": 7},
+    {"id": "node:8", "kind": "gameplay", "title": "古迹余响", "recipeRef": null, "sourceNodeId": 8},
+    {"id": "node:9", "kind": "gameplay", "title": "护道远行", "recipeRef": null, "sourceNodeId": 9},
+    {"id": "node:10", "kind": "gameplay", "title": "天关压境", "recipeRef": null, "sourceNodeId": 10},
+    {"id": "node:11", "kind": "gameplay", "title": "问心终试", "recipeRef": null, "sourceNodeId": 11},
+    {"id": "node:12", "kind": "gameplay", "title": "登临新境", "recipeRef": null, "sourceNodeId": 12}
+  ],
+  "edges": [
+    {"from": "node:1", "to": "node:2", "when": "success"},
+    {"from": "node:2", "to": "node:3", "when": "success"},
+    {"from": "node:3", "to": "node:4", "when": "success"},
+    {"from": "node:4", "to": "node:5", "when": "success"},
+    {"from": "node:5", "to": "node:6", "when": "success"},
+    {"from": "node:6", "to": "node:7", "when": "success"},
+    {"from": "node:7", "to": "node:8", "when": "success"},
+    {"from": "node:8", "to": "node:9", "when": "success"},
+    {"from": "node:9", "to": "node:10", "when": "success"},
+    {"from": "node:10", "to": "node:11", "when": "success"},
+    {"from": "node:11", "to": "node:12", "when": "success"}
+  ],
+  "completionRules": {"type": "reach_any", "nodeIds": ["node:12"]},
+  "metadata": {
+    "recipeId": "cultivation_journey_12",
+    "description": "Legacy-compatible cultivation journey shape. It is a recipe, not a core LoreWeaver constraint.",
+    "compatibility": "manifest.nodes linear"
+  }
+}

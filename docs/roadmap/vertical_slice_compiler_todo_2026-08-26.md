@@ -1,0 +1,75 @@
+# LoreWeaver Vertical-Slice Compiler Convergence TODO
+
+> Branch: `feat/vertical-slice-compiler-convergence`
+> Plan: `docs/roadmap/vertical_slice_compiler_convergence_plan_2026-08-26.md`
+> 约束：先完成黄金链路和验证闭环，再新增 Gameplay Card。
+
+## P0-A：成熟度与 Evidence 模型
+
+- [x] A0 建立最佳实践与迁移方案文档。
+- [x] A1 新增 evidence-derived release maturity evaluator；保留 legacy `production_ready` 兼容。
+- [x] A2 将 maturity evaluator 接入 `production-export-gate` 输出，明确区分 `legacyProductionReady` 与 `certificationTier`。
+- [x] A3 新增 maturity 单测：缺证据、自动证据齐全但无人测/真机、完整认证、waiver、stale/mismatch；并增加 production gate 集成测试。
+- [x] A4 导出 UI 不再把旧 `production_ready`/`export-release` 表述为正式认证；旧入口明确降级为 `Candidate H5`。
+- [x] A5 定义并收紧 `human_playtest` / `device_verification` Evidence schema：正式证据必须带 exact Candidate `specHash + payloadHash + artifact + artifactSha256`，fixture/synthetic/headless/emulated 明确不可满足发布认证。
+
+## P0-B：Agent Repair Loop
+
+- [x] B1 新增纯函数 `classifyBlockerOwner(blocker)`，统一 schema/gameplay/runtime/art/audio/qa/compliance/director ownership。
+- [x] B2 新增 Retry Policy：L0/L1 <= 3，L2 <= 2，L3/L4 自动升级人工。
+- [x] B3 新增 blocker -> targeted validators 映射，避免每次修正重跑全量 Gate。
+- [x] B4 新增 Repair Decision 数据合同：owner、attempt、budget、allowedPatchLevels、validators、escalationReason。
+- [x] B5 新增 `repair_orchestrator.py`，复用现有 `WorldBuilderAgent`、`LEGACY_ROLE`、department allowlist 与 `apply_controlled_patches`，未引入第二套 Agent framework。
+- [x] B6 Gate blocker 可形成 repair context，并由负责角色生成候选修改；候选结果会缩减为 ownership 内的 structured patch。
+- [x] B7 `run_repair_loop` 支持注入 targeted validator runner；验证失败继续消耗同一 blocker 的 retry budget。
+- [x] B8 L3/L4、未知跨域 blocker、预算耗尽、无安全 patch 均 fail-closed 并返回 escalation，不无限循环。
+- [x] B9 使用真实 shipped `golden_slice_gate` 完成 fail -> Repair Orchestrator -> controlled L2 patch -> 同一 Gate revalidate -> pass；CI 的 Agent 响应使用确定性替身，Gate/ownership/patch/retry 均为真实生产代码。
+
+## P0-C：RecipeGraph 与去固定 12 节点
+
+- [x] C1 新增 `loreweaver.recipe-graph.v1` schema。
+- [x] C2 新增 `legacy nodes[] -> linear RecipeGraph` normalizer，保证旧 Manifest 无损兼容。
+- [x] C3 增加 RecipeGraph validator：entry、edge refs、reachability、completion rules、cycle policy。
+- [x] C4 将固定“12 节点修仙”迁移为 `cultivation_journey_12` Recipe fixture；明确它是 authoring recipe，不是 core constraint。
+- [x] C5 WorldBuilder Agent 改为 recipe-aware：支持 `vertical_slice_3`、`adaptive_linear`、`cultivation_journey_12`，不再全局强制修仙/12 节点；默认仍保持 legacy recipe 兼容。
+- [x] C6 保持 RuntimeKernel 第一阶段仍消费 resolved linear runtime nodes，不在本轮重写执行器。
+- [x] C7 增加 legacy -> RecipeGraph -> legacy round-trip 回归，确保旧线性节点 payload 无损。
+
+## P1：统一 Release Compiler
+
+- [x] D1 抽取共享 `release-policy.mjs` / Evidence identity；Workspace 级按实际使用到的所有 Gameplay Card 聚合，并以最弱卡成熟度作为整体成熟度。
+- [x] D2 Workbench H5 export 与 CLI productize export 均走 `release-compiler.mjs`；原 `/api/workspaces/{id}/export` 仅保留为源码备份，不再承担 release 语义。
+- [x] D3 UI 收敛为 Source Backup / Candidate H5 / Certified H5；`release-status` dry-run 展示 certificationTier 与缺失 Evidence，只有 `release_certified` 才启用 Certified 按钮。
+- [x] D4 Certified Export 只允许 evidence-derived `release_certified`；Browser、real-VLM、Human、Device 必须绑定同一 exact Candidate，底层 Promoter 会重新读取/验证证据，不能靠手改 card status、Release Decision 或旧 Candidate Evidence 绕过。
+- [x] D5 Candidate Export 在 ZIP 内写入 `RELEASE_STATUS.json`、`UNVERIFIED_CANDIDATE`、missing evidence/waiver 决策；`releaseEligible` 永远为 false。
+
+## P2：黄金链路
+
+- [x] E1 冻结新增 Gameplay Card，黄金主玩法固定为 `survivor_horde`；本阶段只纵向补闭环与证据。
+- [x] E2 建立 `survivor_vertical_slice_3`：Setup -> Escalation -> Climax，全部复用 `survivor_horde`，只通过已实现 Modifier/knobs 增压。
+- [x] E3 黄金链路复用两套已存在 production Theme Content Pack：wasteland / cyber_pulse；二者共享同一 runtime asset/audio source，不复制玩法代码。
+- [ ] E4 Browser/static/offline 子链已完成并产品化：发布页调用通用 `verify-workspace-candidate.mjs`，统一 Candidate Compiler -> standalone ZIP/static host -> Chromium 逐节点真实进入 adapter `running` -> Modifier 对齐 -> zero `/api` -> zero console/page/request error，并绑定 `specHash + runtimeVersion + payloadHash + artifactSha256 + screenshotSha256`；失败 reverify 不覆盖上一个 Browser anchor，成功选择新 Candidate 才使旧下游 Evidence stale。真实 VLM 也已改为发布页/Golden 共用 `run-workspace-vlm-audit.py`，但 GitHub Actions 当前未配置 `XAI_API_KEY`，因此真实 VLM Evidence 仍正确为 `unavailable/releaseEligible=false`；只有 `grok/codex` real provider completed 且无 FAIL 才可通过。
+- [ ] E5 完成真实设备 FPS / interaction Evidence。工程链路与产品入口均完成：发布页可下载 Browser-verified 的同一个 exact Candidate，并录入真实设备型号、OS、Browser、Viewport、FPS p50/p95/min、console/interaction；Gateway 只转交原始观测，`productize:evidence` 会重新校验 Workspace、Browser Report、Candidate ZIP SHA 与 executable `payloadHash`，只接受 `physicalDevice=true / headless=false / emulated=false`。仍缺真实物理设备运行数据，因此本项不打勾。
+- [ ] E6 完成真人试玩 Evidence。工程链路与产品入口均完成：发布页可录入真实 session 的理解耗时、完成情况、趣味/清晰/难度、失败原因、blocking issue、重玩意愿与修改建议，并要求人工确认真实观察；recorder 只接受 `humanObserved=true / fixture=false / synthetic=false` 且重新绑定 exact Candidate。仍缺真实试玩 session，因此本项不打勾。
+- [x] E7 Evidence 生命周期已闭环：Recipe/Content/Asset/Runtime authoring identity 变化统一 stale 全量发布证据；成功 reverify 新 exact Candidate 只失效 package-bound downstream VLM/Human/Device/release state，不失效新的 Browser anchor；仅 screenshot 变化只失效 VLM/release decision；失败 reverify 保留旧已验证 Candidate。Workspace-local Browser/VLM Evidence 优先于 shared legacy reports，shared 只在 Workspace 缺失时 fallback；若 Workspace 本地报告已 stale/failed，则禁止绕过到 shared PASS。Human/Device 永远只允许 workspace-local。
+- [x] E8 通过 Agent Repair Loop 自动修复一个真实 `golden_slice_gate` 失败：Climax 缺 `boss_phases` -> gameplay L2 patch -> targeted revalidate -> pass。
+- [ ] E9 无 waiver 达到 `release_certified` 并导出 Certified H5；Certified 使用“已验证 Candidate 原地晋升”：Browser + real-VLM + Human + Device 必须绑定同一 executable payload / artifact，VLM 额外绑定 screenshot；晋升只能改变认证 metadata，payloadHash 不得变化。当前仍受 E4 VLM、E5、E6 真实 Evidence 阻塞，不能伪造。
+
+## P3：产品层收敛
+
+- [x] F1 默认用户路径已收敛为：创意 -> 设计 -> 试玩 -> 修改 -> 发布；新增 `CreatorJourneyBar` 与 `CreatorApp`，旧 `App.tsx` 仅保留入口转发，便于回滚。
+- [x] F2 Departments / Manifest / VLM / Pipeline / Logs 已移入持久化 `Expert Mode`；简单模式不展示部门或内部 Gate 术语。
+- [x] F3 默认首页改为 creator-first：Header 只保留创意输入、生成蓝图、Workspace 与基础设置；发布移动到独立 Publish Step；UI 文案和试玩计数不再固定“修仙 / 12 关 / 6 境界”，节点与成长阶段按当前 Spec 动态显示。Convergence Core + Golden Candidate E2E 已通过。
+- [x] F4 已完成事务式“一句话修改 -> 自动验证 -> 最终 Diff”：Agent 只生成 Proposal，不直接覆盖；Creator Policy 限制 Simple Mode 为 L1/L2，Topology/Recipe/Adapter/Runtime 自动升级 Expert；L2 先跑 `gameplay_composition` 目录合同，合法后才暂存并跑真实 `node_smoke`；目录预检失败零写入，运行态失败恢复原 authoring bytes，成功才 Commit/同步 Job/失效旧 Release Evidence，并在 UI 展示完整 validation chain + Diff。真实 `survivor_vertical_slice_3` 三段/4 Modifier 组合已通过同一 composition validator；Convergence Core 的事务回归、TypeScript 与 Golden Candidate Chromium 均全绿。
+- [x] F5 发布页已形成普通用户可执行的 Evidence Checklist：`1 Browser -> 2 Real VLM -> 3 Human -> 4 Physical Device -> Certified`。Browser 按钮构建并验证一个 exact Candidate，下载按钮返回同一 verified ZIP；VLM 按钮调用通用 real-provider audit；Human/Device 表单不能直接制造 PASS，只提交真实观测给严格 recorder。Release Policy 以 Workspace-local exact Candidate Evidence 为最高优先级，所有步骤共享同一 payload/artifact identity。Convergence Core + Golden Candidate E2E 已全绿。
+
+## 当前执行顺序
+
+1. [x] **P0 + P1**：成熟度、Repair Loop、RecipeGraph、统一 Release Compiler/UI、Observed Evidence exact-Candidate 防伪链已闭环。
+2. [x] **E1-E3 + E7-E8/B9**：黄金三段 Recipe、双主题复用、完整证据生命周期、真实 Gate Repair 已通过自动回归。
+3. [x] **E4 Browser/static/offline 工程链**：发布页与 Golden 共用 generic current-workspace verifier；exact Candidate Chromium 三段运行与 payload/artifact/screenshot identity 已闭环，失败 reverify 保留旧 anchor。
+4. [x] **P3 F1-F5**：默认产品壳已变为五步 Creator Flow；一句话修改与发布 Evidence Checklist 均走受控、可回滚、exact-Candidate 绑定链路，工程流水线全部进入 Expert Mode。
+5. [ ] **E4 Real VLM 真实观测**：在实际运行环境配置真实 `XAI_API_KEY`（或可用 Codex CLI provider），在发布页点击 Real VLM，对当前 exact Candidate screenshot 取得 fresh `passed` Evidence；当前 CI 明确为 `unavailable`，不降级。
+6. [ ] **E5 Physical Device 真实观测**：下载发布页同一个 verified Candidate，在真实手机/平板/目标设备运行并记录设备、交互与 FPS 数据，再通过发布页提交。
+7. [ ] **E6 Human Playtest 真实观测**：让真实玩家试玩同一个 verified Candidate，通过发布页记录 session 结果与反馈。
+8. [ ] **E9**：仅在 Browser + real-VLM + human + device 全部 fresh/matched、无 waiver 后原地晋升 Candidate 为 Certified H5。

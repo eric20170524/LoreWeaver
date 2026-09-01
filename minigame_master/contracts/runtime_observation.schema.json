@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/runtime_observation.schema.json",
+  "title": "LoreWeaver Runtime Observation Evidence",
+  "oneOf": [
+    { "$ref": "#/$defs/snapshot" },
+    { "$ref": "#/$defs/trace" }
+  ],
+  "$defs": {
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot",
+        "trace",
+        "clearTrace",
+        "activate",
+        "pause",
+        "resume",
+        "semanticInput",
+        "exactFrameAdvance",
+        "screenshot",
+        "console",
+        "network"
+      ],
+      "properties": {
+        "snapshot": { "type": "boolean" },
+        "trace": { "type": "boolean" },
+        "clearTrace": { "type": "boolean" },
+        "activate": { "type": "boolean" },
+        "pause": { "type": "boolean" },
+        "resume": { "type": "boolean" },
+        "semanticInput": { "type": "boolean" },
+        "exactFrameAdvance": { "type": "boolean" },
+        "screenshot": { "enum": ["host_owned", "unsupported"] },
+        "console": { "enum": ["host_owned", "unsupported"] },
+        "network": { "enum": ["host_owned", "unsupported"] }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "runtimeAuthority",
+        "sessionId",
+        "sequence",
+        "observedAt",
+        "sourceHooksKey",
+        "ended",
+        "endReason",
+        "capabilities",
+        "state"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "loreweaver.runtime-observation-snapshot.v1" },
+        "runtimeAuthority": { "const": "LoreWeaverRuntimeKernel" },
+        "sessionId": { "type": "string", "minLength": 1 },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "observedAt": { "type": "string", "minLength": 1 },
+        "sourceHooksKey": { "type": ["string", "null"] },
+        "ended": { "type": "boolean" },
+        "endReason": { "type": ["string", "null"] },
+        "capabilities": { "$ref": "#/$defs/capabilities" },
+        "state": { "type": ["object", "null"] }
+      }
+    },
+    "traceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "observedAt", "type", "detail", "state"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 1 },
+        "observedAt": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "detail": {},
+        "state": { "type": ["object", "null"] }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "runtimeAuthority",
+        "sessionId",
+        "sourceHooksKey",
+        "ended",
+        "endReason",
+        "entryCount",
+        "firstSequence",
+        "lastSequence",
+        "entries"
+      ],
+      "properties": {
+        "schemaVersion": { "const": "loreweaver.runtime-observation-trace.v1" },
+        "runtimeAuthority": { "const": "LoreWeaverRuntimeKernel" },
+        "sessionId": { "type": "string", "minLength": 1 },
+        "sourceHooksKey": { "type": ["string", "null"] },
+        "ended": { "type": "boolean" },
+        "endReason": { "type": ["string", "null"] },
+        "entryCount": { "type": "integer", "minimum": 0 },
+        "firstSequence": { "type": ["integer", "null"], "minimum": 1 },
+        "lastSequence": { "type": ["integer", "null"], "minimum": 1 },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/traceEntry" }
+        }
+      }
+    }
+  }
+}

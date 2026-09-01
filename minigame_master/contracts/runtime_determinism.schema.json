@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/runtime_determinism.schema.json",
+  "title": "LoreWeaver Runtime Determinism Declaration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "scope",
+    "runtimeAuthority",
+    "random",
+    "time",
+    "input",
+    "stateProjection"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "loreweaver.runtime-determinism.v1"
+    },
+    "scope": {
+      "enum": [
+        "adapter_state_trace",
+        "full_visual_frame"
+      ]
+    },
+    "runtimeAuthority": {
+      "const": "LoreWeaverRuntimeKernel"
+    },
+    "random": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controlled",
+        "source",
+        "seed",
+        "scope"
+      ],
+      "properties": {
+        "controlled": {
+          "type": "boolean"
+        },
+        "source": {
+          "enum": [
+            "seeded_prng",
+            "uncontrolled",
+            "none"
+          ]
+        },
+        "seed": {
+          "type": [
+            "string",
+            "integer",
+            "null"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "adapter",
+            "runtime",
+            "none"
+          ]
+        },
+        "algorithm": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "stateHandoff": {
+          "enum": [
+            "seed_replay",
+            "snapshot_restore",
+            "none"
+          ]
+        }
+      }
+    },
+    "time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controlled",
+        "mode",
+        "hostWallClockSettleAllowed"
+      ],
+      "properties": {
+        "controlled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "enum": [
+            "exact_frame",
+            "semantic_event",
+            "host_wall_clock",
+            "uncontrolled"
+          ]
+        },
+        "hostWallClockSettleAllowed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controlled",
+        "mode"
+      ],
+      "properties": {
+        "controlled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "enum": [
+            "semantic",
+            "recorded_pointer",
+            "uncontrolled",
+            "none"
+          ]
+        }
+      }
+    },
+    "stateProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "paths"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+$",
+          "minLength": 1
+        },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controlled"
+      ],
+      "properties": {
+        "controlled": {
+          "type": "boolean"
+        },
+        "randomSource": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "screenshotTimingControlled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      }
+    },
+    "physics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine",
+        "deterministic",
+        "fixedStep",
+        "stepMs",
+        "settingsHash"
+      ],
+      "properties": {
+        "engine": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deterministic": {
+          "type": "boolean"
+        },
+        "fixedStep": {
+          "type": "boolean"
+        },
+        "stepMs": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "settingsHash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

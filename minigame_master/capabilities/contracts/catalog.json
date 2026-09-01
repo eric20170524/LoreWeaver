@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "loreweaver.production-contract-catalog.v1",
+  "updatedAt": "2026-08-31",
+  "entries": [
+    {
+      "id": "candidate-certification",
+      "title": "Exact Candidate Certification",
+      "status": "verified",
+      "contractRef": "minigame_master/capabilities/contracts/candidate-certification.contract.json",
+      "summary": "One immutable Candidate → browser → real VLM → human → device → independent review → metadata-only Certified promotion.",
+      "missingCapabilities": []
+    },
+    {
+      "id": "runtime-observation",
+      "title": "One-session Runtime Observation",
+      "status": "planned",
+      "contractRef": null,
+      "summary": "Semantic input, exact-frame advance, snapshot, screenshot, console, network and trace from one RuntimeKernel session.",
+      "missingCapabilities": [
+        "RuntimeObservationPort",
+        "semantic action registry",
+        "trace/replay evidence schema"
+      ]
+    },
+    {
+      "id": "asset-atlas",
+      "title": "Asset Atlas Production",
+      "status": "planned",
+      "contractRef": null,
+      "summary": "Raw prompt/reference → process operations → final Manifest keys → edge/transparency/atlas/VLM evidence.",
+      "missingCapabilities": [
+        "AssetRecipe schema",
+        "tool-neutral operation ports",
+        "actual runtime asset-use tracing"
+      ]
+    },
+    {
+      "id": "sprite-collider-alignment",
+      "title": "Sprite / Collider Alignment",
+      "status": "planned",
+      "contractRef": null,
+      "summary": "Coordinate-frame ownership, sprite scale, collider bounds and runtime collision evidence.",
+      "missingCapabilities": [
+        "SceneObject observation schema",
+        "collider visual overlay evidence"
+      ]
+    },
+    {
+      "id": "hud-readability",
+      "title": "HUD Readability",
+      "status": "planned",
+      "contractRef": null,
+      "summary": "Safe areas, contrast, clipping, responsive layout and critical information hierarchy.",
+      "missingCapabilities": [
+        "multi-viewport visual matrix",
+        "HUD semantic regions"
+      ]
+    },
+    {
+      "id": "boss-encounter",
+      "title": "Boss Encounter Production",
+      "status": "planned",
+      "contractRef": null,
+      "summary": "Phase state, telegraph timing, damage windows, cleanup and final-playability review.",
+      "missingCapabilities": [
+        "boss semantic runtime snapshot",
+        "exact-frame telegraph assertion"
+      ]
+    },
+    {
+      "id": "prototype-to-polish",
+      "title": "Prototype to Polish",
+      "status": "planned",
+      "contractRef": null,
+      "summary": "Placeholder inventory, replacement order, presentation acceptance and zero-placeholder Certified gate.",
+      "missingCapabilities": [
+        "placeholder Manifest contract",
+        "visible-placeholder visual gate"
+      ]
+    }
+  ]
+}

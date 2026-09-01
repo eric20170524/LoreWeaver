@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loreweaver.local/contracts/capability_promotion.schema.json",
+  "title": "LoreWeaver Capability Promotion",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "kind",
+    "candidate",
+    "evidence",
+    "approval",
+    "destination",
+    "status"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "loreweaver.capability-promotion.v1" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "kind": { "enum": ["blueprint", "capability_module", "production_contract", "asset_recipe"] },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilityId",
+        "sourceWorkspaceId",
+        "sourceRevision",
+        "sourceLicense",
+        "patchLevel",
+        "reusableSurface",
+        "parameterized",
+        "allTunablesExternalized",
+        "publicInterface",
+        "projectSpecificTerms",
+        "privatePaths"
+      ],
+      "properties": {
+        "capabilityId": { "type": "string", "minLength": 1 },
+        "sourceWorkspaceId": { "type": "string", "minLength": 1 },
+        "sourceRevision": { "type": "string", "minLength": 7 },
+        "sourceLicense": { "type": "string", "minLength": 1 },
+        "patchLevel": { "enum": ["L0", "L1", "L2", "L3", "L4"] },
+        "reusableSurface": { "type": "string", "minLength": 1 },
+        "parameterized": { "type": "boolean" },
+        "allTunablesExternalized": { "type": "boolean" },
+        "publicInterface": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "staticCheckRef": { "type": ["string", "null"] },
+        "projectSpecificTerms": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "privatePaths": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["usageCount", "refs"],
+      "properties": {
+        "usageCount": { "type": "integer", "minimum": 0 },
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "kind", "path", "status", "real", "fixture", "synthetic", "stale"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["static", "runtime", "browser", "visual", "performance", "release", "usage"] },
+              "path": { "type": "string", "minLength": 1 },
+              "status": { "enum": ["passed", "failed", "unavailable", "stale"] },
+              "real": { "type": "boolean" },
+              "fixture": { "type": "boolean" },
+              "synthetic": { "type": "boolean" },
+              "stale": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "approvedBy", "approvedAt"],
+      "properties": {
+        "required": { "const": true },
+        "approvedBy": { "type": ["string", "null"] },
+        "approvedAt": { "type": ["string", "null"] }
+      }
+    },
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "exists"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "exists": { "type": "boolean" }
+      }
+    },
+    "status": { "enum": ["observed", "candidate", "verified", "approved", "promoted", "rejected"] }
+  }
+}
