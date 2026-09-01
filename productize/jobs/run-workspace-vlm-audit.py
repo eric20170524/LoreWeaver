@@ -4,6 +4,8 @@
 This adapter never fabricates a pass. It consumes workspace browser evidence,
 verifies the exact screenshot bytes, inherits artifact/payload identity, and only
 writes `passed` when a supported real provider actually completes with no FAIL.
+A successful real VLM write then non-destructively attempts TaskContract Player
+synchronization; Task orchestration never downgrades valid VLM evidence.
 """
 
 from __future__ import annotations
@@ -22,6 +24,8 @@ LORE_ROOT = Path(__file__).resolve().parents[2]
 if str(LORE_ROOT) not in sys.path:
     sys.path.insert(0, str(LORE_ROOT))
 
+from backend.release_task_sync import ReleaseTaskSyncError, sync_player_release_evidence  # noqa: E402
+from backend.task_repository import TaskRepository, TaskRepositoryError  # noqa: E402
 from backend.visual_audit import run_visual_critic, vlm_probe  # noqa: E402
 
 REAL_VLM_PROVIDERS = {"grok", "codex"}
@@ -85,6 +89,25 @@ def browser_eligible(browser: dict[str, Any]) -> bool:
         and browser.get("screenshotSha256")
         and no_errors
     )
+
+
+def attempt_player_task_sync(workspace_id: str, workspace: Path) -> dict[str, Any]:
+    try:
+        return sync_player_release_evidence(
+            repository=TaskRepository(WORKSPACES_ROOT),
+            workspace_id=workspace_id,
+            workspace_dir=workspace,
+        )
+    except (ReleaseTaskSyncError, TaskRepositoryError, OSError, ValueError) as exc:
+        # Release evidence is already durably written at this point. Task sync is
+        # orchestration metadata and must never invalidate a legitimate VLM pass.
+        return {
+            "schemaVersion": "loreweaver.release-task-sync.v1",
+            "status": "blocked",
+            "action": "noop",
+            "role": "player",
+            "reason": f"task_sync_error:{exc}",
+        }
 
 
 def main() -> int:
@@ -202,6 +225,13 @@ def main() -> int:
     for card_id in card_ids:
         write_json(reports_dir / f"visual_audit_{card_id}_latest.json", {**report, "cardId": card_id})
 
+    task_sync = attempt_player_task_sync(args.workspace_id, workspace) if critic_passed else {
+        "schemaVersion": "loreweaver.release-task-sync.v1",
+        "status": "passed",
+        "action": "noop",
+        "role": "player",
+        "reason": "visual_evidence_not_passed",
+    }
     print(json.dumps({
         "status": status,
         "releaseEligible": critic_passed,
@@ -213,6 +243,7 @@ def main() -> int:
         "screenshotSha256": report["screenshotSha256"],
         "report": repo_relative(latest),
         "cardIds": card_ids,
+        "taskSync": task_sync,
     }, ensure_ascii=False, indent=2))
 
     if critic_passed:
