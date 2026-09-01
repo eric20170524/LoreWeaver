@@ -1,12 +1,15 @@
-"""Synchronize real Workspace release evidence into the TaskContract Player role.
+"""Synchronize release evidence into TaskContract Player/Reviewer/Orchestrator roles.
 
-This bridge is intentionally narrow:
+Role boundaries:
 - Browser verification proves `runtime` only.
 - A completed Grok/Codex critic proves `visual` only.
 - Recorded real human sessions prove `feel` only.
+- A strict no-waiver Certified release decision proves independent `review`.
+- A successful metadata-only Certified promotion proves final `acceptance`.
 
-All sources must bind the same exact Candidate identity. Device verification stays
-a Certified release gate and is not re-labelled as Player feel/runtime evidence.
+Device verification stays a Certified release-policy gate and is never re-labelled
+as Player feel/runtime evidence. Task synchronization mirrors the release chain;
+it does not weaken or replace Release Compiler policy.
 """
 
 from __future__ import annotations
@@ -15,11 +18,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from backend.task_contract import next_required_role
+from backend.task_contract import TaskContractError, next_required_role
 from backend.task_repository import TaskRepository, TaskRepositoryError
 
 REAL_VLM_PROVIDERS = {"grok", "codex"}
 IDENTITY_FIELDS = ("specHash", "runtimeVersion", "payloadHash", "artifact", "artifactSha256")
+DECISION_SCHEMAS = {"loreweaver.workspace-release-decision.v1", "loreweaver.workspace-release-decision.v2"}
 
 
 class ReleaseTaskSyncError(ValueError):
@@ -61,10 +65,7 @@ def _browser_eligible(report: dict[str, Any] | None) -> bool:
 
 
 def _identity_matches(anchor: dict[str, Any], report: dict[str, Any] | None) -> bool:
-    return bool(
-        report
-        and all(report.get(field) == anchor.get(field) for field in IDENTITY_FIELDS)
-    )
+    return bool(report and all(report.get(field) == anchor.get(field) for field in IDENTITY_FIELDS))
 
 
 def _visual_eligible(anchor: dict[str, Any], report: dict[str, Any] | None) -> bool:
@@ -108,27 +109,53 @@ def _criteria_ids(task: dict[str, Any], kind: str) -> list[str]:
     ]
 
 
-def _select_player_task(
+def _select_task_for_role(
     repository: TaskRepository,
     workspace_id: str,
+    role: str,
     explicit_task_id: str | None,
 ) -> tuple[str, dict[str, Any]] | None:
     if explicit_task_id:
         task = repository.read(workspace_id, explicit_task_id)
-        return (explicit_task_id, task) if next_required_role(task) == "player" else None
+        return (explicit_task_id, task) if next_required_role(task) == role else None
     matches: list[tuple[str, dict[str, Any]]] = []
     for summary in repository.list(workspace_id):
         task_id = str(summary.get("id") or "")
         if not task_id:
             continue
         task = repository.read(workspace_id, task_id)
-        if next_required_role(task) == "player":
+        if next_required_role(task) == role:
             matches.append((task_id, task))
     if len(matches) > 1:
         raise ReleaseTaskSyncError(
-            "multiple_tasks_require_player:" + ",".join(task_id for task_id, _ in matches)
+            f"multiple_tasks_require_{role}:" + ",".join(task_id for task_id, _ in matches)
         )
     return matches[0] if matches else None
+
+
+def _append_role(
+    *,
+    repository: TaskRepository,
+    workspace_id: str,
+    task_id: str,
+    task: dict[str, Any],
+    role: str,
+    summary: str,
+    evidence_refs: list[dict[str, Any]],
+) -> dict[str, Any]:
+    try:
+        return repository.append(
+            workspace_id,
+            task_id,
+            role=role,
+            verdict="passed",
+            summary=summary,
+            evidence_refs=evidence_refs,
+            findings=[],
+            expected_last_round_hash=TaskRepository.last_round_hash(task),
+        )
+    except (TaskRepositoryError, TaskContractError) as exc:
+        raise ReleaseTaskSyncError(str(exc)) from exc
 
 
 def sync_player_release_evidence(
@@ -138,7 +165,7 @@ def sync_player_release_evidence(
     workspace_dir: Path,
     explicit_task_id: str | None = None,
 ) -> dict[str, Any]:
-    selected = _select_player_task(repository, workspace_id, explicit_task_id)
+    selected = _select_task_for_role(repository, workspace_id, "player", explicit_task_id)
     if selected is None:
         return {
             "schemaVersion": "loreweaver.release-task-sync.v1",
@@ -228,22 +255,15 @@ def sync_player_release_evidence(
             }
         )
 
-    try:
-        updated = repository.append(
-            workspace_id,
-            task_id,
-            role="player",
-            verdict="passed",
-            summary=(
-                "Exact Candidate runtime, real VLM visual review, and real human feel evidence are all fresh and identity-matched."
-            ),
-            evidence_refs=evidence_refs,
-            findings=[],
-            expected_last_round_hash=TaskRepository.last_round_hash(task),
-        )
-    except TaskRepositoryError as exc:
-        raise ReleaseTaskSyncError(str(exc)) from exc
-
+    updated = _append_role(
+        repository=repository,
+        workspace_id=workspace_id,
+        task_id=task_id,
+        task=task,
+        role="player",
+        summary="Exact Candidate runtime, real VLM visual review, and real human feel evidence are all fresh and identity-matched.",
+        evidence_refs=evidence_refs,
+    )
     return {
         "schemaVersion": "loreweaver.release-task-sync.v1",
         "status": "passed",
@@ -253,5 +273,160 @@ def sync_player_release_evidence(
         "taskStatus": updated.get("status"),
         "cardIds": card_ids,
         "evidenceRefs": evidence_refs,
+        "lastRoundHash": TaskRepository.last_round_hash(updated),
+    }
+
+
+def _review_decision_eligible(decision: dict[str, Any] | None) -> bool:
+    return bool(
+        decision
+        and decision.get("schemaVersion") in DECISION_SCHEMAS
+        and decision.get("mode") == "certified"
+        and decision.get("exportAllowed") is True
+        and decision.get("releaseCertified") is True
+        and decision.get("certificationTier") == "release_certified"
+        and not (decision.get("blockers") or [])
+        and not (decision.get("waivers") or [])
+        and decision.get("packageBrowserReport")
+        and decision.get("packageVisualReport")
+    )
+
+
+def sync_reviewer_release_decision(
+    *,
+    repository: TaskRepository,
+    workspace_id: str,
+    workspace_dir: Path,
+    explicit_task_id: str | None = None,
+) -> dict[str, Any]:
+    selected = _select_task_for_role(repository, workspace_id, "reviewer", explicit_task_id)
+    if selected is None:
+        return {
+            "schemaVersion": "loreweaver.release-task-sync.v1",
+            "status": "passed",
+            "action": "noop",
+            "role": "reviewer",
+            "reason": "no_task_waiting_for_reviewer",
+            "taskId": explicit_task_id,
+        }
+    task_id, task = selected
+    decision_path = workspace_dir / "reports/release_decision_latest.json"
+    decision = _read_json(decision_path)
+    if not _review_decision_eligible(decision):
+        return {
+            "schemaVersion": "loreweaver.release-task-sync.v1",
+            "status": "passed",
+            "action": "noop",
+            "role": "reviewer",
+            "reason": "strict_certified_release_decision_missing_or_ineligible",
+            "taskId": task_id,
+        }
+    evidence = {
+        "id": f"review-{str((decision.get('identity') or {}).get('specHash') or '')[:16]}",
+        "kind": "review",
+        "path": "reports/release_decision_latest.json",
+        "status": "passed",
+        "criterionIds": [],
+        "fixture": False,
+        "synthetic": False,
+        "stale": False,
+    }
+    updated = _append_role(
+        repository=repository,
+        workspace_id=workspace_id,
+        task_id=task_id,
+        task=task,
+        role="reviewer",
+        summary="Independent Release Compiler review confirms strict no-waiver release_certified maturity for the exact Candidate.",
+        evidence_refs=[evidence],
+    )
+    return {
+        "schemaVersion": "loreweaver.release-task-sync.v1",
+        "status": "passed",
+        "action": "handoff_appended",
+        "role": "reviewer",
+        "taskId": task_id,
+        "taskStatus": updated.get("status"),
+        "releaseDecision": evidence["path"],
+        "lastRoundHash": TaskRepository.last_round_hash(updated),
+    }
+
+
+def _promotion_eligible(report: dict[str, Any] | None) -> bool:
+    return bool(
+        report
+        and report.get("schemaVersion") == "loreweaver.certified-promotion-report.v1"
+        and report.get("status") == "release_certified"
+        and report.get("releaseEligible") is True
+        and report.get("certificationTier") == "release_certified"
+        and report.get("metadataOnlyPromotion") is True
+        and report.get("payloadPreserved") is True
+        and report.get("fixture") is not True
+        and report.get("synthetic") is not True
+        and report.get("stale") is not True
+        and report.get("payloadHash")
+        and report.get("sourceCandidate")
+        and report.get("artifact")
+        and report.get("artifactSha256")
+        and report.get("releaseDecision")
+    )
+
+
+def sync_orchestrator_certified_promotion(
+    *,
+    repository: TaskRepository,
+    workspace_id: str,
+    workspace_dir: Path,
+    explicit_task_id: str | None = None,
+) -> dict[str, Any]:
+    selected = _select_task_for_role(repository, workspace_id, "orchestrator", explicit_task_id)
+    if selected is None:
+        return {
+            "schemaVersion": "loreweaver.release-task-sync.v1",
+            "status": "passed",
+            "action": "noop",
+            "role": "orchestrator",
+            "reason": "no_task_waiting_for_orchestrator",
+            "taskId": explicit_task_id,
+        }
+    task_id, task = selected
+    promotion_path = workspace_dir / "reports/certified_promotion_latest.json"
+    promotion = _read_json(promotion_path)
+    if not _promotion_eligible(promotion):
+        return {
+            "schemaVersion": "loreweaver.release-task-sync.v1",
+            "status": "passed",
+            "action": "noop",
+            "role": "orchestrator",
+            "reason": "certified_metadata_promotion_missing_or_ineligible",
+            "taskId": task_id,
+        }
+    evidence = {
+        "id": f"acceptance-{str(promotion.get('artifactSha256') or '')[:16]}",
+        "kind": "acceptance",
+        "path": "reports/certified_promotion_latest.json",
+        "status": "passed",
+        "criterionIds": [],
+        "fixture": False,
+        "synthetic": False,
+        "stale": False,
+    }
+    updated = _append_role(
+        repository=repository,
+        workspace_id=workspace_id,
+        task_id=task_id,
+        task=task,
+        role="orchestrator",
+        summary="Certified promotion preserved the executable payload and produced the final release artifact; Task acceptance is complete.",
+        evidence_refs=[evidence],
+    )
+    return {
+        "schemaVersion": "loreweaver.release-task-sync.v1",
+        "status": "passed",
+        "action": "handoff_appended",
+        "role": "orchestrator",
+        "taskId": task_id,
+        "taskStatus": updated.get("status"),
+        "certifiedPromotion": evidence["path"],
         "lastRoundHash": TaskRepository.last_round_hash(updated),
     }
