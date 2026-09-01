@@ -15,7 +15,9 @@ function assert(value, message) {
   if (!value) throw new Error(message);
 }
 
-const emptyEnv = { PATH: process.env.PATH || "" };
+// Deliberately remove PATH so this branch proves fail-closed behavior even if a
+// future CI runner happens to ship Codex globally.
+const emptyEnv = { PATH: "" };
 const unavailable = probeRealAssetVlmProvider({ env: emptyEnv });
 assert(unavailable.available === false && unavailable.provider === null, JSON.stringify(unavailable));
 const unavailableHandlers = createRealAssetVlmOperationHandlers({ env: emptyEnv });
@@ -43,6 +45,7 @@ console.log(JSON.stringify({
   status: "passed",
   checks: [
     "no_provider_means_no_asset_vlm_port",
+    "no_provider_check_isolated_from_ci_runner_path",
     "provider_presence_enables_real_handler_registration_only",
     "canonical_registry_keeps_deterministic_png_and_wav_ports",
     "asset_vlm_reuses_existing_real_visual_critic",
