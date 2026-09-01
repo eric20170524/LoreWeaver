@@ -35,8 +35,8 @@ jobs:
           ROLLUP_VERSION="$(node -p "require('./node_modules/rollup/package.json').version")"
           npm install --no-save "@rollup/rollup-linux-x64-gnu@${ROLLUP_VERSION}"
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install Chromium and Firefox
+        run: npx playwright install --with-deps chromium firefox
 
       - name: Build and verify golden candidate
         run: node productize/jobs/run-golden-candidate-e2e.mjs
@@ -44,7 +44,7 @@ jobs:
       - name: Verify generic current-workspace Candidate path
         run: node productize/jobs/verify-workspace-candidate.mjs --workspace-id=__golden_survivor_vertical_slice_ci
 
-      - name: Prove seeded adapter-state replay across two Candidate builds
+      - name: Prove seeded adapter-state replay across two builds and two browsers
         run: node productize/jobs/run-golden-cross-build-determinism.mjs
 
       - name: Prove VibeGame-aligned action boss runtime in real Chromium
