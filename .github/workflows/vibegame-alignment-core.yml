@@ -58,6 +58,7 @@ on:
       - "productize/jobs/check-runtime-scenario.mjs"
       - "productize/jobs/check-runtime-determinism.mjs"
       - "productize/jobs/run-golden-cross-build-determinism.mjs"
+      - "productize/jobs/check-action-boss-alignment-runtime.mjs"
       - "productize/jobs/check-asset-recipe.mjs"
       - "productize/jobs/check-asset-operation-executor.mjs"
       - "productize/jobs/check-png-asset-operations.mjs"
@@ -71,6 +72,7 @@ on:
       - "minigame_master/core/lib/contracts/**"
       - "minigame_master/core/lib/gameplay/GameplayAdapter.js"
       - "minigame_master/core/lib/gameplay/survivor_horde/DeterministicSurvivorHordeAdapter.js"
+      - "minigame_master/core/lib/gameplay/dodge_counter_boss/**"
       - "minigame_master/core/lib/gameplay/index.js"
       - "minigame_master/core/lib/utils/DeterministicRandom.js"
       - "server/capabilityPromotionRoutes.ts"
@@ -133,6 +135,7 @@ jobs:
         run: |
           node productize/jobs/check-vertical-slice-blueprint.mjs
           node productize/jobs/check-capability-module.mjs
+          node productize/jobs/check-action-boss-alignment-runtime.mjs
 
       - name: Verify evidence-gated Promotion, write transaction, Gateway, Expert UI and ProductionContract
         run: |
