@@ -238,13 +238,68 @@ async function main() {
       }
 
       const exactFrameRequired = expected.cardId === "survivor_horde";
-      const exactFrameProbe = await page.evaluate(({ required, frames }) => {
+      const stabilizationStartedAt = Date.now();
+      let exactFrameStabilization = {
+        required: exactFrameRequired,
+        stable: !exactFrameRequired,
+        waitedMs: 0,
+        timeoutMs: 5000,
+        cooldown: null,
+        running: null,
+        sleeping: null,
+        reason: exactFrameRequired ? null : "not_required"
+      };
+      if (exactFrameRequired) {
+        try {
+          await page.waitForFunction(() => {
+            const loop = window.__LOREWEAVER_GAME__?.loop;
+            return Boolean(loop)
+              && Number(loop._coolDown || 0) === 0
+              && loop.running === true
+              && loop.sleeping !== true;
+          }, null, { timeout: exactFrameStabilization.timeoutMs, polling: 25 });
+          const loopState = await page.evaluate(() => {
+            const loop = window.__LOREWEAVER_GAME__?.loop;
+            return {
+              cooldown: loop ? Number(loop._coolDown || 0) : null,
+              running: loop?.running ?? null,
+              sleeping: loop?.sleeping ?? null
+            };
+          });
+          exactFrameStabilization = {
+            ...exactFrameStabilization,
+            ...loopState,
+            stable: true,
+            waitedMs: Date.now() - stabilizationStartedAt,
+            reason: "phaser_timestep_stable"
+          };
+        } catch (error) {
+          const loopState = await page.evaluate(() => {
+            const loop = window.__LOREWEAVER_GAME__?.loop;
+            return {
+              cooldown: loop ? Number(loop._coolDown || 0) : null,
+              running: loop?.running ?? null,
+              sleeping: loop?.sleeping ?? null
+            };
+          }).catch(() => ({ cooldown: null, running: null, sleeping: null }));
+          exactFrameStabilization = {
+            ...exactFrameStabilization,
+            ...loopState,
+            stable: false,
+            waitedMs: Date.now() - stabilizationStartedAt,
+            reason: `phaser_timestep_not_stable:${error?.message || String(error)}`
+          };
+        }
+      }
+
+      const exactFrameProbe = await page.evaluate(({ required, frames, stabilization }) => {
         const api = window.__LOREWEAVER_RUNTIME_OBSERVATION__;
         const capabilities = typeof api?.capabilities === "function" ? api.capabilities() : null;
         const probe = {
-          schemaVersion: "loreweaver.exact-frame-browser-probe.v1",
+          schemaVersion: "loreweaver.exact-frame-browser-probe.v2",
           required,
           requestedFrames: frames,
+          stabilization,
           capability: capabilities?.exactFrameAdvance === true,
           passed: !required,
           reason: null,
@@ -259,6 +314,11 @@ async function main() {
         if (!api || typeof api.snapshot !== "function" || typeof api.trace !== "function") {
           probe.passed = false;
           probe.reason = "runtime_observation_api_missing";
+          return probe;
+        }
+        if (required && stabilization?.stable !== true) {
+          probe.passed = false;
+          probe.reason = stabilization?.reason || "phaser_timestep_not_stable";
           return probe;
         }
         if (!probe.capability) {
@@ -329,7 +389,7 @@ async function main() {
           }
         }
         return probe;
-      }, { required: exactFrameRequired, frames: 2 });
+      }, { required: exactFrameRequired, frames: 2, stabilization: exactFrameStabilization });
 
       const observed = await page.evaluate(() => {
         const game = window.__LOREWEAVER_GAME__;
@@ -445,12 +505,12 @@ async function main() {
     exactFrameProbe: result.exactFrameProbe || null
   }));
   const common = {
-    schemaVersion: "loreweaver.standalone-browser-report.v4",
+    schemaVersion: "loreweaver.standalone-browser-report.v5",
     status: passed ? "passed" : "failed",
     createdAt: new Date().toISOString(),
     workspaceId,
     releaseEligible: passed,
-    evidenceMeaning: "exact Candidate executable payload passed static-host browser validation; runtime state, trace, and required survivor exact-frame probe are captured from the same RuntimeObservation session while screenshot remains host-owned",
+    evidenceMeaning: "exact Candidate executable payload passed static-host browser validation; runtime state, trace, and required survivor exact-frame probe are captured from the same RuntimeObservation session after bounded Phaser TimeStep stabilization while screenshot remains host-owned",
     specHash: releaseManifest.specHash,
     runtimeVersion: releaseManifest.runtimeVersion,
     payloadHash: payloadIdentity.payloadHash,
@@ -460,11 +520,12 @@ async function main() {
     staticHostOnly: true,
     offlineBackendRequired: false,
     runtimeObservation: {
-      schemaVersion: "loreweaver.runtime-observation-bundle.v2",
+      schemaVersion: "loreweaver.runtime-observation-bundle.v3",
       runtimeAuthority: "LoreWeaverRuntimeKernel",
       sessionCount: observationSessions.length,
       sessions: observationSessions,
       exactFrameRequiredCards: ["survivor_horde"],
+      exactFrameReadinessPolicy: "bounded_wait_for_phaser_timestep_cooldown_zero_before_pause",
       screenshotOwner: "PlaywrightHost"
     },
     runtimeNodeContract: resolvedContract,
