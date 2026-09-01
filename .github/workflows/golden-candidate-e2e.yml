@@ -44,6 +44,9 @@ jobs:
       - name: Verify generic current-workspace Candidate path
         run: node productize/jobs/verify-workspace-candidate.mjs --workspace-id=__golden_survivor_vertical_slice_ci
 
+      - name: Prove seeded adapter-state replay across two Candidate builds
+        run: node productize/jobs/run-golden-cross-build-determinism.mjs
+
       - name: Prove observed evidence recorder rejects synthetic sessions
         run: |
           cat > .golden-synthetic-human-observation.json <<'JSON'
