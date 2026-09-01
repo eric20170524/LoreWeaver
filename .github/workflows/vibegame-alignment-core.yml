@@ -41,6 +41,7 @@ on:
       - "productize/jobs/check-production-contract.mjs"
       - "productize/jobs/check-runtime-observation.mjs"
       - "productize/jobs/check-runtime-scenario.mjs"
+      - "productize/jobs/check-runtime-determinism.mjs"
       - "productize/jobs/check-asset-recipe.mjs"
       - "productize/jobs/check-asset-operation-executor.mjs"
       - "productize/jobs/check-png-asset-operations.mjs"
@@ -119,10 +120,11 @@ jobs:
           node productize/jobs/check-capability-promotion-ui.mjs
           node productize/jobs/check-production-contract.mjs
 
-      - name: Verify Runtime Observation and semantic replay
+      - name: Verify Runtime Observation, semantic replay and determinism readiness
         run: |
           node productize/jobs/check-runtime-observation.mjs
           node productize/jobs/check-runtime-scenario.mjs
+          node productize/jobs/check-runtime-determinism.mjs
 
       - name: Verify AssetRecipe execution and legacy migration
         run: |
