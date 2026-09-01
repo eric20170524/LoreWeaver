@@ -1,7 +1,7 @@
 export { default as GameplayAdapter } from './GameplayAdapter.js';
 export { default as GameplayModifier } from './GameplayModifier.js';
+export { default as SurvivorHordeAdapter } from './survivor_horde/DeterministicSurvivorHordeAdapter.js';
 export {
-    SurvivorHordeAdapter,
     SURVIVOR_HORDE_DEFAULT_CONFIG,
     HazardTelegraphModifier,
     HAZARD_TELEGRAPH_DEFAULT_CONFIG,
