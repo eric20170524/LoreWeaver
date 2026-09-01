@@ -16,6 +16,7 @@ on:
       - "productize/task-contract.py"
       - "productize/bridge-department-task.py"
       - "productize/sync-department-task.py"
+      - "productize/promote-capability.mjs"
       - "productize/run-asset-job.mjs"
       - "productize/lib/vertical-slice-blueprint.mjs"
       - "productize/lib/capability-module.mjs"
@@ -35,6 +36,8 @@ on:
       - "productize/jobs/check-capability-module.mjs"
       - "productize/jobs/check-capability-promotion.mjs"
       - "productize/jobs/check-capability-promotion-transaction.mjs"
+      - "productize/jobs/check-capability-promotion-api.mjs"
+      - "productize/jobs/check-capability-promotion-ui.mjs"
       - "productize/jobs/check-production-contract.mjs"
       - "productize/jobs/check-runtime-observation.mjs"
       - "productize/jobs/check-runtime-scenario.mjs"
@@ -50,10 +53,12 @@ on:
       - "minigame_master/capabilities/contracts/**"
       - "minigame_master/core/lib/contracts/**"
       - "minigame_master/core/lib/gameplay/GameplayAdapter.js"
+      - "server/capabilityPromotionRoutes.ts"
       - "server/taskContractRoutes.ts"
       - "server/departmentTaskSyncRoutes.ts"
       - "server.ts"
       - "src/components/CapabilityLibrarySummary.tsx"
+      - "src/components/CapabilityPromotionPanel.tsx"
       - "src/components/TaskContractPanel.tsx"
       - "src/components/PipelinePanel.tsx"
       - "src/utils/departmentPrep.ts"
@@ -106,10 +111,12 @@ jobs:
           node productize/jobs/check-vertical-slice-blueprint.mjs
           node productize/jobs/check-capability-module.mjs
 
-      - name: Verify evidence-gated Promotion, write transaction and ProductionContract
+      - name: Verify evidence-gated Promotion, write transaction, Gateway, Expert UI and ProductionContract
         run: |
           node productize/jobs/check-capability-promotion.mjs
           node productize/jobs/check-capability-promotion-transaction.mjs
+          npx tsx productize/jobs/check-capability-promotion-api.mjs
+          node productize/jobs/check-capability-promotion-ui.mjs
           node productize/jobs/check-production-contract.mjs
 
       - name: Verify Runtime Observation and semantic replay
