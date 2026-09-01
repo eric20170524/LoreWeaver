@@ -16,6 +16,7 @@ on:
       - "productize/task-contract.py"
       - "productize/bridge-department-task.py"
       - "productize/sync-department-task.py"
+      - "productize/run-asset-job.mjs"
       - "productize/lib/vertical-slice-blueprint.mjs"
       - "productize/lib/capability-module.mjs"
       - "productize/lib/capability-promotion.mjs"
@@ -40,6 +41,7 @@ on:
       - "productize/jobs/check-asset-operation-executor.mjs"
       - "productize/jobs/check-png-asset-operations.mjs"
       - "productize/jobs/check-legacy-asset-recipe.mjs"
+      - "productize/jobs/check-legacy-asset-job-operation-migration.mjs"
       - "minigame_master/contracts/**"
       - "minigame_master/capabilities/blueprints/**"
       - "minigame_master/capabilities/contracts/**"
@@ -118,6 +120,7 @@ jobs:
           node productize/jobs/check-asset-operation-executor.mjs
           node productize/jobs/check-png-asset-operations.mjs
           node productize/jobs/check-legacy-asset-recipe.mjs
+          node productize/jobs/check-legacy-asset-job-operation-migration.mjs
 
       - name: TypeScript check
         run: npm run lint
