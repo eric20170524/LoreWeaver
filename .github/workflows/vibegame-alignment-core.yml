@@ -19,9 +19,11 @@ on:
       - "productize/bridge-department-task.py"
       - "productize/sync-department-task.py"
       - "productize/sync-release-task.py"
+      - "productize/record-observed-release-evidence.ts"
       - "productize/promote-capability.mjs"
       - "productize/run-asset-job.mjs"
       - "productize/run-asset-recipe.mjs"
+      - "productize/jobs/run-workspace-vlm-audit.py"
       - "productize/lib/vertical-slice-blueprint.mjs"
       - "productize/lib/capability-module.mjs"
       - "productize/lib/capability-promotion.mjs"
@@ -41,6 +43,7 @@ on:
       - "productize/jobs/check-task-ui.mjs"
       - "productize/jobs/check-task-bootstrap.py"
       - "productize/jobs/check-release-task-sync.py"
+      - "productize/jobs/check-release-task-sync-wiring.mjs"
       - "productize/jobs/check-task-repair-bridge.py"
       - "productize/jobs/check-department-task-bridge.py"
       - "productize/jobs/check-department-task-sync.py"
@@ -114,6 +117,7 @@ jobs:
           python3 productize/jobs/check-task-contract.py
           python3 productize/jobs/check-task-bootstrap.py
           python3 productize/jobs/check-release-task-sync.py
+          node productize/jobs/check-release-task-sync-wiring.mjs
           npx tsx productize/jobs/check-task-api.mjs
           node productize/jobs/check-task-ui.mjs
 
