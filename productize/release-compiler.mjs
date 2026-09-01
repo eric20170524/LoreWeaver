@@ -7,6 +7,7 @@ import { compileRuntimeSpec } from "../src/runtime/compileRuntimeSpec.ts";
 import { assembleWorkspaceSpec } from "./lib/workspace-spec.mjs";
 import { evaluateWorkspaceReleasePolicy, RELEASE_MODES } from "./lib/release-policy.mjs";
 import { candidateIdentityFromBrowserReport } from "./lib/exact-candidate-evidence.mjs";
+import { runReleaseTaskSync } from "./lib/release-task-sync.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "..");
@@ -230,6 +231,15 @@ if (!finalAllowed) {
 }
 
 if (mode === "certified") {
+  // A strict final decision is already durable. Mirror that independent review
+  // into TaskContract before artifact promotion. The sync is intentionally
+  // non-destructive and does not alter Release Policy if the Task is absent or
+  // currently at another role.
+  const reviewerTaskSync = runReleaseTaskSync({
+    workspaceId: path.basename(wsPath),
+    role: "reviewer"
+  });
+
   const promoter = path.join(LORE_ROOT, "productize/promote-certified.mjs");
   const promote = spawnSync(process.execPath, [
     promoter,
@@ -249,6 +259,7 @@ if (mode === "certified") {
       mode,
       reason: promoted?.reason || "candidate_promotion_failed",
       releaseDecision: relativeRepoPath(decisionPath),
+      reviewerTaskSync,
       promotion: promoted,
       stdout: (promote.stdout || "").slice(-4000),
       stderr: (promote.stderr || "").slice(-4000)
@@ -267,6 +278,9 @@ if (mode === "certified") {
     sourceCandidate: promoted.sourceCandidate,
     browserReport: promoted.browserReport,
     visualReport: promoted.visualReport,
+    reviewerTaskSync,
+    orchestratorTaskSync: promoted.taskSync || null,
+    certifiedPromotionReport: promoted.promotionReport || null,
     exporterOutput: JSON.stringify(promoted)
   });
 }
