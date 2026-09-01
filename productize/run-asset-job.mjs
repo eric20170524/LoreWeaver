@@ -2,18 +2,14 @@
 /**
  * LW-052: deterministic asset verification + AssetRecipe migration bridge.
  * Legacy report shape is preserved while supported atlas / PCM WAV processing
- * executes through registered tool-neutral AssetRecipe ports.
+ * executes through the canonical LoreWeaver AssetRecipe operation registry.
  */
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import {
-  createBuiltinAssetOperationHandlers,
-  executeAssetRecipe
-} from "./lib/asset-operation-executor.mjs";
-import { createDeterministicPngAssetOperationHandlers } from "./lib/png-asset-operations.mjs";
-import { createDeterministicWavAssetOperationHandlers } from "./lib/wav-asset-operations.mjs";
+import { executeAssetRecipe } from "./lib/asset-operation-executor.mjs";
+import { createLoreWeaverAssetOperationHandlers } from "./lib/asset-operation-registry.mjs";
 import { validateAssetRecipe } from "./lib/asset-recipe.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -38,12 +34,8 @@ function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
-function mergedAssetHandlers() {
-  return new Map([
-    ...createBuiltinAssetOperationHandlers(),
-    ...createDeterministicPngAssetOperationHandlers(),
-    ...createDeterministicWavAssetOperationHandlers()
-  ]);
+function assetHandlers() {
+  return createLoreWeaverAssetOperationHandlers();
 }
 function safeAssetId(relativePath, index) {
   const stem = String(relativePath || "")
@@ -152,7 +144,7 @@ const audioVerifyImpl = async () => {
       const execution = await executeAssetRecipe({
         recipe,
         workspaceDir: ws,
-        handlers: mergedAssetHandlers(),
+        handlers: assetHandlers(),
         reportPath: "reports/asset_recipe_legacy_audio_execution.json",
         enforceDeclaredFinalIdentity: false
       });
@@ -283,7 +275,7 @@ const atlasVerifyImpl = async () => {
   const execution = await executeAssetRecipe({
     recipe,
     workspaceDir: ws,
-    handlers: mergedAssetHandlers(),
+    handlers: assetHandlers(),
     reportPath: "reports/asset_recipe_legacy_atlas_execution.json",
     enforceDeclaredFinalIdentity: false
   });
@@ -343,10 +335,11 @@ if (!runner) {
 
 try {
   const result = {
-    schemaVersion: "loreweaver.asset-job.v3",
+    schemaVersion: "loreweaver.asset-job.v4",
     jobId,
     workspace: path.relative(LORE_ROOT, ws).split(path.sep).join("/"),
     createdAt: new Date().toISOString(),
+    operationRegistry: "productize/lib/asset-operation-registry.mjs",
     ...(await runner())
   };
 
@@ -357,6 +350,7 @@ try {
     status: result.status,
     jobId,
     assets: result.assets?.length || 0,
+    operationRegistry: result.operationRegistry,
     assetRecipeMigration: result.assetRecipeMigration || null
   }, null, 2));
   if (result.status === "failed") process.exit(1);
