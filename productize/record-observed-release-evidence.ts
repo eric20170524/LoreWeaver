@@ -2,6 +2,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { compileRuntimeSpec } from "../src/runtime/compileRuntimeSpec.ts";
 import { assembleWorkspaceSpec } from "./lib/workspace-spec.mjs";
@@ -37,6 +38,17 @@ function readJson(file: string) {
   } catch (error) {
     fail("json_read_failed", { file, error: error instanceof Error ? error.message : String(error) });
   }
+}
+function parseJsonOutput(text: string) {
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch {}
+  const starts: number[] = [];
+  for (let index = 0; index < raw.length; index += 1) if (raw[index] === "{") starts.push(index);
+  for (const start of starts.reverse()) {
+    try { return JSON.parse(raw.slice(start)); } catch {}
+  }
+  return null;
 }
 function sha256File(file: string) {
   return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -74,6 +86,28 @@ function browserEligible(report: any) {
     && typeof report?.artifactSha256 === "string" && report.artifactSha256.length > 0
     && noErrors;
 }
+function attemptPlayerTaskSync(workspaceId: string) {
+  const python = process.env.PYTHON || process.env.PYTHON3 || (process.platform === "win32" ? "python" : "python3");
+  const script = path.join(LORE_ROOT, "productize/sync-release-task.py");
+  const result = spawnSync(python, [script, `--workspace-id=${workspaceId}`, "--role=player"], {
+    cwd: LORE_ROOT,
+    encoding: "utf8",
+    env: process.env,
+    timeout: 30000,
+    shell: false
+  });
+  const payload = parseJsonOutput(result.stdout || "");
+  if (payload) return payload;
+  return {
+    schemaVersion: "loreweaver.release-task-sync.v1",
+    status: "blocked",
+    action: "noop",
+    role: "player",
+    reason: result.error
+      ? `task_sync_process_error:${result.error.message}`
+      : `task_sync_non_json_output:${result.status}:${String(result.stderr || "").slice(-500)}`
+  };
+}
 
 const workspaceArg = valueArg("--workspace");
 const kindArg = valueArg("--kind");
@@ -90,6 +124,7 @@ const workspace = path.resolve(LORE_ROOT, workspaceArg);
 if (!safeWithin(workspace, WORKSPACES_ROOT) || !fs.existsSync(workspace)) {
   fail("workspace_missing_or_outside_allowed_root");
 }
+const workspaceId = path.basename(workspace);
 const inputPath = path.resolve(LORE_ROOT, inputArg);
 if (!safeWithin(inputPath, LORE_ROOT) || !fs.existsSync(inputPath)) {
   fail("observation_input_missing_or_outside_repo");
@@ -172,6 +207,16 @@ const serialized = `${JSON.stringify(built.report, null, 2)}\n`;
 fs.writeFileSync(latestPath, serialized);
 fs.writeFileSync(historyPath, serialized);
 
+const taskSync = kindArg === "human" && built.report.status === "passed"
+  ? attemptPlayerTaskSync(workspaceId)
+  : {
+      schemaVersion: "loreweaver.release-task-sync.v1",
+      status: "passed",
+      action: "noop",
+      role: "player",
+      reason: kindArg === "human" ? "human_evidence_not_passed" : "device_evidence_is_release_gate_not_player_role"
+    };
+
 console.log(JSON.stringify({
   status: built.report.status,
   releaseEligible: built.report.releaseEligible,
@@ -181,7 +226,8 @@ console.log(JSON.stringify({
   payloadHash: built.report.payloadHash,
   artifactSha256: built.report.artifactSha256,
   report: repoRelative(latestPath),
-  history: repoRelative(historyPath)
+  history: repoRelative(historyPath),
+  taskSync
 }, null, 2));
 
 if (built.report.status !== "passed") process.exit(2);
