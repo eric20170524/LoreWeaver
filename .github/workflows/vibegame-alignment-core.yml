@@ -18,6 +18,7 @@ on:
       - "productize/sync-department-task.py"
       - "productize/promote-capability.mjs"
       - "productize/run-asset-job.mjs"
+      - "productize/run-asset-recipe.mjs"
       - "productize/lib/vertical-slice-blueprint.mjs"
       - "productize/lib/capability-module.mjs"
       - "productize/lib/capability-promotion.mjs"
@@ -31,6 +32,7 @@ on:
       - "productize/lib/legacy-asset-recipe.mjs"
       - "productize/jobs/run-asset-vlm-operation.py"
       - "productize/jobs/check-real-asset-vlm-operation.mjs"
+      - "productize/jobs/check-asset-recipe-runner.mjs"
       - "productize/jobs/check-task-contract.py"
       - "productize/jobs/check-task-api.mjs"
       - "productize/jobs/check-task-ui.mjs"
@@ -135,13 +137,14 @@ jobs:
           node productize/jobs/check-runtime-scenario.mjs
           node productize/jobs/check-runtime-determinism.mjs
 
-      - name: Verify AssetRecipe execution, real-only VLM registry and legacy migration
+      - name: Verify AssetRecipe execution, canonical runner, real-only VLM registry and legacy migration
         run: |
           node productize/jobs/check-asset-recipe.mjs
           node productize/jobs/check-asset-operation-executor.mjs
           node productize/jobs/check-png-asset-operations.mjs
           node productize/jobs/check-wav-asset-operations.mjs
           node productize/jobs/check-real-asset-vlm-operation.mjs
+          node productize/jobs/check-asset-recipe-runner.mjs
           node productize/jobs/check-legacy-asset-recipe.mjs
           node productize/jobs/check-legacy-asset-job-operation-migration.mjs
           node productize/jobs/check-legacy-audio-job-operation-migration.mjs
