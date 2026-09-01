@@ -19,6 +19,7 @@ on:
       - "productize/lib/vertical-slice-blueprint.mjs"
       - "productize/lib/capability-module.mjs"
       - "productize/lib/capability-promotion.mjs"
+      - "productize/lib/capability-promotion-transaction.mjs"
       - "productize/lib/asset-recipe.mjs"
       - "productize/lib/asset-operation-executor.mjs"
       - "productize/lib/png-asset-operations.mjs"
@@ -31,6 +32,7 @@ on:
       - "productize/jobs/check-vertical-slice-blueprint.mjs"
       - "productize/jobs/check-capability-module.mjs"
       - "productize/jobs/check-capability-promotion.mjs"
+      - "productize/jobs/check-capability-promotion-transaction.mjs"
       - "productize/jobs/check-production-contract.mjs"
       - "productize/jobs/check-runtime-observation.mjs"
       - "productize/jobs/check-runtime-scenario.mjs"
@@ -99,9 +101,10 @@ jobs:
           node productize/jobs/check-vertical-slice-blueprint.mjs
           node productize/jobs/check-capability-module.mjs
 
-      - name: Verify evidence-gated Promotion and ProductionContract
+      - name: Verify evidence-gated Promotion, write transaction and ProductionContract
         run: |
           node productize/jobs/check-capability-promotion.mjs
+          node productize/jobs/check-capability-promotion-transaction.mjs
           node productize/jobs/check-production-contract.mjs
 
       - name: Verify Runtime Observation and semantic replay
