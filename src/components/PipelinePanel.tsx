@@ -9,6 +9,7 @@ import {
   statusLabel
 } from "../utils/departmentPrep";
 import { CapabilityLibrarySummary } from "./CapabilityLibrarySummary";
+import { CapabilityPromotionPanel } from "./CapabilityPromotionPanel";
 
 /** Canonical pipeline steps shown in the left rail (1.1–3.3). */
 export const PIPELINE_STEPS = [
@@ -314,6 +315,7 @@ export function PipelinePanel({
       </div>
 
       <CapabilityLibrarySummary locale={locale} />
+      <CapabilityPromotionPanel locale={locale} />
     </div>
   );
 }
