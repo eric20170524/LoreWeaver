@@ -2,6 +2,7 @@ import type { Express } from "express";
 import path from "path";
 import { spawn } from "child_process";
 import { registerDepartmentTaskSyncRoutes } from "./departmentTaskSyncRoutes";
+import { registerCapabilityPromotionRoutes } from "./capabilityPromotionRoutes";
 
 export type WorkspaceValidation = {
   ok: boolean;
@@ -230,4 +231,8 @@ export function registerTaskContractRoutes({
     validateWorkspace,
     timeoutMs
   });
+
+  // Expert governance lives behind the same top-level Gateway registration,
+  // but uses a separate two-phase transaction and never inherits Task write authority.
+  registerCapabilityPromotionRoutes({ app, cwd, timeoutMs });
 }
