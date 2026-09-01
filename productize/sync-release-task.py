@@ -11,18 +11,28 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.release_task_sync import ReleaseTaskSyncError, sync_player_release_evidence  # noqa: E402
+from backend.release_task_sync import (  # noqa: E402
+    ReleaseTaskSyncError,
+    sync_orchestrator_certified_promotion,
+    sync_player_release_evidence,
+    sync_reviewer_release_decision,
+)
 from backend.task_repository import TaskRepository, TaskRepositoryError  # noqa: E402
 
 WORKSPACES_ROOT = ROOT / "data/workspaces"
 SAFE_ID = re.compile(r"^[A-Za-z0-9._-]+$")
+SYNC_BY_ROLE = {
+    "player": sync_player_release_evidence,
+    "reviewer": sync_reviewer_release_decision,
+    "orchestrator": sync_orchestrator_certified_promotion,
+}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--workspace-id", required=True)
     parser.add_argument("--task-id", default=None)
-    parser.add_argument("--role", choices=["player"], default="player")
+    parser.add_argument("--role", choices=sorted(SYNC_BY_ROLE), default="player")
     args = parser.parse_args()
 
     if not SAFE_ID.fullmatch(args.workspace_id or "") or args.workspace_id in {".", ".."}:
@@ -38,7 +48,7 @@ def main() -> int:
 
     repository = TaskRepository(WORKSPACES_ROOT)
     try:
-        result = sync_player_release_evidence(
+        result = SYNC_BY_ROLE[args.role](
             repository=repository,
             workspace_id=args.workspace_id,
             workspace_dir=workspace,
@@ -48,6 +58,7 @@ def main() -> int:
         print(json.dumps({
             "schemaVersion": "loreweaver.release-task-sync.v1",
             "status": "blocked",
+            "role": args.role,
             "reason": str(exc),
         }, ensure_ascii=False, indent=2))
         return 2
