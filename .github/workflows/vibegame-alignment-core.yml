@@ -24,6 +24,7 @@ on:
       - "productize/lib/asset-recipe.mjs"
       - "productize/lib/asset-operation-executor.mjs"
       - "productize/lib/png-asset-operations.mjs"
+      - "productize/lib/wav-asset-operations.mjs"
       - "productize/lib/legacy-asset-recipe.mjs"
       - "productize/jobs/check-task-contract.py"
       - "productize/jobs/check-task-api.mjs"
@@ -40,6 +41,7 @@ on:
       - "productize/jobs/check-asset-recipe.mjs"
       - "productize/jobs/check-asset-operation-executor.mjs"
       - "productize/jobs/check-png-asset-operations.mjs"
+      - "productize/jobs/check-wav-asset-operations.mjs"
       - "productize/jobs/check-legacy-asset-recipe.mjs"
       - "productize/jobs/check-legacy-asset-job-operation-migration.mjs"
       - "minigame_master/contracts/**"
@@ -119,6 +121,7 @@ jobs:
           node productize/jobs/check-asset-recipe.mjs
           node productize/jobs/check-asset-operation-executor.mjs
           node productize/jobs/check-png-asset-operations.mjs
+          node productize/jobs/check-wav-asset-operations.mjs
           node productize/jobs/check-legacy-asset-recipe.mjs
           node productize/jobs/check-legacy-asset-job-operation-migration.mjs
 
