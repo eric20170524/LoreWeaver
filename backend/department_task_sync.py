@@ -1,8 +1,9 @@
 """Synchronize confirmed production Departments into TaskContract role bundles.
 
 This module intentionally bridges only production implementation and static-audit
-work. Task Architect remains a task-level planner that must run before the
-production bundle. Player, Reviewer and Orchestrator remain independent.
+work. When the Workspace has no TaskContract yet, the default production path
+first bootstraps one deterministic root task + Architect plan from manifest.json.
+Player, Reviewer and Orchestrator remain independent evidence roles.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from backend.department_task_bridge import (
     append_department_handoff,
     department_role,
 )
+from backend.task_bootstrap import TaskBootstrapError, ensure_root_production_task
 from backend.task_contract import next_required_role
 from backend.task_repository import TaskRepository
 
@@ -160,6 +162,31 @@ def _static_report_bundle(reports_root: Path) -> tuple[list[dict[str, Any]], lis
     return reports, missing_or_failed
 
 
+def _maybe_bootstrap_root_task(
+    repository: TaskRepository,
+    workspace_id: str,
+    workspace_dir: Path,
+    explicit_task_id: str | None,
+) -> dict[str, Any] | None:
+    if explicit_task_id or repository.list(workspace_id):
+        return None
+    try:
+        return ensure_root_production_task(
+            repository=repository,
+            workspace_id=workspace_id,
+            workspace_dir=workspace_dir,
+        )
+    except TaskBootstrapError as exc:
+        # Do not break legacy workspaces that have no authoring manifest. The sync
+        # remains a no-op, but surfaces why Task bootstrap could not occur.
+        return {
+            "schemaVersion": "loreweaver.task-bootstrap.v1",
+            "status": "blocked",
+            "action": "noop",
+            "reason": str(exc),
+        }
+
+
 def sync_confirmed_departments(
     *,
     repository: TaskRepository,
@@ -181,6 +208,12 @@ def sync_confirmed_departments(
             "departmentId": triggering_department_id,
         }
 
+    bootstrap = _maybe_bootstrap_root_task(
+        repository,
+        workspace_id,
+        workspace_dir,
+        explicit_task_id,
+    )
     selected = _select_task(repository, workspace_id, role, explicit_task_id)
     if selected is None:
         return {
@@ -190,6 +223,7 @@ def sync_confirmed_departments(
             "reason": f"no_task_waiting_for_role:{role}",
             "departmentId": triggering_department_id,
             "taskId": explicit_task_id,
+            "taskBootstrap": bootstrap,
         }
     task_id, task = selected
 
@@ -205,6 +239,7 @@ def sync_confirmed_departments(
             "taskId": task_id,
             "requiredDepartments": required_departments,
             "missingDepartments": missing,
+            "taskBootstrap": bootstrap,
         }
 
     criteria_ids: list[str] = []
@@ -220,6 +255,7 @@ def sync_confirmed_departments(
                 "departmentId": triggering_department_id,
                 "taskId": task_id,
                 "evidenceGaps": gaps,
+                "taskBootstrap": bootstrap,
             }
         criteria_ids = [
             str(item.get("id"))
@@ -286,4 +322,5 @@ def sync_confirmed_departments(
         "evidencePath": relative_path.as_posix(),
         "taskStatus": result.get("taskStatus"),
         "lastRoundHash": result.get("lastRoundHash"),
+        "taskBootstrap": bootstrap,
     }
