@@ -10,6 +10,7 @@ import {
 } from "../utils/departmentPrep";
 import { CapabilityLibrarySummary } from "./CapabilityLibrarySummary";
 import { CapabilityPromotionPanel } from "./CapabilityPromotionPanel";
+import { TaskContractPanel } from "./TaskContractPanel";
 
 /** Canonical pipeline steps shown in the left rail (1.1–3.3). */
 export const PIPELINE_STEPS = [
@@ -239,8 +240,8 @@ export function PipelinePanel({
       <p className="text-[10px] text-slate-500 leading-relaxed">
         {copy.coldStartHint ||
           (zh
-            ? "步骤亮灯来自部门确认状态（制作主路径）。整包重建请用顶栏冷启动。"
-            : "Step lights follow department confirmations. Use header cold-start to rebuild.")}
+            ? "部门负责生产执行；跨角色验收、Evidence 覆盖与最终 acceptance 以 TaskContract 为准。整包重建请用顶栏冷启动。"
+            : "Departments execute production work; cross-role acceptance and evidence coverage are governed by TaskContract. Use header cold-start to rebuild.")}
       </p>
 
       <div className="flex flex-col gap-2 relative">
@@ -314,6 +315,7 @@ export function PipelinePanel({
         })}
       </div>
 
+      {workspaceId && <TaskContractPanel workspaceId={workspaceId} locale={locale} />}
       <CapabilityLibrarySummary locale={locale} />
       <CapabilityPromotionPanel locale={locale} />
     </div>
