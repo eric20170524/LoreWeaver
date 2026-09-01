@@ -271,6 +271,7 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             attackZone: this.state.attackZone,
             dodges: this.state.dodges,
             counters: this.state.counters,
+            playerPosition: this.player ? { x: this.player.x, y: this.player.y } : null,
             determinism: this.randomMetadata ? { random: this.randomMetadata() } : null,
             lastResult: this.result
         };
@@ -310,8 +311,13 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             gauge: this.state.gauge,
             phase: this.state.phase,
             phaseLeft: this.state.phaseLeft,
+            invuln: this.state.invuln,
+            attackZone: this.state.attackZone ? { ...this.state.attackZone } : null,
             bossHp: this.state.bossHp,
             score: this.state.score,
+            dodges: this.state.dodges,
+            counters: this.state.counters,
+            playerPosition: this.player ? { x: this.player.x, y: this.player.y } : null,
             determinism: this.randomMetadata ? { random: this.randomMetadata() } : null,
             lastResult: this.result
         });
