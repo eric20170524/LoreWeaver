@@ -24,6 +24,39 @@ export function createLoreWeaverAssetOperationHandlers(options = {}) {
   return handlers;
 }
 
+/**
+ * Fail before any AssetRecipe operation executes when a declared port is not
+ * available. This is especially important for provider-backed `asset.vlm`: a
+ * missing real provider must not leave partially processed outputs behind.
+ */
+export function preflightAssetOperationRegistry(recipe, handlers) {
+  const registry = handlers instanceof Map ? handlers : new Map(Object.entries(handlers || {}));
+  const requiredPorts = [...new Set((recipe?.operations || [])
+    .map((operation) => String(operation?.port || "").trim())
+    .filter(Boolean))];
+  const missingPorts = requiredPorts.filter((port) => typeof registry.get(port) !== "function");
+  return {
+    schemaVersion: "loreweaver.asset-operation-preflight.v1",
+    status: missingPorts.length ? "blocked" : "passed",
+    ready: missingPorts.length === 0,
+    requiredPorts,
+    registeredPorts: [...registry.keys()].sort(),
+    missingPorts,
+    blockers: missingPorts.map((port) => `asset_operation_port_unregistered:${port}`)
+  };
+}
+
+export function assertAssetOperationRegistryReady(recipe, handlers) {
+  const result = preflightAssetOperationRegistry(recipe, handlers);
+  if (!result.ready) {
+    const error = new Error(result.blockers.join(","));
+    error.name = "AssetOperationRegistryPreflightError";
+    error.preflight = result;
+    throw error;
+  }
+  return result;
+}
+
 export function assetOperationCapabilitySnapshot(options = {}) {
   const handlers = createLoreWeaverAssetOperationHandlers(options);
   const vlm = probeRealAssetVlmProvider(options);
