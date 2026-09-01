@@ -9,7 +9,8 @@ import { fileURLToPath } from "node:url";
 import { hashExecutablePayloadManifest } from "../lib/executable-payload.mjs";
 import {
   evaluateRuntimeDeterminismReadiness,
-  createCrossBuildDeterminismEvidence
+  createCrossBuildDeterminismEvidence,
+  evaluateCrossBuildDeterminismReadiness
 } from "../../minigame_master/core/lib/contracts/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -17,8 +18,9 @@ const ROOT = path.resolve(__dirname, "../..");
 const WORKSPACE_ID = "__golden_survivor_vertical_slice_ci";
 const WORKSPACE_REL = `data/workspaces/${WORKSPACE_ID}`;
 const WORKSPACE = path.join(ROOT, WORKSPACE_REL);
-const SEED = "golden-survivor-cross-build-v1";
+const SEED = "golden-survivor-cross-build-v2";
 const ADVANCE_FRAMES = 120;
+const REQUIRED_BROWSERS = ["chromium", "firefox"];
 const PROJECTION_PATHS = [
   "hp",
   "score",
@@ -129,6 +131,32 @@ function startStaticServer(root, port) {
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+function getPath(root, expression) {
+  const tokens = String(expression || "")
+    .replace(/\[(\d+)\]/g, ".$1")
+    .split(".")
+    .filter(Boolean);
+  let value = root;
+  for (const token of tokens) {
+    if (value == null || !(token in value)) return { exists: false, value: null };
+    value = value[token];
+  }
+  return { exists: true, value };
+}
+function projectState(state) {
+  const projection = {};
+  for (const pathExpression of PROJECTION_PATHS) {
+    const resolved = getPath(state, pathExpression);
+    if (!resolved.exists) throw new Error(`projection_path_missing:${pathExpression}`);
+    projection[pathExpression] = resolved.value;
+  }
+  return projection;
+}
+function browserEngine(browserName, browserVersion) {
+  if (browserName === "chromium") return `Blink/${browserVersion}`;
+  if (browserName === "firefox") return `Gecko/${browserVersion}`;
+  return `WebKit/${browserVersion}`;
+}
 
 function compileCandidate(label) {
   const tsx = path.join(ROOT, "node_modules/.bin/tsx");
@@ -137,7 +165,10 @@ function compileCandidate(label) {
     `--workspace=${WORKSPACE_REL}`,
     "--mode=candidate"
   ], { cwd: ROOT, encoding: "utf8", env: process.env, timeout: 180000 });
-  if (result.status !== 0) fail(`candidate_${label}_compile_failed`, { stdout: result.stdout?.slice(-3000), stderr: result.stderr?.slice(-3000) });
+  if (result.status !== 0) fail(`candidate_${label}_compile_failed`, {
+    stdout: result.stdout?.slice(-3000),
+    stderr: result.stderr?.slice(-3000)
+  });
   const compiler = parseLastJson(result.stdout);
   const exporter = parseLastJson(compiler?.exporterOutput);
   if (!exporter?.stage || !exporter?.artifact) fail(`candidate_${label}_compiler_output_invalid`, { compiler });
@@ -145,13 +176,19 @@ function compileCandidate(label) {
   const artifact = path.resolve(ROOT, exporter.artifact);
   if (!fs.existsSync(stage) || !fs.existsSync(artifact)) fail(`candidate_${label}_artifact_missing`);
   const payload = hashExecutablePayloadManifest(walkFiles(stage));
+  const releaseManifest = readJson(path.join(stage, "release-manifest.json"));
+  const assetEntries = (releaseManifest.files || [])
+    .filter((entry) => String(entry.path || "").startsWith("assets/"))
+    .map((entry) => ({ path: entry.path, bytes: entry.bytes, sha256: entry.sha256 }));
   return {
-    id: `${label}:${path.basename(stage)}`,
+    id: label,
     stage,
     artifact,
     artifactSha256: sha256File(artifact),
     payloadHash: payload.payloadHash,
-    specHash: readJson(path.join(stage, "release-manifest.json")).specHash
+    specHash: releaseManifest.specHash,
+    runtimeVersion: releaseManifest.runtimeVersion,
+    assetManifestHash: sha256Json(assetEntries)
   };
 }
 
@@ -167,24 +204,53 @@ const scenario = {
   ]
 };
 const scenarioHash = `sha256:${sha256Json(scenario)}`;
+const physicsSettings = {
+  engine: "phaser-arcade",
+  fixedStep: true,
+  stepMs: 1000 / 60,
+  scope: "paused adapter-state verification scenario",
+  advanceFrames: ADVANCE_FRAMES
+};
 const declaration = {
   schemaVersion: "loreweaver.runtime-determinism.v1",
   scope: "adapter_state_trace",
   runtimeAuthority: "LoreWeaverRuntimeKernel",
-  random: { controlled: true, source: "seeded_prng", seed: SEED, scope: "adapter" },
+  random: {
+    controlled: true,
+    source: "seeded_prng",
+    seed: SEED,
+    scope: "adapter",
+    algorithm: "fnv1a32+mulberry32-v1",
+    stateHandoff: "seed_replay"
+  },
   time: { controlled: true, mode: "exact_frame", hostWallClockSettleAllowed: false },
   input: { controlled: true, mode: "semantic" },
-  stateProjection: { id: "survivor-cross-build-state-v1", paths: PROJECTION_PATHS },
+  stateProjection: { id: "survivor-cross-build-state-v2", paths: PROJECTION_PATHS },
   presentation: { controlled: false, randomSource: "Phaser.Math/host", screenshotTimingControlled: false },
-  metadata: { evidenceScope: "adapter state only; visual frame determinism is explicitly excluded" }
+  engine: { name: "Phaser", version: "4.1.0", renderer: "runtime-selected" },
+  physics: {
+    engine: physicsSettings.engine,
+    deterministic: true,
+    fixedStep: physicsSettings.fixedStep,
+    stepMs: physicsSettings.stepMs,
+    settingsHash: sha256Json(physicsSettings)
+  },
+  host: { mode: "static_candidate", version: "v1" },
+  metadata: {
+    evidenceScope: "adapter state only; visual-frame determinism is explicitly excluded",
+    physicsClaimScope: "empirical equality of the declared projection under exact-frame paused verification, not a universal Phaser physics guarantee"
+  }
 };
 
-async function executeBuild(playwright, build) {
+async function executeBuild(playwright, browserName, build) {
+  const browserType = playwright[browserName];
+  if (!browserType) throw new Error(`playwright_browser_type_missing:${browserName}`);
   const port = await findOpenPort();
   const server = await startStaticServer(build.stage, port);
   let browser = null;
   try {
-    browser = await playwright.chromium.launch({ headless: true });
+    browser = await browserType.launch({ headless: true });
+    const browserVersion = browser.version();
     const page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error?.message || String(error)));
@@ -199,7 +265,11 @@ async function executeBuild(playwright, build) {
       };
     }, { seed: SEED });
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "domcontentloaded", timeout: 30000 });
-    await page.waitForFunction(() => window.__LOREWEAVER_GAME__ && Array.isArray(window.__LOREWEAVER_EMBEDDED_SPEC__?.nodes), null, { timeout: 30000 });
+    await page.waitForFunction(
+      () => window.__LOREWEAVER_GAME__ && Array.isArray(window.__LOREWEAVER_EMBEDDED_SPEC__?.nodes),
+      null,
+      { timeout: 30000 }
+    );
 
     await page.evaluate(() => {
       const game = window.__LOREWEAVER_GAME__;
@@ -225,11 +295,11 @@ async function executeBuild(playwright, build) {
       await page.waitForTimeout(250);
     }
 
-    const paused = await page.evaluate(() => window.__LOREWEAVER_RUNTIME_OBSERVATION__?.pause?.({ reason: "cross_build_determinism_probe" }));
+    const paused = await page.evaluate(
+      () => window.__LOREWEAVER_RUNTIME_OBSERVATION__?.pause?.({ reason: "cross_build_determinism_probe" })
+    );
     if (paused?.status !== "passed") throw new Error(`determinism_pause_failed:${JSON.stringify(paused)}`);
 
-    // The target Scene is already paused, so waiting for Phaser startup cooldown
-    // cannot advance gameplay state. Exact-frame stays fail-closed until cooldown=0.
     await page.waitForFunction(() => {
       const loop = window.__LOREWEAVER_GAME__?.loop;
       return Boolean(loop) && Number(loop._coolDown || 0) === 0 && loop.running === true && loop.sleeping !== true;
@@ -248,19 +318,30 @@ async function executeBuild(playwright, build) {
 
     if (outcome.move?.status !== "passed") throw new Error(`determinism_move_failed:${JSON.stringify(outcome.move)}`);
     if (outcome.advance?.status !== "passed") throw new Error(`determinism_advance_failed:${JSON.stringify(outcome.advance)}`);
-    if (outcome.after?.state?.status !== "paused") throw new Error(`determinism_scene_not_paused_after_advance:${outcome.after?.state?.status}`);
+    if (outcome.after?.state?.status !== "paused") {
+      throw new Error(`determinism_scene_not_paused_after_advance:${outcome.after?.state?.status}`);
+    }
     if (outcome.before?.sessionId !== outcome.after?.sessionId || outcome.after?.sessionId !== outcome.trace?.sessionId) {
       throw new Error("determinism_same_session_identity_failed");
     }
     const random = outcome.after?.state?.determinism?.random;
-    if (random?.controlled !== true || random?.source !== "seeded_prng" || !String(random.seed || "").includes(SEED)) {
+    if (
+      random?.controlled !== true
+      || random?.source !== "seeded_prng"
+      || random?.algorithm !== declaration.random.algorithm
+      || !String(random.seed || "").includes(SEED)
+    ) {
       throw new Error(`seeded_random_not_observed:${JSON.stringify(random)}`);
     }
     if (errors.length) throw new Error(`browser_errors:${JSON.stringify(errors)}`);
 
+    const projection = projectState(outcome.after.state);
     return {
       status: "passed",
       passed: true,
+      browser: browserName,
+      browserVersion,
+      engineVersion: browserEngine(browserName, browserVersion),
       scenarioId: scenario.id,
       scenarioHash,
       runtimeAuthority: outcome.after.runtimeAuthority,
@@ -268,6 +349,8 @@ async function executeBuild(playwright, build) {
       capabilities: outcome.capabilities,
       initialSnapshot: outcome.before,
       finalSnapshot: outcome.after,
+      stateProjection: projection,
+      stateFingerprint: sha256Json(projection),
       traceRange: {
         startSequence: outcome.before.sequence,
         endSequence: outcome.trace.lastSequence,
@@ -280,6 +363,29 @@ async function executeBuild(playwright, build) {
   }
 }
 
+function buildRef(build) {
+  return {
+    id: build.id,
+    payloadHash: build.payloadHash,
+    artifactSha256: build.artifactSha256,
+    specHash: build.specHash,
+    runtimeVersion: build.runtimeVersion,
+    assetManifestHash: build.assetManifestHash
+  };
+}
+
+function compactComparison(comparison, extra) {
+  return {
+    ...extra,
+    schemaVersion: comparison.schemaVersion,
+    status: comparison.status,
+    deterministic: comparison.deterministic,
+    blockers: comparison.blockers,
+    stateMatches: comparison.comparison?.stateMatches ?? false,
+    visualMatches: comparison.comparison?.visualMatches ?? null
+  };
+}
+
 async function main() {
   if (!fs.existsSync(WORKSPACE)) fail("golden_workspace_missing_run_golden_candidate_first");
   let playwright;
@@ -289,65 +395,167 @@ async function main() {
   const buildA = compileCandidate("build-a");
   await sleep(1100);
   const buildB = compileCandidate("build-b");
-  const runA = await executeBuild(playwright, buildA);
-  const runB = await executeBuild(playwright, buildB);
-  const readiness = evaluateRuntimeDeterminismReadiness({
+  if (
+    buildA.specHash !== buildB.specHash
+    || buildA.runtimeVersion !== buildB.runtimeVersion
+    || buildA.assetManifestHash !== buildB.assetManifestHash
+  ) {
+    fail("independent_build_source_identity_mismatch", { buildA, buildB });
+  }
+
+  const runs = [];
+  for (const browserName of REQUIRED_BROWSERS) {
+    runs.push(await executeBuild(playwright, browserName, buildA));
+    runs.push(await executeBuild(playwright, browserName, buildB));
+  }
+
+  const controlReadiness = evaluateRuntimeDeterminismReadiness({
     scenario,
     declaration,
-    capabilities: runA.capabilities
+    capabilities: runs[0].capabilities
   });
-  if (!readiness.ready) fail("golden_determinism_readiness_blocked", { readiness });
+  if (!controlReadiness.ready || controlReadiness.crossBuildDeterministicClaimAllowed !== false) {
+    fail("golden_determinism_control_readiness_invalid", { controlReadiness });
+  }
 
-  const evidence = createCrossBuildDeterminismEvidence({
-    readiness,
-    baselineResult: runA,
-    candidateResult: runB,
-    baselineBuild: {
-      id: buildA.id,
-      payloadHash: buildA.payloadHash,
-      artifactSha256: buildA.artifactSha256,
-      specHash: buildA.specHash
-    },
-    candidateBuild: {
-      id: buildB.id,
-      payloadHash: buildB.payloadHash,
-      artifactSha256: buildB.artifactSha256,
-      specHash: buildB.specHash
-    }
+  const perBrowser = REQUIRED_BROWSERS.map((browserName) => {
+    const browserRuns = runs.filter((run) => run.browser === browserName);
+    const comparison = createCrossBuildDeterminismEvidence({
+      readiness: controlReadiness,
+      baselineResult: browserRuns[0],
+      candidateResult: browserRuns[1],
+      baselineBuild: buildRef(buildA),
+      candidateBuild: buildRef(buildB)
+    });
+    return compactComparison(comparison, { browser: browserName });
   });
-  const report = {
-    ...evidence,
-    schemaVersion: "loreweaver.golden-cross-build-determinism-report.v1",
-    createdAt: new Date().toISOString(),
-    workspaceId: WORKSPACE_ID,
+
+  const crossBrowser = [buildA, buildB].map((build, buildIndex) => {
+    const buildRuns = REQUIRED_BROWSERS.map((browserName) =>
+      runs.filter((run) => run.browser === browserName)[buildIndex]
+    );
+    const comparison = createCrossBuildDeterminismEvidence({
+      readiness: controlReadiness,
+      baselineResult: buildRuns[0],
+      candidateResult: buildRuns[1],
+      baselineBuild: buildRef(build),
+      candidateBuild: buildRef(build)
+    });
+    return compactComparison(comparison, { buildId: build.id });
+  });
+
+  const pairwiseDeterministic = [...perBrowser, ...crossBrowser].every(
+    (comparison) => comparison.status === "passed" && comparison.deterministic === true
+  );
+  const expectedIdentity = {
+    specHash: buildA.specHash,
+    runtimeVersion: buildA.runtimeVersion,
+    assetManifestHash: buildA.assetManifestHash
+  };
+  const createdAt = new Date().toISOString();
+  const cells = [];
+  for (const browserName of REQUIRED_BROWSERS) {
+    const browserRuns = runs.filter((run) => run.browser === browserName);
+    for (const [index, run] of browserRuns.entries()) {
+      const build = index === 0 ? buildA : buildB;
+      cells.push({
+        browser: browserName,
+        browserVersion: run.browserVersion,
+        engineVersion: run.engineVersion,
+        buildId: build.id,
+        sessionId: run.sessionId,
+        status: run.status,
+        payloadHash: build.payloadHash,
+        artifactSha256: build.artifactSha256,
+        specHash: build.specHash,
+        runtimeVersion: build.runtimeVersion,
+        assetManifestHash: build.assetManifestHash,
+        stateFingerprint: run.stateFingerprint
+      });
+    }
+  }
+
+  const evidence = {
+    schemaVersion: "loreweaver.cross-build-determinism-evidence.v2",
+    status: pairwiseDeterministic ? "passed" : "failed",
+    deterministic: pairwiseDeterministic,
+    createdAt,
     fixture: false,
     synthetic: false,
+    stale: false,
+    freshness: "fresh",
     headless: true,
     releaseEligible: false,
-    evidenceMeaning: "Two independently compiled Candidate stages executed in two Chromium sessions with the same explicit verification seed, semantic input, paused target Scene and exact Phaser frame advancement. Only the declared adapter-state projection is compared; visual-frame determinism is not claimed.",
+    waivers: [],
+    runtimeAuthority: "LoreWeaverRuntimeKernel",
+    scope: declaration.scope,
+    scenarioId: scenario.id,
+    scenarioHash,
+    projectionId: declaration.stateProjection.id,
+    identity: expectedIdentity,
+    matrix: {
+      requiredBrowsers: REQUIRED_BROWSERS,
+      requiredBuildCount: 2,
+      cells
+    },
+    comparisons: {
+      perBrowser,
+      crossBrowser
+    }
+  };
+  const evidenceReadiness = evaluateCrossBuildDeterminismReadiness({
+    controlReadiness,
+    evidence,
+    expectedIdentity,
+    requiredBrowsers: REQUIRED_BROWSERS,
+    requiredBuildCount: 2,
+    now: createdAt,
+    waivers: []
+  });
+
+  const report = {
+    ...evidence,
+    schemaVersion: "loreweaver.golden-cross-build-determinism-report.v2",
+    workspaceId: WORKSPACE_ID,
+    replayReady: evidenceReadiness.replayReady,
+    evidenceMeaning: "Two independently compiled Candidate stages executed in independent Chromium and Firefox sessions with the same explicit verification seed, semantic input, paused target Scene and exact Phaser frame advancement. The declared adapter-state projection is compared across builds inside each browser and across browsers for each build. Visual-frame determinism and release certification are explicitly excluded.",
     declaration,
-    readiness,
-    runs: [
-      { build: buildA, sessionId: runA.sessionId, finalState: runA.finalSnapshot.state },
-      { build: buildB, sessionId: runB.sessionId, finalState: runB.finalSnapshot.state }
-    ]
+    controlReadiness,
+    evidenceReadiness,
+    builds: [buildA, buildB],
+    runs: runs.map((run) => ({
+      browser: run.browser,
+      browserVersion: run.browserVersion,
+      engineVersion: run.engineVersion,
+      sessionId: run.sessionId,
+      stateFingerprint: run.stateFingerprint,
+      finalState: run.finalSnapshot.state
+    }))
   };
   const reportPath = path.join(WORKSPACE, "reports/cross_build_determinism_latest.json");
   writeJson(reportPath, report);
+
   console.log(JSON.stringify({
-    status: evidence.status,
+    status: evidenceReadiness.status,
     deterministic: evidence.deterministic,
+    replayReady: evidenceReadiness.replayReady,
+    claim: evidenceReadiness.claim,
+    releaseEligible: evidenceReadiness.releaseEligible,
     scope: evidence.scope,
     workspaceId: WORKSPACE_ID,
     scenarioHash,
-    baselinePayloadHash: buildA.payloadHash,
-    candidatePayloadHash: buildB.payloadHash,
-    baselineSessionId: runA.sessionId,
-    candidateSessionId: runB.sessionId,
-    projection: evidence.comparison,
+    browsers: REQUIRED_BROWSERS,
+    buildIds: [buildA.id, buildB.id],
+    matrixCells: cells.length,
+    perBrowser,
+    crossBrowser,
+    blockers: evidenceReadiness.blockers,
+    warnings: evidenceReadiness.warnings,
     report: path.relative(ROOT, reportPath).split(path.sep).join("/")
   }, null, 2));
-  if (!evidence.deterministic) process.exit(2);
+  if (!evidenceReadiness.replayReady) process.exit(2);
 }
 
-main().catch((error) => fail("golden_cross_build_determinism_error", { error: error?.stack || error?.message || String(error) }));
+main().catch((error) => fail("golden_cross_build_determinism_error", {
+  error: error?.stack || error?.message || String(error)
+}));
