@@ -29,6 +29,8 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.lifecycle = null;
         this.config = { ...DEFAULT_CONFIG };
         this.Phaser = context.Phaser || globalThis.Phaser;
+        this.random = typeof context.random === 'function' ? context.random : Math.random;
+        this.randomMetadata = typeof context.randomMetadata === 'function' ? context.randomMetadata : null;
         this.player = null;
         this.boss = null;
         this.telegraph = null;
@@ -63,6 +65,49 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         return this;
     }
 
+    semanticActions() {
+        return [...new Set([...super.semanticActions(), 'move', 'primary'])];
+    }
+
+    handleSemanticInput(payload = {}) {
+        const action = String(payload?.action || '').trim();
+        if (action === 'move') {
+            if (!this.player || !this.scene) throw new Error('semantic_move_surface_unavailable');
+            const x = Number(payload?.x);
+            const y = Number(payload?.y);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('semantic_move_requires_finite_x_y');
+            const { width, height } = this.scene.scale;
+            this.player.x = Math.max(20, Math.min(width - 20, x));
+            this.player.y = Math.max(height * 0.45, Math.min(height - 60, y));
+            const result = { action, x: this.player.x, y: this.player.y };
+            this.updateObservationState({ semanticAction: result });
+            return result;
+        }
+        if (action === 'primary') return this.primaryAction(payload);
+        return super.handleSemanticInput(payload);
+    }
+
+    primaryAction() {
+        const before = {
+            phase: this.state.phase,
+            bossHp: this.state.bossHp,
+            gauge: this.state.gauge,
+            counters: this.state.counters
+        };
+        const accepted = this.tryCounter();
+        return {
+            action: 'primary',
+            accepted,
+            before,
+            after: {
+                phase: this.state.phase,
+                bossHp: this.state.bossHp,
+                gauge: this.state.gauge,
+                counters: this.state.counters
+            }
+        };
+    }
+
     create(scene) {
         super.create(scene);
         if (!this.Phaser) throw new Error('DodgeCounterBossAdapter requires Phaser.');
@@ -89,13 +134,11 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.boss.on('pointerdown', () => this.tryCounter());
         scene.input.on('pointermove', (p) => {
             if (!this.isRunning()) return;
-            if (p.isDown || true) {
-                // smooth follow pointer for mobile-friendly dodge
-                this.player.x += (p.x - this.player.x) * 0.2;
-                this.player.y += (p.y - this.player.y) * 0.2;
-                this.player.x = Math.max(20, Math.min(width - 20, this.player.x));
-                this.player.y = Math.max(height * 0.45, Math.min(height - 60, this.player.y));
-            }
+            // smooth follow pointer for mobile-friendly dodge
+            this.player.x += (p.x - this.player.x) * 0.2;
+            this.player.y += (p.y - this.player.y) * 0.2;
+            this.player.x = Math.max(20, Math.min(width - 20, this.player.x));
+            this.player.y = Math.max(height * 0.45, Math.min(height - 60, this.player.y));
         });
 
         this.lifecycle.addCleanup(() => {
@@ -111,11 +154,10 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
 
     beginAttack() {
         const { width, height } = this.scene.scale;
-        // pick attack zone near player or random
         const zone = {
-            x: 60 + Math.random() * (width - 120),
-            y: height * 0.55 + Math.random() * (height * 0.25),
-            r: 48 + Math.random() * 24
+            x: 60 + this.random() * (width - 120),
+            y: height * 0.55 + this.random() * (height * 0.25),
+            r: 48 + this.random() * 24
         };
         this.state.attackZone = zone;
         this.state.hitThisAttack = false;
@@ -129,8 +171,7 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
     }
 
     tryCounter() {
-        if (!this.isRunning()) return;
-        if (this.state.phase !== 'counter') return;
+        if (!this.isRunning() || this.state.phase !== 'counter') return false;
         this.state.counters += 1;
         this.state.gauge = Math.min(this.config.breakGaugeMax, this.state.gauge + this.config.counterGaugeGain);
         this.state.bossHp = Math.max(0, this.state.bossHp - this.config.counterDamage);
@@ -145,6 +186,7 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         }
         this.refreshHud();
         this.publishTestState();
+        return true;
     }
 
     update(_time, delta) {
@@ -224,6 +266,12 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             bossHp: this.state.bossHp,
             gauge: this.state.gauge,
             phase: this.state.phase,
+            phaseLeft: this.state.phaseLeft,
+            invuln: this.state.invuln,
+            attackZone: this.state.attackZone,
+            dodges: this.state.dodges,
+            counters: this.state.counters,
+            determinism: this.randomMetadata ? { random: this.randomMetadata() } : null,
             lastResult: this.result
         };
     }
@@ -256,8 +304,16 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
     destroy() { this.lifecycle?.cleanup(); super.destroy(); }
     publishTestState() {
         this.context.testHooks?.update({
-            adapterId: this.config.id, status: this.status,
-            hp: this.state.playerHp, gauge: this.state.gauge, phase: this.state.phase, lastResult: this.result
+            adapterId: this.config.id,
+            status: this.status,
+            hp: this.state.playerHp,
+            gauge: this.state.gauge,
+            phase: this.state.phase,
+            phaseLeft: this.state.phaseLeft,
+            bossHp: this.state.bossHp,
+            score: this.state.score,
+            determinism: this.randomMetadata ? { random: this.randomMetadata() } : null,
+            lastResult: this.result
         });
     }
 }
