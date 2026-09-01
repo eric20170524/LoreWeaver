@@ -29,4 +29,12 @@ export {
     RUNTIME_SCENARIO_SCHEMA_VERSION,
     RUNTIME_SCENARIO_RESULT_VERSION
 } from './RuntimeScenarioRunner.js';
+export {
+    validateRuntimeDeterminismDeclaration,
+    evaluateRuntimeDeterminismReadiness,
+    createCrossBuildDeterminismEvidence,
+    RUNTIME_DETERMINISM_SCHEMA_VERSION,
+    RUNTIME_DETERMINISM_READINESS_SCHEMA_VERSION,
+    CROSS_BUILD_DETERMINISM_EVIDENCE_SCHEMA_VERSION
+} from './RuntimeDeterminismContract.js';
 export { default as SceneLifecycle, SCENE_LIFECYCLE_STATES } from './SceneLifecycle.js';
