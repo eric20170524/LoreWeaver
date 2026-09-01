@@ -33,8 +33,11 @@ export {
     validateRuntimeDeterminismDeclaration,
     evaluateRuntimeDeterminismReadiness,
     createCrossBuildDeterminismEvidence,
+    evaluateCrossBuildDeterminismReadiness,
     RUNTIME_DETERMINISM_SCHEMA_VERSION,
     RUNTIME_DETERMINISM_READINESS_SCHEMA_VERSION,
-    CROSS_BUILD_DETERMINISM_EVIDENCE_SCHEMA_VERSION
+    CROSS_BUILD_DETERMINISM_EVIDENCE_SCHEMA_VERSION,
+    CROSS_BUILD_READINESS_SCHEMA_VERSION,
+    CROSS_BUILD_DETERMINISM_DEFAULT_MAX_AGE_MS
 } from './RuntimeDeterminismContract.js';
 export { default as SceneLifecycle, SCENE_LIFECYCLE_STATES } from './SceneLifecycle.js';
