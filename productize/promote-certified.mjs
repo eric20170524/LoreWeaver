@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { hashExecutablePayloadManifest } from "./lib/executable-payload.mjs";
 import { isTrustedObservedReleaseEvidence } from "./lib/observed-release-evidence.mjs";
+import { runReleaseTaskSync } from "./lib/release-task-sync.mjs";
 import {
   exactCandidateIdentityMismatches,
   isExactCandidateEvidence
@@ -43,7 +44,11 @@ function readJsonSafe(file) {
   }
 }
 function writeJson(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+}
+function repoRelative(file) {
+  return path.relative(LORE_ROOT, file).split(path.sep).join("/");
 }
 function walkFiles(dir, base = dir) {
   const files = [];
@@ -204,7 +209,7 @@ for (const cardId of cardIds) {
     observedEvidence.push({
       cardId,
       kind,
-      file: path.relative(LORE_ROOT, found.file).split(path.sep).join("/")
+      file: repoRelative(found.file)
     });
   }
 }
@@ -239,8 +244,9 @@ if (!fs.existsSync(statusPath) || !fs.existsSync(manifestPath)) {
 }
 const releaseStatus = readJson(statusPath);
 const releaseManifest = readJson(manifestPath);
-const browserRel = path.relative(LORE_ROOT, browserPath).split(path.sep).join("/");
-const visualRel = path.relative(LORE_ROOT, visualPath).split(path.sep).join("/");
+const browserRel = repoRelative(browserPath);
+const visualRel = repoRelative(visualPath);
+const decisionRel = repoRelative(decisionPath);
 writeJson(statusPath, {
   ...releaseStatus,
   createdAt: new Date().toISOString(),
@@ -300,6 +306,46 @@ const zip = spawnSync("zip", ["-q", "-r", certifiedZip, certifiedName], {
 if (zip.status !== 0) fail("certified_archive_failed", { stderr: zip.stderr || "" });
 const certifiedBytes = fs.readFileSync(certifiedZip);
 const certifiedSha = crypto.createHash("sha256").update(certifiedBytes).digest("hex");
+const certifiedArtifactRel = repoRelative(certifiedZip);
+const certifiedStageRel = repoRelative(certifiedStage);
+const sourceCandidateRel = repoRelative(candidateZip);
+
+// Only after the Certified archive exists and the executable payload has already
+// been proven unchanged do we publish the promotion event consumed by the final
+// Task Orchestrator role. This report cannot make an otherwise invalid release
+// certified; it merely records a promotion that already passed every hard gate.
+const promotionReportPath = path.join(workspaceReportsDir, "certified_promotion_latest.json");
+const promotionReport = {
+  schemaVersion: "loreweaver.certified-promotion-report.v1",
+  status: "release_certified",
+  createdAt: new Date().toISOString(),
+  workspaceId,
+  releaseEligible: true,
+  certificationTier: "release_certified",
+  metadataOnlyPromotion: true,
+  payloadPreserved: true,
+  payloadHash: browser.payloadHash,
+  specHash: browser.specHash,
+  runtimeVersion: browser.runtimeVersion,
+  screenshotSha256: browser.screenshotSha256,
+  sourceCandidate: sourceCandidateRel,
+  browserReport: browserRel,
+  visualReport: visualRel,
+  observedEvidence,
+  releaseDecision: decisionRel,
+  artifact: certifiedArtifactRel,
+  artifactSha256: certifiedSha,
+  stage: certifiedStageRel,
+  fixture: false,
+  synthetic: false,
+  stale: false
+};
+writeJson(promotionReportPath, promotionReport);
+
+const taskSync = runReleaseTaskSync({
+  workspaceId,
+  role: "orchestrator"
+});
 
 console.log(JSON.stringify({
   status: "release_certified",
@@ -311,11 +357,13 @@ console.log(JSON.stringify({
   runtimeVersion: browser.runtimeVersion,
   payloadHash: browser.payloadHash,
   screenshotSha256: browser.screenshotSha256,
-  sourceCandidate: path.relative(LORE_ROOT, candidateZip).split(path.sep).join("/"),
+  sourceCandidate: sourceCandidateRel,
   browserReport: browserRel,
   visualReport: visualRel,
   observedEvidence,
-  artifact: path.relative(LORE_ROOT, certifiedZip).split(path.sep).join("/"),
+  artifact: certifiedArtifactRel,
   stage: certifiedStage,
-  sha256: certifiedSha
+  sha256: certifiedSha,
+  promotionReport: repoRelative(promotionReportPath),
+  taskSync
 }, null, 2));
