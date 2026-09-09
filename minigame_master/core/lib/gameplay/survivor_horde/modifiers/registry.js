@@ -15,6 +15,7 @@ import ArenaWaveBossModifier from './ArenaWaveBossModifier.js';
 import RandomRoomPortalsModifier from './RandomRoomPortalsModifier.js';
 import MirrorBossModifier from './MirrorBossModifier.js';
 import SelfDestructEnemyModifier from './SelfDestructEnemyModifier.js';
+import WeaponStanceCycleModifier from './WeaponStanceCycleModifier.js';
 
 export const SURVIVOR_HORDE_MODIFIER_REGISTRY = Object.freeze({
     hazard_telegraph: HazardTelegraphModifier,
@@ -33,7 +34,8 @@ export const SURVIVOR_HORDE_MODIFIER_REGISTRY = Object.freeze({
     arena_wave_boss: ArenaWaveBossModifier,
     random_room_portals: RandomRoomPortalsModifier,
     mirror_boss: MirrorBossModifier,
-    self_destruct_enemy: SelfDestructEnemyModifier
+    self_destruct_enemy: SelfDestructEnemyModifier,
+    weapon_stance_cycle: WeaponStanceCycleModifier
 });
 
 export const SURVIVOR_HORDE_SUPPORTED_MODIFIERS = Object.freeze(
