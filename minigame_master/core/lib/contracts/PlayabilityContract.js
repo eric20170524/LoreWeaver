@@ -136,6 +136,19 @@ export function normalizePlayabilityKnobs(cardId, knobs = {}, node = {}) {
         artAtlasFirst: src.artAtlasFirst !== false
     };
 
+    // survivor_horde card schema exposes enemySpawnRateSec while the runtime
+    // consumes enemies.spawnIntervalMs. Keep this translation at the shared
+    // contract boundary so Workbench/UI/presets and runtime stay consistent.
+    if (card === 'survivor_horde' && src.enemySpawnRateSec !== undefined) {
+        const rateSec = Number(src.enemySpawnRateSec);
+        if (Number.isFinite(rateSec) && rateSec > 0) {
+            out.enemies = {
+                ...(src.enemies && typeof src.enemies === 'object' ? src.enemies : {}),
+                spawnIntervalMs: Math.max(50, Math.round(rateSec * 1000))
+            };
+        }
+    }
+
     // Drop internal flag
     delete out._collectStyle;
     return out;
