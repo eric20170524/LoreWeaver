@@ -1,4 +1,5 @@
 import GameplayModifier from '../../GameplayModifier.js';
+import RunGrowthMilestonesModifier from './RunGrowthMilestonesModifier.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     meleeDurationSec: 5,
@@ -9,7 +10,41 @@ const DEFAULT_CONFIG = Object.freeze({
     meleeColor: 0xff6b35,
     rangedBurstCount: 2,
     rangedDamageMultiplier: 1,
-    announceStance: true
+    announceStance: true,
+    migrateLegacyFirstNodeGrowth: true
+});
+
+const DEFAULT_STANCE_GROWTH = Object.freeze({
+    title: '架势熟练',
+    scoreLabel: '战意',
+    initialSkills: [
+        { id: 'weapon_stance_cycle', label: '近远流转', level: 1 }
+    ],
+    milestones: [
+        {
+            id: 'melee_mastery',
+            threshold: 4,
+            skillId: 'melee_stance',
+            label: '近战精进',
+            level: 2,
+            feedback: '近战精进：范围与威力提升',
+            effects: [
+                { target: 'modifier.weapon_stance_cycle.meleeDamage', op: 'multiply', value: 1.2 },
+                { target: 'modifier.weapon_stance_cycle.meleeRadius', op: 'multiply', value: 1.08 }
+            ]
+        },
+        {
+            id: 'ranged_mastery',
+            threshold: 8,
+            skillId: 'ranged_stance',
+            label: '远程精进',
+            level: 1,
+            feedback: '远程精进：追加连射',
+            effects: [
+                { target: 'modifier.weapon_stance_cycle.rangedBurstCount', op: 'add', value: 1 }
+            ]
+        }
+    ]
 });
 
 function clampPositive(value, fallback) {
@@ -22,6 +57,7 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         super({ ...DEFAULT_CONFIG, ...config });
         this._originalFireAtNearestEnemy = null;
         this._lastStance = null;
+        this._runGrowth = null;
     }
 
     install(context) {
@@ -41,6 +77,23 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
 
             this.performRangedBurst(context);
         };
+
+        // Compatibility bridge: GameRunner still contains a legacy, IP-specific
+        // first-node growth loop. When this reusable stance modifier is active on
+        // that node, migrate ownership to the manifest/modifier layer immediately
+        // so legacy skill names and mutations never reach the playable loop.
+        if (this.config.migrateLegacyFirstNodeGrowth !== false && context.scene?.runGrowthState?.enabled) {
+            const growthConfig = this.config.runGrowth && typeof this.config.runGrowth === 'object'
+                ? { ...DEFAULT_STANCE_GROWTH, ...this.config.runGrowth }
+                : DEFAULT_STANCE_GROWTH;
+            this._runGrowth = new RunGrowthMilestonesModifier(growthConfig);
+            this._runGrowth.id = 'run_growth_milestones';
+            this._runGrowth.install(context);
+        }
+    }
+
+    update(context, time, delta) {
+        this._runGrowth?.update(context, time, delta);
     }
 
     resolveStance(elapsedSeconds) {
@@ -141,12 +194,14 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
     }
 
     uninstall(context) {
-        super.uninstall(context);
+        this._runGrowth?.uninstall(context);
+        this._runGrowth = null;
         if (this._originalFireAtNearestEnemy && context?.adapter) {
             context.adapter.fireAtNearestEnemy = this._originalFireAtNearestEnemy;
         }
         this._originalFireAtNearestEnemy = null;
         this._lastStance = null;
+        super.uninstall(context);
     }
 
     getTestState() {
@@ -154,7 +209,8 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             ...super.getTestState(),
             currentStance: this._lastStance,
             meleeDurationSec: this.config.meleeDurationSec,
-            rangedDurationSec: this.config.rangedDurationSec
+            rangedDurationSec: this.config.rangedDurationSec,
+            runGrowth: this._runGrowth?.getTestState?.() || null
         };
     }
 }
