@@ -5,6 +5,9 @@ import {
   SURVIVOR_HORDE_SUPPORTED_MODIFIERS,
   createSurvivorHordeModifier
 } from '../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/registry.js';
+import {
+  normalizePlayabilityKnobs
+} from '../../minigame_master/core/lib/contracts/PlayabilityContract.js';
 
 assert.ok(
   SURVIVOR_HORDE_SUPPORTED_MODIFIERS.includes('weapon_stance_cycle'),
@@ -29,4 +32,11 @@ assert.equal(modifier.resolveStance(9), 'melee');
 assert.equal(modifier.config.meleeDamage, 5);
 assert.equal(modifier.config.rangedBurstCount, 2);
 
-console.log('PASS weapon_stance_cycle registry smoke check');
+const normalized = normalizePlayabilityKnobs('survivor_horde', {
+  durationSec: 75,
+  enemySpawnRateSec: 1.25
+});
+assert.equal(normalized.durationSec, 75);
+assert.equal(normalized.enemies?.spawnIntervalMs, 1250);
+
+console.log('PASS weapon_stance_cycle registry + survivor knob normalization smoke check');
