@@ -80,6 +80,10 @@ export {
     WEAPON_STANCE_CYCLE_DEFAULT_CONFIG
 } from './modifiers/WeaponStanceCycleModifier.js';
 export {
+    default as RunGrowthMilestonesModifier,
+    RUN_GROWTH_MILESTONES_DEFAULT_CONFIG
+} from './modifiers/RunGrowthMilestonesModifier.js';
+export {
     SURVIVOR_HORDE_MODIFIER_REGISTRY,
     SURVIVOR_HORDE_SUPPORTED_MODIFIERS,
     createSurvivorHordeModifier,
