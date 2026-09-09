@@ -15,6 +15,8 @@ export {
     ESCORT_NPC_DEFAULT_CONFIG,
     LaserWarningModifier,
     LASER_WARNING_DEFAULT_CONFIG,
+    WeaponStanceCycleModifier,
+    WEAPON_STANCE_CYCLE_DEFAULT_CONFIG,
     SURVIVOR_HORDE_MODIFIER_REGISTRY,
     SURVIVOR_HORDE_SUPPORTED_MODIFIERS,
     createSurvivorHordeModifier,
