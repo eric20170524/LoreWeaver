@@ -76,6 +76,10 @@ export {
     SELF_DESTRUCT_ENEMY_DEFAULT_CONFIG
 } from './modifiers/SelfDestructEnemyModifier.js';
 export {
+    default as WeaponStanceCycleModifier,
+    WEAPON_STANCE_CYCLE_DEFAULT_CONFIG
+} from './modifiers/WeaponStanceCycleModifier.js';
+export {
     SURVIVOR_HORDE_MODIFIER_REGISTRY,
     SURVIVOR_HORDE_SUPPORTED_MODIFIERS,
     createSurvivorHordeModifier,
