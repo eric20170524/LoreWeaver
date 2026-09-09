@@ -2,6 +2,8 @@
 
 > 分支：`feat/fangame-co-development`
 >
+> 当前项目：国漫《玄界之门》石牧同人原型。
+>
 > 目标：基于 LoreWeaver 的现有工作台、Gameplay Card、manifest、Phaser runtime 与审计能力，用“边讨论、边决策、边实现、边验证”的方式完成一款同人游戏原型。
 
 ## 1. 共创原则
@@ -30,37 +32,41 @@
 第一版只要求证明以下闭环：
 
 ```text
-IP / 主题输入
-  -> 世界与角色定义
-  -> 1 个主干入口
-  -> 1 个核心玩法节点
-  -> 1 个明确胜负目标
-  -> 1 个角色能力成长反馈
+《玄界之门》石牧主题
+  -> 石牧角色/成长定义
+  -> 主干入口
+  -> Node 1 丰城敌潮（刀弓双态）
+  -> Node 2 四馆较技（Boss 反击）
+  -> Node 3 破庙尸潮（敌潮 + 弹幕）
   -> NodeResult 结算
-  -> 回写主干进度
+  -> 回写主干成长
 ```
 
 ### 默认技术策略
 
 - 平台：H5 / Desktop Browser 原型。
 - 引擎：现有 Phaser runtime。
-- 项目规格：LoreWeaver `manifest.json`。
-- 玩法实现：优先选已有 Gameplay Card。
-- AI 参与：世界构建、剧情、角色、玩法映射、数值初稿、局部 patch、审计。
-- 测试：沿用现有 build/runtime/browser deterministic gates。
+- 项目规格：LoreWeaver `manifest.json` / preset。
+- 主玩法：`survivor_horde`。
+- 节奏变化：`dodge_counter_boss` 等现有 Gameplay Card。
+- 新机制：通用 `weapon_stance_cycle` modifier，项目内映射为陨铁黑刀 / 紫钢弓。
+- 测试：沿用现有 build/runtime/browser deterministic gates，并增加同人 preset 静态校验。
 
-## 3. 第一轮需要共同确定的设计变量
+## 3. 已确认的设计变量
 
-| 变量 | 需要确认的内容 |
+| 变量 | 当前决策 |
 | --- | --- |
-| 同人 IP | 原作/作品名，以及是否仅个人非商业使用 |
-| 玩家幻想 | 玩家最核心要“扮演/获得”的体验 |
-| 主角 | 原作角色、自建角色、旁观者或原创支线角色 |
-| 核心玩法 | 割草、横版动作、回合技能、探索、节奏、合成、对话判定等 |
-| 视角 | 俯视、横版、固定场景、卡牌/界面化 |
-| 单局目标 | 生存、击败 Boss、护送、收集、逃脱、完成剧情目标等 |
-| 长期成长 | 技能、装备、羁绊、境界、收藏、角色解锁等 |
-| 美术方向 | 原作还原 / 二次风格化 / Q 版 / 像素 / 梦幻化等 |
+| 同人 IP | 国漫《玄界之门》，当前按个人非商业原型推进 |
+| 玩家幻想 | 扮演石牧，从强韧武者成长为可破万敌的核心战力 |
+| 主角 | 石牧 |
+| 核心玩法 | 割草 / 弹幕空间压力 / 闯关 + 少量 Boss 节奏变化 |
+| 视角 | 主玩法俯视 Phaser 战场；个别关卡可切现有横版/固定场景卡 |
+| 单局目标 | 清波、生存、Boss、守线等，根据 modifier 改变 |
+| 长期成长 | 境界、武技熟练、兵刃炼化、吞月参悟、白猿血脉 |
+| 第一战斗身份 | 黑刀近战扫群 + 紫钢弓远程压制 |
+| 美术方向 | 暂缓正式资产生成；先用 RuntimeArtBinder 原型兜底验证手感 |
+
+详细设计见：`docs/fangame/xuanjiezhimen_design_v0.1.md`。
 
 ## 4. LoreWeaver 现有能力的优先复用顺序
 
@@ -73,29 +79,28 @@ IP / 主题输入
 - `drag_collect_grid`
 - `sequence_synthesis`
 - `branching_dialogue_check`
+- `dodge_counter_boss`
+- `shooter_duel`
 - `node_iframe_microgame`
 - 现有 survivor / brawler modifiers
 - `NodePayload` / `NodeResult`
 - RuntimeArtBinder
 - audit / TestHooks / determinism gates
 
-### B. 需要按项目生成/配置
+### B. 本项目已生成/配置
 
-- IP DNA
-- 世界观与角色表
-- progressionSystems
-- abilityCatalog / passiveSkillCatalog
-- characterDesignCatalog / enemyDesignCatalog
-- 节点 narrative / reward / planning
-- 玩法卡与节点映射
-- 项目专属素材 manifest
+- `data/presets/xuanjiezhimen_fangame_preset.json`
+- 石牧角色设计 catalog
+- 武技 / 兵刃 / 血脉 abilityCatalog
+- 境界 / 武技 / 兵刃 / 月华 / 血脉 progressionSystems
+- 12 节点路线骨架（只批准 Node 1–3 进入当前竖切）
+- 通用 `weapon_stance_cycle` modifier
 
-### C. 只有必要时才新增代码
+### C. 暂不新增
 
-- 新 GameplayModifier
-- 新 GameplayAdapter
-- 新 runtime feature contract
-- 新资产管线能力
+- 白猿专属 runtime：先不写 IP 硬编码；后续若验证需要，新增通用 `overdrive_transformation`。
+- 新 core contract：当前没有必要。
+- 大规模美术资产：战斗手感通过后再生产。
 
 ## 5. 每轮协作格式
 
@@ -109,16 +114,17 @@ IP / 主题输入
 
 ## 6. 第一里程碑完成条件
 
-- [ ] 确定同人 IP 与使用边界。
-- [ ] 确定核心玩家幻想。
-- [ ] 确定第一核心玩法卡。
-- [ ] 产出项目 Design Seed / GDD v0.1。
-- [ ] 产出首版 manifest。
-- [ ] 首个核心节点可以在 Emulator 中启动。
-- [ ] NodeResult 能正常结算并回写进度。
-- [ ] 角色能力至少有一次可感知成长。
+- [x] 确定同人 IP 与当前个人非商业原型边界。
+- [x] 确定核心玩家幻想。
+- [x] 确定第一核心玩法卡：`survivor_horde`。
+- [x] 产出项目 Design Seed / GDD v0.1。
+- [x] 产出首版 preset / manifest seed。
+- [x] 新增刀弓双态的可复用 runtime modifier。
+- [ ] 首个核心节点在 Emulator 中完成实际运行验证。
+- [ ] NodeResult 正常结算并回写成长。
+- [ ] 角色能力至少有一次可感知的跨局成长。
 - [ ] 通过基础 build/runtime gate。
-- [ ] 完成第一轮可玩复盘。
+- [ ] 完成 Node 1–3 第一轮可玩复盘。
 
 ## 7. 暂不做
 
@@ -127,3 +133,4 @@ IP / 主题输入
 - 不为单个 IP 大规模改 core。
 - 不在玩法尚未验证时批量生成美术资产。
 - 不把 Agent 生成结果未经审核直接写入稳定 runtime。
+- 不照搬原作章节对白与长篇剧情文本。
