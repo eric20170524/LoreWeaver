@@ -20,7 +20,7 @@
 
 旧 `CultivationUIPlugin` 写死洞天、骨文、宝术及另一主题的默认目录；同时无条件在境界>=1时显示所有能力解锁。被动购买只处理 clickPower/activeMultiplier 加法，却仍对尚未接入的战斗效果扣费。
 
-现在是通用主题外壳：角色、资源、境界、颜色和目录来自当前 manifest；没有目录时展示空态，不注入其他 IP。`uiConfig.cultivation.labels` 可覆盖 panel/practice/train/breakthrough/passives/abilities/income。已有石牧 manifest 不需要重建就能使用中性文案和自己的目录。
+现在是通用主题外壳：角色、资源、境界、颜色和目录来自当前 manifest；没有目录时展示空态，不注入其他 IP。`uiConfig.cultivation.labels` 可覆盖 panel/practice/train/breakthrough/passives/abilities/income。角色同时识别现有目录的 `player` / `player_character`，石牧预设使用前者。已有石牧 manifest 不需要重建就能使用自己的角色、资源和目录。
 
 能力图鉴仅认初始能力或真实 unlockedAbilities 记录，不根据境界一键全解锁，也不把图鉴收录伪装成效果已实现。planned 或不支持的被动效果禁用购买；支持的点击/自动积累效果验证整个事务、前置条件和资源后一次性结算，正确区分 add/multiply/set。目录分页，不再把越界条目默默隐藏。HUD 通过主场景 onIncomeTick 刷新。
 
@@ -37,6 +37,16 @@ node productize/jobs/run-xuanjie-local-play-e2e.mjs
 - 修炼模型回归覆盖7项主题、解锁、交易行为。
 - 浏览器脚本用真实 RuntimeKernel、真实石牧预设和 Chromium，检查修炼界面、规划中技能与节点2六次独立反击的胜利/完成回写。它直接进入节点2，绕过选关资格，不代表前三关自然连续通关、真人手感或导出包认证。
 - 报告 `workflow/reports/xuanjie_local_play_browser.json`；CI `Fangame Local Play Regression`。配置测试入口不等于通过，结果以实际运行记录为准。
+
+### 已取得的浏览器证据
+
+`9a4047f` 的 [CI run 34462573478](https://github.com/eric20170524/LoreWeaver/actions/runs/34462573478) 已通过上述9+7项单元检查与 Chromium 检查。下载并核对了 artifact `10146180076`，SHA256 `fa884b3235504d42fc4859b262f9e62dc438092cef4bb97ea40824c15ebe6ebd`。
+
+报告实际记录：六次独立反击、六次闪避，破势100，BossHP150，玩家HP120；耗时约23.33秒、剩余46.67秒；NodeResult.success=true、reason=boss_defeated；宿主保存回调记录 completedNodeIds=[2]、unlockedNodeIds=[1,3]。这里的保存回调由测试记录，不是用户机器磁盘持久化验收。错误列表为空。修炼界面和反击截图已检查，仍是原型图形，不是正式角色/Boss美术验收。
+
+第一次浏览器测试因测试入口使用 SceneManager.start、未停止已有菜单/模态层而无法点击 Boss。改为与真实选关按钮一致的 MainScene.scene.start，并断言菜单已停止后通过；没有修改角色生命、计时或破势来制造通关。旧随机性单元夹具也已补齐 running 前置状态，同时新增 idle 攻击不能消耗随机数的断言，保留同种子/异种子及三次随机调用检查。
+
+上述证据绑定 `9a4047f`；后续提交的结果需看对应 Actions 记录，不能沿用旧提交成功标志。
 
 ## 本地更新
 

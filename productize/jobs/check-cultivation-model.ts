@@ -5,12 +5,13 @@ import { cultivationView, abilityRecorded, passivePurchaseStatus, purchasePassiv
 const state = (): any => ({ mainCurrencyCount: 500, currentRealmIndex: 3, clickPower: 2, activeMultiplier: 1,
   unlockedAbilities: ['foreign_ability'], unlockedPassives: [], unlockedNodeIds: [1], completedNodeIds: [], secondaryResources: {} });
 const spec: any = { title: '测试世界', themeColor: '#b83a2d', economy: { currencyName: '真气', realms: ['武徒'] },
-  characterDesignCatalog: [{ name: '石牧', role: 'player_character' }], nodes: [] };
+  characterDesignCatalog: [{ name: '石牧', role: 'player' }], nodes: [] };
 const skill: any = { id: 'train', name: '练习', cost: 20, effects: [{ target: 'clickPower', op: 'multiply', value: 2 }], description: '测试' };
 
 test('active manifest owns labels, character, color and empty catalogs', () => {
   const view = cultivationView(spec);
   assert.equal(view.panel, '石牧 · 修炼');
+  assert.equal(cultivationView({ ...spec, characterDesignCatalog: [{ name: '别的主角', role: 'player_character' }] }).panel, '别的主角 · 修炼');
   assert.equal(view.currency, '真气');
   assert.equal(view.color, spec.themeColor);
   assert.deepEqual(view.passivesCatalog, []);

@@ -3,7 +3,7 @@ import type { GameSpec, PlayerState, PassiveSkillSpec, AbilitySpec } from '../..
 /** Presentation comes from the active manifest, never from a built-in IP. */
 export function cultivationView(spec: GameSpec) {
   const labels = spec.uiConfig?.cultivation?.labels || {};
-  const player = spec.characterDesignCatalog?.find(item => item.role === 'player_character');
+  const player = spec.characterDesignCatalog?.find(item => item.role === 'player' || item.role === 'player_character');
   const text = (value: unknown, fallback: string) =>
     typeof value === 'string' && value.trim() ? value.trim() : fallback;
   const currency = text(spec.economy?.currencyName?.split('/')[0], '修炼资源');
