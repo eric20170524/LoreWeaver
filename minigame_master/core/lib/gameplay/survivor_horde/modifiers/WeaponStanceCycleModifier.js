@@ -128,7 +128,7 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         )));
 
         const targets = groups.enemies.getChildren()
-            .filter((enemy) => enemy?.active)
+            .filter((enemy) => adapter.isEnemyTargetable(enemy))
             .map((enemy) => ({
                 enemy,
                 distance: Math.hypot(enemy.x - player.x, enemy.y - player.y)
@@ -155,10 +155,12 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             slash?.destroy?.();
         }
 
-        targets.forEach(({ enemy }) => adapter.damageEnemy(enemy, damage));
+        const hitCount = targets.reduce((count, { enemy }) => (
+            count + (adapter.damageEnemy(enemy, damage) ? 1 : 0)
+        ), 0);
         context.events?.emit?.('weapon-stance-attack', {
             stance: 'melee',
-            hitCount: targets.length,
+            hitCount,
             damage,
             radius
         });
