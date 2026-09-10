@@ -18,7 +18,7 @@ fs.mkdirSync(reports, { recursive: true });
 const output = path.join(reports, 'xuanjie_local_play_browser.json');
 const report = { status: 'failed', synthetic: true, releaseEligible: false,
   scope: 'RuntimeKernel + cultivation UI + authored node 2 direct-entry regression', assertions: [], errors: [] };
-let browser, server;
+let browser, server, page;
 try {
   await build({
     stdin: { resolveDir: root, loader: 'ts', contents: `
@@ -45,7 +45,7 @@ try {
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 760, height: 1320 } });
+  page = await browser.newPage({ viewport: { width: 760, height: 1320 } });
   page.on('pageerror', error => report.errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error' && !message.text().includes('404')) report.errors.push(message.text()); });
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
@@ -77,7 +77,9 @@ try {
 
   await page.evaluate(() => {
     const h = window.harness;
-    h.game.scene.start('LevelActiveScene', { node: h.spec.nodes.find(node => node.id === 2) });
+    // Match the actual node-card handler: ScenePlugin.start stops MainScene.
+    // SceneManager.start alone leaves the old modal/input scene running above it.
+    h.game.scene.keys.MainScene.scene.start('LevelActiveScene', { node: h.spec.nodes.find(node => node.id === 2) });
   });
   for (let i = 0; i < 12; i++) {
     if (await page.evaluate(() => window.harness.game.scene.keys.LevelActiveScene?.adapter?.status === 'running')) break;
@@ -91,6 +93,7 @@ try {
     h.adapter = h.game.scene.keys.LevelActiveScene.adapter;
     return h.adapter.getTestState();
   });
+  assert.equal(await page.evaluate(() => window.harness.game.scene.isActive('MainScene')), false, 'main menu must stop before gameplay');
   assert.equal(nodeState.adapterId, 'dodge_counter_boss');
   assert.ok(nodeState.timer > 60 && nodeState.timer <= 70);
   report.assertions.push('authored node 2 starts with its 70-second countdown');
@@ -107,7 +110,9 @@ try {
       return a.status === 'running' && a.state.phase === 'counter' && !a.state.counterUsed;
     }, null, { timeout: 10000, polling: 20 });
     const point = await page.evaluate(() => ({ x: window.harness.adapter.boss.x, y: window.harness.adapter.boss.y }));
+    const before = await page.evaluate(() => window.harness.adapter.getTestState());
     await clickPoint(point);
+    (report.counterAttempts ||= []).push({ expectedCount: count, point, before, after: await page.evaluate(() => window.harness.adapter.getTestState()) });
     if (count === 1) await clickPoint(point); // double-click must remain one counter
     await page.waitForFunction(expected => window.harness.adapter.state.counters === expected, count, { timeout: 1000 });
     const snapshot = await page.evaluate(() => window.harness.adapter.getTestState());
@@ -130,6 +135,23 @@ try {
   report.status = 'passed';
 } catch (error) {
   report.errors.push(error?.stack || String(error));
+  if (page && !page.isClosed()) {
+    report.failureState = await page.evaluate(() => {
+      const h = window.harness;
+      const scene = h?.game?.scene?.keys?.LevelActiveScene;
+      const adapter = h?.adapter || scene?.adapter;
+      const pointer = scene?.input?.activePointer;
+      return {
+        activeScenes: h?.game?.scene?.getScenes(true).map(item => item.sys.settings.key),
+        adapter: adapter?.getTestState?.(),
+        boss: adapter?.boss ? { x: adapter.boss.x, y: adapter.boss.y, active: adapter.boss.active, inputEnabled: adapter.boss.input?.enabled } : null,
+        pointer: pointer ? { x: pointer.x, y: pointer.y, isDown: pointer.isDown } : null,
+        mainModalActive: h?.game?.scene?.keys?.MainScene?.activeUIPlugin?.activeModalContainer?.active || false,
+        logs: h?.logs?.slice(-12)
+      };
+    }).catch(error => ({ error: String(error) }));
+    await page.screenshot({ path: path.join(reports, 'xuanjie_failure.png') }).catch(() => {});
+  }
   process.exitCode = 1;
 } finally {
   if (browser) await browser.close();
