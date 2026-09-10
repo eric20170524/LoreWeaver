@@ -25,6 +25,11 @@ function attackZoneFor(seed) {
   adapter.scene = { scale: { width: 720, height: 1280 } };
   adapter.telegraph = fakeTelegraph();
   adapter.beginAttack();
+  assert(adapter.state.attackZone === null, 'idle lifecycle cannot begin a combat attack');
+  assert(adapter.getTestState().determinism.random.calls === 0, 'rejected idle attack cannot consume verification randomness');
+  // Isolated rendering double: model the running lifecycle established by create().
+  adapter.status = 'running';
+  adapter.beginAttack();
   return {
     zone: { ...adapter.state.attackZone },
     random: adapter.getTestState().determinism.random
@@ -61,6 +66,7 @@ console.log(JSON.stringify({
   schemaVersion: 'loreweaver.action-boss-alignment-runtime-check.v1',
   status: 'passed',
   checks: [
+    'idle_attack_is_rejected_without_consuming_rng',
     'verification_seed_replays_attack_pattern',
     'normal_runtime_keeps_natural_randomness',
     'semantic_move_mutates_real_player_position',
