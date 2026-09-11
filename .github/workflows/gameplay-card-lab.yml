@@ -1,0 +1,48 @@
+name: Gameplay Card Lab
+on:
+  pull_request:
+    paths:
+      - 'productize/card-lab/**'
+      - 'productize/jobs/*card-lab*'
+      - 'minigame_master/gameplay/cards/dodge_counter_boss.json'
+      - 'minigame_master/core/**'
+      - 'src/game/**'
+      - 'src/runtime/**'
+      - 'package*.json'
+      - '.github/workflows/gameplay-card-lab.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dodge-counter-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Counter state-machine regressions
+        run: node --test productize/jobs/check-dodge-counter-runtime.mjs
+      - name: Install real Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build the static sample and operate it through real input
+        run: node productize/jobs/run-card-lab-e2e.mjs
+      - name: Upload exact tested playable bundle
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: gameplay-card-lab-playable
+          path: dist/card-lab/
+          if-no-files-found: error
+      - name: Upload browser evidence and failure traces
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameplay-card-lab-evidence
+          path: workflow/reports/card-lab/
+          if-no-files-found: error
