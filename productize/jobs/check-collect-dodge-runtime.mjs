@@ -5,6 +5,7 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import CollectDodgeAdapter from '../../minigame_master/core/lib/gameplay/collect_dodge/CollectDodgeAdapter.js';
 import { createMockPhaser } from '../../minigame_master/core/lib/testing/MockPhaserScene.js';
+import { normalizePlayabilityKnobs, validatePlayabilityContract } from '../../minigame_master/core/lib/contracts/PlayabilityContract.js';
 
 function fixture(knobs = {}, onEnd) {
   const mock = createMockPhaser();
@@ -123,4 +124,32 @@ test('reinitialization resets elapsed time and player state without sharing defa
   a.init({nodeConfig:{gameplay:{knobs:{}}}});
   assert.equal(a.state.elapsedSeconds,0); assert.equal(a.state.timeRemaining,40);
   assert.equal(a.state.score,0); assert.equal(a.result,null); assert.equal(a.state.hazardsHit,0);
+});
+
+
+test('host normalization preserves authored collection quotas and is idempotent',()=>{
+  for(const cardId of ['drag_collect_grid','collect_dodge']) {
+    for(const needAmount of [1,16,200]) {
+      const raw={needAmount,timeLimitSec:40};
+      const first=normalizePlayabilityKnobs(cardId,raw);
+      const second=normalizePlayabilityKnobs(cardId,first);
+      assert.equal(first.needAmount,needAmount);
+      assert.equal(first.goalValue,needAmount);
+      assert.deepEqual(second,first);
+      assert.deepEqual(raw,{needAmount,timeLimitSec:40});
+    }
+  }
+});
+test('the shared host-to-adapter path keeps the same default quota as direct entry',()=>{
+  const card=JSON.parse(fs.readFileSync(new URL('../../minigame_master/gameplay/cards/drag_collect_grid.json',import.meta.url)));
+  const raw=Object.fromEntries(Object.entries(card.knobs).map(([k,v])=>[k,v.default]));
+  const normalized=normalizePlayabilityKnobs(card.id,raw,{durationLimit:40,goalValue:16});
+  const {a}=fixture(normalized);
+  assert.equal(a.config.goalValue,16);assert.equal(a.config.duration,40);a.destroy();
+});
+test('high collection goals warn without rewriting difficulty or affecting other card migrations',()=>{
+  const checked=validatePlayabilityContract('drag_collect_grid',{needAmount:200,timeLimitSec:5});
+  assert.equal(checked.normalized.needAmount,200);
+  assert.ok(checked.warnings.some(w=>w.code==='collect_goal_high'));
+  assert.equal(normalizePlayabilityKnobs('reaction_pick',{needAmount:40,timeLimitSec:40}).needAmount,12);
 });

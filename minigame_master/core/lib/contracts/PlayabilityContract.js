@@ -82,8 +82,17 @@ export function resolveNeedAmount(knobs = {}, node = {}, durationSec = 30) {
     );
     if (!Number.isFinite(goal) || goal <= 0) goal = 15;
 
-    // Campaign nodes often synced goalValue == durationSec — unplayable for collect.
-    if (COLLECT_STYLE_CARDS.has(String(knobs.cardId || node.gameplay?.cardId || '')) || knobs._collectStyle) {
+    const cardId = String(knobs.cardId || node.gameplay?.cardId || '');
+    // Collection quotas are authored counts, not a proxy for run duration.
+    // The old heuristic turned 16/40s into 13 and even a one-item goal into 8.
+    // Honor the declared card range through every host normalization pass;
+    // infeasible configurations are warnings, never silent difficulty edits.
+    if (cardId === 'drag_collect_grid' || cardId === 'collect_dodge') {
+        return Math.max(1, Math.min(200, Math.round(goal)));
+    }
+
+    // Other legacy collect families retain their migration behavior for now.
+    if (COLLECT_STYLE_CARDS.has(cardId) || knobs._collectStyle) {
         const maxCollect = Math.max(12, Math.floor(durationSec / 3));
         if (goal >= durationSec) {
             goal = Math.min(maxCollect, Math.max(12, Math.floor(durationSec / 5)));

@@ -39,6 +39,7 @@ try {
   const read = page => page.evaluate(() => window.__CARD_LAB__.snapshot());
   const pads = new WeakMap();
   const attempts = new WeakMap();
+  const inputLatency = new WeakMap();
   async function point(page, x, y) {
     const box = await page.locator('canvas').boundingBox();
     assert.ok(box, 'canvas has bounds');
@@ -70,7 +71,7 @@ try {
     page.on('console', msg => { if (msg.type() === 'error') row.errors.push(msg.text()); });
     page.on('requestfailed', req => row.errors.push(`request: ${req.url()} ${req.failure()?.errorText}`));
     page.on('response', res => { if (res.status() >= 400) row.errors.push(`HTTP ${res.status()}: ${res.url()}`); });
-    await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
+    await context.tracing.start({ screenshots: false, snapshots: true, sources: false });
     try {
       await page.goto(targetUrl);
       await page.waitForFunction(() => !!window.__CARD_LAB__, null, { timeout: 10000 });
@@ -97,10 +98,11 @@ try {
     assert.ok(p, 'input point prepared before the timing-critical window');
     // Anticipate driver round trips; do not freeze the game or move its clock.
     // Intent is not a judgment: only the actual accepted offset determines grade.
-    const target = aim === 'good' ? -175 : -60;
+    const latency = inputLatency.get(page) ?? 60;
+    const target = (aim === 'good' ? -120 : 0) - latency;
     const observed = await page.waitForFunction(target => {
       const s = window.__CARD_LAB__.snapshot().state;
-      return s?.status === 'running' && !s.resolved && s.offsetMs >= target && s.offsetMs <= target + 30
+      return s?.status === 'running' && !s.resolved && s.offsetMs >= target && s.offsetMs <= 100
         ? { beatIndex: s.beatIndex, offsetMs: s.offsetMs, sequence: s.judgmentSequence } : false;
     }, target, { timeout: 8000, polling: 8 });
     if (input === 'touch') await page.touchscreen.tap(p.x, p.y);
@@ -118,6 +120,10 @@ try {
     assert.equal(actual.kind, expected, 'grade must match actual input offset, not intended grade');
     assert.equal(actual.gain, { perfect: 10, good: 5, miss: 0 }[expected]);
     if (duplicate) assert.equal(after.judgmentSequence, before.sequence + 1, 'two inputs consume this beat once');
+    // Estimate only the external driver's delivery latency; never adjust game
+    // windows or time. A broad observation window avoids skipping an entire
+    // beat when a rendered frame steps over a 30ms polling interval.
+    inputLatency.set(page, Math.max(0, Math.min(180, actual.offsetMs - before.offsetMs)));
     attempts.get(page).push({ input, aim, duplicate, observed: before, actual });
     return after;
   }
