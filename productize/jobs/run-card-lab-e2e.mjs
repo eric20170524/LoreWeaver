@@ -37,8 +37,9 @@ try {
   report.browser = browser.version();
   const url = `http://127.0.0.1:${server.address().port}/preview/`;
   const read = page => page.evaluate(() => window.__CARD_LAB__.snapshot());
+  const bounds = new WeakMap();
   async function point(page, x, y) {
-    const box = await page.locator('canvas').boundingBox();
+    const box = bounds.get(page) || await page.locator('canvas').boundingBox();
     assert.ok(box, 'canvas has bounds');
     return { x: box.x + x / 720 * box.width, y: box.y + y / 1280 * box.height };
   }
@@ -49,7 +50,7 @@ try {
     await page.mouse.move(from.x, from.y);
     await page.mouse.down();
     try {
-      await page.mouse.move(to.x, to.y, { steps: 5 });
+      await page.mouse.move(to.x, to.y);
       if (s.state.status === 'running') {
         // CDP delivery does not prove Phaser consumed the last move yet.
         // A lethal hit may legitimately dispose the player before we observe its
@@ -75,6 +76,8 @@ try {
       const s = window.__CARD_LAB__?.snapshot();
       return s?.generation === generation + 1 && !s.starting && s.state?.status === 'running';
     }, before.generation, { timeout: 20000, polling: 30 });
+    await page.locator('canvas').scrollIntoViewIfNeeded();
+    bounds.set(page, await page.locator('canvas').boundingBox());
     const after = await read(page);
     assert.deepEqual(after.sceneKeys, ['LevelActiveScene'], 'menu is stopped before gameplay');
     assert.equal(after.state.counters, 0); assert.equal(after.state.gauge, 0);
@@ -101,7 +104,7 @@ try {
     page.on('console', msg => { if (msg.type() === 'error') row.errors.push(msg.text()); });
     page.on('requestfailed', req => row.errors.push(`request: ${req.url()} ${req.failure()?.errorText}`));
     page.on('response', res => { if (res.status() >= 400) row.errors.push(`HTTP ${res.status()}: ${res.url()}`); });
-    await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
+    await context.tracing.start({ screenshots: false, snapshots: true, sources: false });
     try {
       await page.goto(targetUrl);
       await page.waitForFunction(() => !!window.__CARD_LAB__, null, { timeout: 10000 });

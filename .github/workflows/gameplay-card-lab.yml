@@ -4,9 +4,8 @@ on:
     paths:
       - 'productize/card-lab/**'
       - 'productize/jobs/*card-lab*'
-      - 'minigame_master/gameplay/cards/dodge_counter_boss.json'
-      - 'minigame_master/gameplay/cards/rhythm_timing.json'
-      - 'productize/jobs/check-rhythm-timing-runtime.mjs'
+      - 'productize/jobs/check-*-runtime.mjs'
+      - 'minigame_master/gameplay/cards/**'
       - 'minigame_master/core/**'
       - 'src/game/**'
       - 'src/runtime/**'
@@ -18,9 +17,20 @@ permissions:
 jobs:
   cards-browser:
     runs-on: ubuntu-latest
-    # Run 34589336917 spent over nine minutes installing browser dependencies.
-    # Keep setup bounded without cancelling the unchanged gameplay assertions.
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - card: dodge_counter_boss
+            unit: check-dodge-counter-runtime.mjs
+            browser: run-card-lab-e2e.mjs
+          - card: rhythm_timing
+            unit: check-rhythm-timing-runtime.mjs
+            browser: run-rhythm-card-lab-e2e.mjs
+          - card: drag_collect_grid
+            unit: check-collect-dodge-runtime.mjs
+            browser: run-collect-card-lab-e2e.mjs
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,27 +40,25 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Counter and rhythm state-machine regressions
-        run: node --test productize/jobs/check-dodge-counter-runtime.mjs productize/jobs/check-rhythm-timing-runtime.mjs
+      - name: Card state-machine regressions
+        run: node --test productize/jobs/${{ matrix.unit }}
       - name: Install real Chromium
         timeout-minutes: 12
         run: npx playwright install --with-deps chromium
-      - name: Build the static sample and operate it through real input
+      - name: Real browser input on the shared static bundle
         timeout-minutes: 5
-        run: |
-          node productize/jobs/run-card-lab-e2e.mjs
-          node productize/jobs/run-rhythm-card-lab-e2e.mjs
-      - name: Upload exact tested playable bundle
+        run: node productize/jobs/${{ matrix.browser }}
+      - name: Upload tested playable bundle (this card's scope only)
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: gameplay-card-lab-playable
+          name: card-lab-playable-${{ matrix.card }}
           path: dist/card-lab/
           if-no-files-found: error
-      - name: Upload browser evidence and failure traces
+      - name: Upload scoped browser evidence and failures
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gameplay-card-lab-evidence
+          name: card-lab-evidence-${{ matrix.card }}
           path: workflow/reports/card-lab/
           if-no-files-found: error
