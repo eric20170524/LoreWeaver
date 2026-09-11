@@ -52,10 +52,13 @@ try {
       await page.mouse.move(to.x, to.y, { steps: 5 });
       if (s.state.status === 'running') {
         // CDP delivery does not prove Phaser consumed the last move yet.
-        // Keep the real button held until the actual player reaches the point;
-        // failure here remains a test failure, never a synthetic state edit.
+        // A lethal hit may legitimately dispose the player before we observe its
+        // final position. The caller still asserts exact HP loss and hp_zero;
+        // accepting terminal cleanup here does not count any outcome as success.
         await page.waitForFunction(({ x, y }) => {
-          const p = window.__CARD_LAB__.snapshot().state?.playerPosition;
+          const state = window.__CARD_LAB__.snapshot().state;
+          if (state?.lastResult && ['ended', 'destroyed'].includes(state.status)) return true;
+          const p = state?.playerPosition;
           return p && Math.abs(p.x - x) < 2 && Math.abs(p.y - y) < 2;
         }, { x, y }, { timeout: 1000, polling: 16 });
       } else {
