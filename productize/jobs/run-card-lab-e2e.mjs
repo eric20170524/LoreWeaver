@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
+import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
 import { ROOT, OUT, buildCardLab } from './build-card-lab.mjs';
@@ -70,7 +71,7 @@ try {
     const s = await read(page); assert.ok(s.bossPosition, 'boss is alive');
     const p = await point(page, s.bossPosition.x, s.bossPosition.y); await page.mouse.click(p.x, p.y);
   }
-  async function run(id, action, mobile = false) {
+  async function run(id, action, mobile = false, targetUrl = url) {
     const context = await browser.newContext(mobile
       ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }
       : { viewport: { width: 1440, height: 1050 } });
@@ -83,7 +84,7 @@ try {
     page.on('response', res => { if (res.status() >= 400) row.errors.push(`HTTP ${res.status()}: ${res.url()}`); });
     await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
     try {
-      await page.goto(url);
+      await page.goto(targetUrl);
       await page.waitForFunction(() => !!window.__CARD_LAB__, null, { timeout: 10000 });
       await action(page, row);
       await page.waitForTimeout(200);
@@ -92,6 +93,7 @@ try {
       row.final = await read(page);
       await page.screenshot({ path: path.join(reports, `${id}.png`), fullPage: true });
     } catch (error) {
+      row.passed = false;
       row.errors.push(error.stack || String(error));
       row.final = await read(page).catch(() => null);
       await page.screenshot({ path: path.join(reports, `${id}-failed.png`), fullPage: true }).catch(() => {});
@@ -156,6 +158,7 @@ try {
     await page.getByRole('button', { name: '暂停', exact: true }).click();
     await page.waitForFunction(() => window.__CARD_LAB__.snapshot().state?.status === 'paused');
     const before = (await read(page)).state;
+    assert.equal(await page.evaluate(() => document.activeElement?.tagName), 'CANVAS');
     await page.keyboard.press('Space'); await clickBoss(page); await drag(page, 360, 980);
     await page.waitForTimeout(700);
     const frozen = (await read(page)).state;
@@ -192,6 +195,12 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no horizontal overflow');
     row.assertions.push('Chromium mobile emulation: real touch drag and Boss tap', 'no horizontal overflow; not a physical iOS/Android certification');
   }, true);
+  await run('offline-file-launch', async (page, row) => {
+    await begin(page);
+    await page.getByRole('button', { name: '退出', exact: true }).click();
+    await page.waitForFunction(() => window.__CARD_LAB__.snapshot().result?.reason === 'retreated');
+    row.assertions.push('the same bundle also starts from file:// without a server or API key');
+  }, false, pathToFileURL(path.join(OUT, 'index.html')).href);
   report.status = report.cases.every(row => row.passed) ? 'passed' : 'failed';
 } catch (error) { report.error = error.stack || String(error); }
 finally {

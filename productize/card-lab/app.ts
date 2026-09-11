@@ -10,6 +10,7 @@ const pause = $('pause') as HTMLButtonElement;
 const quit = $('quit') as HTMLButtonElement;
 const duration = $('duration') as HTMLInputElement;
 const hp = $('hp') as HTMLInputElement;
+duration.required = hp.required = true;
 let runtime: ReturnType<typeof startLoreWeaverRuntime> | null = null;
 let adapter: any = null;
 let generation = 0;
@@ -21,7 +22,7 @@ let saves: any[] = [];
 let logs: string[] = [];
 let ended = false;
 let runConfig: any = null;
-const snapshot = () => ({
+const snapshot = () => structuredClone({
   generation, starting, specHash: runtime?.resolvedSpec.specHash || null,
   cardId: card.id, revision: LAB_REVISION, config: runConfig,
   state: adapter?.getTestState?.() || null, result: lastResult,
@@ -43,6 +44,13 @@ function stop() {
   synth.stopBgm();
   synth.stopBossTheme();
   $('game').replaceChildren();
+}
+function focusGame() {
+  const canvas = runtime?.game.canvas;
+  if (!canvas) return;
+  canvas.tabIndex = 0;
+  canvas.setAttribute('aria-label', '闪避反击游戏画面');
+  canvas.focus({ preventScroll: true });
 }
 function launch() {
   if (starting) return;
@@ -86,6 +94,8 @@ pause.addEventListener('click', () => {
   if (!adapter || ended) return;
   if (adapter.status === 'paused') adapter.resume();
   else if (adapter.status === 'running') adapter.pause();
+  // Space belongs to gameplay, not the last clicked DOM button.
+  focusGame();
 });
 quit.addEventListener('click', () => {
   if (!adapter || ended) return;
@@ -106,6 +116,7 @@ const refresh = window.setInterval(() => {
   const state = adapter?.getTestState?.();
   if (starting && state?.status === 'running') {
     starting = false; start.disabled = false;
+    focusGame();
   } else if (starting && Date.now() > deadline) {
     stop(); starting = false; start.disabled = false;
     $('status').textContent = '启动超时'; $('result').textContent = logs.join('\n'); return;

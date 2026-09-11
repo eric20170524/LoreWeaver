@@ -26,7 +26,7 @@ npx playwright install chromium
 node productize/jobs/run-card-lab-e2e.mjs
 ```
 
-GitHub Actions `Gameplay Card Lab` 在 PR 更新时运行。浏览器脚本用实际静态构建、HTTP 子路径、真实鼠标/键盘/触控输入；不编辑状态、不加速时钟、不调用 finish(true)。五个场景分别是：默认六次反击胜利、实际拖入攻击区导致HP归零、公开十秒配置超时、暂停/恢复/退出/三次重开、390px移动触控模拟。
+GitHub Actions `Gameplay Card Lab` 在 PR 更新时运行。浏览器脚本用实际静态构建、HTTP 子路径、真实鼠标/键盘/触控输入；不编辑状态、不加速时钟、不调用 finish(true)。六个场景分别是：默认六次反击胜利、实际拖入攻击区导致HP归零、公开十秒配置超时、暂停/恢复/退出/三次重开、390px移动触控模拟，以及同一构建包的 file:// 离线启动。
 
 成功才上传可玩包 `gameplay-card-lab-playable`；证据包 `gameplay-card-lab-evidence` 保留每项结果与截图，失败时附 trace。报告 `workflow/reports/card-lab/browser-latest.json` 包含实际构建revision、文件哈希、浏览器版本和各项结果。报告标记 synthetic=true、releaseEligible=false：不是自然连续闯关、真人体验、物理手机或全设备性能认证。
 
@@ -39,3 +39,9 @@ GitHub Actions `Gameplay Card Lab` 在 PR 更新时运行。浏览器脚本用�
 ## 尚待验收
 
 其他卡与 modifier 组合；正式角色动画与音效；长期压力、设备FPS；工作台到导出完整发布流程；大幅自定义参数组合。每张卡只有对应提交的报告可证明已测范围，计划和工作流配置本身不是通过证据。
+
+## 首轮云端回归修复
+
+`a2c572d` 的 Actions 34588436890 实测四项通过、一项失败：暂停按钮保留 DOM 焦点，按空格会触发按钮点击、意外恢复游戏。修复把开始/暂停操作后的焦点交给可聚焦 canvas，保留空格作为游戏输入；继续验证原暂停断言，不放宽计时条件。截图写入失败也必须将该场景标记为失败，不能留下提前设置的 passed=true。
+
+人工检查首轮截图还发现 GameRunner 外壳的标题文字绘制异常（只显示首字）；外层网页提供完整标题与操作说明，但这不能算视觉验收通过。该共用外壳问题单独跟进，不通过演示专用战斗实现掩盖。
