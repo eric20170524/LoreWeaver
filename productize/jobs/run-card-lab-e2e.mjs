@@ -46,8 +46,24 @@ try {
     const s = await read(page);
     const from = await point(page, s.state.playerPosition.x, s.state.playerPosition.y);
     const to = await point(page, x, y);
-    await page.mouse.move(from.x, from.y); await page.mouse.down();
-    await page.mouse.move(to.x, to.y, { steps: 5 }); await page.mouse.up();
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    try {
+      await page.mouse.move(to.x, to.y, { steps: 5 });
+      if (s.state.status === 'running') {
+        // CDP delivery does not prove Phaser consumed the last move yet.
+        // Keep the real button held until the actual player reaches the point;
+        // failure here remains a test failure, never a synthetic state edit.
+        await page.waitForFunction(({ x, y }) => {
+          const p = window.__CARD_LAB__.snapshot().state?.playerPosition;
+          return p && Math.abs(p.x - x) < 2 && Math.abs(p.y - y) < 2;
+        }, { x, y }, { timeout: 1000, polling: 16 });
+      } else {
+        await page.waitForTimeout(50);
+      }
+    } finally {
+      await page.mouse.up();
+    }
   }
   async function begin(page) {
     const before = await read(page);
@@ -108,7 +124,7 @@ try {
     assert.equal(initial.config.playerHp, 100); assert.equal(initial.config.bossHp, 300);
     assert.equal(initial.config.durationSec, 90);
     await drag(page, 22, 1140);
-    await page.keyboard.press('Space'); // outside the opening must do nothing
+    await page.keyboard.press('Space');
     assert.equal((await read(page)).state.counters, 0);
     for (let count = 1; count <= 6; count++) {
       await waitCounter(page);
@@ -132,11 +148,18 @@ try {
   });
   await run('damage-failure', async (page, row) => {
     await begin(page);
+    row.pointerAttempts = [];
     for (let hit = 1; hit <= 6; hit++) {
       await page.waitForFunction(() => window.__CARD_LAB__.snapshot().state?.phase === 'warning', null, { timeout: 10000, polling: 16 });
-      const zone = (await read(page)).state.attackZone;
+      const before = (await read(page)).state;
+      const zone = before.attackZone;
+      const attempt = { hit, before, target: { x: zone.x, y: zone.y } };
+      row.pointerAttempts.push(attempt);
       await drag(page, zone.x, zone.y);
-      await page.waitForFunction(previous => window.__CARD_LAB__.snapshot().state?.hp < previous, 100 - (hit - 1) * 18, { timeout: 3000 });
+      attempt.afterDrag = (await read(page)).state;
+      await page.waitForFunction(previous => window.__CARD_LAB__.snapshot().state?.hp < previous, before.hp, { timeout: 3000 });
+      attempt.afterHit = (await read(page)).state;
+      assert.equal(attempt.afterHit.hp, Math.max(0, before.hp - 18));
       if (hit < 6) await page.waitForFunction(() => window.__CARD_LAB__.snapshot().state?.phase === 'idle', null, { timeout: 4000 });
     }
     await page.waitForFunction(() => !!window.__CARD_LAB__.snapshot().result);
