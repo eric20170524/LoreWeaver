@@ -1,7 +1,11 @@
 import { startLoreWeaverRuntime } from '../../src/runtime/LoreWeaverRuntimeKernel';
 import { INITIAL_PLAYER_STATE } from '../../src/runtime/playerState';
 import { synth } from '../../src/utils/AudioSynth';
-import card from '../../minigame_master/gameplay/cards/dodge_counter_boss.json';
+import dodgeCard from '../../minigame_master/gameplay/cards/dodge_counter_boss.json';
+import rhythmCard from '../../minigame_master/gameplay/cards/rhythm_timing.json';
+
+const cards = { dodge_counter_boss: dodgeCard, rhythm_timing: rhythmCard };
+let card: any = cards[new URLSearchParams(location.search).get('card') as keyof typeof cards] || dodgeCard;
 
 declare const LAB_REVISION: string;
 const $ = (id: string) => document.getElementById(id)!;
@@ -10,6 +14,9 @@ const pause = $('pause') as HTMLButtonElement;
 const quit = $('quit') as HTMLButtonElement;
 const duration = $('duration') as HTMLInputElement;
 const hp = $('hp') as HTMLInputElement;
+const selector = $('card') as HTMLSelectElement;
+const target = $('target') as HTMLInputElement;
+const combo = $('combo') as HTMLInputElement;
 duration.required = hp.required = true;
 let runtime: ReturnType<typeof startLoreWeaverRuntime> | null = null;
 let adapter: any = null;
@@ -49,13 +56,15 @@ function focusGame() {
   const canvas = runtime?.game.canvas;
   if (!canvas) return;
   canvas.tabIndex = 0;
-  canvas.setAttribute('aria-label', '闪避反击游戏画面');
+  canvas.setAttribute('aria-label', `${card.title} 游戏画面`);
   canvas.focus({ preventScroll: true });
 }
 function launch() {
   if (starting) return;
-  if (!duration.checkValidity() || !hp.checkValidity()) {
-    (duration.checkValidity() ? hp : duration).reportValidity();
+  const fields = [duration, hp, ...(card.id === 'rhythm_timing' ? [target, combo] : [])];
+  const invalid = fields.find(field => !field.checkValidity());
+  if (invalid) {
+    invalid.reportValidity();
     return;
   }
   stop(); generation += 1; starting = true; ended = false;
@@ -63,13 +72,18 @@ function launch() {
   start.disabled = true; pause.disabled = true; quit.disabled = true;
   $('result').textContent = '本次尚未结算';
   $('status').textContent = '加载中';
-  runConfig = Object.fromEntries(Object.entries(card.knobs).map(([key, knob]) => [key, knob.default]));
+  runConfig = Object.fromEntries(Object.entries(card.knobs).map(([key, knob]) => [key, (knob as { default: unknown }).default]));
   runConfig.durationSec = Number(duration.value);
   runConfig.playerHp = Number(hp.value);
+  const rhythm = card.id === 'rhythm_timing';
+  if (rhythm) {
+    runConfig.targetProgress = Number(target.value);
+    runConfig.requiredBestCombo = Number(combo.value);
+  }
   const node = {
-    id: 1, title: '闪避反击试炼', intro: '按住拖动离开危险区。金色反击窗口出现时，点击红色 Boss 或按空格。每个窗口只接受一次反击。',
-    taunts: ['看清预警，再抓住反击窗口。'], mechanics: card.id, rewards: '试验场完成记录',
-    goalValue: Number(runConfig.breakGaugeMax), resourceMultiplier: 1, difficulty: 1,
+    id: 1, title: rhythm ? '节奏共鸣试炼' : '闪避反击试炼', intro: rhythm ? '圆环重合时点击中心或按空格。进度与最佳连击均达标才成功。' : '按住拖动离开危险区。金色反击窗口出现时，点击红色 Boss 或按空格。每个窗口只接受一次反击。',
+    taunts: [rhythm ? '听从节拍，看准圆环。' : '看清预警，再抓住反击窗口。'], mechanics: card.id, rewards: '试验场完成记录',
+    goalValue: Number(rhythm ? runConfig.targetProgress : runConfig.breakGaugeMax), resourceMultiplier: 1, difficulty: 1,
     durationLimit: Number(runConfig.durationSec),
     gameplay: { adapter: 'phaser', cardId: card.id, modifiers: [], knobs: { ...runConfig }, patchLevel: 'L1' as const }
   };
@@ -135,8 +149,39 @@ const refresh = window.setInterval(() => {
   if (state) {
     $('timer').textContent = `${Math.ceil(state.timer ?? 0)}s`;
     $('health').textContent = String(state.hp ?? '—');
-    $('gauge').textContent = `${state.gauge ?? 0}/${state.goalValue ?? 100}`;
-    $('counters').textContent = String(state.counters ?? 0);
+    $('gauge').textContent = `${state.gauge ?? state.score ?? 0}/${state.goalValue ?? 100}`;
+    $('counters').textContent = card.id === 'rhythm_timing' ? `${state.combo ?? 0} / ${state.bestCombo ?? 0}` : String(state.counters ?? 0);
   }
 }, 50);
 window.addEventListener('pagehide', () => { clearInterval(refresh); stop(); });
+
+function selectCard() {
+  stop(); starting = false; ended = false; lastResult = null; runConfig = null; saves = []; logs = [];
+  selector.value = card.id;
+  const rhythm = card.id === 'rhythm_timing';
+  document.title = `玩法卡试验场 · ${rhythm ? '节奏点击' : '闪避反击'}`;
+  $('heading').textContent = rhythm ? '02 · 节奏点击' : '01 · 闪避反击 Boss';
+  $('card-id').textContent = card.id;
+  $('subtitle').textContent = rhythm ? '看准节拍，稳定连击' : '读招，然后反击';
+  $('instructions').innerHTML = rhythm
+    ? '<p>① 外圈收拢到白环时，点击中心或按空格。</p><p>② Perfect ±80ms 得10分；Good ±160ms 得5分。过早或漏拍扣生命并断连击，每拍只结算一次。</p><p>③ 进度和最佳连击同时达标才获胜。默认10次Perfect可完成；不是随意点击加分。</p>'
+    : '<p>① 按住拖动青色角色，离开黄 / 红色危险区。</p><p>② 金圈亮起时，点击红色 Boss 或按空格。每个窗口仅一次。</p><p>③ 破势达到100或Boss血量归零获胜；生命耗尽或超时失败。</p>';
+  $('rhythm-config').hidden = !rhythm;
+  $('progress-label').textContent = rhythm ? '进度' : '破势';
+  $('count-label').textContent = rhythm ? '当前 / 最佳连击' : '反击次数';
+  for (const [field, key] of [[duration, 'durationSec'], [hp, 'playerHp']] as const) {
+    const knob = card.knobs[key]; field.value = String(knob.default);
+    field.min = String(knob.min); field.max = String(knob.max);
+  }
+  target.value = String(rhythmCard.knobs.targetProgress.default);
+  combo.value = String(rhythmCard.knobs.requiredBestCombo.default);
+  $('definition').textContent = JSON.stringify(card, null, 2);
+  $('status').textContent = '尚未开始'; $('result').textContent = '本次尚未结算';
+  for (const id of ['timer', 'health', 'gauge', 'counters']) $(id).textContent = '—';
+  start.disabled = false; pause.disabled = quit.disabled = true;
+}
+selector.addEventListener('change', () => {
+  card = cards[selector.value as keyof typeof cards] || dodgeCard;
+  selectCard();
+});
+selectCard();

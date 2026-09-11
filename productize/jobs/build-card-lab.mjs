@@ -27,7 +27,7 @@ export async function buildCardLab() {
   const phaserLicense = fs.readFileSync(path.join(ROOT, 'node_modules/phaser/LICENSE.md'), 'utf8');
   fs.writeFileSync(path.join(OUT, 'THIRD_PARTY_NOTICES.txt'), `Phaser\n${phaserLicense}\nAdditional notices: game.js.LEGAL.txt\n`);
   const files = ['index.html', 'game.js', 'game.js.LEGAL.txt', 'LICENSE', 'THIRD_PARTY_NOTICES.txt'].filter(name => fs.existsSync(path.join(OUT, name)));
-  const manifest = { revision, cards: ['dodge_counter_boss'], releaseEligible: false,
+  const manifest = { revision, cards: ['dodge_counter_boss', 'rhythm_timing'], releaseEligible: false,
     runtime: 'compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter',
     files: files.map(name => ({ name, sha256: createHash('sha256').update(fs.readFileSync(path.join(OUT, name))).digest('hex') })) };
   fs.writeFileSync(path.join(OUT, 'build-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
