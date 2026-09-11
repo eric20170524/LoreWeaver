@@ -16,6 +16,7 @@ venv/
 
 # Local runtime data (workspaces, SQLite, generated assets) — never commit
 data/
+*.db
 **/source/
 docs_collab/screenshots/
 
