@@ -16,7 +16,9 @@ permissions:
 jobs:
   dodge-counter-browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Run 34589336917 spent over nine minutes installing browser dependencies.
+    # Keep setup bounded without cancelling the unchanged gameplay assertions.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,8 +31,10 @@ jobs:
       - name: Counter state-machine regressions
         run: node --test productize/jobs/check-dodge-counter-runtime.mjs
       - name: Install real Chromium
+        timeout-minutes: 12
         run: npx playwright install --with-deps chromium
       - name: Build the static sample and operate it through real input
+        timeout-minutes: 5
         run: node productize/jobs/run-card-lab-e2e.mjs
       - name: Upload exact tested playable bundle
         uses: actions/upload-artifact@v4
