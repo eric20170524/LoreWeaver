@@ -3,27 +3,28 @@
   "id": "sequence_synthesis",
   "title": "Sequence Synthesis",
   "category": "crafting_puzzle",
-  "status": "production_ready",
+  "status": "runtime_ready",
   "runtime": {
     "engineTargets": [
-      "html_canvas",
       "phaser"
     ],
     "adapter": "SequenceSynthesisAdapter",
-    "container": "node_iframe_microgame",
+    "container": "phaser_scene",
     "template": "sequence_synthesis"
   },
   "inputs": [
-    "pointer",
-    "button"
+    "pointer_down",
+    "touch_tap",
+    "keyboard_1_to_8"
   ],
   "objectives": [
     "complete_recipe_sequence"
   ],
   "failure": [
-    "mistakes_exhausted",
-    "explosion",
-    "retreated"
+    "explosion_when_enabled",
+    "timer_expired",
+    "retreated",
+    "hp_zero_if_external_damage"
   ],
   "knobs": {
     "recipeLength": {
@@ -38,7 +39,7 @@
       "type": "integer",
       "default": 6,
       "min": 2,
-      "max": 30,
+      "max": 8,
       "patchLevel": "L1",
       "description": "Number of possible materials shown."
     },
@@ -48,7 +49,7 @@
       "min": 0,
       "max": 100,
       "patchLevel": "L1",
-      "description": "Progress lost after a wrong input."
+      "description": "Wrong input rewinds ceil(penalty * recipeLength / 100) accepted ingredients. Progress is the remaining accepted prefix; zero means no rollback."
     },
     "explodeOnConsecutiveMistakes": {
       "type": "integer",
@@ -76,19 +77,29 @@
       "patchLevel": "L1",
       "description": "Allow pause."
     },
-    "artRuntimeMode": {
-      "type": "string",
-      "default": "prototype",
-      "patchLevel": "L1",
-      "description": "prototype | production art mode."
-    },
     "runSeed": {
       "type": "integer",
       "default": 0,
       "min": 0,
       "max": 999999999,
       "patchLevel": "L1",
-      "description": "Optional RNG seed for recipe."
+      "description": "Reproducible recipe and material-order seed, including 0. Never falls back to wall time."
+    },
+    "durationSec": {
+      "type": "number",
+      "default": 45,
+      "min": 5,
+      "max": 180,
+      "patchLevel": "L1",
+      "description": "Real round countdown; timeout always fails."
+    },
+    "playerHp": {
+      "type": "number",
+      "default": 100,
+      "min": 1,
+      "max": 300,
+      "patchLevel": "L1",
+      "description": "Initial health; regular material mistakes affect prefix/overheat, not HP."
     }
   },
   "patchPolicy": {
@@ -114,16 +125,26 @@
     "telemetry": [
       "mistakes",
       "recipeLength",
-      "elapsedSec"
+      "elapsedSec",
+      "progress",
+      "stepsCompleted",
+      "resets",
+      "runSeed",
+      "timeRemaining"
     ]
   },
   "testFixture": {
-    "type": "e2e",
-    "path": null,
+    "type": "browser",
+    "path": "productize/jobs/run-sequence-card-lab-e2e.mjs",
     "assertions": [
-      "correct material advances recipe",
-      "wrong material applies penalty",
-      "complete recipe sends NodeResult"
+      "real material input completes the recipe",
+      "wrong material rewinds actual prefix",
+      "overheat reset and optional failure",
+      "real timeout fails",
+      "pause input and countdown freeze",
+      "restart clears result and seed zero is reproducible",
+      "mobile touch completes recipe",
+      "same static bundle starts offline"
     ]
   },
   "sourceProvenance": [
@@ -141,10 +162,12 @@
     ]
   },
   "knownRisks": [
-    "strict order can feel like rote clicking without meaningful hints",
-    "must expose current required material clearly for accessibility"
+    "No physical-device/FPS/soak certification",
+    "Long authored localization needs visual review",
+    "Whole-ingredient rollback intentionally replaces cosmetic progress penalties",
+    "Legacy forceComplete demo helper is opt-in only and is never used by real-input card lab tests"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "implementationNotes": "Shared RuntimeKernel/core adapter. Material pool 2-8, recipe 1-20; pointer/touch or visible number key. Seeded Fisher-Yates; actual prefix rollback, real countdown, terminal/lifecycle guards. Current browser results are tied to CI source revision.",
   "requiredAssets": {
     "playerClips": [
       "idle"
@@ -194,35 +217,42 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
-    "conditionalWaivers": [
-      "device_class_fps: headless soak avgFps proxy",
-      "vlm_visual_overflow: deferred; deterministic visual_audit used",
-      "standalone_zip_host_e2e: demo browser gate primary for sequence puzzle card"
-    ]
+    "productionReady": false,
+    "blockReason": "Current revision requires per-card browser, device, visual and export validation; historical demo certification is not inherited."
   },
-  "certificationNotes": {
+  "historicalCertification": {
     "status": "production_ready",
-    "certifiedAt": "2026-07-24",
-    "demo": "minigame_master/core/demo/sequence_synthesis",
-    "e2eScript": "npm run check:seq-e2e:release",
-    "visualSoakScript": "npm run check:seq-visual-soak:release",
-    "readinessScript": "npm run check:seq-gate",
-    "fixtures": "minigame_master/gameplay/cards/fixtures/sequence_synthesis/",
-    "humanSignoff": "docs/reports/step_E3_sequence_synthesis_human_playtest_signoff.md",
-    "evidence": [
-      "runtime_e2e_sequence_synthesis_latest.json",
-      "standalone_browser_report_sequence_synthesis.json",
-      "visual_audit_sequence_synthesis_latest.json",
-      "performance_report_sequence_synthesis_latest.json",
-      "seq_gate_readiness_latest.json",
-      "level_recipe_compile_seq_latest.json"
-    ],
-    "residuals": [
-      "true device-class FPS P95",
-      "VLM overflow/HUD audit",
-      "full standalone export host E2E matrix"
-    ]
+    "exportPolicy": {
+      "productionReady": true,
+      "blockReason": null,
+      "conditionalWaivers": [
+        "device_class_fps: headless soak avgFps proxy",
+        "vlm_visual_overflow: deferred; deterministic visual_audit used",
+        "standalone_zip_host_e2e: demo browser gate primary for sequence puzzle card"
+      ]
+    },
+    "notes": {
+      "status": "production_ready",
+      "certifiedAt": "2026-07-24",
+      "demo": "minigame_master/core/demo/sequence_synthesis",
+      "e2eScript": "npm run check:seq-e2e:release",
+      "visualSoakScript": "npm run check:seq-visual-soak:release",
+      "readinessScript": "npm run check:seq-gate",
+      "fixtures": "minigame_master/gameplay/cards/fixtures/sequence_synthesis/",
+      "humanSignoff": "docs/reports/step_E3_sequence_synthesis_human_playtest_signoff.md",
+      "evidence": [
+        "runtime_e2e_sequence_synthesis_latest.json",
+        "standalone_browser_report_sequence_synthesis.json",
+        "visual_audit_sequence_synthesis_latest.json",
+        "performance_report_sequence_synthesis_latest.json",
+        "seq_gate_readiness_latest.json",
+        "level_recipe_compile_seq_latest.json"
+      ],
+      "residuals": [
+        "true device-class FPS P95",
+        "VLM overflow/HUD audit",
+        "full standalone export host E2E matrix"
+      ]
+    }
   }
 }

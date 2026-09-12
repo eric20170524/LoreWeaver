@@ -31,6 +31,9 @@ jobs:
           - card: drag_collect_grid
             unit: check-collect-dodge-runtime.mjs
             browser: run-collect-card-lab-e2e.mjs
+          - card: sequence_synthesis
+            unit: check-sequence-synthesis-runtime.mjs
+            browser: run-sequence-card-lab-e2e.mjs
     steps:
       - uses: actions/checkout@v4
         with:
