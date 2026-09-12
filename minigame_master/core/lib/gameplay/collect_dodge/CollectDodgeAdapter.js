@@ -4,8 +4,10 @@ import SceneLifecycle from '../../contracts/SceneLifecycle.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     id: 'drag_collect_grid',
-    duration: 30,
-    goalValue: 15,
+    duration: 40,
+    goalValue: 16,
+    playerHp: 100,
+    maxActiveItems: 48,
     spawnIntervalMs: 700,
     itemSpeed: 280,
     hazardRate: 0.35,
@@ -13,13 +15,25 @@ const DEFAULT_CONFIG = Object.freeze({
     difficulty: 1,
     collectRadius: 36,
     /** Pure collect loop without boss phase — preferred for gate demos */
-    skipBoss: false,
+    skipBoss: true,
     boss: {
         hp: 100,
         speed: 150,
         attackIntervalMs: 2500
     }
 });
+
+const bounded = (value, fallback, min, max) => {
+    const n = value == null || value === '' || typeof value === 'boolean' ? NaN : Number(value);
+    return Math.min(max, Math.max(min, Number.isFinite(n) ? n : fallback));
+};
+
+// Swept collection: a long frame must not skip an item crossing the player.
+function segmentDistance(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy || 1)));
+    return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+}
 
 function mergeConfig(base, patch) {
     if (!patch || typeof patch !== 'object') return { ...base };
@@ -59,6 +73,9 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         /** @type {{kind:string, go:any, icon?:any, speed:number, r:number}[]} */
         this.fallers = [];
         this.projectiles = [];
+        this.random = typeof context.random === 'function' ? context.random : Math.random;
+        this.itemSerial = 0;
+        this.feedback = new Set();
         this.state = {
             hp: 100,
             elapsedSeconds: 0,
@@ -81,47 +98,34 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         const knobs = { ...(play || {}), ...rawKnobs };
         this.config = mergeConfig(DEFAULT_CONFIG, knobs);
 
-        this.config.duration = Number(
-            knobs.timeLimitSec || knobs.durationSec || play.durationSec || DEFAULT_CONFIG.duration
-        );
-        // Card-standard needAmount (+ legacy collectGoal/goalValue via normalize)
-        this.config.goalValue = Number(
-            knobs.needAmount ||
-                knobs.goalValue ||
-                knobs.collectGoal ||
-                play.needAmount ||
-                play.collectGoal ||
-                DEFAULT_CONFIG.goalValue
-        );
-
-        this.config.spawnIntervalMs = Math.max(
-            280,
-            Number(this.config.spawnIntervalMs || DEFAULT_CONFIG.spawnIntervalMs)
-        );
-        this.config.itemSpeed = Math.max(
-            140,
-            Number(this.config.itemSpeed || DEFAULT_CONFIG.itemSpeed)
-        );
-        this.config.difficulty = Math.max(1, Number(this.config.difficulty || 1));
-        this.config.hazardRate = Math.min(
-            0.7,
-            Math.max(0.05, Number(this.config.hazardRate ?? DEFAULT_CONFIG.hazardRate))
-        );
-        this.config.collectRadius = Number(this.config.collectRadius || DEFAULT_CONFIG.collectRadius);
-        this.config.skipBoss = Boolean(knobs.skipBoss ?? this.config.skipBoss);
-
-        if (!this.config.boss || typeof this.config.boss !== 'object') {
-            this.config.boss = { ...DEFAULT_CONFIG.boss };
-        } else {
-            this.config.boss = { ...DEFAULT_CONFIG.boss, ...this.config.boss };
-        }
+        this.config.duration = bounded(rawKnobs.timeLimitSec ?? rawKnobs.durationSec ?? rawKnobs.duration ?? nodeConfig.duration ?? nodeConfig.durationLimit, 40, 5, 300);
+        this.config.goalValue = Math.round(bounded(rawKnobs.needAmount ?? rawKnobs.goalValue ?? rawKnobs.collectGoal ?? nodeConfig.goalValue ?? nodeConfig.rewards?.score, 16, 1, 200));
+        this.config.spawnIntervalMs = bounded(knobs.spawnIntervalMs, 700, 200, 3000);
+        this.config.itemSpeed = bounded(knobs.itemSpeed, 280, 80, 800);
+        this.config.difficulty = Math.round(bounded(knobs.difficulty, 1, 1, 6));
+        this.config.hazardRate = bounded(knobs.hazardRate, 0.35, 0, 0.9);
+        this.config.damageOnHit = bounded(knobs.damageOnHit, 15, 1, 100);
+        this.config.collectRadius = bounded(knobs.collectRadius, 36, 12, 64);
+        this.config.maxActiveItems = Math.round(bounded(knobs.maxActiveItems, 48, 4, 256));
+        this.config.playerHp = bounded(rawKnobs.playerHp ?? payload.playerStats?.hp, 100, 1, 1000);
+        this.config.skipBoss = typeof knobs.skipBoss === 'boolean' ? knobs.skipBoss : DEFAULT_CONFIG.skipBoss;
+        const boss = knobs.boss && typeof knobs.boss === 'object' ? knobs.boss : {};
+        this.config.boss = {
+            hp: bounded(boss.hp, 100, 1, 10000), speed: bounded(boss.speed, 150, 0, 600),
+            attackIntervalMs: bounded(boss.attackIntervalMs, 2500, 200, 10000)
+        };
 
         this.themePack =
             nodeConfig.themeContentPack || knobs.themeContentPack || payload.themeContentPack || null;
         this.themeLocale =
             knobs.locale || nodeConfig.locale || this.themePack?.defaultLocale || 'zh-CN';
 
-        this.state.hp = payload.playerStats?.hp || 100;
+        this.state.hp = this.config.playerHp;
+        this.state.elapsedSeconds = 0;
+        this.state.hazardsHit = 0;
+        this.result = null;
+        this.itemSerial = 0;
+        this.bossDirection = 1;
         this.state.timeRemaining = this.config.duration;
         this.state.bossHp = this.config.boss.hp;
         this.state.bossMaxHp = this.config.boss.hp;
@@ -168,12 +172,12 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.player.setDepth(20);
 
         // Hint text (themeable)
-        const hint = this.t('control_hint_inline', this.t('level.control_hint', 'Drag to collect · dodge hazards'));
+        const hint = this.t('control_hint_inline', this.t('level.control_hint', '按住横向拖动接绿珠 · 避开红珠'));
         this.hintText = scene.add
             .text(width / 2, height - 90, hint, {
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '16px',
-                color: '#94a3b8'
+                color: '#94a3b8', align: 'center', wordWrap: { width: width - 64 }
             })
             .setOrigin(0.5)
             .setDepth(20);
@@ -187,6 +191,9 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
             this.bossText?.destroy?.();
             this.bossHpGraphics?.destroy?.();
             this.hintText?.destroy?.();
+            for (const entry of this.feedback) { entry.tween?.remove?.(); entry.text.destroy?.(); }
+            this.feedback.clear();
+            this.player = this.boss = this.bossText = this.bossHpGraphics = this.hintText = null;
         });
 
         this.bindInput();
@@ -200,23 +207,23 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
 
     bindInput() {
         const move = (pointer) => {
-            if (!this.isRunning() || !this.player) return;
+            if (!this.isRunning() || !this.player || !pointer.isDown || !Number.isFinite(pointer.x)) return;
             const targetX = this.Phaser.Math.Clamp(pointer.x, 36, this.world.width - 36);
             this.player.x = targetX;
         };
-        // Drag / touch: follow pointer whenever it moves (and on down)
+        // Drag / touch only: hovering must not change gameplay.
         this.lifecycle.trackListener(this.scene.input, 'pointermove', move);
         this.lifecycle.trackListener(this.scene.input, 'pointerdown', move);
     }
 
     startTimers() {
         const delay = Math.max(
-            280,
+            200,
             this.config.spawnIntervalMs - (this.config.difficulty - 1) * 50
         );
         this.spawnTimerEvent = this.scene.time.addEvent({
             delay,
-            callback: this.spawnFallingItem,
+            callback: () => this.spawnFallingItem(),
             callbackScope: this,
             loop: true
         });
@@ -225,7 +232,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.lifecycle.trackTimer(
             this.scene.time.addEvent({
                 delay: 1000,
-                callback: this.onSecondTick,
+                callback: () => this.onSecondTick(),
                 callbackScope: this,
                 loop: true
             })
@@ -233,8 +240,8 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     update(_time, delta) {
-        if (!this.isRunning()) return;
-        const dt = Math.min(50, Math.max(0, delta || 16.6)) / 1000;
+        if (!this.isRunning() || !Number.isFinite(delta) || delta <= 0) return;
+        const dt = delta / 1000;
 
         // Manual fall (reliable across Phaser versions)
         for (let i = this.fallers.length - 1; i >= 0; i--) {
@@ -244,9 +251,10 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
                 if (f) this.fallers.splice(i, 1);
                 continue;
             }
+            const previousX = f.go.x, previousY = f.go.y;
             if (f._vx != null || f._vy != null) {
                 f.go.x += (f._vx || 0) * dt;
-                f.go.y += (f._vy || f.speed || 0) * dt;
+                f.go.y += (f._vy ?? f.speed ?? 0) * dt;
             } else {
                 f.go.y += f.speed * dt;
             }
@@ -254,20 +262,9 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
                 f.icon.x = f.go.x;
                 f.icon.y = f.go.y;
             }
-            if (f.go.y > this.world.height + 40) {
-                f.icon?.destroy?.();
-                f.go.destroy();
-                this.fallers.splice(i, 1);
-                continue;
-            }
             // Collect / hit
             if (this.player && this.player.active) {
-                const dist = this.Phaser.Math.Distance.Between(
-                    this.player.x,
-                    this.player.y,
-                    f.go.x,
-                    f.go.y
-                );
+                const dist = segmentDistance(this.player.x, this.player.y, previousX, previousY, f.go.x, f.go.y);
                 if (dist <= (f.r || 12) + this.config.collectRadius) {
                     if (f.kind === 'gem') this.collectGem(f);
                     else if (f.kind === 'hazard') this.hitHazard(f);
@@ -278,8 +275,14 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
                     if (!this.isRunning()) break;
                 }
             }
+            if (f.go.active && (f.go.y > this.world.height + 40 || f.go.x < -40 || f.go.x > this.world.width + 40)) {
+                f.icon?.destroy?.(); f.go.destroy();
+                const idx = this.fallers.indexOf(f);
+                if (idx >= 0) this.fallers.splice(idx, 1);
+            }
         }
 
+        if (!this.isRunning()) return;
         // Projectiles upward
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
@@ -287,32 +290,27 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
                 this.projectiles.splice(i, 1);
                 continue;
             }
+            const previousY = p.go.y;
             p.go.y -= p.speed * dt;
-            if (p.go.y < -40) {
-                p.go.destroy();
-                this.projectiles.splice(i, 1);
-                continue;
-            }
             if (this.boss && this.boss.active) {
-                const d = this.Phaser.Math.Distance.Between(
-                    p.go.x,
-                    p.go.y,
-                    this.boss.x,
-                    this.boss.y
-                );
+                const d = segmentDistance(this.boss.x, this.boss.y, p.go.x, previousY, p.go.x, p.go.y);
                 if (d < 50) {
-                    p.go.destroy();
-                    this.projectiles.splice(i, 1);
-                    this.damageBoss(12);
+                    const { x, y } = this.boss;
+                    p.go.destroy(); this.projectiles.splice(i, 1);
                     this.playSynthSound('loot');
-                    this.spawnParticles(this.boss.x, this.boss.y, 0xef4444);
-                    this.spawnFloatingText(this.boss.x, this.boss.y, '-12', '#ef4444');
+                    this.spawnParticles(x, y, 0xef4444);
+                    this.spawnFloatingText(x, y, '-12', '#ef4444');
+                    this.damageBoss(12);
+                    if (!this.isRunning()) return;
                 }
+            }
+            if (p.go.active && p.go.y < -40) {
+                p.go.destroy(); this.projectiles.splice(i, 1);
             }
         }
 
         if (this.state.bossSpawned && this.boss && this.boss.active) {
-            this.boss.x += this.bossDirection * (this.config.boss.speed || 150) * dt;
+            this.boss.x += this.bossDirection * (this.config.boss.speed ?? 150) * dt;
             if (this.boss.x >= this.world.width - 60) {
                 this.boss.x = this.world.width - 60;
                 this.bossDirection = -1;
@@ -331,36 +329,37 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     spawnFallingItem() {
-        if (!this.isRunning()) return;
+        if (!this.isRunning() || this.fallers.length >= this.config.maxActiveItems) return;
 
         if (this.state.bossSpawned) {
-            if (Math.random() < 0.45) this.spawnSwordDrop();
+            if (this.random() < 0.45) this.spawnSwordDrop();
             return;
         }
 
         const { width } = this.world;
-        const x = this.Phaser.Math.Between(48, width - 48);
+        const x = 48 + this.random() * (width - 96);
         const y = 150;
-        const isHazard = Math.random() < this.config.hazardRate;
+        const isHazard = this.random() < this.config.hazardRate;
         const speed = this.config.itemSpeed + (this.config.difficulty - 1) * 30;
 
         if (isHazard) {
             const go = this.scene.add.circle(x, y, 13, 0xef4444, 0.95);
             go.setStrokeStyle(2, 0xffffff, 0.95);
             go.setDepth(10);
-            this.fallers.push({ kind: 'hazard', go, speed, r: 13 });
+            this.fallers.push({ id: ++this.itemSerial, kind: 'hazard', go, speed, r: 13 });
         } else {
             const go = this.scene.add.circle(x, y, 12, 0x34d399, 0.98);
             go.setStrokeStyle(2, 0xffffff, 1);
             go.setDepth(10);
-            this.fallers.push({ kind: 'gem', go, speed, r: 12 });
+            this.fallers.push({ id: ++this.itemSerial, kind: 'gem', go, speed, r: 12 });
         }
         this.state.spawnedTotal += 1;
     }
 
     spawnSwordDrop() {
+        if (!this.isRunning() || this.fallers.length >= this.config.maxActiveItems) return;
         const { width } = this.world;
-        const x = this.Phaser.Math.Between(48, width - 48);
+        const x = 48 + this.random() * (width - 96);
         const y = 150;
         const speed = this.config.itemSpeed * 0.95;
         const go = this.scene.add.circle(x, y, 14, 0xf59e0b, 0.9);
@@ -370,7 +369,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
             .text(x, y, '🗡️', { fontSize: '14px' })
             .setOrigin(0.5)
             .setDepth(11);
-        this.fallers.push({ kind: 'swordDrop', go, icon, speed, r: 14 });
+        this.fallers.push({ id: ++this.itemSerial, kind: 'swordDrop', go, icon, speed, r: 14 });
         this.state.spawnedTotal += 1;
     }
 
@@ -382,7 +381,14 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.fallers = [];
     }
 
+    acceptFaller(f) {
+        if (!this.isRunning() || !f?.go?.active || f.consumed || !this.fallers.includes(f)) return false;
+        f.consumed = true;
+        return true;
+    }
+
     collectGem(f) {
+        if (!this.acceptFaller(f)) return false;
         const x = f?.go?.x ?? 0;
         const y = f?.go?.y ?? 0;
         f?.icon?.destroy?.();
@@ -404,17 +410,20 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     hitHazard(f) {
+        if (!this.acceptFaller(f)) return false;
+        this.state.hazardsHit += 1;
         const x = f?.go?.x ?? 0;
         const y = f?.go?.y ?? 0;
         f?.icon?.destroy?.();
         f?.go?.destroy?.();
-        this.damagePlayer(this.config.damageOnHit, NODE_RESULT_REASONS.HP_ZERO);
         this.playSynthSound('damage');
         this.triggerScreenShake(140, 0.008);
         this.spawnParticles(x, y, 0xef4444);
+        this.damagePlayer(this.config.damageOnHit, NODE_RESULT_REASONS.HP_ZERO);
     }
 
     collectSwordDrop(f) {
+        if (!this.acceptFaller(f)) return false;
         const x = f?.go?.x ?? 0;
         const y = f?.go?.y ?? 0;
         f?.icon?.destroy?.();
@@ -426,6 +435,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     shootFlyingSword(x, y) {
+        if (!this.isRunning() || this.projectiles.length >= this.config.maxActiveItems) return;
         const go = this.scene.add.circle(x, y, 7, 0xfbbf24, 1);
         go.setStrokeStyle(1.5, 0xffffff, 1);
         go.setDepth(15);
@@ -433,6 +443,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     spawnBoss() {
+        if (!this.isRunning() || this.state.bossSpawned) return;
         this.state.bossSpawned = true;
         this.clearFallers();
         this.triggerScreenShake(280, 0.012);
@@ -472,7 +483,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         this.lifecycle.trackTimer(this.bossAttackEvent);
 
         if (this.hintText) {
-            this.hintText.setText('接金色飞剑 · 自动射向兽王');
+            this.hintText.setText(this.t('boss_control_hint', '接金色飞剑 · 向上射击 Boss'));
         }
     }
 
@@ -492,6 +503,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     damageBoss(amount) {
+        if (!this.isRunning() || !this.boss?.active || !Number.isFinite(amount) || amount <= 0 || this.state.bossHp <= 0) return;
         this.state.bossHp = Math.max(0, this.state.bossHp - amount);
         this.updateBossHpBar();
         if (this.state.bossHp <= 0) {
@@ -502,7 +514,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     triggerBossAttack() {
         if (!this.isRunning() || !this.boss) return;
         // Fan of red orbs downward
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 5 && this.fallers.length < this.config.maxActiveItems; i++) {
             const t = i / 4;
             const angle = Math.PI * 0.15 + t * Math.PI * 0.7;
             const go = this.scene.add.circle(this.boss.x, this.boss.y + 20, 9, 0xef4444, 0.95);
@@ -513,7 +525,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
             const vx = Math.cos(angle) * speed;
             const vy = Math.sin(angle) * speed;
             this.fallers.push({
-                kind: 'hazard',
+                id: ++this.itemSerial, kind: 'hazard',
                 go,
                 speed: 0,
                 r: 9,
@@ -527,7 +539,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     damagePlayer(amount, failReason = NODE_RESULT_REASONS.HP_ZERO) {
-        if (!this.isRunning()) return;
+        if (!this.isRunning() || !Number.isFinite(amount) || amount <= 0) return;
         this.state.hp = Math.max(this.state.hp - amount, 0);
         this.spawnFloatingText(this.player.x, this.player.y - 30, `-${amount}`, '#f87171');
         if (this.state.hp <= 0) {
@@ -554,6 +566,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
 
     finish(success, reason = null) {
         if (this.status === 'ended' || this.status === 'destroyed') return this.result;
+        if (success && !(this.state.score >= this.config.goalValue || (this.state.bossSpawned && this.state.bossHp <= 0))) return null;
         if (this.lifecycle && !this.lifecycle.canTransition()) return this.result;
         this.lifecycle?.beginEnd();
 
@@ -563,7 +576,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         const rewards = {};
         if (success) {
             rewards.mainCurrency =
-                (this.payload.nodeConfig?.rewards?.score || this.config.goalValue) * 1.5;
+                (this.payload?.nodeConfig?.rewards?.score || this.config.goalValue) * 1.5;
         }
 
         const result = this.end({
@@ -603,6 +616,13 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
             goalValue: this.config.goalValue,
             timer: this.state.timeRemaining,
             bossSpawned: this.state.bossSpawned,
+            bossHp: this.state.bossHp,
+            hazardsHit: this.state.hazardsHit,
+            playerPosition: this.player ? { x: this.player.x, y: this.player.y } : null,
+            items: this.fallers.filter(f => f.go?.active && !f.consumed).map(f => ({
+                id: f.id, kind: f.kind, x: f.go.x, y: f.go.y, radius: f.r,
+                vx: f._vx ?? 0, vy: f._vy ?? f.speed
+            })),
             spawnedTotal: this.state.spawnedTotal,
             fallers: this.fallers.length,
             lastResult: this.result
@@ -634,7 +654,7 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
     }
 
     spawnFloatingText(x, y, text, color) {
-        if (!this.scene?.add?.text) return;
+        if (!this.isRunning() || !this.scene?.add?.text) return;
         const txt = this.scene.add
             .text(x, y, text, {
                 fontFamily: 'Inter, sans-serif',
@@ -644,12 +664,14 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
             })
             .setOrigin(0.5)
             .setDepth(30);
-        this.scene.tweens?.add?.({
+        const entry = { text: txt, tween: null };
+        this.feedback.add(entry);
+        entry.tween = this.scene.tweens?.add?.({
             targets: txt,
             y: y - 50,
             alpha: 0,
             duration: 600,
-            onComplete: () => txt.destroy()
+            onComplete: () => { txt.destroy(); this.feedback.delete(entry); }
         });
     }
 
@@ -668,3 +690,5 @@ export default class CollectDodgeAdapter extends GameplayAdapter {
         });
     }
 }
+
+export { DEFAULT_CONFIG as COLLECT_DODGE_DEFAULT_CONFIG };

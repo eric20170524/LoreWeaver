@@ -21,7 +21,9 @@ const DEFAULT_CONFIG = Object.freeze({
     explodeOnConsecutiveMistakes: 2,
     /** When true, consecutive mistakes hard-fail instead of recipe reset */
     explodeFails: false,
-    goalProgress: 100,
+    durationSec: 45,
+    playerHp: 100,
+    runSeed: 0,
     rewardTable: { score: 1 },
     allowQuit: true,
     allowPause: true
@@ -42,10 +44,16 @@ function mergeConfig(base, patch) {
     return output;
 }
 
+function bounded(value, fallback, min, max, integer = false) {
+    const n = value === null || value === '' || typeof value === 'boolean' ? NaN : Number(value);
+    const safe = Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+    return integer ? Math.floor(safe) : safe;
+}
+
 function seededRandom(seed) {
-    let s = Number(seed) || 1;
+    let s = Number(seed) >>> 0;
     return () => {
-        s = (s * 1664525 + 1013904223) % 4294967296;
+        s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
         return s / 4294967296;
     };
 }
@@ -66,6 +74,8 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
             mistakes: 0,
             consecutiveMistakes: 0,
             elapsedSeconds: 0,
+            timeRemaining: DEFAULT_CONFIG.durationSec,
+            resets: 0,
             hp: 100
         };
     }
@@ -77,23 +87,39 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         const knobs = gameplayConfig.knobs || nodeConfig.knobs || {};
         this.config = mergeConfig(DEFAULT_CONFIG, mergeConfig(gameplayConfig, knobs));
 
-        this.config.recipeLength = Math.max(1, Number(this.config.recipeLength || 4));
-        this.config.materialPoolSize = Math.max(2, Number(this.config.materialPoolSize || 6));
-        this.config.wrongInputProgressPenalty = Number(this.config.wrongInputProgressPenalty ?? 30);
-        this.config.explodeOnConsecutiveMistakes = Math.max(
-            1,
-            Number(this.config.explodeOnConsecutiveMistakes || 2)
-        );
-        this.config.explodeFails = Boolean(knobs.explodeFails ?? this.config.explodeFails);
+        this.config.recipeLength = bounded(this.config.recipeLength, 4, 1, 20, true);
+        this.config.materialPoolSize = bounded(this.config.materialPoolSize, 6, 2, MATERIAL_PALETTE.length, true);
+        this.config.wrongInputProgressPenalty = bounded(this.config.wrongInputProgressPenalty, 30, 0, 100);
+        this.config.explodeOnConsecutiveMistakes = bounded(this.config.explodeOnConsecutiveMistakes, 2, 1, 10, true);
+        this.config.explodeFails = this.config.explodeFails === true;
+        this.config.allowPause = this.config.allowPause !== false;
+        this.config.allowQuit = this.config.allowQuit !== false;
+        const duration = knobs.timeLimitSec ?? knobs.durationSec ?? knobs.duration
+            ?? nodeConfig.duration ?? nodeConfig.durationLimit ?? this.config.durationSec;
+        this.config.durationSec = bounded(duration, 45, 5, 180);
+        this.config.playerHp = bounded(knobs.playerHp ?? payload.playerStats?.hp ?? this.config.playerHp, 100, 1, 300);
+        this.config.runSeed = bounded(payload.runSeed ?? knobs.runSeed ?? this.config.runSeed, 0, 0, 999999999, true);
+        this.readPlayabilityKnobs({ ...payload, nodeConfig: {
+            ...nodeConfig, gameplay: { ...gameplayConfig, knobs: {
+                ...knobs, timeLimitSec: this.config.durationSec, durationSec: this.config.durationSec,
+                goalValue: 100, needAmount: 100,
+                allowPause: this.config.allowPause, allowQuit: this.config.allowQuit
+            } }
+        } }, 'sequence_synthesis');
 
         this.themePack =
             nodeConfig.themeContentPack || knobs.themeContentPack || payload.themeContentPack || null;
         this.themeLocale =
             knobs.locale || nodeConfig.locale || this.themePack?.defaultLocale || 'zh-CN';
 
-        const rng = seededRandom(payload.runSeed || knobs.runSeed || (Date.now() % 100000));
+        // Zero is a valid reproducible seed; never use wall time or random sort.
+        const rng = seededRandom(this.config.runSeed);
         const poolSize = Math.min(MATERIAL_PALETTE.length, this.config.materialPoolSize);
-        const shuffled = MATERIAL_PALETTE.slice().sort(() => rng() - 0.5);
+        const shuffled = MATERIAL_PALETTE.slice();
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
+            const j = Math.floor(rng() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
         this.state.pool = shuffled.slice(0, poolSize).map((m) => ({
             ...m,
             label: this.t(`material_${m.id}`, m.label)
@@ -108,8 +134,11 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         this.state.mistakes = 0;
         this.state.consecutiveMistakes = 0;
         this.state.elapsedSeconds = 0;
-        this.state.hp = payload.playerStats?.hp || 100;
-        this.readPlayabilityKnobs(payload, 'sequence_synthesis');
+        this.state.hp = this.config.playerHp;
+        this.state.timeRemaining = this.config.durationSec;
+        this.state.resets = 0;
+        this.result = null;
+        this.acceptingInput = false;
         return this;
     }
 
@@ -140,15 +169,14 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         this.drawMaterialPool(width, height);
         this.drawProgress(width, height);
 
-        this.lifecycle.trackTimer(scene.time.addEvent({
-            delay: 1000,
-            loop: true,
-            callback: () => {
-                if (!this.isRunning()) return;
-                this.state.elapsedSeconds += 1;
-                this.publishTestState();
-            }
-        }));
+        this.lifecycle.trackListener(scene.input?.keyboard, 'keydown', (event) => {
+            if (!this.isRunning() || event?.repeat || event?.ctrlKey || event?.altKey || event?.metaKey) return;
+            const index = /^[1-8]$/.test(event?.key || '') ? Number(event.key) - 1 : -1;
+            if (index < 0 || !this.state.pool[index]) return;
+            event.preventDefault?.();
+            this.onMaterialClick(this.state.pool[index]);
+        });
+
 
         this.publishTestState();
         return this;
@@ -212,9 +240,9 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
     drawMaterialPool(width, height) {
         const pool = this.state.pool;
         const cols = Math.min(pool.length, 4);
-        const btnW = 88;
-        const btnH = 48;
-        const gap = 14;
+        const gap = 16;
+        const btnW = Math.min(128, (width - 48 - (cols - 1) * gap) / cols);
+        const btnH = 92;
         const rows = Math.ceil(pool.length / cols);
         const totalW = cols * btnW + (cols - 1) * gap;
         const startX = (width - totalW) / 2 + btnW / 2;
@@ -228,13 +256,13 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
             const bg = this.scene.add.rectangle(x, y, btnW, btnH, mat.color, 0.9)
                 .setStrokeStyle(2, 0xffffff, 0.3)
                 .setInteractive({ useHandCursor: true });
-            const label = this.scene.add.text(x, y, mat.label, {
+            const label = this.scene.add.text(x, y, `${index + 1} · ${mat.label}`, {
                 fontFamily: 'Inter, sans-serif',
                 fontSize: '14px',
                 fontStyle: 'bold',
                 color: '#0f172a'
             }).setOrigin(0.5);
-            bg.on('pointerdown', () => this.onMaterialClick(mat));
+            this.lifecycle.trackListener(bg, 'pointerdown', () => this.onMaterialClick(mat));
             this.materialButtons.push({ bg, label, id: mat.id });
         });
 
@@ -265,7 +293,7 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         const nextId = this.state.recipe[this.state.stepIndex];
         const mat = this.state.pool.find((m) => m.id === nextId);
         const step = this.t('step_fmt', 'Step {i}/{n} · need: {m}')
-            .replace('{i}', String(this.state.stepIndex + 1))
+            .replace('{i}', String(Math.min(this.state.stepIndex + 1, this.state.recipe.length)))
             .replace('{n}', String(this.state.recipe.length))
             .replace('{m}', mat?.label || nextId || '—');
         this.ui.stepText?.setText(step);
@@ -275,7 +303,7 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         const { width } = this.scene.scale;
         const ratio = Math.max(0, Math.min(1, this.state.progress / 100));
         const g = this.ui.progressBar;
-        if (!g) return;
+        if (!g?.active) return;
         g.clear();
         g.fillStyle(0x1e293b, 0.9);
         g.fillRoundedRect(width * 0.2, this.scene.scale.height * 0.5, width * 0.6, 14, 7);
@@ -291,70 +319,80 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
     }
 
     onMaterialClick(mat) {
-        if (!this.isRunning()) return;
-        const expected = this.state.recipe[this.state.stepIndex];
-        if (mat.id === expected) {
-            this.state.consecutiveMistakes = 0;
-            this.state.stepIndex += 1;
-            const gain = 100 / this.state.recipe.length;
-            this.state.progress = Math.min(100, this.state.progress + gain);
-            this.ui.feedback
-                ?.setText(this.t('ok_feed', 'Correct: [{m}]').replace('{m}', mat.label))
-                .setColor('#34d399');
-            this.scene?.cameras?.main?.flash?.(80, 52, 211, 153);
-            this.context.spawnParticles?.(this.scene.scale.width / 2, this.scene.scale.height * 0.3, mat.color);
-
-            if (this.state.stepIndex >= this.state.recipe.length) {
-                this.state.progress = 100;
-                this.refreshProgress();
-                this.refreshStepText();
-                this.publishTestState();
-                this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
-                return;
-            }
-        } else {
-            this.state.mistakes += 1;
-            this.state.consecutiveMistakes += 1;
-            this.state.progress = Math.max(0, this.state.progress - this.config.wrongInputProgressPenalty);
-            this.ui.feedback
-                ?.setText(
-                    this.t('bad_feed', 'Wrong material! -{n}')
-                        .replace('{n}', String(this.config.wrongInputProgressPenalty))
-                )
-                .setColor('#f87171');
-            this.scene?.cameras?.main?.shake?.(120, 0.008);
-
-            if (this.state.consecutiveMistakes >= this.config.explodeOnConsecutiveMistakes) {
-                if (this.config.explodeFails) {
-                    this.ui.feedback
-                        ?.setText(this.t('explode_fail', 'Overheat — synthesis failed'))
-                        .setColor('#ef4444');
-                    this.scene?.cameras?.main?.shake?.(280, 0.02);
-                    this.finish(false, NODE_RESULT_REASONS.FAILED);
-                    return;
-                }
-                this.ui.feedback
-                    ?.setText(this.t('explode_reset', 'Overheat! Recipe reset'))
-                    .setColor('#ef4444');
-                this.state.stepIndex = 0;
-                this.state.progress = 0;
+        if (!this.isRunning() || this.acceptingInput) return false;
+        const material = this.state.pool.find(item => item.id === mat?.id);
+        if (!material) return false;
+        this.acceptingInput = true;
+        try {
+            const expected = this.state.recipe[this.state.stepIndex];
+            if (material.id === expected) {
                 this.state.consecutiveMistakes = 0;
-                this.scene?.cameras?.main?.shake?.(280, 0.02);
+                this.state.stepIndex += 1;
+                this.state.progress = this.state.stepIndex * 100 / this.state.recipe.length;
+                // Settle terminal input before presentation callbacks can re-enter.
+                if (this.state.stepIndex >= this.state.recipe.length) {
+                    this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
+                    return true;
+                }
+                this.ui.feedback?.setText(this.t('ok_feed', 'Correct: [{m}]').replace('{m}', material.label)).setColor('#34d399');
+                this.scene?.cameras?.main?.flash?.(80, 52, 211, 153);
+                this.context.spawnParticles?.(this.scene.scale.width / 2, this.scene.scale.height * 0.3, material.color);
+            } else {
+                this.state.mistakes += 1;
+                this.state.consecutiveMistakes += 1;
+                // Progress means an accepted recipe prefix. A percentage penalty
+                // rolls back whole ingredients (rounded up), not a cosmetic bar
+                // which previously jumped to 100 despite unearned progress.
+                const rollback = Math.ceil(this.config.wrongInputProgressPenalty * this.state.recipe.length / 100);
+                this.state.stepIndex = Math.max(0, this.state.stepIndex - rollback);
+                this.state.progress = this.state.stepIndex * 100 / this.state.recipe.length;
+                this.ui.feedback?.setText(this.t('bad_feed_steps', 'Wrong material! -{n} steps').replace('{n}', String(rollback))).setColor('#f87171');
+                this.scene?.cameras?.main?.shake?.(120, 0.008);
+                if (this.state.consecutiveMistakes >= this.config.explodeOnConsecutiveMistakes) {
+                    if (this.config.explodeFails) {
+                        this.finish(false, NODE_RESULT_REASONS.FAILED);
+                        return true;
+                    }
+                    this.state.stepIndex = this.state.progress = this.state.consecutiveMistakes = 0;
+                    this.state.resets += 1;
+                    this.ui.feedback?.setText(this.t('explode_reset', 'Overheat! Recipe reset')).setColor('#ef4444');
+                }
             }
+            if (this.isRunning()) {
+                this.refreshStepText();
+                this.refreshProgress();
+                this.publishTestState();
+            }
+            return true;
+        } finally {
+            this.acceptingInput = false;
         }
+    }
 
-        this.refreshStepText();
-        this.refreshProgress();
+    update(_time, delta) {
+        if (!this.isRunning() || !Number.isFinite(delta) || delta < 0) return;
+        this.state.elapsedSeconds = Math.min(this.config.durationSec, this.state.elapsedSeconds + delta / 1000);
+        this.state.timeRemaining = Math.max(0, this.config.durationSec - this.state.elapsedSeconds);
+        if (this.state.timeRemaining <= 0) {
+            this.finish(false, NODE_RESULT_REASONS.TIMER_EXPIRED);
+            return;
+        }
         this.publishTestState();
     }
 
     getTestState() {
         return {
+            ...super.getTestState(),
             adapter: 'SequenceSynthesisAdapter',
             adapterId: this.config.id,
             status: this.status,
             hp: this.state.hp,
-            timer: this.state.elapsedSeconds,
+            timer: this.state.timeRemaining,
+            goalValue: 100,
+            runSeed: this.config.runSeed,
+            resets: this.state.resets,
+            materials: this.state.pool.map(mat => ({ id: mat.id, label: mat.label })),
+            buttons: this.materialButtons.filter(b => b.bg?.active).map(b => ({ id: b.id, x: b.bg.x, y: b.bg.y })),
             score: Math.round(this.state.progress),
             progress: this.state.progress,
             stepIndex: this.state.stepIndex,
@@ -369,23 +407,23 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
 
     /** Test helper: force fail path */
     damagePlayer(amount, failReason = NODE_RESULT_REASONS.HP_ZERO) {
-        if (!this.isRunning()) return;
-        this.state.hp = Math.max(0, this.state.hp - Number(amount || 0));
+        if (!this.isRunning() || !Number.isFinite(amount) || amount <= 0) return false;
+        this.state.hp = Math.max(0, this.state.hp - amount);
         this.publishTestState();
         if (this.state.hp <= 0) this.finish(false, failReason);
     }
 
-    /** Test helper: complete remaining recipe steps */
+    /** Legacy demo helper. Requires explicit test-only opt-in; not a player action. */
     forceComplete() {
-        if (!this.isRunning()) return;
+        if (!this.context.allowTestCommands || !this.isRunning()) return false;
         this.state.stepIndex = this.state.recipe.length;
         this.state.progress = 100;
-        this.refreshProgress();
-        this.refreshStepText();
-        this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
+        return this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
     }
 
     finish(success, reason = null) {
+        // The host's generic score threshold is not authority for this recipe.
+        if (success && (!this.state.recipe.length || this.state.stepIndex !== this.state.recipe.length || this.state.timeRemaining <= 0)) return this.result;
         if (this.status === 'ended' || this.status === 'destroyed') return this.result;
         if (!this.lifecycle?.canTransition()) return this.result;
         this.lifecycle.beginEnd();
@@ -402,18 +440,27 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
                 mistakes: this.state.mistakes,
                 recipeLength: this.state.recipe.length,
                 elapsedSec: this.state.elapsedSeconds,
-                progress: this.state.progress
+                progress: this.state.progress,
+                stepsCompleted: this.state.stepIndex,
+                resets: this.state.resets,
+                runSeed: this.config.runSeed,
+                timeRemaining: this.state.timeRemaining
             }
         });
 
         this.lifecycle.cleanup();
         this.lifecycle.finishEnd();
-        this.context.onEnd?.(result, this);
         this.publishTestState();
+        this.context.onEnd?.(result, this);
         return result;
     }
 
+    pause() {
+        if (this.config.allowPause) super.pause();
+    }
+
     retreat() {
+        if (!this.config.allowQuit) return null;
         return this.finish(false, NODE_RESULT_REASONS.RETREATED);
     }
 
@@ -422,22 +469,15 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
     }
 
     destroy() {
-        this.lifecycle?.cleanup();
+        this.lifecycle?.destroy();
+        this.ui = {};
         super.destroy();
     }
 
     publishTestState() {
-        this.context.testHooks?.update({
-            adapterId: this.config.id,
-            nodeId: this.payload?.nodeId || null,
-            status: this.status,
-            score: Math.round(this.state.progress),
-            hp: this.state.hp,
-            mistakes: this.state.mistakes,
-            stepIndex: this.state.stepIndex,
-            lastResult: this.result
-        });
+        this.context.testHooks?.update(this.getTestState());
     }
+
 }
 
 export { DEFAULT_CONFIG as SEQUENCE_SYNTHESIS_DEFAULT_CONFIG };

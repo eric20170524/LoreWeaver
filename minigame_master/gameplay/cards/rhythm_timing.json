@@ -3,132 +3,106 @@
   "id": "rhythm_timing",
   "title": "Rhythm Timing",
   "category": "timing",
-  "status": "production_ready",
+  "status": "runtime_ready",
   "runtime": {
     "engineTargets": [
-      "html_canvas",
       "phaser"
     ],
     "adapter": "TapReactionAdapter",
-    "container": "node_iframe_microgame",
+    "container": "phaser_scene",
     "template": "rhythm_timing"
   },
   "inputs": [
-    "button",
-    "pointer"
+    "pointer_tap",
+    "touch_tap",
+    "keyboard_space"
   ],
   "objectives": [
-    "reach_progress",
-    "reach_combo"
+    "reach_progress_and_best_combo"
   ],
   "failure": [
-    "retreated",
-    "optional_timer_expired"
+    "player_hp_zero",
+    "timer_expired",
+    "retreated"
   ],
   "knobs": {
     "beatIntervalMs": {
       "type": "integer",
       "default": 1500,
-      "min": 300,
-      "max": 5000,
       "patchLevel": "L1",
-      "description": "Timing cycle length."
+      "description": "Milliseconds between target beats; canonical alias takes precedence over spawnIntervalMs.",
+      "min": 300,
+      "max": 5000
     },
     "perfectWindowMs": {
       "type": "integer",
       "default": 80,
-      "min": 10,
-      "max": 500,
       "patchLevel": "L1",
-      "description": "Perfect hit timing window."
+      "description": "Half-window ±ms around beat target. Perfect awards 10; clamped to goodWindowMs.",
+      "min": 1,
+      "max": 500
     },
     "goodWindowMs": {
       "type": "integer",
       "default": 160,
-      "min": 10,
-      "max": 800,
       "patchLevel": "L1",
-      "description": "Good hit timing window."
+      "description": "Half-window ±ms. Good awards 5. Clamped below half the beat interval to avoid overlap.",
+      "min": 10,
+      "max": 800
     },
     "targetProgress": {
       "type": "integer",
       "default": 100,
-      "min": 10,
-      "max": 1000,
       "patchLevel": "L1",
-      "description": "Progress required to complete the node."
+      "description": "Progress AND requiredBestCombo must both be satisfied.",
+      "min": 1,
+      "max": 1000
     },
     "requiredBestCombo": {
       "type": "integer",
-      "default": 18,
+      "default": 8,
+      "patchLevel": "L1",
+      "description": "Best continuous successful-hit streak needed in addition to progress. Zero disables the requirement.",
       "min": 0,
-      "max": 200,
-      "patchLevel": "L1",
-      "description": "Optional best combo requirement."
-    },
-    "spawnIntervalMs": {
-      "type": "integer",
-      "default": 1200,
-      "min": 300,
-      "max": 5000,
-      "patchLevel": "L1",
-      "description": "Alias of beatIntervalMs for adapter spawn loop."
-    },
-    "orbLifetimeMs": {
-      "type": "integer",
-      "default": 2500,
-      "min": 400,
-      "max": 8000,
-      "patchLevel": "L1",
-      "description": "How long a reaction orb remains clickable."
-    },
-    "skipBoss": {
-      "type": "boolean",
-      "default": false,
-      "patchLevel": "L1",
-      "description": "When true, pure timing loop without boss phase (demo/gate)."
+      "max": 200
     },
     "durationSec": {
       "type": "integer",
-      "default": 30,
-      "min": 10,
-      "max": 600,
+      "default": 45,
       "patchLevel": "L1",
-      "description": "Run duration seconds."
-    },
-    "goalValue": {
-      "type": "integer",
-      "default": 15,
+      "description": "Active-play deadline; pause does not consume time.",
       "min": 1,
-      "max": 1000,
-      "patchLevel": "L1",
-      "description": "Score/progress needed to win (alias of targetProgress)."
+      "max": 600
     },
-    "difficulty": {
+    "playerHp": {
       "type": "integer",
-      "default": 1,
+      "default": 100,
+      "patchLevel": "L1",
+      "description": "Initial health for this node.",
       "min": 1,
-      "max": 5,
-      "patchLevel": "L1",
-      "description": "Difficulty scaling for spawn and orb lifetime."
+      "max": 1000
     },
-    "artRuntimeMode": {
-      "type": "string",
-      "default": "prototype",
+    "damageOnMiss": {
+      "type": "integer",
+      "default": 10,
       "patchLevel": "L1",
-      "description": "prototype | production art binding mode."
+      "description": "Damage once per early or expired beat. Zero supports no-damage practice.",
+      "min": 0,
+      "max": 1000
     },
-    "allowQuit": {
+    "skipBoss": {
       "type": "boolean",
       "default": true,
       "patchLevel": "L1",
-      "description": "Allow retreat/quit."
+      "description": "True selects judged rhythm. Explicit false selects legacy reaction/Boss compatibility mode, NOT covered by this card acceptance."
     },
-    "allowPause": {
-      "type": "boolean",
-      "default": true,
+    "rewardTable": {
+      "type": "object",
+      "default": {
+        "score": 1
+      },
       "patchLevel": "L1",
-      "description": "Allow pause/resume."
+      "description": "Adapter rewards on successful completion only."
     }
   },
   "patchPolicy": {
@@ -143,11 +117,11 @@
     ]
   },
   "requiredCoreSystems": [
-    "TimingJudge",
-    "ProgressBar",
-    "ComboTracker",
-    "NodeResult",
-    "WebAudioSynth"
+    "GameplayAdapter",
+    "SceneLifecycle",
+    "RhythmTimingRound",
+    "NodePayload",
+    "NodeResult"
   ],
   "resultContract": {
     "successReason": "objective_met",
@@ -160,11 +134,13 @@
   },
   "testFixture": {
     "type": "e2e",
-    "path": null,
+    "path": "productize/jobs/run-rhythm-card-lab-e2e.mjs",
     "assertions": [
-      "progress increases on valid hit",
-      "miss lowers or stalls progress",
-      "completion sends NodeResult"
+      "default progress AND combo through actual keyboard/pointer hits",
+      "early/good/perfect, missed beats, unique consumption",
+      "HP and deadline failures, no rewards",
+      "pause/resume/retreat/restart",
+      "touch input and offline file launch"
     ]
   },
   "sourceProvenance": [
@@ -184,10 +160,12 @@
     ]
   },
   "knownRisks": [
-    "latency and animation timing can make strict windows feel unfair",
-    "mobile tap feedback must be immediate"
+    "Browser input latency near timing boundaries; exact boundaries have unit coverage, not device latency calibration.",
+    "skipBoss:false legacy Boss mode remains available but is outside judged rhythm acceptance.",
+    "Arbitrary custom target/combo/duration combinations can be impossible; default preset is the tested playable configuration.",
+    "No physical-device FPS, multi-browser, musical audio synchronization or long soak certification."
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "implementationNotes": "Judged rhythm uses a single frame-driven rules model within TapReactionAdapter. Perfect=10, Good=5; early/expired=miss once per beat and resets combo. Score alone cannot force host success. Uses runtime delta, not wall clock, and no tween callbacks grant rewards. Canonical knobs override legacy aliases. orbLifetimeMs and difficulty are legacy reaction-only.",
   "requiredAssets": {
     "playerClips": [
       "idle"
@@ -217,35 +195,71 @@
       "audio",
       "e2e"
     ],
-    "notes": "Migrated to Gameplay Card V2 maturity model."
+    "notes": "Current judged timing implementation requires commit-bound Card Lab evidence; historical production labels are not retained as current certification."
   },
   "testScenarios": [
     {
-      "id": "smoke_test",
+      "id": "default-victory",
       "tags": [
-        "smoke",
-        "runtime"
+        "browser",
+        "input"
       ]
     },
     {
-      "id": "demo_e2e_enter_retreat_fail_win",
+      "id": "timing-judgments",
       "tags": [
-        "e2e",
-        "demo",
-        "gate"
+        "browser",
+        "input"
+      ]
+    },
+    {
+      "id": "miss-failure",
+      "tags": [
+        "browser",
+        "input"
+      ]
+    },
+    {
+      "id": "configured-timeout",
+      "tags": [
+        "browser",
+        "input"
+      ]
+    },
+    {
+      "id": "combo-requirement",
+      "tags": [
+        "browser",
+        "input"
+      ]
+    },
+    {
+      "id": "pause-restart",
+      "tags": [
+        "browser",
+        "input"
+      ]
+    },
+    {
+      "id": "mobile-touch",
+      "tags": [
+        "browser",
+        "input"
+      ]
+    },
+    {
+      "id": "offline-file-launch",
+      "tags": [
+        "browser",
+        "input"
       ]
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
-    "conditionalWaivers": [
-      "device_class_fps: headless soak avgFps proxy",
-      "vlm_visual_overflow: deferred; deterministic visual_audit used",
-      "standalone_zip_host_e2e: demo browser gate primary for lightweight card"
-    ]
+    "productionReady": false,
+    "blockReason": "Card Lab is synthetic browser acceptance, not full release certification."
   },
-  "certificationNotes": {
+  "historicalCertification": {
     "status": "production_ready",
     "certifiedAt": "2026-07-24",
     "demo": "minigame_master/core/demo/rhythm_timing",
@@ -267,6 +281,12 @@
       "VLM overflow/HUD audit",
       "full standalone export host E2E matrix",
       "boss phase in production demos (skipBoss currently)"
-    ]
+    ],
+    "note": "Historical metadata only; not evidence for the judged timing runtime introduced in Card Lab."
+  },
+  "parameterAliases": {
+    "spawnIntervalMs": "beatIntervalMs",
+    "goalValue": "targetProgress",
+    "duration": "durationSec"
   }
 }

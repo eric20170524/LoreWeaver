@@ -1,0 +1,49 @@
+name: Gameplay Quality
+
+on:
+  pull_request:
+    paths:
+      - 'minigame_master/**'
+      - 'src/game/**'
+      - 'src/runtime/**'
+      - 'productize/jobs/**'
+      - '.github/workflows/gameplay-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gameplay-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Repair platform optional dependency
+        run: |
+          VERSION="$(node -p "require('./node_modules/rollup/package.json').version")"
+          npm install --no-save "@rollup/rollup-linux-x64-gnu@${VERSION}"
+      - name: Existing behavioral baseline
+        run: |
+          node --test productize/jobs/check-survivor-combat-runtime.mjs productize/jobs/check-dodge-counter-runtime.mjs
+          npx tsx --test productize/jobs/check-cultivation-model.ts
+      - name: Reproducible source diagnostic bundle
+        if: always()
+        run: |
+          mkdir -p /tmp/gameplay-quality
+          git rev-parse HEAD > /tmp/gameplay-quality/source-commit.txt
+          git archive --format=tar.gz --output=/tmp/gameplay-quality/source.tar.gz HEAD
+          tar -czf /tmp/gameplay-quality/node-dependencies.tar.gz node_modules
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gameplay-quality-diagnostics
+          path: /tmp/gameplay-quality/
+          retention-days: 2

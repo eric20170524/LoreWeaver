@@ -15,6 +15,8 @@ import ArenaWaveBossModifier from './ArenaWaveBossModifier.js';
 import RandomRoomPortalsModifier from './RandomRoomPortalsModifier.js';
 import MirrorBossModifier from './MirrorBossModifier.js';
 import SelfDestructEnemyModifier from './SelfDestructEnemyModifier.js';
+import WeaponStanceCycleModifier from './WeaponStanceCycleModifier.js';
+import RunGrowthMilestonesModifier from './RunGrowthMilestonesModifier.js';
 
 export const SURVIVOR_HORDE_MODIFIER_REGISTRY = Object.freeze({
     hazard_telegraph: HazardTelegraphModifier,
@@ -33,7 +35,9 @@ export const SURVIVOR_HORDE_MODIFIER_REGISTRY = Object.freeze({
     arena_wave_boss: ArenaWaveBossModifier,
     random_room_portals: RandomRoomPortalsModifier,
     mirror_boss: MirrorBossModifier,
-    self_destruct_enemy: SelfDestructEnemyModifier
+    self_destruct_enemy: SelfDestructEnemyModifier,
+    weapon_stance_cycle: WeaponStanceCycleModifier,
+    run_growth_milestones: RunGrowthMilestonesModifier
 });
 
 export const SURVIVOR_HORDE_SUPPORTED_MODIFIERS = Object.freeze(
@@ -50,7 +54,11 @@ export function createSurvivorHordeModifier(entry = {}) {
     const knobs = typeof entry === 'string'
         ? {}
         : entry.knobs || entry.config || {};
-    return new ModifierClass(knobs);
+    const modifier = new ModifierClass(knobs);
+    // Stable runtime identity lets generic modifiers address each other without
+    // importing concrete classes or relying on constructor names.
+    modifier.id = id;
+    return modifier;
 }
 
 export function createSurvivorHordeModifiers(entries = []) {

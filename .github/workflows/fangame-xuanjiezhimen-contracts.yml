@@ -1,0 +1,47 @@
+name: Fangame Xuanjiezhimen Contracts
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'data/presets/xuanjiezhimen_fangame_preset.json'
+      - 'backend/theme_presets.py'
+      - 'minigame_master/core/lib/contracts/**'
+      - 'minigame_master/core/lib/gameplay/GameplayAdapter.js'
+      - 'minigame_master/core/lib/gameplay/GameplayModifier.js'
+      - 'minigame_master/core/lib/gameplay/survivor_horde/**'
+      - 'productize/jobs/check-xuanjiezhimen-fangame-preset.py'
+      - 'productize/jobs/check-weapon-stance-cycle.mjs'
+      - 'productize/jobs/check-survivor-combat-runtime.mjs'
+      - '.github/workflows/fangame-xuanjiezhimen-contracts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate fangame preset and aliases
+        run: python productize/jobs/check-xuanjiezhimen-fangame-preset.py
+
+      - name: Validate stance, run growth, and survivor knob bridge
+        run: node productize/jobs/check-weapon-stance-cycle.mjs
+
+      - name: Validate timer-driven combat and exactly-once rewards
+        run: node --test productize/jobs/check-survivor-combat-runtime.mjs

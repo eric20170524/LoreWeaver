@@ -11,6 +11,8 @@ export default class GameplayAdapter {
         /** @type {object|null} normalized playability knobs after init */
         this.playability = null;
         this.observationControls = new Set();
+        this.sceneShutdownHandler = null;
+        this.ownsScenePause = false;
     }
 
     /**
@@ -40,6 +42,10 @@ export default class GameplayAdapter {
     create(scene) {
         this.scene = scene;
         this.status = 'running';
+        // Keep this listener outside the run cleanups: finish() cleans those
+        // before the host stops the scene. The adapter still needs disposal.
+        this.sceneShutdownHandler = () => this.destroy();
+        scene.events?.once?.('shutdown', this.sceneShutdownHandler);
         this.registerObservationControls();
         return this;
     }
@@ -49,12 +55,20 @@ export default class GameplayAdapter {
     pause() {
         if (this.status === 'running') {
             this.status = 'paused';
+            this.lifecycle?.pause?.();
+            // A paused flag alone does not stop Phaser input, tweens or timers.
+            // Do not take ownership of a pause already imposed by the host.
+            this.ownsScenePause = this.scene?.sys?.isActive?.() === true;
+            if (this.ownsScenePause) this.scene.sys.pause();
         }
     }
 
     resume() {
         if (this.status === 'paused') {
             this.status = 'running';
+            this.lifecycle?.resume?.();
+            if (this.ownsScenePause && this.scene?.sys?.isPaused?.()) this.scene.sys.resume();
+            this.ownsScenePause = false;
         }
     }
 
@@ -293,14 +307,23 @@ export default class GameplayAdapter {
     }
 
     destroy() {
+        if (this.status === 'destroyed') return;
+        this.scene?.events?.off?.('shutdown', this.sceneShutdownHandler);
+        this.sceneShutdownHandler = null;
+        this.lifecycle?.destroy?.();
+        this.ownsScenePause = false;
         this.unregisterObservationControls();
         this.status = 'destroyed';
         this.scene = null;
     }
 
     end(partialResult = {}) {
+        if (this.status === 'ended' || this.status === 'destroyed') return this.result;
         this.result = createNodeResult(partialResult);
         this.status = 'ended';
+        // Allow host settlement callbacks to run after a direct adapter pause.
+        if (this.ownsScenePause && this.scene?.sys?.isPaused?.()) this.scene.sys.resume();
+        this.ownsScenePause = false;
         this.updateObservationState({ lastResult: this.result });
         return this.result;
     }

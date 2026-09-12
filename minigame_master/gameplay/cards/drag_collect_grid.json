@@ -3,7 +3,7 @@
   "id": "drag_collect_grid",
   "title": "Drag Collect / Falling Collect",
   "category": "collection",
-  "status": "production_ready",
+  "status": "runtime_ready",
   "runtime": {
     "engineTargets": [
       "phaser",
@@ -16,8 +16,7 @@
   },
   "inputs": [
     "pointer_drag",
-    "touch_drag",
-    "pointer_move"
+    "touch_drag"
   ],
   "objectives": [
     "collect_target_amount"
@@ -96,12 +95,10 @@
       "type": "string",
       "default": "objective",
       "enum": [
-        "objective",
-        "survive",
-        "boss_only"
+        "objective"
       ],
       "patchLevel": "L1",
-      "description": "Win condition class (PlayabilityContract)."
+      "description": "This card completes its collection objective (or the optional legacy Boss). Survival-only is not implemented."
     },
     "allowQuit": {
       "type": "boolean",
@@ -147,9 +144,9 @@
     },
     "skipBoss": {
       "type": "boolean",
-      "default": false,
+      "default": true,
       "patchLevel": "L1",
-      "description": "When true, pure collect loop without boss phase (demo/production gate)."
+      "description": "Default is the pure collection objective. Explicit false retains the legacy mid-run Boss phase."
     },
     "durationSec": {
       "type": "number",
@@ -172,6 +169,30 @@
       "default": "prototype",
       "patchLevel": "L1",
       "description": "prototype | production art binding mode."
+    },
+    "playerHp": {
+      "type": "number",
+      "default": 100,
+      "min": 1,
+      "max": 1000,
+      "patchLevel": "L1",
+      "description": "Initial health, applied at new run."
+    },
+    "collectRadius": {
+      "type": "number",
+      "default": 36,
+      "min": 12,
+      "max": 64,
+      "patchLevel": "L1",
+      "description": "Player collection/hit radius in pixels."
+    },
+    "maxActiveItems": {
+      "type": "number",
+      "default": 48,
+      "min": 4,
+      "max": 256,
+      "patchLevel": "L1",
+      "description": "Bound for simultaneously active falling objects and player projectiles."
     }
   },
   "patchPolicy": {
@@ -198,12 +219,14 @@
     "retreatReason": "retreated"
   },
   "testFixture": {
-    "type": "adapter_smoke",
-    "path": "minigame_master/core/lib/testing/runAdapterSmoke.js",
+    "type": "browser",
+    "path": "productize/jobs/run-collect-card-lab-e2e.mjs",
     "assertions": [
-      "create spawns falling items (spawnedTotal > 0)",
-      "player can collect via proximity",
-      "retreat emits NodeResult reason=retreated and onEnd"
+      "default quota won by real dragging",
+      "hazards cause real HP failure",
+      "timeout fails before quota",
+      "pause and hover do not move",
+      "restart/switch/offline/mobile touch"
     ]
   },
   "sourceProvenance": [
@@ -222,7 +245,9 @@
   },
   "knownRisks": [
     "Do not set needAmount ≈ timeLimitSec (unplayable collect quota)",
-    "Prefer manual fall kinematics over arcade velocity for host stability"
+    "Prefer manual fall kinematics over arcade velocity for host stability",
+    "Historical production tag was conditional on skipBoss fixtures; current tests must bind the source revision.",
+    "Optional Boss retains unit regressions; browser Boss combat and device performance remain pending."
   ],
   "implementationNotes": "Runtime adapter is CollectDodgeAdapter (not a separate DragCollectGridAdapter). Card knobs use timeLimitSec/needAmount; runtime normalizes legacy durationSec/goalValue/collectGoal via PlayabilityContract.",
   "requiredAssets": {
@@ -276,16 +301,10 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
-    "conditionalWaivers": [
-      "device_class_fps: headless soak avgFps proxy",
-      "vlm_visual_overflow: deferred; deterministic visual_audit used",
-      "standalone_zip_host_e2e: demo browser gate primary for collect/dodge card",
-      "boss phase skipped in production demos (skipBoss)"
-    ]
+    "productionReady": false,
+    "blockReason": "Current Card Lab default-collection verification is separate from historical gates; full release and optional Boss browser coverage pending."
   },
-  "certificationNotes": {
+  "historicalCertification": {
     "status": "production_ready",
     "certifiedAt": "2026-07-24",
     "demo": "minigame_master/core/demo/drag_collect_grid",
