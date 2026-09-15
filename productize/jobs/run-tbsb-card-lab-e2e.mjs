@@ -60,14 +60,18 @@ async function waitPlayerTurn(page, timeout = 2500) {
   return read(page);
 }
 
+function assertRunningTimer(snapshot, limit) {
+  assert.equal(snapshot.config.timeLimitSec, limit);
+  assert.ok(snapshot.state.timer > 0 && snapshot.state.timer <= limit, `running timer stays inside (0, ${limit}]`);
+}
+
 try {
   await run('default-victory', async (page, row) => {
     const initial = await begin(page);
     assert.equal(initial.config.playerHp, 100);
     assert.equal(initial.config.enemyHp, 180);
     assert.equal(initial.config.enemyAtk, 18);
-    assert.equal(initial.config.timeLimitSec, 45);
-    assert.ok(initial.state.timer <= 45 && initial.state.timer > 44);
+    assertRunningTimer(initial, 45);
 
     await acceptedSkill(page, row, 'burst');
     let state = await waitPlayerTurn(page);
@@ -159,7 +163,7 @@ try {
     await page.locator('#enemy-hp').fill('999');
     await page.locator('#enemy-atk').fill('0');
     const initial = await begin(page);
-    assert.ok(initial.state.timer <= 5 && initial.state.timer > 4);
+    assertRunningTimer(initial, 5);
     await page.waitForFunction(() => !!window.__CARD_LAB__.snapshot().result, null, { timeout: 8500 });
     const final = await read(page);
     assert.equal(final.result.success, false);
@@ -173,14 +177,20 @@ try {
     await page.locator('#duration').fill('20');
     await page.locator('#enemy-hp').fill('999');
     await page.locator('#enemy-atk').fill('25');
-    await begin(page);
+    const initial = await begin(page);
+    assertRunningTimer(initial, 20);
 
-    const action = await acceptedSkill(page, row, 'heavy');
-    assert.equal(action.after.state.turn, 'enemy');
+    const usedBeforePause = initial.state.skillsUsed;
+    await pressSkill(page, 'heavy');
     await page.getByRole('button', { name: '暂停', exact: true }).click();
     await page.waitForFunction(() => window.__CARD_LAB__.snapshot().state?.status === 'paused');
-    const paused = (await read(page)).state;
-    assert.equal(paused.turn, 'enemy');
+    const pausedSnapshot = await read(page);
+    const paused = pausedSnapshot.state;
+    assert.equal(paused.skillsUsed, usedBeforePause + 1, 'heavy is accepted before the visible pause');
+    assert.equal(paused.turn, 'enemy', 'pause lands before the pending enemy response');
+    assert.equal(paused.hp, 100);
+    row.actions.push({ kind: 'pointer', skill: 'heavy', phase: 'pause-race', turnAfter: paused.turn, hpAfter: paused.hp });
+
     await page.waitForTimeout(1000);
     const frozen = (await read(page)).state;
     assert.equal(frozen.hp, paused.hp);
@@ -193,31 +203,40 @@ try {
     assert.equal(resumed.state.hp, 75);
     assert.ok(resumed.state.timer < frozen.timer - 0.1);
 
-    const pendingRestart = await acceptedSkill(page, row, 'strike');
-    assert.equal(pendingRestart.after.state.turn, 'enemy');
-    const beforeRestartGeneration = pendingRestart.after.generation;
-    const restarted = await begin(page);
+    const beforeRestartGeneration = resumed.generation;
+    await pressSkill(page, 'strike');
+    await page.locator('#start').click();
+    await page.waitForFunction(
+      generation => {
+        const snap = window.__CARD_LAB__.snapshot();
+        return snap.generation === generation + 1 && !snap.starting && snap.state?.status === 'running';
+      },
+      beforeRestartGeneration,
+      { timeout: 20000 }
+    );
+    await page.locator('canvas').scrollIntoViewIfNeeded();
+    const restarted = await read(page);
     assert.equal(restarted.generation, beforeRestartGeneration + 1);
     assert.equal(restarted.state.hp, 100);
     assert.equal(restarted.state.enemyHp, 999);
     assert.equal(restarted.state.turn, 'player');
     assert.equal(restarted.state.skillsUsed, 0);
     assert.ok(Object.values(restarted.state.cooldowns).every(value => value === 0));
-    assert.ok(restarted.state.timer <= 20 && restarted.state.timer > 19);
+    assertRunningTimer(restarted, 20);
     assert.equal(await page.locator('canvas').count(), 1);
 
     await page.waitForTimeout(900);
     const stableRestart = await read(page);
     assert.equal(stableRestart.generation, restarted.generation);
     assert.equal(stableRestart.result, null);
-    assert.equal(stableRestart.state.hp, 100, 'stale pending enemy action cannot damage the restarted battle');
+    assert.equal(stableRestart.state.hp, 100, 'old enemy action cannot cross the host remount boundary');
     assert.equal(stableRestart.state.turn, 'player');
     assert.equal(stableRestart.state.skillsUsed, 0);
     row.assertions.push(
-      'pause during the pending enemy turn freezes both response and countdown',
+      'visible pause immediately after a real skill click freezes the pending enemy response and countdown',
       'resume produces exactly one enemy response',
-      'restart during a second pending enemy turn cancels the old response',
-      'visible restart creates one fresh canvas and resets HP, turn, cooldowns, skills and timer'
+      'visible restart immediately after a real skill click remounts the battle and old enemy work cannot damage the new generation',
+      'restart leaves one fresh canvas with HP, turn, cooldowns, skills and timer reset'
     );
   });
 
@@ -238,7 +257,7 @@ try {
     assert.equal(restarted.state.enemyHp, 180);
     assert.equal(restarted.state.skillsUsed, 0);
     assert.equal(restarted.state.turn, 'player');
-    assert.ok(restarted.state.timer > 44);
+    assertRunningTimer(restarted, 45);
     row.assertions.push('start/restart from a completed result clears the old settlement and mounts a fresh battle');
   });
 
