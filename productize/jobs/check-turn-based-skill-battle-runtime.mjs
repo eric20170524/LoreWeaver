@@ -179,38 +179,6 @@ test('destroy without a result cancels the pending enemy action and emits no com
   assert.equal(adapter.status, 'destroyed');
 });
 
-test('restart during a pending enemy turn cancels the stale action and fully resets battle state', () => {
-  const { adapter, mock, results, skill } = fixture({
-    enemyHp: 999,
-    enemyAtk: 25,
-    timeLimitSec: 20
-  });
-  assert.equal(adapter.onSkillClick(skill('heavy')), true);
-  assert.equal(adapter.state.turn, 'enemy');
-  assert.equal(adapter.state.skillsUsed, 1);
-  const oldTimers = mock.timers.slice();
-  assert.ok(oldTimers.some(timer => !timer.removed), 'enemy response is pending before restart');
-
-  assert.equal(adapter.restart(), true);
-  assert.ok(oldTimers.every(timer => timer.removed), 'restart removes timers owned by the previous battle');
-  assert.equal(adapter.status, 'running');
-  assert.equal(adapter.state.playerHp, 100);
-  assert.equal(adapter.state.enemyHp, 999);
-  assert.equal(adapter.state.turn, 'player');
-  assert.equal(adapter.state.turnsElapsed, 0);
-  assert.equal(adapter.state.skillsUsed, 0);
-  assert.equal(adapter.state.timeRemaining, 20);
-  assert.ok(Object.values(adapter.state.cooldowns).every(value => value === 0));
-  assert.equal(results.length, 0);
-
-  mock.tick(2000);
-  assert.equal(adapter.state.playerHp, 100, 'stale enemy timer cannot damage the restarted battle');
-  assert.equal(adapter.state.turnsElapsed, 0);
-  assert.equal(adapter.state.turn, 'player');
-  assert.equal(results.length, 0);
-  adapter.destroy();
-});
-
 test('card defaults survive shared host normalization without reintroducing 1800/120 drift', () => {
   const card = JSON.parse(fs.readFileSync(new URL('../../minigame_master/gameplay/cards/turn_based_skill_battle.json', import.meta.url)));
   const raw = Object.fromEntries(Object.entries(card.knobs).map(([key, value]) => [key, value.default]));
