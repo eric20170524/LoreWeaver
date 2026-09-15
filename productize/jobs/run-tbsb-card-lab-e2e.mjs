@@ -99,7 +99,7 @@ try {
     await begin(page);
 
     const heavy = await acceptedSkill(page, row, 'heavy');
-    assert.equal(heavy.after.turn, 'enemy');
+    assert.equal(heavy.after.state.turn, 'enemy');
     let state = await waitPlayerTurn(page);
     assert.equal(state.state.hp, 90);
     assert.equal(state.state.cooldowns.heavy, 2);
@@ -176,7 +176,7 @@ try {
     await begin(page);
 
     const action = await acceptedSkill(page, row, 'heavy');
-    assert.equal(action.after.turn, 'enemy');
+    assert.equal(action.after.state.turn, 'enemy');
     await page.getByRole('button', { name: '暂停', exact: true }).click();
     await page.waitForFunction(() => window.__CARD_LAB__.snapshot().state?.status === 'paused');
     const paused = (await read(page)).state;
