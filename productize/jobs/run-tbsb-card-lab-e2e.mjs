@@ -193,7 +193,9 @@ try {
     assert.equal(resumed.state.hp, 75);
     assert.ok(resumed.state.timer < frozen.timer - 0.1);
 
-    const beforeRestartGeneration = resumed.generation;
+    const pendingRestart = await acceptedSkill(page, row, 'strike');
+    assert.equal(pendingRestart.after.state.turn, 'enemy');
+    const beforeRestartGeneration = pendingRestart.after.generation;
     const restarted = await begin(page);
     assert.equal(restarted.generation, beforeRestartGeneration + 1);
     assert.equal(restarted.state.hp, 100);
@@ -203,9 +205,18 @@ try {
     assert.ok(Object.values(restarted.state.cooldowns).every(value => value === 0));
     assert.ok(restarted.state.timer <= 20 && restarted.state.timer > 19);
     assert.equal(await page.locator('canvas').count(), 1);
+
+    await page.waitForTimeout(900);
+    const stableRestart = await read(page);
+    assert.equal(stableRestart.generation, restarted.generation);
+    assert.equal(stableRestart.result, null);
+    assert.equal(stableRestart.state.hp, 100, 'stale pending enemy action cannot damage the restarted battle');
+    assert.equal(stableRestart.state.turn, 'player');
+    assert.equal(stableRestart.state.skillsUsed, 0);
     row.assertions.push(
       'pause during the pending enemy turn freezes both response and countdown',
       'resume produces exactly one enemy response',
+      'restart during a second pending enemy turn cancels the old response',
       'visible restart creates one fresh canvas and resets HP, turn, cooldowns, skills and timer'
     );
   });
