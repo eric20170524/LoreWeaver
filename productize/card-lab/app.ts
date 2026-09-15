@@ -5,8 +5,15 @@ import dodgeCard from '../../minigame_master/gameplay/cards/dodge_counter_boss.j
 import rhythmCard from '../../minigame_master/gameplay/cards/rhythm_timing.json';
 import collectCard from '../../minigame_master/gameplay/cards/drag_collect_grid.json';
 import sequenceCard from '../../minigame_master/gameplay/cards/sequence_synthesis.json';
+import turnBasedCard from '../../minigame_master/gameplay/cards/turn_based_skill_battle.json';
 
-const cards = { dodge_counter_boss: dodgeCard, rhythm_timing: rhythmCard, drag_collect_grid: collectCard, sequence_synthesis: sequenceCard };
+const cards = {
+  dodge_counter_boss: dodgeCard,
+  rhythm_timing: rhythmCard,
+  drag_collect_grid: collectCard,
+  sequence_synthesis: sequenceCard,
+  turn_based_skill_battle: turnBasedCard
+};
 let card: any = cards[new URLSearchParams(location.search).get('card') as keyof typeof cards] || dodgeCard;
 
 declare const LAB_REVISION: string;
@@ -26,7 +33,9 @@ const pool = $('pool') as HTMLInputElement;
 const penalty = $('penalty') as HTMLInputElement;
 const seed = $('seed') as HTMLInputElement;
 const explode = $('explode') as HTMLSelectElement;
-duration.required = hp.required = true;
+const enemyHp = $('enemy-hp') as HTMLInputElement;
+const enemyAtk = $('enemy-atk') as HTMLInputElement;
+duration.required = hp.required = enemyHp.required = enemyAtk.required = true;
 let runtime: ReturnType<typeof startLoreWeaverRuntime> | null = null;
 let adapter: any = null;
 let generation = 0;
@@ -70,7 +79,19 @@ function focusGame() {
 }
 function launch() {
   if (starting) return;
-  const fields = [duration, hp, ...(card.id === 'rhythm_timing' ? [target, combo] : card.id === 'drag_collect_grid' ? [target, hazard, damage] : card.id === 'sequence_synthesis' ? [recipe, pool, penalty, seed] : [])];
+  const rhythm = card.id === 'rhythm_timing';
+  const collect = card.id === 'drag_collect_grid';
+  const sequence = card.id === 'sequence_synthesis';
+  const turnBased = card.id === 'turn_based_skill_battle';
+  const fields = [
+    duration,
+    hp,
+    ...(rhythm ? [target, combo]
+      : collect ? [target, hazard, damage]
+      : sequence ? [recipe, pool, penalty, seed]
+      : turnBased ? [enemyHp, enemyAtk]
+      : [])
+  ];
   const invalid = fields.find(field => !field.checkValidity());
   if (invalid) {
     invalid.reportValidity();
@@ -84,9 +105,6 @@ function launch() {
   runConfig = Object.fromEntries(Object.entries(card.knobs).map(([key, knob]) => [key, (knob as { default: unknown }).default]));
   runConfig.durationSec = Number(duration.value);
   runConfig.playerHp = Number(hp.value);
-  const rhythm = card.id === 'rhythm_timing';
-  const collect = card.id === 'drag_collect_grid';
-  const sequence = card.id === 'sequence_synthesis';
   if (collect) {
     runConfig.timeLimitSec = Number(duration.value);
     runConfig.needAmount = runConfig.goalValue = Number(target.value);
@@ -114,10 +132,25 @@ function launch() {
       material_earth:'土', material_wind:'风', material_thunder:'雷', material_ice:'冰'
     } };
   }
+  if (turnBased) {
+    runConfig.timeLimitSec = Number(duration.value);
+    runConfig.enemyHp = Number(enemyHp.value);
+    runConfig.enemyAtk = Number(enemyAtk.value);
+  }
+
+  const title = turnBased ? '回合技能对决试炼' : sequence ? '顺序合成试炼' : collect ? '拖拽收集试炼' : rhythm ? '节奏共鸣试炼' : '闪避反击试炼';
+  const intro = turnBased
+    ? '选择技能行动，敌方随后反击。技能冷却按完整玩家回合计算；击败敌人获胜，生命归零或总时限耗尽失败。'
+    : sequence ? '按配方顺序投入材料。错误回退已完成步骤，连续错误重置或失败，超时失败。'
+    : collect ? '按住横向拖动，接绿珠、避红珠。收集达标获胜，超时或生命归零失败。'
+    : rhythm ? '圆环重合时点击中心或按空格。进度与最佳连击均达标才成功。'
+    : '按住拖动离开危险区。金色反击窗口出现时，点击红色 Boss 或按空格。每个窗口只接受一次反击。';
+  const taunt = turnBased ? '看清冷却，规划下一回合。' : sequence ? '看清配方，从左到右依次投入。' : collect ? '观察落点，及时走位。' : rhythm ? '听从节拍，看准圆环。' : '看清预警，再抓住反击窗口。';
+  const goalValue = Number(turnBased ? runConfig.enemyHp : sequence ? 100 : collect ? runConfig.needAmount : rhythm ? runConfig.targetProgress : runConfig.breakGaugeMax);
   const node = {
-    id: 1, title: sequence ? '顺序合成试炼' : collect ? '拖拽收集试炼' : rhythm ? '节奏共鸣试炼' : '闪避反击试炼', intro: sequence ? '按配方顺序投入材料。错误回退已完成步骤，连续错误重置或失败，超时失败。' : collect ? '按住横向拖动，接绿珠、避红珠。收集达标获胜，超时或生命归零失败。' : rhythm ? '圆环重合时点击中心或按空格。进度与最佳连击均达标才成功。' : '按住拖动离开危险区。金色反击窗口出现时，点击红色 Boss 或按空格。每个窗口只接受一次反击。',
-    taunts: [sequence ? '看清配方，从左到右依次投入。' : collect ? '观察落点，及时走位。' : rhythm ? '听从节拍，看准圆环。' : '看清预警，再抓住反击窗口。'], mechanics: card.id, rewards: '试验场完成记录',
-    goalValue: Number(sequence ? 100 : collect ? runConfig.needAmount : rhythm ? runConfig.targetProgress : runConfig.breakGaugeMax), resourceMultiplier: 1, difficulty: 1,
+    id: 1, title, intro,
+    taunts: [taunt], mechanics: card.id, rewards: '试验场完成记录',
+    goalValue, resourceMultiplier: 1, difficulty: 1,
     durationLimit: Number(runConfig.durationSec),
     gameplay: { adapter: 'phaser', cardId: card.id, modifiers: [], knobs: { ...runConfig }, patchLevel: 'L1' as const }
   };
@@ -178,13 +211,23 @@ const refresh = window.setInterval(() => {
   quit.disabled = pause.disabled;
   pause.textContent = state?.status === 'paused' ? '继续' : '暂停';
   const phases: Record<string, string> = { idle: '等待出招', warning: '危险预警', active: '攻击判定', counter: '反击窗口' };
+  const runningStatus = card.id === 'turn_based_skill_battle'
+    ? state?.turn === 'enemy' ? '敌方行动' : '玩家回合'
+    : phases[state?.phase] || '运行中';
   $('status').textContent = ended ? (lastResult.success ? '挑战成功' : lastResult.reason === 'retreated' ? '已退出' : '挑战失败')
-    : state?.status === 'paused' ? '已暂停' : state?.status === 'running' ? phases[state.phase] || '运行中' : '等待开场';
+    : state?.status === 'paused' ? '已暂停' : state?.status === 'running' ? runningStatus : '等待开场';
   if (state) {
     $('timer').textContent = `${Math.ceil(state.timer ?? 0)}s`;
     $('health').textContent = String(state.hp ?? '—');
-    $('gauge').textContent = `${state.gauge ?? state.score ?? 0}/${state.goalValue ?? 100}`;
-    $('counters').textContent = card.id === 'rhythm_timing' ? `${state.combo ?? 0} / ${state.bestCombo ?? 0}` : card.id === 'drag_collect_grid' ? String(state.hazardsHit ?? 0) : card.id === 'sequence_synthesis' ? `${state.mistakes ?? 0} / ${state.resets ?? 0}` : String(state.counters ?? 0);
+    $('gauge').textContent = card.id === 'turn_based_skill_battle'
+      ? `${Math.ceil(state.enemyHp ?? 0)}/${runConfig?.enemyHp ?? '—'}`
+      : `${state.gauge ?? state.score ?? 0}/${state.goalValue ?? 100}`;
+    $('counters').textContent = card.id === 'rhythm_timing'
+      ? `${state.combo ?? 0} / ${state.bestCombo ?? 0}`
+      : card.id === 'drag_collect_grid' ? String(state.hazardsHit ?? 0)
+      : card.id === 'sequence_synthesis' ? `${state.mistakes ?? 0} / ${state.resets ?? 0}`
+      : card.id === 'turn_based_skill_battle' ? String(state.skillsUsed ?? 0)
+      : String(state.counters ?? 0);
   }
 }, 50);
 window.addEventListener('pagehide', () => { clearInterval(refresh); stop(); });
@@ -195,11 +238,14 @@ function selectCard() {
   const rhythm = card.id === 'rhythm_timing';
   const collect = card.id === 'drag_collect_grid';
   const sequence = card.id === 'sequence_synthesis';
-  document.title = `玩法卡试验场 · ${sequence ? '顺序合成' : collect ? '拖拽收集' : rhythm ? '节奏点击' : '闪避反击'}`;
-  $('heading').textContent = sequence ? '04 · 顺序合成' : collect ? '03 · 拖拽收集' : rhythm ? '02 · 节奏点击' : '01 · 闪避反击 Boss';
+  const turnBased = card.id === 'turn_based_skill_battle';
+  document.title = `玩法卡试验场 · ${turnBased ? '回合技能战斗' : sequence ? '顺序合成' : collect ? '拖拽收集' : rhythm ? '节奏点击' : '闪避反击'}`;
+  $('heading').textContent = turnBased ? '05 · 回合制技能战斗' : sequence ? '04 · 顺序合成' : collect ? '03 · 拖拽收集' : rhythm ? '02 · 节奏点击' : '01 · 闪避反击 Boss';
   $('card-id').textContent = card.id;
-  $('subtitle').textContent = sequence ? '读配方，按序合成' : collect ? '接住绿珠，避开红珠' : rhythm ? '看准节拍，稳定连击' : '读招，然后反击';
-  $('instructions').innerHTML = sequence
+  $('subtitle').textContent = turnBased ? '选技能，读冷却，扛住反击' : sequence ? '读配方，按序合成' : collect ? '接住绿珠，避开红珠' : rhythm ? '看准节拍，稳定连击' : '读招，然后反击';
+  $('instructions').innerHTML = turnBased
+    ? '<p>① 点击底部技能；被接受的技能只消费一次行动，随后进入一次敌方回合。</p><p>② 技能 CD=N 会完整封锁接下来 N 个玩家回合；冷却归零后才能再次使用。</p><p>③ 敌方生命归零获胜；玩家生命归零或总倒计时耗尽失败。暂停会冻结敌方行动与倒计时。</p>'
+    : sequence
     ? '<p>① 按可见配方从左到右点击材料；数字1～8对应材料按钮。</p><p>② 错误按惩罚比例回退完整步骤（向上取整）；默认30%在4步配方中回退2步。连错2次重置，可切换为直接失败。</p><p>③ 完成整份配方获胜；超时失败。种子0也是固定配方。触摸点击与鼠标规则一致。</p>'
     : collect
     ? '<p>① 按住鼠标或手指，横向拖动底部角色；悬停不会移动。</p><p>② 接绿色珠子加1，碰红色珠子扣生命。默认40秒内接16颗绿珠。</p><p>③ 达标获胜；超时或生命耗尽失败。默认不插入Boss阶段。</p>'
@@ -210,12 +256,14 @@ function selectCard() {
   $('combo-field').hidden = !rhythm;
   $('collect-config').hidden = !collect;
   $('sequence-config').hidden = !sequence;
-  $('progress-label').textContent = sequence ? '配方进度' : collect ? '已收集' : rhythm ? '进度' : '破势';
-  $('count-label').textContent = sequence ? '错误 / 重置' : collect ? '受击次数' : rhythm ? '当前 / 最佳连击' : '反击次数';
-  for (const [field, key] of [[duration, 'durationSec'], [hp, 'playerHp']] as const) {
-    const knob = card.knobs[key]; field.value = String(knob.default);
-    field.min = String(knob.min); field.max = String(knob.max);
-  }
+  $('turn-based-config').hidden = !turnBased;
+  $('progress-label').textContent = turnBased ? '敌方生命' : sequence ? '配方进度' : collect ? '已收集' : rhythm ? '进度' : '破势';
+  $('count-label').textContent = turnBased ? '已用技能' : sequence ? '错误 / 重置' : collect ? '受击次数' : rhythm ? '当前 / 最佳连击' : '反击次数';
+  const durationKnob = card.knobs.durationSec || card.knobs.timeLimitSec;
+  duration.value = String(durationKnob.default);
+  duration.min = String(durationKnob.min); duration.max = String(durationKnob.max);
+  const hpKnob = card.knobs.playerHp;
+  hp.value = String(hpKnob.default); hp.min = String(hpKnob.min); hp.max = String(hpKnob.max);
   for (const [field, key] of [[recipe, 'recipeLength'], [pool, 'materialPoolSize'], [penalty, 'wrongInputProgressPenalty'], [seed, 'runSeed']] as const) {
     const knob = sequenceCard.knobs[key]; field.value = String(knob.default);
     field.min = String(knob.min); field.max = String(knob.max);
@@ -226,6 +274,10 @@ function selectCard() {
   hazard.value = String(collectCard.knobs.hazardRate.default);
   damage.value = String(collectCard.knobs.damageOnHit.default);
   combo.value = String(rhythmCard.knobs.requiredBestCombo.default);
+  for (const [field, key] of [[enemyHp, 'enemyHp'], [enemyAtk, 'enemyAtk']] as const) {
+    const knob = turnBasedCard.knobs[key]; field.value = String(knob.default);
+    field.min = String(knob.min); field.max = String(knob.max);
+  }
   $('definition').textContent = JSON.stringify(card, null, 2);
   $('status').textContent = '尚未开始'; $('result').textContent = '本次尚未结算';
   for (const id of ['timer', 'health', 'gauge', 'counters']) $(id).textContent = '—';
