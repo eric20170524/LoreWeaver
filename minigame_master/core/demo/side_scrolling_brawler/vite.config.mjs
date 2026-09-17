@@ -1,19 +1,19 @@
-import { defineConfig } from 'vite';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const demoRoot = path.dirname(fileURLToPath(import.meta.url));
+const loreRoot = path.resolve(demoRoot, "../../../..");
+const phaserEsm = path.resolve(loreRoot, "node_modules/phaser/dist/phaser.esm.js");
 
-export default defineConfig({
-  root: here,
+export default {
+  root: demoRoot,
+  cacheDir: path.join("/private/tmp", "lw_side_scrolling_brawler_vite_cache"),
+  resolve: { alias: { phaser: phaserEsm } },
   server: {
-    host: '127.0.0.1',
+    host: "127.0.0.1",
     port: 4186,
     strictPort: true,
-    fs: { allow: [path.resolve(here, '../../..')] }
+    fs: { allow: [loreRoot] }
   },
-  build: {
-    outDir: path.resolve(here, '../../../../dist/demo-side-scrolling-brawler'),
-    emptyOutDir: true
-  }
-});
+  build: { emptyOutDir: true }
+};
