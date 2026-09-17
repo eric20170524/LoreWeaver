@@ -26,7 +26,8 @@ export default class CertifiedSideScrollingBrawlerAdapter extends SideScrollingB
         });
         const isMovementZone = (pointer = {}) => Number(pointer.y ?? pointer.worldY ?? 0) <= this.scene.scale.height * 0.75;
         const pointerId = (pointer = {}) => pointer.id ?? pointer.pointerId ?? 0;
-        const isTouchPointer = (pointer = {}) => String(pointer.event?.pointerType || pointer.pointerType || '').toLowerCase() === 'touch';
+        const isTouchPointer = (pointer = {}) => Boolean(pointer.wasTouch)
+            || String(pointer.event?.pointerType || pointer.pointerType || '').toLowerCase() === 'touch';
 
         const onDown = (pointer) => {
             if (!this.isRunning() || !isMovementZone(pointer)) return;
