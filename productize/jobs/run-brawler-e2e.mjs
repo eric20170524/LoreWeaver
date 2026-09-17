@@ -55,12 +55,6 @@ async function startRun(page, suffix = '') {
   await page.locator('canvas').click({ position: { x: 20, y: 20 } });
 }
 
-async function hold(page, key, ms) {
-  await page.keyboard.down(key);
-  await sleep(ms);
-  await page.keyboard.up(key);
-}
-
 async function advanceUntilWaveLock(page, timeout = 7000) {
   await page.keyboard.down('KeyD');
   try {
@@ -127,17 +121,32 @@ async function scenarioFailure(page) {
   return result;
 }
 
+async function runScenario(context, label, scenario) {
+  const page = await context.newPage();
+  const pageErrors = [];
+  const onPageError = error => pageErrors.push(error);
+  page.on('pageerror', onPageError);
+  try {
+    const result = await scenario(page);
+    if (pageErrors.length > 0) {
+      throw new Error(`${label} page error: ${pageErrors.map(error => error.stack || error.message || String(error)).join('\n---\n')}`);
+    }
+    return result;
+  } finally {
+    page.removeListener('pageerror', onPageError);
+    await page.close().catch(() => {});
+  }
+}
+
 let browser;
 try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  const page = await context.newPage();
-  page.on('pageerror', error => { throw error; });
 
-  const victory = await scenarioVictory(page);
-  const pauseRestart = await scenarioPauseRestart(page);
-  const failure = await scenarioFailure(page);
+  const victory = await runScenario(context, 'victory', scenarioVictory);
+  const pauseRestart = await runScenario(context, 'pause-restart', scenarioPauseRestart);
+  const failure = await runScenario(context, 'failure', scenarioFailure);
 
   console.log(JSON.stringify({
     cardId: 'side_scrolling_brawler',
