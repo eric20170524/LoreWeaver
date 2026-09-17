@@ -61,9 +61,22 @@ async function hold(page, key, ms) {
   await page.keyboard.up(key);
 }
 
+async function advanceUntilWaveLock(page, timeout = 7000) {
+  await page.keyboard.down('KeyD');
+  try {
+    return await waitState(
+      page,
+      s => s.status === 'ended' || (s.locked === true && s.aliveEnemies > 0),
+      'wave locked',
+      timeout
+    );
+  } finally {
+    await page.keyboard.up('KeyD');
+  }
+}
+
 async function clearCurrentWave(page, attackKey = 'KeyJ') {
   await waitState(page, s => s.locked === true && s.aliveEnemies > 0, 'wave locked');
-  await hold(page, 'KeyD', 420);
   for (let i = 0; i < 6; i += 1) {
     await page.keyboard.press(attackKey);
     await sleep(170);
@@ -75,9 +88,9 @@ async function clearCurrentWave(page, attackKey = 'KeyJ') {
 
 async function scenarioVictory(page) {
   await startRun(page);
-  await hold(page, 'KeyD', 420);
+  await advanceUntilWaveLock(page);
   await clearCurrentWave(page, 'KeyJ');
-  await hold(page, 'KeyD', 1050);
+  await advanceUntilWaveLock(page);
   await clearCurrentWave(page, 'KeyK');
   const result = await waitState(page, s => s.status === 'ended', 'victory result', 12000);
   if (result.resultSuccess !== true) throw new Error(`victory expected; ${JSON.stringify(result)}`);
@@ -98,8 +111,7 @@ async function scenarioPauseRestart(page) {
   await waitState(page, s => s.status === 'running', 'resumed');
   await waitState(page, s => s.elapsedSec > paused.elapsedSec, 'elapsed resumed', 3000);
 
-  await hold(page, 'KeyD', 450);
-  await waitState(page, s => s.locked === true, 'pre-restart progressed');
+  await advanceUntilWaveLock(page);
   await page.getByTestId('restart-run').click();
   const reset = await waitState(page, s => s.status === 'running' && s.wavesCleared === 0 && s.kills === 0 && s.locked === false, 'restart reset');
   if (reset.hp !== 100 || reset.lives !== 2 || reset.playerX > 100) throw new Error(`restart did not reset run: ${JSON.stringify(reset)}`);
@@ -108,7 +120,7 @@ async function scenarioPauseRestart(page) {
 
 async function scenarioFailure(page) {
   await startRun(page, '?mode=fail');
-  await hold(page, 'KeyD', 500);
+  await advanceUntilWaveLock(page);
   const result = await waitState(page, s => s.status === 'ended', 'failure result', 8000);
   if (result.resultSuccess !== false || result.resultReason !== 'hp_zero') throw new Error(`hp-zero failure expected; ${JSON.stringify(result)}`);
   if (result.settlementCount !== 1) throw new Error(`failure settlement must be exactly once; ${JSON.stringify(result)}`);
