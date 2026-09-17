@@ -4,9 +4,10 @@ import SideScrollingBrawlerAdapter from './SideScrollingBrawlerAdapter.js';
  * Production-facing compatibility layer for the legacy belt-scroll runtime.
  *
  * The underlying adapter remains the source of truth for waves, life stock,
- * continues and modifiers. This layer only closes two host/card contract gaps:
+ * continues and modifiers. This layer only closes host/card contract gaps:
  * 1) score-based host objectives must never bypass all-clear settlement;
- * 2) touch input must provide real lane movement, not attack-only taps.
+ * 2) successful settlement reports the card-owned `all_clear` reason;
+ * 3) touch input provides real lane movement, not attack-only taps.
  */
 export default class CertifiedSideScrollingBrawlerAdapter extends SideScrollingBrawlerAdapter {
     constructor(context = {}) {
@@ -130,9 +131,10 @@ export default class CertifiedSideScrollingBrawlerAdapter extends SideScrollingB
                 // Brawler victory is contractual all-clear, so ignore that fallback.
                 return this.result;
             }
-            // Preserve the card-owned settlement reason even when the generic host
-            // observes the score threshold before the adapter's delayed completion.
-            return super.finish(true, 'completed');
+            return super.finish(true, 'all_clear');
+        }
+        if (success && (reason == null || reason === 'completed')) {
+            return super.finish(true, 'all_clear');
         }
         return super.finish(success, reason);
     }
