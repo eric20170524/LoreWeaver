@@ -33,7 +33,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Restore Rollup native optional dependency
-        run: npm install --no-save "@rollup/rollup-linux-x64-gnu@$(node -p \"require('./node_modules/rollup/package.json').version\")"
+        run: |
+          ROLLUP_VERSION=$(node -p "require('./node_modules/rollup/package.json').version")
+          npm install --no-save "@rollup/rollup-linux-x64-gnu@$ROLLUP_VERSION"
       - name: Install real Chromium
         timeout-minutes: 10
         run: npx playwright install --with-deps chromium
