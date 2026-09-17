@@ -37,6 +37,9 @@ jobs:
           - card: turn_based_skill_battle
             unit: check-turn-based-skill-battle-runtime.mjs
             browser: run-tbsb-card-lab-e2e.mjs
+          - card: side_scrolling_brawler
+            unit: check-side-scrolling-brawler-runtime.mjs
+            browser: run-brawler-card-lab-e2e.mjs
     steps:
       - uses: actions/checkout@v4
         with:
