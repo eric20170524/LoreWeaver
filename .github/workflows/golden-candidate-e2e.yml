@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Migrate legacy Survivor runtime evidence identity
+        run: node productize/jobs/migrate-survivor-runtime-evidence.mjs
+
       - name: Repair Rollup native optional dependency
         run: |
           ROLLUP_VERSION="$(node -p "require('./node_modules/rollup/package.json').version")"
