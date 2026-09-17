@@ -26,6 +26,7 @@ export default class CertifiedSideScrollingBrawlerAdapter extends SideScrollingB
         });
         const isMovementZone = (pointer = {}) => Number(pointer.y ?? pointer.worldY ?? 0) <= this.scene.scale.height * 0.75;
         const pointerId = (pointer = {}) => pointer.id ?? pointer.pointerId ?? 0;
+        const isTouchPointer = (pointer = {}) => String(pointer.event?.pointerType || pointer.pointerType || '').toLowerCase() === 'touch';
 
         const onDown = (pointer) => {
             if (!this.isRunning() || !isMovementZone(pointer)) return;
@@ -34,13 +35,20 @@ export default class CertifiedSideScrollingBrawlerAdapter extends SideScrollingB
         };
         const onMove = (pointer) => {
             if (!this.isRunning() || this.touchMoveTarget == null) return;
-            if (pointerId(pointer) !== this.touchPointerId) return;
+            if (this.touchPointerId != null && pointerId(pointer) !== this.touchPointerId) return;
             if (pointer.isDown === false || !isMovementZone(pointer)) return;
             this.touchMoveTarget = readPoint(pointer);
         };
         const onUp = (pointer) => {
             if (this.touchMoveTarget == null) return;
-            if (pointerId(pointer) !== this.touchPointerId) return;
+            if (this.touchPointerId != null && pointerId(pointer) !== this.touchPointerId) return;
+            if (isTouchPointer(pointer) && isMovementZone(pointer)) {
+                // A real touch tap becomes a destination. Drag is still supported
+                // while the finger is down; desktop mouse release stops movement.
+                this.touchMoveTarget = readPoint(pointer);
+                this.touchPointerId = null;
+                return;
+            }
             this.touchMoveTarget = null;
             this.touchPointerId = null;
         };
