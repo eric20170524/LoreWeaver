@@ -1,0 +1,40 @@
+name: Side Scrolling Brawler
+on:
+  push:
+    branches:
+      - feat/fangame-co-development
+    paths:
+      - 'minigame_master/core/demo/side_scrolling_brawler/**'
+      - 'minigame_master/core/lib/gameplay/side_scrolling_brawler/**'
+      - 'minigame_master/gameplay/cards/side_scrolling_brawler.json'
+      - 'productize/jobs/run-brawler-e2e.mjs'
+      - '.github/workflows/side-scrolling-brawler.yml'
+  pull_request:
+    paths:
+      - 'minigame_master/core/demo/side_scrolling_brawler/**'
+      - 'minigame_master/core/lib/gameplay/side_scrolling_brawler/**'
+      - 'minigame_master/gameplay/cards/side_scrolling_brawler.json'
+      - 'productize/jobs/run-brawler-e2e.mjs'
+      - '.github/workflows/side-scrolling-brawler.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install real Chromium
+        timeout-minutes: 10
+        run: npx playwright install --with-deps chromium
+      - name: Run sixth-card real browser regression
+        timeout-minutes: 5
+        run: node productize/jobs/run-brawler-e2e.mjs
