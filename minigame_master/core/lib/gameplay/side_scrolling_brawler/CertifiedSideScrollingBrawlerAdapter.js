@@ -121,6 +121,9 @@ export default class CertifiedSideScrollingBrawlerAdapter extends SideScrollingB
                 // Brawler victory is contractual all-clear, so ignore that fallback.
                 return this.result;
             }
+            // Preserve the card-owned settlement reason even when the generic host
+            // observes the score threshold before the adapter's delayed completion.
+            return super.finish(true, 'completed');
         }
         return super.finish(success, reason);
     }
