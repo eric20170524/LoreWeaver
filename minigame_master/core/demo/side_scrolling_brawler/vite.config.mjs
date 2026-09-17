@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,7 +8,7 @@ const phaserEsm = path.resolve(loreRoot, "node_modules/phaser/dist/phaser.esm.js
 
 export default {
   root: demoRoot,
-  cacheDir: path.join("/private/tmp", "lw_side_scrolling_brawler_vite_cache"),
+  cacheDir: path.join(os.tmpdir(), "lw_side_scrolling_brawler_vite_cache"),
   resolve: { alias: { phaser: phaserEsm } },
   server: {
     host: "127.0.0.1",
