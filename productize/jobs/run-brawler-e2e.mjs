@@ -69,10 +69,18 @@ async function advanceUntilWaveLock(page, timeout = 7000) {
   }
 }
 
+async function pulseCombatKey(page, key) {
+  // Keep the key down across multiple possible RAF samples so Phaser JustDown
+  // observes the same input a real player produces, even on a loaded CI runner.
+  await page.keyboard.down(key);
+  await sleep(80);
+  await page.keyboard.up(key);
+}
+
 async function clearCurrentWave(page, attackKey = 'KeyJ') {
   await waitState(page, s => s.locked === true && s.aliveEnemies > 0, 'wave locked');
   for (let i = 0; i < 6; i += 1) {
-    await page.keyboard.press(attackKey);
+    await pulseCombatKey(page, attackKey);
     await sleep(170);
     const s = await state(page);
     if (s.aliveEnemies === 0 || s.status === 'ended') break;
@@ -88,6 +96,7 @@ async function scenarioVictory(page) {
   await clearCurrentWave(page, 'KeyK');
   const result = await waitState(page, s => s.status === 'ended', 'victory result', 12000);
   if (result.resultSuccess !== true) throw new Error(`victory expected; ${JSON.stringify(result)}`);
+  if (result.resultReason !== 'all_clear') throw new Error(`all_clear expected; ${JSON.stringify(result)}`);
   if (result.wavesCleared !== 2 || result.kills !== 2) throw new Error(`victory telemetry mismatch; ${JSON.stringify(result)}`);
   if (result.settlementCount !== 1) throw new Error(`settlement must be exactly once; ${JSON.stringify(result)}`);
   return result;
@@ -152,7 +161,7 @@ try {
     cardId: 'side_scrolling_brawler',
     status: 'passed',
     assertions: {
-      victory: { success: victory.resultSuccess, wavesCleared: victory.wavesCleared, kills: victory.kills, settlementCount: victory.settlementCount },
+      victory: { success: victory.resultSuccess, reason: victory.resultReason, wavesCleared: victory.wavesCleared, kills: victory.kills, settlementCount: victory.settlementCount },
       pauseRestart: { hp: pauseRestart.hp, lives: pauseRestart.lives, playerX: pauseRestart.playerX, wavesCleared: pauseRestart.wavesCleared },
       failure: { success: failure.resultSuccess, reason: failure.resultReason, settlementCount: failure.settlementCount }
     }
