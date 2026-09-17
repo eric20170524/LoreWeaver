@@ -122,6 +122,20 @@ export default class CertifiedSideScrollingBrawlerAdapter extends SideScrollingB
         this.player.setScale?.(1, 0.85 + ((nextY - this.lane.top) / (this.lane.bottom - this.lane.top)) * 0.25);
     }
 
+    refreshHud() {
+        const lifecycleState = String(this.lifecycle?.state || '');
+        if (
+            this.status === 'ended'
+            || this.status === 'destroyed'
+            || lifecycleState === 'ending'
+            || lifecycleState === 'ended'
+            || lifecycleState === 'destroyed'
+        ) {
+            return;
+        }
+        super.refreshHud();
+    }
+
     finish(success, reason = null) {
         if (success && reason === 'objective_met') {
             const allWavesCleared = this.state.waveIndex >= this.config.waveList.length;
