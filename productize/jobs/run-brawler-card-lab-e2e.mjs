@@ -23,16 +23,14 @@ async function moveToNextWave(page, cleared) {
 }
 
 async function clearCurrentWave(page, clearedTarget) {
-  await page.keyboard.down('d');
-  try {
-    for (let i = 0; i < 50; i += 1) {
-      const snapshot = await read(page);
-      if (snapshot.result || Number(snapshot.state?.wavesCleared || 0) >= clearedTarget) break;
-      await page.keyboard.press(i % 3 === 0 ? 'k' : 'j');
-      await page.waitForTimeout(i % 3 === 0 ? 470 : 310);
-    }
-  } finally {
-    await page.keyboard.up('d');
+  // Once a lock-screen wave starts, stop advancing. Holding D while attacking can
+  // push the player to the right clamp so pursuing enemies end up behind the
+  // current facing direction, which correctly makes those attacks miss.
+  for (let i = 0; i < 60; i += 1) {
+    const snapshot = await read(page);
+    if (snapshot.result || Number(snapshot.state?.wavesCleared || 0) >= clearedTarget) break;
+    await page.keyboard.press(i % 3 === 0 ? 'k' : 'j');
+    await page.waitForTimeout(i % 3 === 0 ? 470 : 310);
   }
   await page.waitForFunction(target => {
     const s = window.__CARD_LAB__.snapshot();
@@ -62,14 +60,14 @@ await run('default-all-clear-victory', async (page, row) => {
   await page.waitForFunction(() => Boolean(window.__CARD_LAB__.snapshot().result), null, { timeout: 5000 });
   const done = await read(page);
   assert.equal(done.result.success, true);
-  assert.equal(done.result.reason, 'completed');
+  assert.equal(done.result.reason, 'all_clear');
   assert.equal(done.state.wavesCleared, 3);
   assert.equal(done.state.kills, 8);
   assert.equal(done.result.telemetry.wavesCleared, 3);
   assert.equal(done.result.telemetry.totalWaves, 3);
   assert.equal(done.result.telemetry.kills, 8);
   row.assertions.push('victory requires clearing all three authored waves including the boss');
-  row.assertions.push('NodeResult keeps the brawler-owned completed reason and telemetry');
+  row.assertions.push('NodeResult uses the certified brawler-owned all_clear reason and telemetry');
 });
 
 await run('pause-freezes-and-restart-remounts', async (page, row) => {
