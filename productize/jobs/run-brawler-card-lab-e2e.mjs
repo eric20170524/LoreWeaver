@@ -22,6 +22,19 @@ async function moveToNextWave(page, cleared) {
   return snapshot;
 }
 
+async function pulseCombatKey(page, key, cadenceMs) {
+  // Phaser's combat path samples Keyboard.JustDown during the game update loop.
+  // A zero-duration Playwright keyboard.press() can complete down+up between
+  // rendered frames on a loaded CI runner, so hold the real key across at least
+  // one frame before releasing it. The remaining wait preserves the authored
+  // attack cooldown cadence instead of accelerating gameplay time.
+  const holdMs = 80;
+  await page.keyboard.down(key);
+  await page.waitForTimeout(holdMs);
+  await page.keyboard.up(key);
+  await page.waitForTimeout(Math.max(0, cadenceMs - holdMs));
+}
+
 async function clearCurrentWave(page, clearedTarget) {
   // Once a lock-screen wave starts, stop advancing. Holding D while attacking can
   // push the player to the right clamp so pursuing enemies end up behind the
@@ -29,8 +42,10 @@ async function clearCurrentWave(page, clearedTarget) {
   for (let i = 0; i < 60; i += 1) {
     const snapshot = await read(page);
     if (snapshot.result || Number(snapshot.state?.wavesCleared || 0) >= clearedTarget) break;
-    await page.keyboard.press(i % 3 === 0 ? 'k' : 'j');
-    await page.waitForTimeout(i % 3 === 0 ? 470 : 310);
+    // The boss has enough HP that deterministic heavy strikes are the useful
+    // player action; earlier mobs still exercise both light and heavy inputs.
+    const heavy = clearedTarget === 3 || i % 3 === 0;
+    await pulseCombatKey(page, heavy ? 'k' : 'j', heavy ? 470 : 310);
   }
   await page.waitForFunction(target => {
     const s = window.__CARD_LAB__.snapshot();
