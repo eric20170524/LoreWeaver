@@ -1,0 +1,473 @@
+{
+  "title": "玄界之门·石牧武途（同人原型）",
+  "themeColor": "#b83a2d",
+  "economy": {
+    "currencyName": "真气",
+    "resources": ["气血", "灵石", "月华"],
+    "realms": ["武徒", "后天武者", "先天武者", "地阶", "天位", "圣阶"]
+  },
+  "progressionSystems": [
+    {
+      "id": "realm_breakthrough",
+      "title": "武道境界",
+      "resource": "真气",
+      "action": "积累真气并完成关键试炼后突破境界",
+      "unlocks": ["higher_nodes", "base_stats", "advanced_martial_arts"],
+      "nodePayloadEffect": "提高局内生命、基础伤害与高阶关卡进入资格。"
+    },
+    {
+      "id": "martial_mastery",
+      "title": "武技熟练",
+      "resource": "气血",
+      "action": "通过战斗与修炼提升刀法、拳法和身法熟练度",
+      "unlocks": ["fengchi_blade", "combo_growth", "melee_budget"],
+      "nodePayloadEffect": "强化近战刀斩范围、伤害和连续清怪能力。"
+    },
+    {
+      "id": "weapon_forging",
+      "title": "兵刃炼化",
+      "resource": "灵石",
+      "action": "强化陨铁黑刀与紫钢弓，并为兵刃叠加符阵",
+      "unlocks": ["black_blade_flame", "purple_steel_bow", "ranged_budget"],
+      "nodePayloadEffect": "决定远程弹道密度、黑刀附加伤害和武器架势效率。"
+    },
+    {
+      "id": "bloodline_awakening",
+      "title": "白猿血脉",
+      "resource": "月华",
+      "action": "在高压战斗与月华修炼中逐步唤醒异血",
+      "unlocks": ["white_ape_overdrive", "bloodline_passives"],
+      "nodePayloadEffect": "高压阶段提供爆发、抗压和终局形态成长。"
+    },
+    {
+      "id": "moon_insight",
+      "title": "吞月参悟",
+      "resource": "月华",
+      "action": "通过月下修炼积累参悟进度",
+      "unlocks": ["swallow_moon", "faster_mastery"],
+      "nodePayloadEffect": "提高成长效率，并为血脉与高阶武技提供解锁条件。"
+    }
+  ],
+  "abilityCatalog": [
+    {
+      "id": "fengchi_blade",
+      "name": "风驰十三式",
+      "description": "石牧早期标志性刀法。游戏中承担近身快速清群与连斩成长。",
+      "category": "martial_art",
+      "lineage": "blade",
+      "unlockSource": "initial",
+      "unlockCondition": "开局获得基础式，随武技熟练逐步提升",
+      "gameplayTags": ["melee", "aoe", "combo"],
+      "runtimeSkillIds": ["melee_sweep", "weapon_stance_melee"],
+      "affectedNodeIds": [1, 2, 3, 4, 6, 8, 9, 11, 12],
+      "designRole": "近战清群主轴",
+      "characterHooks": ["meteorite_black_blade"]
+    },
+    {
+      "id": "purple_steel_bow",
+      "name": "紫钢弓",
+      "description": "远程压制与安全输出手段，承担自动射击、精英点杀与弹幕缝隙输出。",
+      "category": "weapon",
+      "lineage": "bow",
+      "unlockSource": "initial",
+      "unlockCondition": "第一章战斗配置解锁",
+      "gameplayTags": ["ranged", "projectile", "single_target"],
+      "runtimeSkillIds": ["starter_projectile", "weapon_stance_ranged"],
+      "affectedNodeIds": [1, 3, 5, 6, 8, 9, 11, 12],
+      "designRole": "远程弹道主轴"
+    },
+    {
+      "id": "black_blade_flame",
+      "name": "陨铁黑刀·烈炎",
+      "description": "将火属性强化叠加到黑刀上，使近战清群转化为持续压场能力。",
+      "category": "weapon_upgrade",
+      "lineage": "fire_blade",
+      "unlockSource": "node_reward",
+      "unlockCondition": "完成中前期兵刃炼化节点",
+      "gameplayTags": ["melee", "fire", "area_damage"],
+      "runtimeSkillIds": ["melee_sweep_fire", "burn_on_hit"],
+      "affectedNodeIds": [4, 6, 8, 9, 11, 12],
+      "designRole": "黑刀中期质变"
+    },
+    {
+      "id": "swallow_moon",
+      "name": "吞月式",
+      "description": "月下参悟带来的长期成长能力，主要服务于熟练度、血脉和资源转化。",
+      "category": "cultivation",
+      "lineage": "moon",
+      "unlockSource": "node_reward",
+      "unlockCondition": "完成月华参悟试炼",
+      "gameplayTags": ["growth", "insight", "resource"],
+      "runtimeSkillIds": ["moon_insight_bonus"],
+      "affectedNodeIds": [6, 7, 8, 9, 10, 11, 12],
+      "designRole": "长期成长加速器"
+    },
+    {
+      "id": "white_ape_overdrive",
+      "name": "白猿血脉·爆发",
+      "description": "石牧的终局辨识能力。高压阶段进入短时爆发形态，强化范围、伤害与抗压。",
+      "category": "bloodline",
+      "lineage": "white_ape",
+      "unlockSource": "hybrid",
+      "unlockCondition": "血脉觉醒进度与关键剧情节点共同解锁",
+      "gameplayTags": ["ultimate", "aoe", "survival", "burst"],
+      "runtimeSkillIds": ["ultimate_form", "bloodline_overdrive"],
+      "affectedNodeIds": [10, 11, 12],
+      "designRole": "终局爆发与角色身份核心"
+    }
+  ],
+  "passiveSkillCatalog": [
+    {
+      "id": "blade_speed_1",
+      "name": "疾风刀势",
+      "treeTier": "T1",
+      "cost": 20,
+      "requires": null,
+      "runtimeStatus": "planned",
+      "effects": [{"target": "weapon_stance_cycle.meleeDamage", "op": "multiply", "value": 1.15}],
+      "affectedRuntimeSkillIds": ["melee_sweep"],
+      "description": "提高近战架势的清怪效率。"
+    },
+    {
+      "id": "bow_burst_1",
+      "name": "连珠箭",
+      "treeTier": "T1",
+      "cost": 20,
+      "requires": null,
+      "runtimeStatus": "planned",
+      "effects": [{"target": "weapon_stance_cycle.rangedBurstCount", "op": "add", "value": 1}],
+      "affectedRuntimeSkillIds": ["starter_projectile"],
+      "description": "提高远程架势的连射数量。"
+    },
+    {
+      "id": "bloodline_toughness",
+      "name": "异血强身",
+      "treeTier": "T2",
+      "cost": 60,
+      "requires": "blade_speed_1",
+      "runtimeStatus": "planned",
+      "effects": [{"target": "player.hp", "op": "multiply", "value": 1.2}],
+      "affectedRuntimeSkillIds": ["bloodline_overdrive"],
+      "description": "以血脉力量提高高压关卡中的生存空间。"
+    }
+  ],
+  "characterDesignCatalog": [
+    {
+      "id": "shi_mu",
+      "name": "石牧",
+      "role": "player",
+      "appearsNodeIds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      "combatIdentity": "强韧近战武者；黑刀近身扫荡、紫钢弓远程压制，后期以白猿血脉完成爆发。",
+      "visualDesign": {
+        "silhouette": "年轻强健武者，背负长弓与重刀；战斗姿态重心低、动作干脆。",
+        "palette": ["#25272b", "#7a241f", "#d8c7a2"],
+        "stageVariants": [
+          {"realmRange": [0, 2], "look": "灰黑武装配暗红束带，刀弓双持辨识。"},
+          {"realmRange": [3, 5], "look": "兵刃出现火纹与月华高光，血脉爆发时增加白金能量轮廓。"}
+        ]
+      },
+      "animationCues": ["heavy_idle", "blade_sweep", "bow_release", "bloodline_burst"],
+      "skillConnections": ["fengchi_blade", "purple_steel_bow", "black_blade_flame", "white_ape_overdrive"],
+      "audioDirection": "刀斩强调破风与金属低频，弓箭干脆，血脉爆发加入猿啸式低沉能量冲击。"
+    }
+  ],
+  "enemyDesignCatalog": [
+    {
+      "id": "fengcheng_fighter",
+      "name": "丰城武徒",
+      "runtimeEnemyId": "bandit_cultivator",
+      "silhouette": "短兵器人形武者",
+      "palette": ["#6b6258", "#303033"],
+      "combatRead": "基础近战追击单位，承担第一章密度压力。"
+    },
+    {
+      "id": "arena_elite",
+      "name": "擂台强敌",
+      "runtimeEnemyId": "human_genius",
+      "silhouette": "高挑人形精英，攻击前有明显蓄势",
+      "palette": ["#8b342a", "#e2b86b"],
+      "combatRead": "高血量精英/小 Boss，用于验证刀弓切换与走位。"
+    },
+    {
+      "id": "living_corpse",
+      "name": "活尸",
+      "runtimeEnemyId": "rock_golem",
+      "silhouette": "迟缓厚重的人形怪物",
+      "palette": ["#5d6658", "#252c28"],
+      "combatRead": "低速高血量单位，逼迫玩家近战清场后切远程处理。"
+    },
+    {
+      "id": "battlefield_raider",
+      "name": "战场悍敌",
+      "runtimeEnemyId": "genius_beast",
+      "silhouette": "宽肩重武器战士",
+      "palette": ["#77402f", "#29221e"],
+      "combatRead": "中后期高压单位，承担突进与碰撞惩罚。"
+    }
+  ],
+  "skillEffectCatalog": [
+    {
+      "id": "fx_fengchi_sweep",
+      "runtimeSkillId": "melee_sweep",
+      "shape": "近身环形高速刀光",
+      "palette": ["#f4eee2", "#b83a2d"],
+      "screenShake": {"durationMs": 90, "intensity": 0.004},
+      "implementation": "weapon_stance_cycle 近战阶段使用扩散刀圈表现",
+      "upgradeNote": "后续替换为扇形多段刀光而非纯圆环。"
+    },
+    {
+      "id": "fx_white_ape",
+      "runtimeSkillId": "bloodline_overdrive",
+      "shape": "白金色巨大猿影轮廓与冲击波",
+      "palette": ["#f6f1dd", "#d9b866", "#8f352c"],
+      "screenShake": {"durationMs": 260, "intensity": 0.012},
+      "implementation": "planned",
+      "upgradeNote": "Vertical Slice 后再进入正式美术资产管线。"
+    }
+  ],
+  "audioCueCatalog": [
+    {
+      "id": "sfx_blade_sweep",
+      "runtimeSkillId": "melee_sweep",
+      "synth": {"frequencies": [180, 90], "wave": "sawtooth", "durationMs": 120, "volume": 0.18},
+      "mixRole": "combat_primary",
+      "description": "低频破风刀斩占据近战主反馈。"
+    },
+    {
+      "id": "sfx_bow_release",
+      "runtimeSkillId": "starter_projectile",
+      "synth": {"frequencies": [520, 260], "wave": "triangle", "durationMs": 90, "volume": 0.12},
+      "mixRole": "combat_secondary",
+      "description": "短促弓弦与飞矢反馈。"
+    }
+  ],
+  "nodes": [
+    {
+      "id": 1,
+      "title": "丰城夜战：凶拳试锋",
+      "intro": "石牧在丰城地下势力的围攻中试炼刀弓双持。先以黑刀近身扫开包围，再用紫钢弓点杀外围强敌。",
+      "taunts": ["「一个人也敢闯进来？」", "「围住他，别让他换弓！」"],
+      "mechanics": "survivor_horde",
+      "rewards": "气血 +20，灵石 +8，解锁风驰刀法熟练成长",
+      "goalValue": 80,
+      "resourceMultiplier": 1.25,
+      "difficulty": 1,
+      "durationLimit": 75,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 4, "rangedDurationSec": 5, "meleeRadius": 96, "meleeDamage": 5, "meleeMaxTargets": 10, "rangedBurstCount": 2, "rangedDamageMultiplier": 1.0}},
+          {"id": "horde_intensity", "knobs": {"spawnMultiplier": 2, "eliteChance": 0.12}},
+          {"id": "arena_wave_boss", "knobs": {"totalWaves": 3, "interWaveDelayMs": 1800}}
+        ],
+        "knobs": {
+          "durationSec": 75,
+          "difficulty": 1,
+          "goalValue": 80,
+          "enemySpawnRateSec": 1.25,
+          "enemyPool": ["bandit_cultivator", "human_genius"],
+          "weapon": {"fireIntervalMs": 720, "bulletSpeed": 500, "bulletDamage": 2.5, "bulletRadius": 4, "bulletColor": 14196006},
+          "player": {"hp": 120, "speed": 175}
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "mainlineHooks": ["realm_breakthrough", "martial_mastery", "weapon_forging"],
+        "rewardUnlocks": ["fengchi_blade"],
+        "runSkillPool": ["fengchi_blade", "purple_steel_bow"],
+        "notes": "第一 Vertical Slice。必须先验证刀弓架势循环、割草密度、波次结算与 NodeResult 回写。"
+      }
+    },
+    {
+      "id": 2,
+      "title": "四馆较技：破势夺魁",
+      "intro": "面对擂台强敌，不再依靠数量碾压，而是观察预警、闪避重击并抓住反击窗口。",
+      "taunts": ["「听说你很强。」", "「擂台之上，只有胜负。」"],
+      "mechanics": "dodge_counter_boss",
+      "rewards": "气血 +35，武技熟练提升",
+      "goalValue": 100,
+      "resourceMultiplier": 1.5,
+      "difficulty": 2,
+      "durationLimit": 70,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "dodge_counter_boss",
+        "modifiers": [],
+        "knobs": {"playerHp": 120, "bossHp": 360, "breakGaugeMax": 100},
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "mainlineHooks": ["martial_mastery"],
+        "rewardUnlocks": [],
+        "runSkillPool": ["fengchi_blade"],
+        "notes": "Boss 关用于打断连续割草节奏，突出石牧硬朗、冷静的反击感。"
+      }
+    },
+    {
+      "id": 3,
+      "title": "破庙尸潮：刀弓守夜",
+      "intro": "夜雨破庙被活尸包围。玩家在狭窄空间内轮换黑刀与紫钢弓，并躲避地面危险预警。",
+      "taunts": ["「尸群又来了！」", "「先破包围，再处理重尸！」"],
+      "mechanics": "survivor_horde",
+      "rewards": "灵石 +15，解锁陨铁黑刀强化路线",
+      "goalValue": 120,
+      "resourceMultiplier": 1.8,
+      "difficulty": 2,
+      "durationLimit": 85,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 5, "rangedDurationSec": 4, "meleeRadius": 102, "meleeDamage": 6, "rangedBurstCount": 2}},
+          {"id": "hazard_telegraph", "knobs": {"warningMs": 900, "activeMs": 260, "damage": 16, "shape": "circle"}},
+          {"id": "boss_phases", "knobs": {"phaseThresholds": [0.66, 0.33], "phaseAnnouncement": true}}
+        ],
+        "knobs": {"durationSec": 85, "difficulty": 2, "goalValue": 120, "enemySpawnRateSec": 1.0, "enemyPool": ["rock_golem", "bandit_cultivator"], "bossId": "human_genius"},
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "mainlineHooks": ["martial_mastery", "weapon_forging"],
+        "rewardUnlocks": ["black_blade_flame"],
+        "runSkillPool": ["fengchi_blade", "purple_steel_bow", "black_blade_flame"],
+        "notes": "第二个 survivor 节点验证危险预警 + Boss 弹幕与架势循环能否共存。"
+      }
+    },
+    {
+      "id": 4,
+      "title": "黑刀炼成：烈炎开锋",
+      "intro": "兵刃强化完成后，以黑刀为主完成连续锁屏清场，让角色成长从数值提升变成动作表现变化。",
+      "taunts": ["「刀势更重了！」", "「烈炎入刃，一口气杀穿！」"],
+      "mechanics": "side_scrolling_brawler",
+      "rewards": "黑刀烈炎强化，真气收益提升",
+      "goalValue": 4,
+      "resourceMultiplier": 2.2,
+      "difficulty": 3,
+      "durationLimit": 100,
+      "gameplay": {"adapter": "phaser", "cardId": "side_scrolling_brawler", "modifiers": [{"id": "locked_screen_wave", "knobs": {}}, {"id": "elemental_directional_combo", "knobs": {"elementTags": ["fire", "wind"]}}], "knobs": {"stageLengthPx": 2600, "playersMax": 1}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["weapon_forging", "martial_mastery"], "rewardUnlocks": [], "runSkillPool": ["fengchi_blade", "black_blade_flame"], "notes": "横版闯关承担黑刀动作表现，不要求成为主玩法。"}
+    },
+    {
+      "id": 5,
+      "title": "远射试炼：紫钢弓破阵",
+      "intro": "在远距离对决中用紫钢弓寻找弹幕缝隙，以持续射击压制精英目标。",
+      "taunts": ["「箭路只有一线，敢不敢压上来？」", "「别只盯着目标，先看弹幕。」"],
+      "mechanics": "shooter_duel",
+      "rewards": "灵石 +25，远程伤害预算提升",
+      "goalValue": 300,
+      "resourceMultiplier": 2.8,
+      "difficulty": 3,
+      "durationLimit": 75,
+      "gameplay": {"adapter": "phaser", "cardId": "shooter_duel", "modifiers": [], "knobs": {"playerHp": 120, "bossHp": 420, "timeLimitSec": 75}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["weapon_forging"], "rewardUnlocks": [], "runSkillPool": ["purple_steel_bow"], "notes": "纯远程弹幕节点，验证另一种节奏。"}
+    },
+    {
+      "id": 6,
+      "title": "宗门试炼：高压围杀",
+      "intro": "敌人密度和精英比例上升，黑刀烈炎与紫钢弓必须交替使用，单一套路开始失效。",
+      "taunts": ["「真正的试炼才刚开始。」", "「别被包围，先处理精英！」"],
+      "mechanics": "survivor_horde",
+      "rewards": "月华 +18，开启吞月参悟",
+      "goalValue": 180,
+      "resourceMultiplier": 3.5,
+      "difficulty": 4,
+      "durationLimit": 100,
+      "gameplay": {"adapter": "phaser", "cardId": "survivor_horde", "modifiers": [{"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 4, "rangedDurationSec": 4, "meleeRadius": 108, "meleeDamage": 7, "rangedBurstCount": 3}}, {"id": "horde_intensity", "knobs": {"spawnMultiplier": 3, "eliteChance": 0.18}}, {"id": "debuff_zone", "knobs": {"zoneRadius": 90, "speedCap": 65, "moveIntervalMs": 6000}}], "knobs": {"durationSec": 100, "difficulty": 4, "enemySpawnRateSec": 0.85, "enemyPool": ["bandit_cultivator", "human_genius", "genius_beast"]}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["realm_breakthrough", "martial_mastery", "weapon_forging"], "rewardUnlocks": ["swallow_moon"], "runSkillPool": ["fengchi_blade", "purple_steel_bow", "black_blade_flame"], "notes": "高压割草节点。"}
+    },
+    {
+      "id": 7,
+      "title": "月下参悟：吞月式",
+      "intro": "短暂离开连续战斗，在月下完成节奏参悟，为下一阶段血脉与武技成长建立资源循环。",
+      "taunts": ["「静心，观月。」", "「战斗之外，也要让成长可感知。」"],
+      "mechanics": "rhythm_timing",
+      "rewards": "月华 +40，吞月式正式生效",
+      "goalValue": 100,
+      "resourceMultiplier": 4.2,
+      "difficulty": 4,
+      "durationLimit": 55,
+      "gameplay": {"adapter": "phaser", "cardId": "rhythm_timing", "modifiers": [], "knobs": {"beatIntervalMs": 1350, "perfectWindowMs": 95, "goodWindowMs": 190, "targetProgress": 100, "requiredBestCombo": 12}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["moon_insight"], "rewardUnlocks": ["swallow_moon"], "runSkillPool": ["swallow_moon"], "notes": "非战斗节点控制在总流程少数，服务成长而非抢占主玩法。"}
+    },
+    {
+      "id": 8,
+      "title": "黑魔门外：群敌破围",
+      "intro": "进入更复杂的战场，敌人从单纯追击转向多层压力，要求玩家根据架势主动调整站位。",
+      "taunts": ["「进得来，未必出得去。」", "「刀快还是人多，试过才知道。」"],
+      "mechanics": "survivor_horde",
+      "rewards": "气血 +80，境界突破材料",
+      "goalValue": 220,
+      "resourceMultiplier": 5.0,
+      "difficulty": 5,
+      "durationLimit": 110,
+      "gameplay": {"adapter": "phaser", "cardId": "survivor_horde", "modifiers": [{"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 4, "rangedDurationSec": 3, "meleeRadius": 112, "meleeDamage": 8, "rangedBurstCount": 3}}, {"id": "hazard_telegraph", "knobs": {"warningMs": 760, "activeMs": 260, "damage": 20, "shape": "line"}}, {"id": "arena_wave_boss", "knobs": {"totalWaves": 5, "interWaveDelayMs": 1600}}], "knobs": {"durationSec": 110, "difficulty": 5, "enemySpawnRateSec": 0.75, "enemyPool": ["bandit_cultivator", "human_genius", "genius_beast"]}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["realm_breakthrough", "martial_mastery", "weapon_forging", "moon_insight"], "rewardUnlocks": [], "runSkillPool": ["fengchi_blade", "purple_steel_bow", "black_blade_flame", "swallow_moon"], "notes": "中期闯关式 survivor 关。"}
+    },
+    {
+      "id": 9,
+      "title": "蛮族战场：守线斩阵",
+      "intro": "不再只求自身存活，石牧需要在敌潮中守住战线，以割草效率换取整体战局空间。",
+      "taunts": ["「防线一破，后方皆危！」", "「先斩冲阵者！」"],
+      "mechanics": "survivor_horde",
+      "rewards": "灵石 +90，血脉觉醒进度",
+      "goalValue": 260,
+      "resourceMultiplier": 6.5,
+      "difficulty": 5,
+      "durationLimit": 120,
+      "gameplay": {"adapter": "phaser", "cardId": "survivor_horde", "modifiers": [{"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 4, "rangedDurationSec": 4, "meleeRadius": 115, "meleeDamage": 9, "rangedBurstCount": 3}}, {"id": "defend_line", "knobs": {"wallHp": 160, "breachDamage": 8}}, {"id": "horde_intensity", "knobs": {"spawnMultiplier": 3, "eliteChance": 0.22}}], "knobs": {"durationSec": 120, "difficulty": 5, "enemySpawnRateSec": 0.7, "enemyPool": ["bandit_cultivator", "genius_beast", "human_genius"]}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["realm_breakthrough", "bloodline_awakening"], "rewardUnlocks": [], "runSkillPool": ["fengchi_blade", "purple_steel_bow", "black_blade_flame"], "notes": "把割草从个人生存升级为战场目标。"}
+    },
+    {
+      "id": 10,
+      "title": "异血激荡：白猿初醒",
+      "intro": "高压单体战触发血脉异动。玩家通过闪避与反击将破势槽打满，首次看到白猿力量的爆发反馈。",
+      "taunts": ["「这股力量……不是普通真气。」", "「压住它，再借它破敌！」"],
+      "mechanics": "dodge_counter_boss",
+      "rewards": "解锁白猿血脉·爆发",
+      "goalValue": 100,
+      "resourceMultiplier": 8.0,
+      "difficulty": 6,
+      "durationLimit": 90,
+      "gameplay": {"adapter": "phaser", "cardId": "dodge_counter_boss", "modifiers": [], "knobs": {"playerHp": 150, "bossHp": 620, "breakGaugeMax": 120}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["bloodline_awakening", "moon_insight"], "rewardUnlocks": ["white_ape_overdrive"], "runSkillPool": ["fengchi_blade", "white_ape_overdrive"], "notes": "血脉首次质变节点；正式形态 VFX 暂列下一里程碑。"}
+    },
+    {
+      "id": 11,
+      "title": "白猿血战：万敌退避",
+      "intro": "以已觉醒血脉进入高密度战场，让长期养成真正改变割草曲线。",
+      "taunts": ["「来得越多越好！」", "「这一战，试试血脉能撑到什么程度。」"],
+      "mechanics": "survivor_horde",
+      "rewards": "血脉核心成长，圣阶前置",
+      "goalValue": 360,
+      "resourceMultiplier": 10.0,
+      "difficulty": 6,
+      "durationLimit": 125,
+      "gameplay": {"adapter": "phaser", "cardId": "survivor_horde", "modifiers": [{"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 3, "rangedDurationSec": 3, "meleeRadius": 128, "meleeDamage": 12, "meleeMaxTargets": 18, "rangedBurstCount": 4, "rangedDamageMultiplier": 1.25}}, {"id": "horde_intensity", "knobs": {"spawnMultiplier": 4, "eliteChance": 0.28}}, {"id": "boss_phases", "knobs": {"phaseThresholds": [0.75, 0.5, 0.25], "phaseAnnouncement": true}}], "knobs": {"durationSec": 125, "difficulty": 6, "enemySpawnRateSec": 0.55, "enemyPool": ["genius_beast", "human_genius", "rock_golem"], "bossId": "qiongqi_cub", "player": {"hp": 180, "speed": 195}}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["bloodline_awakening", "realm_breakthrough"], "rewardUnlocks": [], "runSkillPool": ["fengchi_blade", "purple_steel_bow", "black_blade_flame", "white_ape_overdrive"], "notes": "后期割草强度基准。白猿正式形态尚未做专属 runtime modifier。"}
+    },
+    {
+      "id": 12,
+      "title": "玄界门前：刀弓血脉终试",
+      "intro": "终局原型把刀弓切换、弹幕躲避、波次 Boss 与血脉成长汇合成一场综合试炼。",
+      "taunts": ["「一路杀到这里，就别停下。」", "「门在前面，最后一战。」"],
+      "mechanics": "survivor_horde",
+      "rewards": "完成当前同人原型主循环",
+      "goalValue": 500,
+      "resourceMultiplier": 12.0,
+      "difficulty": 7,
+      "durationLimit": 150,
+      "gameplay": {"adapter": "phaser", "cardId": "survivor_horde", "modifiers": [{"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 3, "rangedDurationSec": 3, "meleeRadius": 132, "meleeDamage": 13, "meleeMaxTargets": 20, "rangedBurstCount": 4, "rangedDamageMultiplier": 1.3}}, {"id": "arena_wave_boss", "knobs": {"totalWaves": 6, "interWaveDelayMs": 1400}}, {"id": "hazard_telegraph", "knobs": {"warningMs": 680, "activeMs": 240, "damage": 24, "shape": "circle"}}, {"id": "boss_phases", "knobs": {"phaseThresholds": [0.66, 0.33], "phaseAnnouncement": true}}], "knobs": {"durationSec": 150, "difficulty": 7, "enemySpawnRateSec": 0.5, "enemyPool": ["human_genius", "genius_beast", "rock_golem"], "bossId": "ancient_beast_king", "player": {"hp": 200, "speed": 200}}, "patchLevel": "L2"},
+      "planning": {"mainlineHooks": ["realm_breakthrough", "martial_mastery", "weapon_forging", "bloodline_awakening", "moon_insight"], "rewardUnlocks": [], "runSkillPool": ["fengchi_blade", "purple_steel_bow", "black_blade_flame", "swallow_moon", "white_ape_overdrive"], "notes": "当前只作为路线骨架；必须在前 3 节点验证后再进入正式制作。"}
+    }
+  ],
+  "gameplayCards": ["survivor_horde", "dodge_counter_boss", "side_scrolling_brawler", "shooter_duel", "rhythm_timing"],
+  "orchestrationPolicy": {
+    "autoSelectOnlyProductionReady": true,
+    "defaultCardId": "survivor_horde"
+  },
+  "uiConfig": {
+    "plugin": "cultivation",
+    "prototypeMode": "fangame_vertical_slice",
+    "focusNodeIds": [1, 2, 3]
+  }
+}

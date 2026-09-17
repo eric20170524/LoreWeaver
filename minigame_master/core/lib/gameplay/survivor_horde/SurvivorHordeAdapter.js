@@ -357,23 +357,25 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     }
 
     startTimers() {
+        // Resolve methods at tick time: modifiers are installed after these timers
+        // and may also be added or removed while the adapter is running.
         this.lifecycle.trackTimer(this.scene.time.addEvent({
             delay: this.config.enemies.spawnIntervalMs,
-            callback: this.spawnWave,
+            callback: () => this.spawnWave(),
             callbackScope: this,
             loop: true
         }));
 
         this.lifecycle.trackTimer(this.scene.time.addEvent({
             delay: this.config.weapon.fireIntervalMs,
-            callback: this.fireAtNearestEnemy,
+            callback: () => this.fireAtNearestEnemy(),
             callbackScope: this,
             loop: true
         }));
 
         this.lifecycle.trackTimer(this.scene.time.addEvent({
             delay: 1000,
-            callback: this.onSecondTick,
+            callback: () => this.onSecondTick(),
             callbackScope: this,
             loop: true
         }));
@@ -491,7 +493,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
     updateEnemies() {
         this.groups.enemies.getChildren().forEach((enemy) => {
-            if (!enemy.active) return;
+            if (!this.isEnemyTargetable(enemy)) return;
             const target = this.selectEnemyTarget(enemy);
             const speed = enemy.getData('speed') || this.config.enemies.pool[0]?.speed || 80;
             this.scene.physics.moveToObject(enemy, target, speed);
@@ -532,6 +534,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
         enemy.setData('id', enemyConfig.id || 'enemy');
         enemy.setData('hp', enemyConfig.hp || 1);
+        enemy.setData('defeated', false);
         enemy.setData('maxHp', enemyConfig.hp || 1);
         enemy.setData('radius', enemyConfig.radius || 10);
         enemy.setData('speed', enemyConfig.speed || 80);
@@ -596,12 +599,16 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         return this.createCircle(x, y, radius, this.config.weapon.bulletColor);
     }
 
+    isEnemyTargetable(enemy) {
+        return Boolean(enemy?.active && !enemy.getData('defeated'));
+    }
+
     findNearestEnemy() {
         let nearest = null;
         let nearestDistance = Infinity;
 
         this.groups.enemies.getChildren().forEach((enemy) => {
-            if (!enemy.active) return;
+            if (!this.isEnemyTargetable(enemy)) return;
             const distance = Math.hypot(enemy.x - this.player.x, enemy.y - this.player.y);
             if (distance < nearestDistance) {
                 nearest = enemy;
@@ -613,34 +620,33 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     }
 
     handleBulletEnemyOverlap(bullet, enemy) {
-        if (!bullet.active || !enemy.active) return;
+        if (!this.isRunning() || !bullet?.active || !this.isEnemyTargetable(enemy)) return;
         const damage = bullet.getData('damage') || this.config.weapon.bulletDamage;
         bullet.destroy();
         this.damageEnemy(enemy, damage);
     }
 
     damageEnemy(enemy, damage) {
-        if (!enemy?.active || !Number.isFinite(damage) || damage <= 0) return false;
+        if (!this.isRunning() || !this.isEnemyTargetable(enemy) || !Number.isFinite(damage) || damage <= 0) return false;
         const beforeHp = enemy.getData('hp') || 0;
-        const hp = beforeHp - damage;
+        const hp = Math.max(0, beforeHp - damage);
+        const defeated = hp <= 0;
+        const enemyId = enemy.getData('enemyId') || enemy.getData('id') || 'enemy';
+        const reward = enemy.getData('reward') || {};
         enemy.setData('hp', hp);
 
-        const enemyId = enemy.getData('enemyId') || enemy.getData('id') || 'enemy';
-        this.emitRuntimeEvent('enemy-damaged', {
-            enemyId,
-            amount: damage,
-            beforeHp,
-            hp: Math.max(0, hp)
-        });
-        if (hp <= 0) {
+        if (defeated) {
+            // Reserve the defeat before callbacks can apply another hit. Keep the
+            // sprite active for its death clip, but remove all combat participation.
+            enemy.setData('defeated', true);
+            enemy.body?.stop?.();
+            if (enemy.body) enemy.body.enable = false;
             this.runtimeArt?.playClip?.(enemy, 'enemy', 'death', {
                 enemyId,
                 repeat: 0,
                 frameRate: 8
             });
-            const reward = enemy.getData('reward') || {};
             this.state.kills += 1;
-            this.emitRuntimeEvent('enemy-defeated', { enemyId, reward });
             if (this.config.collectibles.enabled) {
                 this.spawnCollectible(enemy.x, enemy.y, reward);
             } else {
@@ -657,7 +663,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
                 frameRate: 8
             });
             this.lifecycle.trackTimer(this.scene.time.delayedCall(180, () => {
-                if (enemy?.active) {
+                if (this.isEnemyTargetable(enemy)) {
                     this.runtimeArt?.playClip?.(enemy, 'enemy', 'walk', {
                         enemyId,
                         repeat: -1,
@@ -666,10 +672,16 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
                 }
             }));
         }
+
+        // Settle rewards and cleanup before notifying listeners: a boss modifier
+        // may finish the node synchronously in response to these events.
+        this.emitRuntimeEvent('enemy-damaged', { enemyId, amount: damage, beforeHp, hp });
+        if (defeated) this.emitRuntimeEvent('enemy-defeated', { enemyId, reward });
         return true;
     }
 
     handlePlayerEnemyOverlap(_player, enemy) {
+        if (!this.isRunning() || !this.isEnemyTargetable(enemy)) return;
         const now = this.scene.time.now;
         if (now - this.state.lastPlayerHitAt < this.config.player.collisionCooldownMs) return;
         this.state.lastPlayerHitAt = now;
@@ -716,6 +728,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     }
 
     handleCollectibleOverlap(_player, collectible) {
+        if (!this.isRunning() || !collectible?.active) return;
         const reward = collectible.getData('reward') || this.config.collectibles.reward || {};
         addRewards(this.state.collectedRewards, reward);
         this.state.score += reward.score || 1;
@@ -724,7 +737,8 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
     cleanupBullets(time) {
         this.groups.bullets.getChildren().forEach((bullet) => {
-            const createdAt = bullet.getData('createdAt') || time;
+            if (!bullet?.active) return;
+            const createdAt = bullet.getData('createdAt') ?? time;
             const expired = time - createdAt > this.config.weapon.bulletLifetimeMs;
             const outOfBounds = bullet.x < -50 || bullet.y < -50 || bullet.x > this.world.width + 50 || bullet.y > this.world.height + 50;
             if (expired || outOfBounds) bullet.destroy();

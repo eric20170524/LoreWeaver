@@ -1,0 +1,48 @@
+name: Fangame Local Play Regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/game/**'
+      - 'src/runtime/**'
+      - 'minigame_master/core/lib/gameplay/dodge_counter_boss/**'
+      - 'minigame_master/core/lib/gameplay/GameplayAdapter.js'
+      - 'minigame_master/core/lib/contracts/**'
+      - 'data/presets/xuanjiezhimen_fangame_preset.json'
+      - 'productize/jobs/check-dodge-counter-runtime.mjs'
+      - 'productize/jobs/check-cultivation-model.ts'
+      - 'productize/jobs/run-xuanjie-local-play-e2e.mjs'
+      - '.github/workflows/fangame-local-play-regression.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-play:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Repair Rollup optional native dependency
+        run: |
+          ROLLUP_VERSION="$(node -p "require('./node_modules/rollup/package.json').version")"
+          npm install --no-save "@rollup/rollup-linux-x64-gnu@${ROLLUP_VERSION}"
+      - name: Combat and cultivation transaction regressions
+        run: |
+          node --test productize/jobs/check-dodge-counter-runtime.mjs
+          npx tsx --test productize/jobs/check-cultivation-model.ts
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: Actual RuntimeKernel node 2 and cultivation UI
+        run: node productize/jobs/run-xuanjie-local-play-e2e.mjs
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xuanjie-local-play-regression
+          if-no-files-found: ignore
+          path: workflow/reports/xuanjie_*

@@ -1,5 +1,7 @@
 export {
-    default as SideScrollingBrawlerAdapter,
+    default as SideScrollingBrawlerAdapter
+} from './CertifiedSideScrollingBrawlerAdapter.js';
+export {
     SIDE_SCROLLING_BRAWLER_DEFAULT_CONFIG,
     DEFAULT_WAVES
 } from './SideScrollingBrawlerAdapter.js';
