@@ -72,16 +72,24 @@ test('generic host objective_met cannot bypass locked-wave all-clear', () => {
   adapter.destroy();
 });
 
-test('objective_met observed after true all-clear is normalized to completed', () => {
+test('objective_met observed after true all-clear is normalized to all_clear', () => {
   const { adapter, results } = fixture();
   adapter.state.waveIndex = adapter.config.waveList.length;
   adapter.enemies = [];
   const result = adapter.finish(true, 'objective_met');
   assert.equal(result?.success, true);
-  assert.equal(result?.reason, 'completed');
+  assert.equal(result?.reason, 'all_clear');
   assert.equal(results.length, 1);
-  assert.equal(results[0].reason, 'completed');
+  assert.equal(results[0].reason, 'all_clear');
   assert.equal(adapter.status, 'ended');
+});
+
+test('legacy completed success is normalized to the card-owned all_clear reason', () => {
+  const { adapter, results } = fixture();
+  const result = adapter.finish(true, 'completed');
+  assert.equal(result?.success, true);
+  assert.equal(result?.reason, 'all_clear');
+  assert.equal(results.length, 1);
 });
 
 test('real pointer movement zone drives the player on the belt-scroll lane', () => {
