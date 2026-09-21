@@ -174,6 +174,7 @@ export default class GameplayAdapter {
         const deltaMs = 1000 / fps;
         const wasRunning = Boolean(loop.running);
         const previousSmoothStep = loop.smoothStep;
+        const previousCallback = loop.callback;
         const initialFrame = Number(loop.frame || 0);
         const initialLoopTime = Number(loop.time || 0);
         const initialLastTime = Number.isFinite(Number(loop.lastTime))
@@ -202,6 +203,12 @@ export default class GameplayAdapter {
             manuallyResumed = true;
 
             loop.smoothStep = false;
+            // TimeStep subtracts absolute RAF timestamps. Floating-point
+            // cancellation makes that delta depend on the page's uptime and can
+            // move a Clock timer across its boundary (e.g. frame 120 at 60 Hz).
+            // Keep the real TimeStep -> Game.step path, but deliver the declared
+            // fixed delta exactly to gameplay, independent of the RAF epoch.
+            loop.callback = (time) => previousCallback.call(loop, time, deltaMs);
             for (let index = 0; index < frames; index += 1) {
                 const stepTime = wallClockBase + (index + 1) * 0.001;
                 loop.lastTime = stepTime - deltaMs;
@@ -216,6 +223,7 @@ export default class GameplayAdapter {
             manualFinalLoopTime = Number(loop.time || initialLoopTime);
             manualFinalCallbackTime = Number(loop.lastTime || wallClockBase);
         } finally {
+            loop.callback = previousCallback;
             loop.smoothStep = previousSmoothStep;
             if (manuallyResumed && this.status === 'running') {
                 systems.pause({ source: 'runtime_observation_exact_frame' });

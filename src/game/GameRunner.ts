@@ -920,6 +920,13 @@ export function initializePhaserGame(
 
         // Retreat AFTER intro so it is never covered by the skip zone.
         this.mountRetreatButton(knobs);
+        // Verification hosts can start replay at the completed adapter setup,
+        // before any gameplay frame. Browser polling must not define frame zero.
+        const verification = (window as any).__LOREWEAVER_DETERMINISM__;
+        if (this.adapter && verification?.mode === 'verification' && verification.pauseOnStart === true) {
+          this.adapter.pause();
+          this.adapter.updateObservationState({ paused: true });
+        }
       });
     }
 
@@ -1792,8 +1799,11 @@ export function initializePhaserGame(
       introContainer.add([title, descText, mech, prompt]);
 
       const skipZone = this.add.zone(width / 2, height / 2, width, height).setInteractive();
-      skipZone.on("pointerdown", () => {
-        synth.playClick();
+      let closing = false;
+      const closeIntro = () => {
+        if (closing) return;
+        closing = true;
+        skipZone.disableInteractive();
         this.tweens.add({
           targets: introContainer,
           alpha: 0,
@@ -1804,22 +1814,13 @@ export function initializePhaserGame(
             onComplete();
           }
         });
+      };
+      skipZone.on("pointerdown", () => {
+        synth.playClick();
+        closeIntro();
       });
 
-      this.time.delayedCall(2500, () => {
-        if (introContainer.active) {
-          this.tweens.add({
-            targets: introContainer,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => {
-              introContainer.destroy();
-              skipZone.destroy();
-              onComplete();
-            }
-          });
-        }
-      });
+      this.time.delayedCall(2500, closeIntro);
     }
 
     private spawnParticleExplosion(x: number, y: number, color: number) {

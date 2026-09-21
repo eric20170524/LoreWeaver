@@ -198,7 +198,7 @@ const scenario = {
   title: "Golden survivor seeded state replay",
   requiredCapabilities: ["semanticInput", "pause", "resume", "exactFrameAdvance"],
   steps: [
-    { id: "pause", type: "pause" },
+    { id: "pause", type: "pause", boundary: "adapter_created_before_first_gameplay_frame" },
     { id: "move", type: "input", payload: { action: "move", x: 360, y: 640 } },
     { id: "advance", type: "advance_frames", frames: ADVANCE_FRAMES }
   ]
@@ -248,11 +248,14 @@ async function executeBuild(playwright, browserName, build) {
   const port = await findOpenPort();
   const server = await startStaticServer(build.stage, port);
   let browser = null;
+  let page = null;
+  const errors = [];
+  const requests = [];
   try {
     browser = await browserType.launch({ headless: true });
     const browserVersion = browser.version();
-    const page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
-    const errors = [];
+    page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
+    page.on("requestfailed", (request) => requests.push({ url: request.url(), error: request.failure()?.errorText }));
     page.on("pageerror", (error) => errors.push(error?.message || String(error)));
     page.on("console", (msg) => {
       if (msg.type() === "error" && !msg.text().includes("favicon")) errors.push(msg.text());
@@ -261,6 +264,7 @@ async function executeBuild(playwright, browserName, build) {
       window.__LOREWEAVER_DETERMINISM__ = {
         mode: "verification",
         seed,
+        pauseOnStart: true,
         scope: "adapter_state_trace"
       };
     }, { seed: SEED });
@@ -284,9 +288,9 @@ async function executeBuild(playwright, browserName, build) {
         const game = window.__LOREWEAVER_GAME__;
         const scene = game?.scene?.keys?.LevelActiveScene;
         const api = window.__LOREWEAVER_RUNTIME_OBSERVATION__;
-        return Boolean(game?.scene?.isActive?.("LevelActiveScene"))
+        return Boolean(game?.scene?.isPaused?.("LevelActiveScene"))
           && scene?.node?.gameplay?.cardId === "survivor_horde"
-          && (scene?.adapter?.status === "running" || window.__LOREWEAVER_TEST_HOOKS__?.status === "running")
+          && scene?.adapter?.status === "paused"
           && api?.capabilities?.().pause === true;
       });
       if (ready) break;
@@ -295,10 +299,11 @@ async function executeBuild(playwright, browserName, build) {
       await page.waitForTimeout(250);
     }
 
-    const paused = await page.evaluate(
-      () => window.__LOREWEAVER_RUNTIME_OBSERVATION__?.pause?.({ reason: "cross_build_determinism_probe" })
-    );
-    if (paused?.status !== "passed") throw new Error(`determinism_pause_failed:${JSON.stringify(paused)}`);
+    const paused = await page.evaluate(() => {
+      const scene = window.__LOREWEAVER_GAME__?.scene?.keys?.LevelActiveScene;
+      return scene?.adapter?.status === "paused" && scene.sys.isPaused();
+    });
+    if (!paused) throw new Error("determinism_initial_pause_missing");
 
     await page.waitForFunction(() => {
       const loop = window.__LOREWEAVER_GAME__?.loop;
@@ -307,16 +312,29 @@ async function executeBuild(playwright, browserName, build) {
 
     const outcome = await page.evaluate(({ frames }) => {
       const api = window.__LOREWEAVER_RUNTIME_OBSERVATION__;
+      const clockState = () => {
+        const clock = window.__LOREWEAVER_GAME__.scene.keys.LevelActiveScene.time;
+        return [...clock._active, ...clock._pendingInsertion].map(event => ({
+          delay: event.delay, elapsed: event.elapsed, loop: event.loop, paused: event.paused
+        }));
+      };
       const capabilities = api.capabilities();
       const before = api.snapshot();
+      const initialTimers = clockState();
       const move = api.input({ action: "move", x: 360, y: 640 });
       const advance = api.advanceFrames({ frames });
       const after = api.snapshot();
       const trace = api.trace();
-      return { capabilities, before, move, advance, after, trace };
+      return { capabilities, before, move, advance, after, trace, initialTimers, finalTimers: clockState() };
     }, { frames: ADVANCE_FRAMES });
 
     if (outcome.move?.status !== "passed") throw new Error(`determinism_move_failed:${JSON.stringify(outcome.move)}`);
+    const initialGameplayTimers = outcome.initialTimers.filter(event => event.loop);
+    const finalGameplayTimers = outcome.finalTimers.filter(event => event.loop);
+    if (initialGameplayTimers.length !== 3 || initialGameplayTimers.some(event => event.elapsed !== 0)
+      || finalGameplayTimers.length !== 3) {
+      throw new Error(`determinism_timer_lifecycle_invalid:${JSON.stringify({ initialGameplayTimers, finalGameplayTimers })}`);
+    }
     if (outcome.advance?.status !== "passed") throw new Error(`determinism_advance_failed:${JSON.stringify(outcome.advance)}`);
     if (outcome.after?.state?.status !== "paused") {
       throw new Error(`determinism_scene_not_paused_after_advance:${outcome.after?.state?.status}`);
@@ -351,12 +369,23 @@ async function executeBuild(playwright, browserName, build) {
       finalSnapshot: outcome.after,
       stateProjection: projection,
       stateFingerprint: sha256Json(projection),
+      replay: { advance: outcome.advance, initialTimers: outcome.initialTimers, finalTimers: outcome.finalTimers },
       traceRange: {
         startSequence: outcome.before.sequence,
         endSequence: outcome.trace.lastSequence,
         finalEntryCount: outcome.trace.entryCount
       }
     };
+  } catch (error) {
+    const diagnostics = await page?.evaluate(() => ({
+      text: document.body?.innerText,
+      gamePresent: Boolean(window.__LOREWEAVER_GAME__),
+      specPresent: Boolean(window.__LOREWEAVER_EMBEDDED_SPEC__),
+      snapshot: window.__LOREWEAVER_RUNTIME_OBSERVATION__?.snapshot?.()
+    })).catch(() => null);
+    const reportPath = path.join(WORKSPACE, `reports/determinism-${browserName}-${build.id}-failure.json`);
+    writeJson(reportPath, { status: "failed", browser: browserName, build: buildRef(build), error: error?.stack || String(error), errors, requests, diagnostics });
+    throw new Error(`${browserName}/${build.id}: ${error?.message || error}; diagnostics: ${reportPath}; browser errors: ${JSON.stringify(errors)}`);
   } finally {
     if (browser) await browser.close();
     await new Promise((resolve) => server.close(resolve));
@@ -374,7 +403,15 @@ function buildRef(build) {
   };
 }
 
-function compactComparison(comparison, extra) {
+function projectionDifferences(baseline, candidate) {
+  return PROJECTION_PATHS.flatMap((field) =>
+    JSON.stringify(stable(baseline[field])) === JSON.stringify(stable(candidate[field]))
+      ? [] : [{ field, expected: baseline[field], actual: candidate[field] }]);
+}
+
+function compactComparison(comparison, extra, runs) {
+  const initialDifferences = projectionDifferences(
+    projectState(runs[0].initialSnapshot.state), projectState(runs[1].initialSnapshot.state));
   return {
     ...extra,
     schemaVersion: comparison.schemaVersion,
@@ -382,7 +419,10 @@ function compactComparison(comparison, extra) {
     deterministic: comparison.deterministic,
     blockers: comparison.blockers,
     stateMatches: comparison.comparison?.stateMatches ?? false,
-    visualMatches: comparison.comparison?.visualMatches ?? null
+    visualMatches: comparison.comparison?.visualMatches ?? null,
+    initialStateMatches: initialDifferences.length === 0,
+    initialDifferences,
+    finalDifferences: projectionDifferences(runs[0].stateProjection, runs[1].stateProjection)
   };
 }
 
@@ -427,7 +467,7 @@ async function main() {
       baselineBuild: buildRef(buildA),
       candidateBuild: buildRef(buildB)
     });
-    return compactComparison(comparison, { browser: browserName });
+    return compactComparison(comparison, { browser: browserName }, browserRuns);
   });
 
   const crossBrowser = [buildA, buildB].map((build, buildIndex) => {
@@ -441,11 +481,11 @@ async function main() {
       baselineBuild: buildRef(build),
       candidateBuild: buildRef(build)
     });
-    return compactComparison(comparison, { buildId: build.id });
+    return compactComparison(comparison, { buildId: build.id }, buildRuns);
   });
 
   const pairwiseDeterministic = [...perBrowser, ...crossBrowser].every(
-    (comparison) => comparison.status === "passed" && comparison.deterministic === true
+    (comparison) => comparison.status === "passed" && comparison.deterministic === true && comparison.initialStateMatches
   );
   const expectedIdentity = {
     specHash: buildA.specHash,
@@ -529,7 +569,10 @@ async function main() {
       engineVersion: run.engineVersion,
       sessionId: run.sessionId,
       stateFingerprint: run.stateFingerprint,
-      finalState: run.finalSnapshot.state
+      finalState: run.finalSnapshot.state,
+      initialProjection: projectState(run.initialSnapshot.state),
+      finalProjection: run.stateProjection,
+      replay: run.replay
     }))
   };
   const reportPath = path.join(WORKSPACE, "reports/cross_build_determinism_latest.json");
