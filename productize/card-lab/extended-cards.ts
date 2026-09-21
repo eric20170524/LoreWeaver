@@ -1,3 +1,4 @@
+import platformCard from '../../minigame_master/gameplay/cards/platform_escape.json';
 import mazeCard from '../../minigame_master/gameplay/cards/maze_exploration_choice.json';
 import shooterCard from '../../minigame_master/gameplay/cards/shooter_duel.json';
 import dialogueCard from '../../minigame_master/gameplay/cards/branching_dialogue_check.json';
@@ -27,6 +28,14 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  platform_escape: {
+    card: platformCard, heading: '17 · 平台逃生', title: '平台逃生试炼',
+    intro: '自动向终点推进。A/D 或左右键移动，W/上键/空格或点击画布跳跃。躲开红色刀刃和灰色落石；进度到 100 获胜，生命耗尽失败。默认路程约需 22.5 秒，触屏点击即可起跳。',
+    fields: [ { key: 'levelLen', label: '路程长度' }, { key: 'progressSpeed', label: '推进速度' }, { key: 'hazardIntervalMs', label: '障碍间隔（毫秒）' }, { key: 'gravity', label: '重力' }, { key: 'jumpV0', label: '跳跃初速' }, { key: 'moveSpeed', label: '移动速度' } ],
+    goal: () => 100, progress: state => `${Math.floor(state.progress ?? 0)}%`,
+    health: state => state.hp ?? 0, count: state => state.jumps ?? 0,
+    healthLabel: '生命', progressLabel: '路程', countLabel: '跳跃'
+  },
   maze_exploration_choice: {
     card: mazeCard, heading: '16 · 迷宫抉择', title: '迷宫抉择试炼',
     intro: '用 WASD/方向键逐格移动，或点击角色周围指定方向。黄色格会询问是否花费能量救援，绿色格是出口。救援可获额外奖励；跳过或能量不足仍能通关。没有限时，可随时撤退。',

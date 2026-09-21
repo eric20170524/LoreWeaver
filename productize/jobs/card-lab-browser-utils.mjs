@@ -35,12 +35,12 @@ export async function createLabSuite(cardId) {
   const url = `http://127.0.0.1:${server.address().port}/preview/?card=${cardId}`;
   const boxes = new WeakMap();
   const point = (page,x,y)=>{const box=boxes.get(page);assert.ok(box);return {x:box.x+x/720*box.width,y:box.y+y/1280*box.height};};
-  async function begin(page) {
+  async function begin(page, {initialScoreMax=0}={}) {
     const before=await read(page);
     await page.locator('#start').click();
     await page.waitForFunction(g=>{const s=window.__CARD_LAB__.snapshot();return s.generation===g+1&&!s.starting&&s.state?.status==='running';},before.generation,{timeout:20000});
     await page.locator('canvas').scrollIntoViewIfNeeded();boxes.set(page,await page.locator('canvas').boundingBox());
-    const s=await read(page);assert.equal(s.cardId,cardId);assert.equal(s.state.score,0);
+    const s=await read(page);assert.equal(s.cardId,cardId);assert.ok(s.state.score>=0 && s.state.score<=initialScoreMax, `initial score ${s.state.score} exceeds ${initialScoreMax}`);
     assert.deepEqual(s.sceneKeys,['LevelActiveScene']); return s;
   }
   async function run(id,action,{mobile=false,offline=false}={}) {

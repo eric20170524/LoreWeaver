@@ -1,0 +1,289 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "platform_escape",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "9ae74f5bcdc04ca0015e0fc7e947f5dafb847dbf",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check",
+      "shooter_duel",
+      "maze_exploration_choice",
+      "platform_escape"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "99c97840c0aafc8a3e383395331366b6a445e76729779650e2a7b781737a62f6"
+      },
+      {
+        "name": "game.js",
+        "sha256": "86bd34cf788feec32e9a5e96895e02d3c934158356b086daf096c35c565f93cc"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T14:27:34.651Z",
+  "sourceNote": "Checkout revision is the build base; actual bundle SHA-256 identifies uncommitted and concurrent source included in the tested payload.",
+  "unitTests": {
+    "passed": 8,
+    "command": "node productize/jobs/check-platform-runtime.mjs",
+    "seedSweep": 100
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "cases": [
+    {
+      "id": "default-keyboard-escape",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "gravity": 1800,
+        "moveSpeed": 280,
+        "jumpV0": 720,
+        "levelLen": 1800,
+        "progressSpeed": 80,
+        "hazardIntervalMs": 900
+      },
+      "actionCount": 22,
+      "state": {
+        "hp": 100,
+        "progress": 100,
+        "hits": 0,
+        "jumps": 22
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "default-unattended-death",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "gravity": 1800,
+        "moveSpeed": 280,
+        "jumpV0": 720,
+        "levelLen": 1800,
+        "progressSpeed": 80,
+        "hazardIntervalMs": 900
+      },
+      "actionCount": 0,
+      "state": {
+        "hp": 0,
+        "progress": 27.92475555555552,
+        "hits": 4,
+        "jumps": 0
+      },
+      "result": {
+        "success": false,
+        "reason": "hp_zero",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 27.92475555555552,
+          "hp": 0
+        }
+      }
+    },
+    {
+      "id": "pause-resume-three-restarts",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "gravity": 1800,
+        "moveSpeed": 280,
+        "jumpV0": 720,
+        "levelLen": 400,
+        "progressSpeed": 80,
+        "hazardIntervalMs": 900
+      },
+      "actionCount": 2,
+      "state": {
+        "hp": 100,
+        "progress": 2.333600000000006,
+        "hits": 0,
+        "jumps": 0
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 2.333600000000006,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "custom-route-and-repeated-short-jumps",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "gravity": 1800,
+        "moveSpeed": 280,
+        "jumpV0": 720,
+        "levelLen": 400,
+        "progressSpeed": 80,
+        "hazardIntervalMs": 900
+      },
+      "actionCount": 2,
+      "state": {
+        "hp": 100,
+        "progress": 100,
+        "hits": 0,
+        "jumps": 4
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-escape",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "gravity": 1800,
+        "moveSpeed": 280,
+        "jumpV0": 720,
+        "levelLen": 1800,
+        "progressSpeed": 80,
+        "hazardIntervalMs": 900
+      },
+      "actionCount": 22,
+      "state": {
+        "hp": 100,
+        "progress": 100,
+        "hits": 0,
+        "jumps": 22
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "offline-pointer-default-escape",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "gravity": 1800,
+        "moveSpeed": 280,
+        "jumpV0": 720,
+        "levelLen": 1800,
+        "progressSpeed": 80,
+        "hazardIntervalMs": 900
+      },
+      "actionCount": 22,
+      "state": {
+        "hp": 100,
+        "progress": 100,
+        "hits": 0,
+        "jumps": 22
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "hp": 100
+        }
+      }
+    }
+  ]
+}
