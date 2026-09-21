@@ -949,7 +949,7 @@ export function initializePhaserGame(
               ? (this.adapter as any).state.hp
               : 100;
           if (this.scoreHUD) {
-            this.scoreHUD.setText(`目标进度：${score} / ${goal}`);
+            this.scoreHUD.setText(goal > 0 ? `目标进度：${score} / ${goal}` : `当前得分：${score}`);
           }
           if (this.livesHUD) {
             this.livesHUD.setText(`生命精力：${Math.ceil(hp)}`);
@@ -994,7 +994,7 @@ export function initializePhaserGame(
       } as any).setOrigin(0.5);
 
       // Lives and Target score indicators
-      this.scoreHUD = this.add.text(32, height - 42, `目标进度：0 / ${this.node.goalValue}`, {
+      this.scoreHUD = this.add.text(32, height - 42, this.node.goalValue > 0 ? `目标进度：0 / ${this.node.goalValue}` : '当前得分：0', {
         fontFamily: "JetBrains Mono, monospace",
         fontSize: "20px",
         color: "#ffffff"
@@ -1906,7 +1906,7 @@ export function initializePhaserGame(
 
       container.init(payload);
       const iframe = container.mount(parentEl, {
-        src: `./nodes/node${this.node.id}.html`,
+        src: typeof knobs.src === "string" ? knobs.src : undefined,
         nodeId: this.node.id
       });
       this.activeIframe = iframe;

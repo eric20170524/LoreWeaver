@@ -10,7 +10,7 @@ export const NODE_RESULT_REASONS = Object.freeze({
 });
 
 export function createNodePayload(input = {}) {
-    const nodeId = input.nodeId || input.id || 'node_unknown';
+    const nodeId = input.nodeId ?? input.id ?? 'node_unknown';
 
     return {
         nodeId,
@@ -20,7 +20,7 @@ export function createNodePayload(input = {}) {
         playerPerks: input.playerPerks || input.perks || [],
         inventory: input.inventory || {},
         storyFlags: input.storyFlags || input.flags || [],
-        runSeed: input.runSeed || null,
+        runSeed: input.runSeed ?? null,
         source: {
             workspaceId: input.source?.workspaceId || input.workspaceId || null,
             projectId: input.source?.projectId || input.projectId || null,
