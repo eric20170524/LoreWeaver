@@ -75,3 +75,18 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 第二十三张 [node_iframe_microgame](NODE_IFRAME_MICROGAME_CARD_LAB.md) 已通过九项状态机测试、八个真实浏览器场景与 TypeScript。真实 H5 子游戏覆盖编码、标准/旧结果、奖励去重、来源校验、退出/重开、双倒计时暂停、自然/宿主超时、触控和离线。修复 file:// URL 与 MessageEvent 来源序列化差异，同时保留发送窗口校验。390px 画面已核对，[验收 JSON](../reports/card_lab_23_2026-09-21.json) 保存构建哈希。累计 23/23 张已有逐卡本地工程验收；这不等于最终同源码全库验收，也不等于远端 CI 或发布认证。
 
 接下来检查共享合同（零种子、终局玩法 HUD、iframe 源配置），再执行当前工作区全库汇总验证和双构建双浏览器 replay。远端 OAuth 缺少 workflow scope 的推送限制仍需解决；不重写并行提交。
+
+
+## 2026-09-22：最终同源码回归
+
+共享合同修复提交 `3704b3b`：保留零种子和零节点编号，终局玩法不再显示零分母目标，iframe 宿主不再覆盖配置源路径。27 个运行时/合同检查脚本及 TypeScript 通过，iframe 八场景复跑通过。最新双构建 × Chromium/Firefox replay 全部通过，四组比较的 initial/final diff 均为空。当前源码包含并行未提交修改，不能把 revision 当成干净构建证明。
+
+23 卡真实浏览器顺序总回归已启动，`workflow/reports/final-card-audit/all-cards.json` 记录逐项状态、源码哈希和日志。执行完成前不宣称全库最终通过。[当前审计证据](../reports/final_cards_audit_2026-09-22.json) 暂为 partial。
+
+远端状态更新：本轮 push 返回 non-fast-forward；fetch 后发现远端新增六个 sprite-gen 集成提交，顶端 `41de4b3`，本地独有 13 提交、远端独有 6 提交。尚未合并，以保持正在执行的回归源码和构建基点稳定。之前 workflow scope 拒绝是历史事实，不能代表这次推送已再次走到同一权限检查。
+
+合并预检：`git merge-tree --write-tree HEAD origin/feat/fangame-co-development` 成功，无冲突，尚未移动分支。额外合同审计发现 iframe 的宿主奖励转换仍有两处待修：`storyFlags` 数组（包括空数组）会遮蔽 relic；显式 `xp=0` 会触发默认 multiplierGain。core NodeResult 已保存 skillUp/unlocks.ages，但当前宿主 PlayerState 没有对应等级/时代模型，应明确兼容边界，不凭容器保存字段宣称长期成长已应用这些字段。本轮总回归完成后修正现有映射并做针对性验收。
+
+CI 配置已在工作区扩展为 23 卡完整矩阵，脚本路径逐项存在，Ruby YAML 解析和目录集合相等检查通过；浏览器步骤上限 10 分钟、job 上限 30 分钟。暂未提交/推送，不能称为云端通过。iframe 奖励映射修复与四项保存状态回归已暂存于 `/tmp/loreweaver-iframe-reward-fix/`，待总回归结束后接入。
+
+最终本地总回归完成：23/23 卡、154 个真实浏览器场景全部通过，前后源码哈希一致。随后仅对 iframe 奖励转换修复 xp=0 与 relic/flags 共存，四项保存回归、十项容器回归、TypeScript 及八个真实浏览器场景通过。该补丁不改变其他 adapter 的玩法路径。证据保存总回归与后续容器构建各自哈希，不把二者混称为同一二进制。远端合并、推送和最新 CI 尚待完成。

@@ -22,8 +22,8 @@ function finish(success: boolean) {
   status = 'ended'; render();
   const reason = success ? 'objective_met' : 'timer_expired';
   const reply = knobs.responseFormat === 'legacy'
-    ? { type: 'NODE_RESULT', reward: { success, reason, ...(success ? { qi: 3, xp: 30, skill: 'iframe_focus', flag: 'iframe_demo_clear' } : {}) } }
-    : { type: 'NODE_RESULT', result: { success, reason, rewards: success ? { qi: 3, xp: 30, skill: 'iframe_focus' } : {}, unlocks: { flags: success ? ['iframe_demo_clear'] : [] }, telemetry: { hits, needed } } };
+    ? { type: 'NODE_RESULT', reward: { success, reason, ...(success ? { qi: 3, xp: 30, skill: 'iframe_focus', relic: 'iframe_jade', flag: 'iframe_demo_clear' } : {}) } }
+    : { type: 'NODE_RESULT', result: { success, reason, rewards: success ? { qi: 3, xp: 30, skill: 'iframe_focus', relic: 'iframe_jade' } : {}, unlocks: { flags: success ? ['iframe_demo_clear'] : [] }, telemetry: { hits, needed } } };
   // Model at-least-once delivery: the host must still reward exactly once.
   send(reply); send(reply);
 }

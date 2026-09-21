@@ -17,3 +17,5 @@ npx tsc --noEmit
 这些证据仅认证所附示例与容器协议路径，不代表任意外部 H5 游戏具备正确暂停、结果或安全行为。卡片保留 runtime_ready，证据 synthetic:true / releaseEligible:false；没有正式美术或真机发布认证。构建 revision 仅为基点，实际文件 SHA-256 标识包含并行工作区修改的测试对象。原六卡云端矩阵未覆盖本卡。
 
 报告和截图在 `workflow/reports/card-lab/node_iframe_microgame/`；[验收摘要](../reports/card_lab_23_2026-09-21.json) 保存最终构建哈希和场景结果。
+
+最终审计补充：宿主奖励映射保留显式 xp=0，并同时持久化 relic 和 flags。core 协议会保存 skillUp/unlocks.ages，但本宿主 PlayerState 没有对应技能等级/时代字段；不宣称这两个字段已应用到长期成长。新增四项 RewardApplier 保存状态回归，以及自定义 srcTemplate/显式 src 覆盖测试。

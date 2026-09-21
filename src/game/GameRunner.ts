@@ -3,6 +3,7 @@ import { GameSpec, PlayerState, NodeSpec, GameplayModifierSpec, NodeResult } fro
 import { synth } from "../utils/AudioSynth";
 import AudioAssetResolver from "../../minigame_master/core/lib/audio/AudioAssetResolver.js";
 import { RewardApplier } from "../utils/RewardApplier";
+import { mapIframeRewards } from "../utils/iframeRewards";
 import {
   SurvivorHordeAdapter,
   createSurvivorHordeModifier,
@@ -1938,42 +1939,9 @@ export function initializePhaserGame(
         const pState = { ...this.game.registry.get("playerState") } as PlayerState;
         const rwdKey = spec.economy.resources[0] || "金币";
 
-        const mappedSecondary: { [key: string]: number } = {};
-        if (typeof reward.qi === "number") {
-          mappedSecondary[rwdKey] = reward.qi;
-        } else if (reward.secondaryResources) {
-          Object.assign(mappedSecondary, reward.secondaryResources);
-        } else {
-          mappedSecondary[rwdKey] = 1;
-        }
-
-        const mappedAbilities: string[] = [];
-        if (reward.skill) {
-          mappedAbilities.push(reward.skill);
-        }
-        if (reward.unlockedAbilities) {
-          mappedAbilities.push(...reward.unlockedAbilities);
-        }
-        if (mappedAbilities.length === 0 && this.node.planning?.rewardUnlocks) {
-          mappedAbilities.push(...this.node.planning.rewardUnlocks);
-        }
-
-        const mappedFlags: string[] = [];
-        if (reward.storyFlags) {
-          mappedFlags.push(...reward.storyFlags);
-        } else if (reward.relic) {
-          mappedFlags.push(reward.relic);
-        }
-
         const nodeResult: NodeResult = {
           success: true,
-          rewards: {
-            multiplierGain: reward.multiplierGain ?? (reward.xp ? reward.xp / 300.0 : this.node.resourceMultiplier / 12.0),
-            secondaryResources: mappedSecondary,
-            unlockedAbilities: mappedAbilities,
-            storyFlags: mappedFlags,
-            unlockNextNode: reward.unlockNextNode !== false
-          }
+          rewards: mapIframeRewards(reward, this.node, rwdKey)
         };
 
         const nextState = RewardApplier.apply(pState, this.node, nodeResult);

@@ -1,0 +1,2742 @@
+{
+  "date": "2026-09-22",
+  "status": "local_engineering_passed",
+  "revision": "3704b3b",
+  "sourceNote": "All-card audit ran on one unchanged workspace at base 3704b3b; subsequent iframe-only reward changes passed targeted unit and browser regression. Workspace includes concurrent uncommitted changes; actual bundle hashes identify tested payloads. Remote integration and CI are pending.",
+  "unitScripts": [
+    {
+      "name": "check-action-boss-alignment-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-collect-dodge-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-combo-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-dialogue-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-dodge-counter-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-drag-core-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-energy-balance-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-hazard-waves-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-iframe-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-maze-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-observe-capture-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-platform-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-point-drag-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-pressure-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-qix-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-reaction-pick-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-rhythm-pickup-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-rhythm-timing-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-rune-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-sequence-synthesis-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-shooter-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-side-scrolling-brawler-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-survivor-combat-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-turn-based-skill-battle-runtime.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-runtime-kernel-contract.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-runtime-determinism.mjs",
+      "status": 0
+    },
+    {
+      "name": "check-runtime-observation.mjs",
+      "status": 0
+    }
+  ],
+  "typescript": "passed",
+  "iframeBrowserCases": 8,
+  "replay": {
+    "schemaVersion": "loreweaver.golden-cross-build-determinism-report.v2",
+    "status": "passed",
+    "deterministic": true,
+    "createdAt": "2026-09-21T16:02:07.430Z",
+    "fixture": false,
+    "synthetic": false,
+    "stale": false,
+    "freshness": "fresh",
+    "headless": true,
+    "releaseEligible": false,
+    "waivers": [],
+    "runtimeAuthority": "LoreWeaverRuntimeKernel",
+    "scope": "adapter_state_trace",
+    "scenarioId": "golden-survivor-cross-build-state",
+    "scenarioHash": "sha256:c250267e92e21260c96689b9b60e05aac7e65fb2420707144f8db293c2366976",
+    "projectionId": "survivor-cross-build-state-v2",
+    "identity": {
+      "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+      "runtimeVersion": "2.0.0",
+      "assetManifestHash": "207392d6a10804fdd84ffb6b657dbd55c48cdaac3c698198ae42ba4c51cf9e8f"
+    },
+    "matrix": {
+      "requiredBrowsers": [
+        "chromium",
+        "firefox"
+      ],
+      "requiredBuildCount": 2,
+      "cells": [
+        {
+          "browser": "chromium",
+          "browserVersion": "131.0.6778.33",
+          "engineVersion": "Blink/131.0.6778.33",
+          "buildId": "build-a",
+          "sessionId": "runtime-mubfnroo-72xrvv22",
+          "status": "passed",
+          "payloadHash": "933b0e7bc4c7e3771b1d3e49c2c53ebd4651fde1f175c83d8f516c288349c8ab",
+          "artifactSha256": "0810a5b1efb46b997097f220f7f5ad121987e6a17f4f61cb1f7f06b28b10f72c",
+          "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+          "runtimeVersion": "2.0.0",
+          "assetManifestHash": "207392d6a10804fdd84ffb6b657dbd55c48cdaac3c698198ae42ba4c51cf9e8f",
+          "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2"
+        },
+        {
+          "browser": "chromium",
+          "browserVersion": "131.0.6778.33",
+          "engineVersion": "Blink/131.0.6778.33",
+          "buildId": "build-b",
+          "sessionId": "runtime-mubfntxy-lhmab3o9",
+          "status": "passed",
+          "payloadHash": "933b0e7bc4c7e3771b1d3e49c2c53ebd4651fde1f175c83d8f516c288349c8ab",
+          "artifactSha256": "6aef649921c3dfa9c657a471bbb7e90439a5391aa5ee9d917c697fe601033e7a",
+          "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+          "runtimeVersion": "2.0.0",
+          "assetManifestHash": "207392d6a10804fdd84ffb6b657dbd55c48cdaac3c698198ae42ba4c51cf9e8f",
+          "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2"
+        },
+        {
+          "browser": "firefox",
+          "browserVersion": "132.0",
+          "engineVersion": "Gecko/132.0",
+          "buildId": "build-a",
+          "sessionId": "runtime-mubfnybc-g2ggfhfn",
+          "status": "passed",
+          "payloadHash": "933b0e7bc4c7e3771b1d3e49c2c53ebd4651fde1f175c83d8f516c288349c8ab",
+          "artifactSha256": "0810a5b1efb46b997097f220f7f5ad121987e6a17f4f61cb1f7f06b28b10f72c",
+          "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+          "runtimeVersion": "2.0.0",
+          "assetManifestHash": "207392d6a10804fdd84ffb6b657dbd55c48cdaac3c698198ae42ba4c51cf9e8f",
+          "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2"
+        },
+        {
+          "browser": "firefox",
+          "browserVersion": "132.0",
+          "engineVersion": "Gecko/132.0",
+          "buildId": "build-b",
+          "sessionId": "runtime-mubfo1zr-yp4952nw",
+          "status": "passed",
+          "payloadHash": "933b0e7bc4c7e3771b1d3e49c2c53ebd4651fde1f175c83d8f516c288349c8ab",
+          "artifactSha256": "6aef649921c3dfa9c657a471bbb7e90439a5391aa5ee9d917c697fe601033e7a",
+          "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+          "runtimeVersion": "2.0.0",
+          "assetManifestHash": "207392d6a10804fdd84ffb6b657dbd55c48cdaac3c698198ae42ba4c51cf9e8f",
+          "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2"
+        }
+      ]
+    },
+    "comparisons": {
+      "perBrowser": [
+        {
+          "browser": "chromium",
+          "schemaVersion": "loreweaver.cross-build-determinism-evidence.v1",
+          "status": "passed",
+          "deterministic": true,
+          "blockers": [],
+          "stateMatches": true,
+          "visualMatches": null,
+          "initialStateMatches": true,
+          "initialDifferences": [],
+          "finalDifferences": []
+        },
+        {
+          "browser": "firefox",
+          "schemaVersion": "loreweaver.cross-build-determinism-evidence.v1",
+          "status": "passed",
+          "deterministic": true,
+          "blockers": [],
+          "stateMatches": true,
+          "visualMatches": null,
+          "initialStateMatches": true,
+          "initialDifferences": [],
+          "finalDifferences": []
+        }
+      ],
+      "crossBrowser": [
+        {
+          "buildId": "build-a",
+          "schemaVersion": "loreweaver.cross-build-determinism-evidence.v1",
+          "status": "passed",
+          "deterministic": true,
+          "blockers": [],
+          "stateMatches": true,
+          "visualMatches": null,
+          "initialStateMatches": true,
+          "initialDifferences": [],
+          "finalDifferences": []
+        },
+        {
+          "buildId": "build-b",
+          "schemaVersion": "loreweaver.cross-build-determinism-evidence.v1",
+          "status": "passed",
+          "deterministic": true,
+          "blockers": [],
+          "stateMatches": true,
+          "visualMatches": null,
+          "initialStateMatches": true,
+          "initialDifferences": [],
+          "finalDifferences": []
+        }
+      ]
+    },
+    "workspaceId": "__golden_survivor_vertical_slice_ci",
+    "replayReady": true,
+    "evidenceMeaning": "Two independently compiled Candidate stages executed in independent Chromium and Firefox sessions with the same explicit verification seed, semantic input, paused target Scene and exact Phaser frame advancement. The declared adapter-state projection is compared across builds inside each browser and across browsers for each build. Visual-frame determinism and release certification are explicitly excluded.",
+    "declaration": {
+      "schemaVersion": "loreweaver.runtime-determinism.v1",
+      "scope": "adapter_state_trace",
+      "runtimeAuthority": "LoreWeaverRuntimeKernel",
+      "random": {
+        "controlled": true,
+        "source": "seeded_prng",
+        "seed": "golden-survivor-cross-build-v2",
+        "scope": "adapter",
+        "algorithm": "fnv1a32+mulberry32-v1",
+        "stateHandoff": "seed_replay"
+      },
+      "time": {
+        "controlled": true,
+        "mode": "exact_frame",
+        "hostWallClockSettleAllowed": false
+      },
+      "input": {
+        "controlled": true,
+        "mode": "semantic"
+      },
+      "stateProjection": {
+        "id": "survivor-cross-build-state-v2",
+        "paths": [
+          "hp",
+          "score",
+          "timer",
+          "kills",
+          "determinism.random.state",
+          "determinism.random.calls",
+          "determinism.adapterStateSample.enemyCount",
+          "determinism.adapterStateSample.enemies"
+        ]
+      },
+      "presentation": {
+        "controlled": false,
+        "randomSource": "Phaser.Math/host",
+        "screenshotTimingControlled": false
+      },
+      "engine": {
+        "name": "Phaser",
+        "version": "4.1.0",
+        "renderer": "runtime-selected"
+      },
+      "physics": {
+        "engine": "phaser-arcade",
+        "deterministic": true,
+        "fixedStep": true,
+        "stepMs": 16.666666666666668,
+        "settingsHash": "41b3c2cd1aea1ac5498438f21d5aa62a76ce3d7a6a896f91d86b9da127a6e63c"
+      },
+      "host": {
+        "mode": "static_candidate",
+        "version": "v1"
+      },
+      "metadata": {
+        "evidenceScope": "adapter state only; visual-frame determinism is explicitly excluded",
+        "physicsClaimScope": "empirical equality of the declared projection under exact-frame paused verification, not a universal Phaser physics guarantee"
+      }
+    },
+    "controlReadiness": {
+      "schemaVersion": "loreweaver.runtime-determinism-readiness.v1",
+      "status": "ready",
+      "ready": true,
+      "evidenceRunAllowed": true,
+      "crossBuildDeterministicClaimAllowed": false,
+      "scope": "adapter_state_trace",
+      "runtimeAuthority": "LoreWeaverRuntimeKernel",
+      "scenarioId": "golden-survivor-cross-build-state",
+      "blockers": [],
+      "warnings": [
+        "presentation_not_deterministic_but_excluded_from_adapter_state_scope"
+      ],
+      "controls": {
+        "random": {
+          "controlled": true,
+          "source": "seeded_prng",
+          "seed": "golden-survivor-cross-build-v2",
+          "scope": "adapter",
+          "algorithm": "fnv1a32+mulberry32-v1",
+          "stateHandoff": "seed_replay"
+        },
+        "time": {
+          "controlled": true,
+          "mode": "exact_frame",
+          "hostWallClockSettleAllowed": false
+        },
+        "input": {
+          "controlled": true,
+          "mode": "semantic"
+        },
+        "stateProjection": {
+          "id": "survivor-cross-build-state-v2",
+          "paths": [
+            "hp",
+            "score",
+            "timer",
+            "kills",
+            "determinism.random.state",
+            "determinism.random.calls",
+            "determinism.adapterStateSample.enemyCount",
+            "determinism.adapterStateSample.enemies"
+          ]
+        },
+        "presentation": {
+          "controlled": false,
+          "randomSource": "Phaser.Math/host",
+          "screenshotTimingControlled": false
+        },
+        "engine": {
+          "name": "Phaser",
+          "version": "4.1.0",
+          "renderer": "runtime-selected"
+        },
+        "physics": {
+          "engine": "phaser-arcade",
+          "deterministic": true,
+          "fixedStep": true,
+          "stepMs": 16.666666666666668,
+          "settingsHash": "41b3c2cd1aea1ac5498438f21d5aa62a76ce3d7a6a896f91d86b9da127a6e63c"
+        },
+        "host": {
+          "mode": "static_candidate",
+          "version": "v1"
+        }
+      },
+      "capabilities": {
+        "snapshot": true,
+        "trace": true,
+        "clearTrace": true,
+        "activate": false,
+        "pause": true,
+        "resume": true,
+        "semanticInput": true,
+        "exactFrameAdvance": true,
+        "screenshot": "host_owned",
+        "console": "host_owned",
+        "network": "host_owned"
+      }
+    },
+    "evidenceReadiness": {
+      "schemaVersion": "loreweaver.cross-build-determinism-readiness.v1",
+      "status": "ready",
+      "ready": true,
+      "replayReady": true,
+      "crossBuildDeterministicClaimAllowed": true,
+      "releaseEligible": false,
+      "claim": "adapter_state_cross_build",
+      "scope": "adapter_state_trace",
+      "runtimeAuthority": "LoreWeaverRuntimeKernel",
+      "scenarioId": "golden-survivor-cross-build-state",
+      "expectedIdentity": {
+        "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+        "runtimeVersion": "2.0.0",
+        "assetManifestHash": "207392d6a10804fdd84ffb6b657dbd55c48cdaac3c698198ae42ba4c51cf9e8f"
+      },
+      "matrix": {
+        "requiredBrowsers": [
+          "chromium",
+          "firefox"
+        ],
+        "requiredBuildCount": 2,
+        "coveredBrowsers": [
+          "chromium",
+          "firefox"
+        ],
+        "coveredBuildIds": [
+          "build-a",
+          "build-b"
+        ],
+        "complete": true
+      },
+      "evidence": {
+        "schemaVersion": "loreweaver.cross-build-determinism-evidence.v2",
+        "createdAt": "2026-09-21T16:02:07.430Z",
+        "fixture": false,
+        "synthetic": false,
+        "headless": true,
+        "status": "passed",
+        "deterministic": true
+      },
+      "blockers": [],
+      "warnings": [
+        "visual_frame_determinism_not_claimed",
+        "headless_engineering_evidence_not_physical_device_evidence"
+      ]
+    },
+    "builds": [
+      {
+        "id": "build-a",
+        "stage": "/Users/lm/pyProj/LoreWeaver/productize/exports/standalone-__golden_survivor_vertical_slice_ci-20260921160145",
+        "artifact": "/Users/lm/pyProj/LoreWeaver/productize/exports/standalone-__golden_survivor_vertical_slice_ci-20260921160145.zip",
+        "artifactSha256": "0810a5b1efb46b997097f220f7f5ad121987e6a17f4f61cb1f7f06b28b10f72c",
+        "payloadHash": "933b0e7bc4c7e3771b1d3e49c2c53ebd4651fde1f175c83d8f516c288349c8ab",
+        "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+        "runtimeVersion": "2.0.0",
+        "assetManifestHash": "207392d6a10804fdd84ffb6b657dbd55c48cdaac3c698198ae42ba4c51cf9e8f"
+      },
+      {
+        "id": "build-b",
+        "stage": "/Users/lm/pyProj/LoreWeaver/productize/exports/standalone-__golden_survivor_vertical_slice_ci-20260921160150",
+        "artifact": "/Users/lm/pyProj/LoreWeaver/productize/exports/standalone-__golden_survivor_vertical_slice_ci-20260921160150.zip",
+        "artifactSha256": "6aef649921c3dfa9c657a471bbb7e90439a5391aa5ee9d917c697fe601033e7a",
+        "payloadHash": "933b0e7bc4c7e3771b1d3e49c2c53ebd4651fde1f175c83d8f516c288349c8ab",
+        "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+        "runtimeVersion": "2.0.0",
+        "assetManifestHash": "207392d6a10804fdd84ffb6b657dbd55c48cdaac3c698198ae42ba4c51cf9e8f"
+      }
+    ],
+    "runs": [
+      {
+        "browser": "chromium",
+        "browserVersion": "131.0.6778.33",
+        "engineVersion": "Blink/131.0.6778.33",
+        "sessionId": "runtime-mubfnroo-72xrvv22",
+        "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2",
+        "finalState": {
+          "sceneKey": null,
+          "nodeId": "node_1",
+          "adapterId": "Vr",
+          "status": "paused",
+          "hp": 100,
+          "progress": 0,
+          "timer": 89,
+          "score": 0,
+          "lastResult": null,
+          "errors": [],
+          "artRuntimeMode": "prototype",
+          "artAllowProceduralFallback": true,
+          "artSourceSummary": "atlas_or_idle",
+          "artDegradations": [],
+          "artDegradationCount": 0,
+          "artAtlasStatus": "loaded",
+          "runtimeEvents": [],
+          "modifiers": [],
+          "adapter": "Vr",
+          "semanticActions": [
+            "retreat",
+            "move"
+          ],
+          "playability": null,
+          "configId": "survivor_horde",
+          "kills": 0,
+          "determinism": {
+            "schemaVersion": "loreweaver.adapter-determinism.v1",
+            "enabled": true,
+            "scope": "adapter_state_trace",
+            "random": {
+              "schemaVersion": "loreweaver.seeded-random.v1",
+              "controlled": true,
+              "source": "seeded_prng",
+              "scope": "adapter",
+              "seed": "golden-survivor-cross-build-v2:survivor_horde",
+              "algorithm": "fnv1a32+mulberry32-v1",
+              "initialState": 1115297809,
+              "state": 483462139,
+              "calls": 2
+            },
+            "adapterStateSample": {
+              "enemyCount": 1,
+              "enemies": [
+                {
+                  "x": -8.288,
+                  "y": 21.321,
+                  "active": true,
+                  "hp": 2
+                }
+              ]
+            }
+          },
+          "paused": true,
+          "semanticAction": {
+            "action": "move",
+            "x": 360,
+            "y": 640
+          },
+          "exactFrameAdvance": {
+            "frames": 120,
+            "fps": 60,
+            "deltaMs": 16.666666666666668,
+            "simulatedDeltaMs": 2000.0000000000002,
+            "initialFrame": 121,
+            "finalFrame": 241,
+            "initialLoopTime": 2563.8,
+            "finalLoopTime": 4563.79999999997,
+            "initialCallbackTime": 2563.8,
+            "finalCallbackTime": 2577.72000000149,
+            "targetSceneStatus": "paused",
+            "loopRestored": true,
+            "method": "Phaser.TimeStep.step -> Phaser.Game.step",
+            "wallClockPolicy": "pinned_monotonic_callback_time_with_fixed_timestep_delta"
+          }
+        },
+        "initialProjection": {
+          "hp": 100,
+          "score": 0,
+          "timer": 90,
+          "kills": 0,
+          "determinism.random.state": 1115297809,
+          "determinism.random.calls": 0,
+          "determinism.adapterStateSample.enemyCount": 0,
+          "determinism.adapterStateSample.enemies": []
+        },
+        "finalProjection": {
+          "hp": 100,
+          "score": 0,
+          "timer": 89,
+          "kills": 0,
+          "determinism.random.state": 483462139,
+          "determinism.random.calls": 2,
+          "determinism.adapterStateSample.enemyCount": 1,
+          "determinism.adapterStateSample.enemies": [
+            {
+              "x": -8.288,
+              "y": 21.321,
+              "active": true,
+              "hp": 2
+            }
+          ]
+        },
+        "replay": {
+          "advance": {
+            "status": "passed",
+            "control": "advanceFrames",
+            "sessionId": "runtime-mubfnroo-72xrvv22",
+            "result": {
+              "frames": 120,
+              "fps": 60,
+              "deltaMs": 16.666666666666668,
+              "simulatedDeltaMs": 2000.0000000000002,
+              "initialFrame": 121,
+              "finalFrame": 241,
+              "initialLoopTime": 2563.8,
+              "finalLoopTime": 4563.79999999997,
+              "initialCallbackTime": 2563.8,
+              "finalCallbackTime": 2577.72000000149,
+              "targetSceneStatus": "paused",
+              "loopRestored": true,
+              "method": "Phaser.TimeStep.step -> Phaser.Game.step",
+              "wallClockPolicy": "pinned_monotonic_callback_time_with_fixed_timestep_delta"
+            }
+          },
+          "initialTimers": [
+            {
+              "delay": 2500,
+              "elapsed": 373.5399999988078,
+              "loop": false,
+              "paused": false
+            },
+            {
+              "delay": 1400,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1500,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1000,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            }
+          ],
+          "finalTimers": [
+            {
+              "delay": 2500,
+              "elapsed": 2373.5399999988085,
+              "loop": false,
+              "paused": false
+            },
+            {
+              "delay": 1400,
+              "elapsed": 600.0000000000007,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1500,
+              "elapsed": 500.00000000000136,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1000,
+              "elapsed": 999.9999999999982,
+              "loop": true,
+              "paused": false
+            }
+          ]
+        }
+      },
+      {
+        "browser": "chromium",
+        "browserVersion": "131.0.6778.33",
+        "engineVersion": "Blink/131.0.6778.33",
+        "sessionId": "runtime-mubfntxy-lhmab3o9",
+        "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2",
+        "finalState": {
+          "sceneKey": null,
+          "nodeId": "node_1",
+          "adapterId": "Vr",
+          "status": "paused",
+          "hp": 100,
+          "progress": 0,
+          "timer": 89,
+          "score": 0,
+          "lastResult": null,
+          "errors": [],
+          "artRuntimeMode": "prototype",
+          "artAllowProceduralFallback": true,
+          "artSourceSummary": "atlas_or_idle",
+          "artDegradations": [],
+          "artDegradationCount": 0,
+          "artAtlasStatus": "loaded",
+          "runtimeEvents": [],
+          "modifiers": [],
+          "adapter": "Vr",
+          "semanticActions": [
+            "retreat",
+            "move"
+          ],
+          "playability": null,
+          "configId": "survivor_horde",
+          "kills": 0,
+          "determinism": {
+            "schemaVersion": "loreweaver.adapter-determinism.v1",
+            "enabled": true,
+            "scope": "adapter_state_trace",
+            "random": {
+              "schemaVersion": "loreweaver.seeded-random.v1",
+              "controlled": true,
+              "source": "seeded_prng",
+              "scope": "adapter",
+              "seed": "golden-survivor-cross-build-v2:survivor_horde",
+              "algorithm": "fnv1a32+mulberry32-v1",
+              "initialState": 1115297809,
+              "state": 483462139,
+              "calls": 2
+            },
+            "adapterStateSample": {
+              "enemyCount": 1,
+              "enemies": [
+                {
+                  "x": -8.288,
+                  "y": 21.321,
+                  "active": true,
+                  "hp": 2
+                }
+              ]
+            }
+          },
+          "paused": true,
+          "semanticAction": {
+            "action": "move",
+            "x": 360,
+            "y": 640
+          },
+          "exactFrameAdvance": {
+            "frames": 120,
+            "fps": 60,
+            "deltaMs": 16.666666666666668,
+            "simulatedDeltaMs": 2000.0000000000002,
+            "initialFrame": 120,
+            "finalFrame": 240,
+            "initialLoopTime": 2404.2,
+            "finalLoopTime": 4404.199999999973,
+            "initialCallbackTime": 2404.2,
+            "finalCallbackTime": 2417.12,
+            "targetSceneStatus": "paused",
+            "loopRestored": true,
+            "method": "Phaser.TimeStep.step -> Phaser.Game.step",
+            "wallClockPolicy": "pinned_monotonic_callback_time_with_fixed_timestep_delta"
+          }
+        },
+        "initialProjection": {
+          "hp": 100,
+          "score": 0,
+          "timer": 90,
+          "kills": 0,
+          "determinism.random.state": 1115297809,
+          "determinism.random.calls": 0,
+          "determinism.adapterStateSample.enemyCount": 0,
+          "determinism.adapterStateSample.enemies": []
+        },
+        "finalProjection": {
+          "hp": 100,
+          "score": 0,
+          "timer": 89,
+          "kills": 0,
+          "determinism.random.state": 483462139,
+          "determinism.random.calls": 2,
+          "determinism.adapterStateSample.enemyCount": 1,
+          "determinism.adapterStateSample.enemies": [
+            {
+              "x": -8.288,
+              "y": 21.321,
+              "active": true,
+              "hp": 2
+            }
+          ]
+        },
+        "replay": {
+          "advance": {
+            "status": "passed",
+            "control": "advanceFrames",
+            "sessionId": "runtime-mubfntxy-lhmab3o9",
+            "result": {
+              "frames": 120,
+              "fps": 60,
+              "deltaMs": 16.666666666666668,
+              "simulatedDeltaMs": 2000.0000000000002,
+              "initialFrame": 120,
+              "finalFrame": 240,
+              "initialLoopTime": 2404.2,
+              "finalLoopTime": 4404.199999999973,
+              "initialCallbackTime": 2404.2,
+              "finalCallbackTime": 2417.12,
+              "targetSceneStatus": "paused",
+              "loopRestored": true,
+              "method": "Phaser.TimeStep.step -> Phaser.Game.step",
+              "wallClockPolicy": "pinned_monotonic_callback_time_with_fixed_timestep_delta"
+            }
+          },
+          "initialTimers": [
+            {
+              "delay": 2500,
+              "elapsed": 374.80666666309025,
+              "loop": false,
+              "paused": false
+            },
+            {
+              "delay": 1400,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1500,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1000,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            }
+          ],
+          "finalTimers": [
+            {
+              "delay": 2500,
+              "elapsed": 2374.806666663091,
+              "loop": false,
+              "paused": false
+            },
+            {
+              "delay": 1400,
+              "elapsed": 600.0000000000007,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1500,
+              "elapsed": 500.00000000000136,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1000,
+              "elapsed": 999.9999999999982,
+              "loop": true,
+              "paused": false
+            }
+          ]
+        }
+      },
+      {
+        "browser": "firefox",
+        "browserVersion": "132.0",
+        "engineVersion": "Gecko/132.0",
+        "sessionId": "runtime-mubfnybc-g2ggfhfn",
+        "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2",
+        "finalState": {
+          "sceneKey": null,
+          "nodeId": "node_1",
+          "adapterId": "Vr",
+          "status": "paused",
+          "hp": 100,
+          "progress": 0,
+          "timer": 89,
+          "score": 0,
+          "lastResult": null,
+          "errors": [],
+          "artRuntimeMode": "prototype",
+          "artAllowProceduralFallback": true,
+          "artSourceSummary": "atlas_or_idle",
+          "artDegradations": [],
+          "artDegradationCount": 0,
+          "artAtlasStatus": "loaded",
+          "runtimeEvents": [],
+          "modifiers": [],
+          "adapter": "Vr",
+          "semanticActions": [
+            "retreat",
+            "move"
+          ],
+          "playability": null,
+          "configId": "survivor_horde",
+          "kills": 0,
+          "determinism": {
+            "schemaVersion": "loreweaver.adapter-determinism.v1",
+            "enabled": true,
+            "scope": "adapter_state_trace",
+            "random": {
+              "schemaVersion": "loreweaver.seeded-random.v1",
+              "controlled": true,
+              "source": "seeded_prng",
+              "scope": "adapter",
+              "seed": "golden-survivor-cross-build-v2:survivor_horde",
+              "algorithm": "fnv1a32+mulberry32-v1",
+              "initialState": 1115297809,
+              "state": 483462139,
+              "calls": 2
+            },
+            "adapterStateSample": {
+              "enemyCount": 1,
+              "enemies": [
+                {
+                  "x": -8.288,
+                  "y": 21.321,
+                  "active": true,
+                  "hp": 2
+                }
+              ]
+            }
+          },
+          "paused": true,
+          "semanticAction": {
+            "action": "move",
+            "x": 360,
+            "y": 640
+          },
+          "exactFrameAdvance": {
+            "frames": 120,
+            "fps": 60,
+            "deltaMs": 16.666666666666668,
+            "simulatedDeltaMs": 2000.0000000000002,
+            "initialFrame": 120,
+            "finalFrame": 240,
+            "initialLoopTime": 2658.76,
+            "finalLoopTime": 4658.7599999999675,
+            "initialCallbackTime": 2658.76,
+            "finalCallbackTime": 2673.12,
+            "targetSceneStatus": "paused",
+            "loopRestored": true,
+            "method": "Phaser.TimeStep.step -> Phaser.Game.step",
+            "wallClockPolicy": "pinned_monotonic_callback_time_with_fixed_timestep_delta"
+          }
+        },
+        "initialProjection": {
+          "hp": 100,
+          "score": 0,
+          "timer": 90,
+          "kills": 0,
+          "determinism.random.state": 1115297809,
+          "determinism.random.calls": 0,
+          "determinism.adapterStateSample.enemyCount": 0,
+          "determinism.adapterStateSample.enemies": []
+        },
+        "finalProjection": {
+          "hp": 100,
+          "score": 0,
+          "timer": 89,
+          "kills": 0,
+          "determinism.random.state": 483462139,
+          "determinism.random.calls": 2,
+          "determinism.adapterStateSample.enemyCount": 1,
+          "determinism.adapterStateSample.enemies": [
+            {
+              "x": -8.288,
+              "y": 21.321,
+              "active": true,
+              "hp": 2
+            }
+          ]
+        },
+        "replay": {
+          "advance": {
+            "status": "passed",
+            "control": "advanceFrames",
+            "sessionId": "runtime-mubfnybc-g2ggfhfn",
+            "result": {
+              "frames": 120,
+              "fps": 60,
+              "deltaMs": 16.666666666666668,
+              "simulatedDeltaMs": 2000.0000000000002,
+              "initialFrame": 120,
+              "finalFrame": 240,
+              "initialLoopTime": 2658.76,
+              "finalLoopTime": 4658.7599999999675,
+              "initialCallbackTime": 2658.76,
+              "finalCallbackTime": 2673.12,
+              "targetSceneStatus": "paused",
+              "loopRestored": true,
+              "method": "Phaser.TimeStep.step -> Phaser.Game.step",
+              "wallClockPolicy": "pinned_monotonic_callback_time_with_fixed_timestep_delta"
+            }
+          },
+          "initialTimers": [
+            {
+              "delay": 2500,
+              "elapsed": 383.2553333333338,
+              "loop": false,
+              "paused": false
+            },
+            {
+              "delay": 1400,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1500,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1000,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            }
+          ],
+          "finalTimers": [
+            {
+              "delay": 2500,
+              "elapsed": 2383.2553333333344,
+              "loop": false,
+              "paused": false
+            },
+            {
+              "delay": 1400,
+              "elapsed": 600.0000000000007,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1500,
+              "elapsed": 500.00000000000136,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1000,
+              "elapsed": 999.9999999999982,
+              "loop": true,
+              "paused": false
+            }
+          ]
+        }
+      },
+      {
+        "browser": "firefox",
+        "browserVersion": "132.0",
+        "engineVersion": "Gecko/132.0",
+        "sessionId": "runtime-mubfo1zr-yp4952nw",
+        "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2",
+        "finalState": {
+          "sceneKey": null,
+          "nodeId": "node_1",
+          "adapterId": "Vr",
+          "status": "paused",
+          "hp": 100,
+          "progress": 0,
+          "timer": 89,
+          "score": 0,
+          "lastResult": null,
+          "errors": [],
+          "artRuntimeMode": "prototype",
+          "artAllowProceduralFallback": true,
+          "artSourceSummary": "atlas_or_idle",
+          "artDegradations": [],
+          "artDegradationCount": 0,
+          "artAtlasStatus": "loaded",
+          "runtimeEvents": [],
+          "modifiers": [],
+          "adapter": "Vr",
+          "semanticActions": [
+            "retreat",
+            "move"
+          ],
+          "playability": null,
+          "configId": "survivor_horde",
+          "kills": 0,
+          "determinism": {
+            "schemaVersion": "loreweaver.adapter-determinism.v1",
+            "enabled": true,
+            "scope": "adapter_state_trace",
+            "random": {
+              "schemaVersion": "loreweaver.seeded-random.v1",
+              "controlled": true,
+              "source": "seeded_prng",
+              "scope": "adapter",
+              "seed": "golden-survivor-cross-build-v2:survivor_horde",
+              "algorithm": "fnv1a32+mulberry32-v1",
+              "initialState": 1115297809,
+              "state": 483462139,
+              "calls": 2
+            },
+            "adapterStateSample": {
+              "enemyCount": 1,
+              "enemies": [
+                {
+                  "x": -8.288,
+                  "y": 21.321,
+                  "active": true,
+                  "hp": 2
+                }
+              ]
+            }
+          },
+          "paused": true,
+          "semanticAction": {
+            "action": "move",
+            "x": 360,
+            "y": 640
+          },
+          "exactFrameAdvance": {
+            "frames": 120,
+            "fps": 60,
+            "deltaMs": 16.666666666666668,
+            "simulatedDeltaMs": 2000.0000000000002,
+            "initialFrame": 120,
+            "finalFrame": 240,
+            "initialLoopTime": 2541.56,
+            "finalLoopTime": 4541.55999999997,
+            "initialCallbackTime": 2541.56,
+            "finalCallbackTime": 2555.12,
+            "targetSceneStatus": "paused",
+            "loopRestored": true,
+            "method": "Phaser.TimeStep.step -> Phaser.Game.step",
+            "wallClockPolicy": "pinned_monotonic_callback_time_with_fixed_timestep_delta"
+          }
+        },
+        "initialProjection": {
+          "hp": 100,
+          "score": 0,
+          "timer": 90,
+          "kills": 0,
+          "determinism.random.state": 1115297809,
+          "determinism.random.calls": 0,
+          "determinism.adapterStateSample.enemyCount": 0,
+          "determinism.adapterStateSample.enemies": []
+        },
+        "finalProjection": {
+          "hp": 100,
+          "score": 0,
+          "timer": 89,
+          "kills": 0,
+          "determinism.random.state": 483462139,
+          "determinism.random.calls": 2,
+          "determinism.adapterStateSample.enemyCount": 1,
+          "determinism.adapterStateSample.enemies": [
+            {
+              "x": -8.288,
+              "y": 21.321,
+              "active": true,
+              "hp": 2
+            }
+          ]
+        },
+        "replay": {
+          "advance": {
+            "status": "passed",
+            "control": "advanceFrames",
+            "sessionId": "runtime-mubfo1zr-yp4952nw",
+            "result": {
+              "frames": 120,
+              "fps": 60,
+              "deltaMs": 16.666666666666668,
+              "simulatedDeltaMs": 2000.0000000000002,
+              "initialFrame": 120,
+              "finalFrame": 240,
+              "initialLoopTime": 2541.56,
+              "finalLoopTime": 4541.55999999997,
+              "initialCallbackTime": 2541.56,
+              "finalCallbackTime": 2555.12,
+              "targetSceneStatus": "paused",
+              "loopRestored": true,
+              "method": "Phaser.TimeStep.step -> Phaser.Game.step",
+              "wallClockPolicy": "pinned_monotonic_callback_time_with_fixed_timestep_delta"
+            }
+          },
+          "initialTimers": [
+            {
+              "delay": 2500,
+              "elapsed": 416.03933333333293,
+              "loop": false,
+              "paused": false
+            },
+            {
+              "delay": 1400,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1500,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1000,
+              "elapsed": 0,
+              "loop": true,
+              "paused": false
+            }
+          ],
+          "finalTimers": [
+            {
+              "delay": 2500,
+              "elapsed": 2416.039333333333,
+              "loop": false,
+              "paused": false
+            },
+            {
+              "delay": 1400,
+              "elapsed": 600.0000000000007,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1500,
+              "elapsed": 500.00000000000136,
+              "loop": true,
+              "paused": false
+            },
+            {
+              "delay": 1000,
+              "elapsed": 999.9999999999982,
+              "loop": true,
+              "paused": false
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "allCards": {
+    "status": "passed",
+    "synthetic": true,
+    "releaseEligible": false,
+    "startedAt": "2026-09-21T16:03:30.430Z",
+    "revision": "3704b3bb441ce5cd67e9325f338f0537a537eb6c",
+    "sourceHash": "4af5feae800418873c0a72ce53308c48b3651304c22f5a4431a6ef79fb7c8d99",
+    "cases": [
+      {
+        "cardId": "dodge_counter_boss",
+        "command": "run-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "damage-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "configured-timeout",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-retreat-restart",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-file-launch",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "rhythm_timing",
+        "command": "run-rhythm-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/rhythm_timing/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "timing-judgments",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "miss-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "configured-timeout",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "combo-requirement",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-restart",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-file-launch",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "drag_collect_grid",
+        "command": "run-collect-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/drag_collect_grid/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "real-hazard-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "configured-timeout",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "target-one-and-settings",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-hover-restart-switch",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-file-launch",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "sequence_synthesis",
+        "command": "run-sequence-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/sequence_synthesis/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "rollback-reset-recovery",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "overheat-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "configured-timeout",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-restart-seed-switch",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "maximum-recipe",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-file-launch",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "turn_based_skill_battle",
+        "command": "run-tbsb-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/turn_based_skill_battle/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "cooldown-and-enemy-turn",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "natural-hp-zero-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "configured-timeout",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-enemy-turn-and-restart",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "result-restart",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-file-launch",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "side_scrolling_brawler",
+        "command": "run-brawler-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/side_scrolling_brawler/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-all-clear-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-freezes-and-restart-remounts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "natural-life-stock-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-move-and-attack",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-launch-and-retreat",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "survivor_horde",
+        "command": "run-survivor-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/survivor_horde/browser-latest.json",
+        "cases": [
+          {
+            "id": "configured-survival-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pointer-movement-and-retreat",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "natural-collision-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-resume-and-restart",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-survival",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-launch-and-retreat",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "reaction_pick",
+        "command": "run-reaction-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/reaction_pick/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-six-round-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "previous-round-timeout-is-cancelled",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "wrong-option-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "natural-timeout-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-resume-and-restart",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "invalid-time-range-does-not-start",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-six-round-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-six-round-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "energy_balance",
+        "command": "run-energy-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/energy_balance/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-stable-time-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "wrong-direction-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "no-input-does-not-win",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "outside-core-drop-and-pause-restart",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-drag-and-retreat",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "observe_capture",
+        "command": "run-observe-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/observe_capture/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-five-capture-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "miss-penalty-and-missed-window",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-resume-and-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "custom-target-no-premature-host-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "drag_to_core",
+        "command": "run-drag-core-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/drag_to_core/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-hazards-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "hazard-penalty-retry",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-resume-and-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "drop-outside-core-remains-retryable",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "pressure_survival",
+        "command": "run-pressure-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/pressure_survival/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-thirty-second-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-unattended-pressure-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "skill-cooldown-and-click-spam-no-early-win",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-target-resume-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "rune_connect_sequence",
+        "command": "run-rune-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/rune_connect_sequence/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-seven-links-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "wrong-start-and-destination-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "blank-release-pause-resume-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "maximum-sixteen-runes-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "branching_dialogue_check",
+        "command": "run-dialogue-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/branching_dialogue_check/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-good-ending",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "missing-relic-fallback-neutral",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "relic-unlocks-good-ending",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "realm-locked-fallback",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "bad-ending-positive-score-still-fails",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "paused-choice-ending-timer-and-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-good-ending",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-neutral-ending",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "shooter_duel",
+        "command": "run-shooter-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/shooter_duel/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-keyboard-boss-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-unattended-projectile-death",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "natural-timeout",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-resume-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-pointer-default-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "maze_exploration_choice",
+        "command": "run-maze-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/maze_exploration_choice/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-keyboard-rescue-and-exit",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "zero-energy-rescue-fails-exploration-succeeds",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "paused-choice-and-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "even-dimensions-and-zero-cost",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-rescue-exit",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-decline-exit",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "platform_escape",
+        "command": "run-platform-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/platform_escape/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-keyboard-escape",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-unattended-death",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-resume-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "custom-route-and-repeated-short-jumps",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-escape",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-pointer-default-escape",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "hazard_collect_waves",
+        "command": "run-hazard-waves-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/hazard_collect_waves/browser-latest.json",
+        "cases": [
+          {
+            "id": "maximum-config-and-supply-validation",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-three-waves-keyboard-and-mouse",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-quota-shortage",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-six-strikes-death",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "paused-pickup-and-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-three-waves",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-three-waves",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "sequence_puzzle_combo",
+        "command": "run-combo-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/sequence_puzzle_combo/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-mouse-visible-demo-and-puzzle",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "wrong-sequence-and-wrong-slot-retry",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-demo-drag-outside-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "maximum-eight-keyboard-both-phases",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "rhythm_then_pickup",
+        "command": "run-rhythm-pickup-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/rhythm_then_pickup/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-keyboard-both-phases",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "single-click-per-beat-and-miss",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pickup-natural-timeout-and-expiry",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-both-phases-and-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "invalid-windows-and-maximum-config",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-mouse-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "qix_area_capture",
+        "command": "run-qix-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/qix_area_capture/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-keyboard-seventy-percent",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-five-path-collisions-death",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "natural-twenty-second-timeout",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-open-path-zero-enemies-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "maximum-grid-zero-enemy-fill",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-seventy-percent",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-seventy-percent",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "point_drag_progression",
+        "command": "run-point-drag-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/point_drag_progression/browser-latest.json",
+        "cases": [
+          {
+            "id": "default-mouse-stages-and-branch-reward",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-mismatch-instability-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "default-empty-drop-instability-failure",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "pause-cancel-outside-three-restarts",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "maximum-two-hundred-keyboard-progression",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-default-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-default-victory",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      },
+      {
+        "cardId": "node_iframe_microgame",
+        "command": "run-iframe-card-lab-e2e.mjs",
+        "exitCode": 0,
+        "status": "passed",
+        "report": "workflow/reports/card-lab/node_iframe_microgame/browser-latest.json",
+        "cases": [
+          {
+            "id": "normalized-base64-result-reward-once",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "plain-json-legacy-in-flow-result",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "child-natural-timeout-no-reward",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "parent-message-timeout-removes-child",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "cooperative-pause-freezes-both-deadlines",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "foreign-message-three-live-restarts-and-child-close",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "mobile-touch-real-child-victory",
+            "passed": true,
+            "errors": []
+          },
+          {
+            "id": "offline-child-payload-and-result",
+            "passed": true,
+            "errors": []
+          }
+        ],
+        "buildRef": "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d"
+      }
+    ],
+    "finishedAt": "2026-09-21T16:41:59.536Z",
+    "finalSourceHash": "4af5feae800418873c0a72ce53308c48b3651304c22f5a4431a6ef79fb7c8d99",
+    "builds": {
+      "ff6d36f5d056a33bccffb7d2288bbaa80c43e9bf0dec8da6813a5b4ebdc52c6d": {
+        "revision": "3704b3bb441ce5cd67e9325f338f0537a537eb6c",
+        "cards": [
+          "dodge_counter_boss",
+          "rhythm_timing",
+          "drag_collect_grid",
+          "sequence_synthesis",
+          "turn_based_skill_battle",
+          "side_scrolling_brawler",
+          "survivor_horde",
+          "reaction_pick",
+          "energy_balance",
+          "observe_capture",
+          "drag_to_core",
+          "pressure_survival",
+          "rune_connect_sequence",
+          "branching_dialogue_check",
+          "shooter_duel",
+          "maze_exploration_choice",
+          "platform_escape",
+          "hazard_collect_waves",
+          "sequence_puzzle_combo",
+          "rhythm_then_pickup",
+          "qix_area_capture",
+          "point_drag_progression",
+          "node_iframe_microgame"
+        ],
+        "releaseEligible": false,
+        "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+        "files": [
+          {
+            "name": "nodes/node1.html",
+            "sha256": "6b6eb6dcd70ca172ccdeed79fae27a26793f2cb8922ea7b2bd86b1fe6e9bc4e2"
+          },
+          {
+            "name": "iframe-node.js",
+            "sha256": "7635973e94e7bf5e2993ed3f439cd2541077ac9fb1cb3e5f088b9df3d9ce9af9"
+          },
+          {
+            "name": "index.html",
+            "sha256": "c0f9c7a5878d2fad8982d3327be6f6e0ac5b87e3d4443d683e35baa6e2b0afb0"
+          },
+          {
+            "name": "game.js",
+            "sha256": "4cd7af34dfbda06c58dbf66afa62bb23bae35307708a546bc7f414347a5aa2da"
+          },
+          {
+            "name": "game.js.LEGAL.txt",
+            "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+          },
+          {
+            "name": "LICENSE",
+            "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+          },
+          {
+            "name": "THIRD_PARTY_NOTICES.txt",
+            "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+          }
+        ]
+      }
+    }
+  },
+  "additionalChecks": {
+    "playerStateAndCultivationTests": 12,
+    "catalogPolicy": "passed",
+    "weaponStance": "passed",
+    "fangamePreset": "passed"
+  },
+  "iframeFollowup": {
+    "unitTests": 14,
+    "typescript": "passed",
+    "browser": {
+      "schemaVersion": "loreweaver.card-lab-browser.v1",
+      "cardId": "node_iframe_microgame",
+      "status": "passed",
+      "synthetic": true,
+      "releaseEligible": false,
+      "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+      "cases": [
+        {
+          "id": "normalized-base64-result-reward-once",
+          "passed": true,
+          "errors": [],
+          "assertions": [
+            "child decoded base64_json payload and rendered its node title",
+            "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+          ],
+          "actions": [],
+          "result": {
+            "success": true,
+            "reason": "objective_met",
+            "rewards": {
+              "qi": 3,
+              "xp": 30,
+              "skill": "iframe_focus",
+              "relic": "iframe_jade"
+            },
+            "penalties": {},
+            "unlocks": {
+              "nodes": [],
+              "ages": [],
+              "flags": [
+                "iframe_demo_clear"
+              ],
+              "gallery": []
+            },
+            "telemetry": {
+              "hits": 4,
+              "needed": 4
+            }
+          },
+          "rewardSaves": [
+            {
+              "currentRealmIndex": 0,
+              "mainCurrencyCount": 0,
+              "secondaryResources": {
+                "练习记录": 3
+              },
+              "unlockedNodeIds": [
+                1,
+                2
+              ],
+              "completedNodeIds": [
+                1
+              ],
+              "unlockedAbilities": [
+                "iframe_focus"
+              ],
+              "activeMultiplier": 1.1,
+              "clickPower": 1.5,
+              "storyFlags": [
+                "iframe_demo_clear",
+                "iframe_jade"
+              ],
+              "unlockedPassives": [],
+              "hp": 100
+            }
+          ]
+        },
+        {
+          "id": "plain-json-legacy-in-flow-result",
+          "passed": true,
+          "errors": [],
+          "assertions": [
+            "child decoded plain_json payload and rendered its node title",
+            "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+          ],
+          "actions": [],
+          "result": {
+            "success": true,
+            "reason": "objective_met",
+            "rewards": {
+              "qi": 3,
+              "xp": 30,
+              "skill": "iframe_focus",
+              "skillUp": 1,
+              "relic": "iframe_jade"
+            },
+            "penalties": {},
+            "unlocks": {
+              "nodes": [],
+              "ages": [],
+              "flags": [
+                "iframe_demo_clear"
+              ],
+              "gallery": []
+            },
+            "telemetry": {}
+          },
+          "rewardSaves": [
+            {
+              "currentRealmIndex": 0,
+              "mainCurrencyCount": 0,
+              "secondaryResources": {
+                "练习记录": 3
+              },
+              "unlockedNodeIds": [
+                1,
+                2
+              ],
+              "completedNodeIds": [
+                1
+              ],
+              "unlockedAbilities": [
+                "iframe_focus"
+              ],
+              "activeMultiplier": 1.1,
+              "clickPower": 1.5,
+              "storyFlags": [
+                "iframe_demo_clear",
+                "iframe_jade"
+              ],
+              "unlockedPassives": [],
+              "hp": 100
+            }
+          ]
+        },
+        {
+          "id": "child-natural-timeout-no-reward",
+          "passed": true,
+          "errors": [],
+          "assertions": [],
+          "actions": [],
+          "result": {
+            "success": false,
+            "reason": "timer_expired",
+            "rewards": {},
+            "penalties": {},
+            "unlocks": {
+              "nodes": [],
+              "ages": [],
+              "flags": [],
+              "gallery": []
+            },
+            "telemetry": {
+              "hits": 0,
+              "needed": 4
+            }
+          },
+          "rewardSaves": []
+        },
+        {
+          "id": "parent-message-timeout-removes-child",
+          "passed": true,
+          "errors": [],
+          "assertions": [],
+          "actions": [],
+          "result": {
+            "success": false,
+            "reason": "timer_expired",
+            "rewards": {},
+            "penalties": {},
+            "unlocks": {
+              "nodes": [],
+              "ages": [],
+              "flags": [],
+              "gallery": []
+            },
+            "telemetry": {
+              "messageTimeout": true
+            }
+          },
+          "rewardSaves": []
+        },
+        {
+          "id": "cooperative-pause-freezes-both-deadlines",
+          "passed": true,
+          "errors": [],
+          "assertions": [
+            "child decoded base64_json payload and rendered its node title",
+            "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+          ],
+          "actions": [],
+          "result": {
+            "success": true,
+            "reason": "objective_met",
+            "rewards": {
+              "qi": 3,
+              "xp": 30,
+              "skill": "iframe_focus",
+              "relic": "iframe_jade"
+            },
+            "penalties": {},
+            "unlocks": {
+              "nodes": [],
+              "ages": [],
+              "flags": [
+                "iframe_demo_clear"
+              ],
+              "gallery": []
+            },
+            "telemetry": {
+              "hits": 4,
+              "needed": 4
+            }
+          },
+          "rewardSaves": [
+            {
+              "currentRealmIndex": 0,
+              "mainCurrencyCount": 0,
+              "secondaryResources": {
+                "练习记录": 3
+              },
+              "unlockedNodeIds": [
+                1,
+                2
+              ],
+              "completedNodeIds": [
+                1
+              ],
+              "unlockedAbilities": [
+                "iframe_focus"
+              ],
+              "activeMultiplier": 1.1,
+              "clickPower": 1.5,
+              "storyFlags": [
+                "iframe_demo_clear",
+                "iframe_jade"
+              ],
+              "unlockedPassives": [],
+              "hp": 100
+            }
+          ]
+        },
+        {
+          "id": "foreign-message-three-live-restarts-and-child-close",
+          "passed": true,
+          "errors": [],
+          "assertions": [],
+          "actions": [],
+          "result": {
+            "success": false,
+            "reason": "retreated",
+            "rewards": {},
+            "penalties": {},
+            "unlocks": {
+              "nodes": [],
+              "ages": [],
+              "flags": [],
+              "gallery": []
+            },
+            "telemetry": {
+              "closedBy": "NODE_CLOSE"
+            }
+          },
+          "rewardSaves": []
+        },
+        {
+          "id": "mobile-touch-real-child-victory",
+          "passed": true,
+          "errors": [],
+          "assertions": [
+            "child decoded base64_json payload and rendered its node title",
+            "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+          ],
+          "actions": [],
+          "result": {
+            "success": true,
+            "reason": "objective_met",
+            "rewards": {
+              "qi": 3,
+              "xp": 30,
+              "skill": "iframe_focus",
+              "relic": "iframe_jade"
+            },
+            "penalties": {},
+            "unlocks": {
+              "nodes": [],
+              "ages": [],
+              "flags": [
+                "iframe_demo_clear"
+              ],
+              "gallery": []
+            },
+            "telemetry": {
+              "hits": 4,
+              "needed": 4
+            }
+          },
+          "rewardSaves": [
+            {
+              "currentRealmIndex": 0,
+              "mainCurrencyCount": 0,
+              "secondaryResources": {
+                "练习记录": 3
+              },
+              "unlockedNodeIds": [
+                1,
+                2
+              ],
+              "completedNodeIds": [
+                1
+              ],
+              "unlockedAbilities": [
+                "iframe_focus"
+              ],
+              "activeMultiplier": 1.1,
+              "clickPower": 1.5,
+              "storyFlags": [
+                "iframe_demo_clear",
+                "iframe_jade"
+              ],
+              "unlockedPassives": [],
+              "hp": 100
+            }
+          ]
+        },
+        {
+          "id": "offline-child-payload-and-result",
+          "passed": true,
+          "errors": [],
+          "assertions": [
+            "child decoded base64_json payload and rendered its node title",
+            "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+          ],
+          "actions": [],
+          "result": {
+            "success": true,
+            "reason": "objective_met",
+            "rewards": {
+              "qi": 3,
+              "xp": 30,
+              "skill": "iframe_focus",
+              "relic": "iframe_jade"
+            },
+            "penalties": {},
+            "unlocks": {
+              "nodes": [],
+              "ages": [],
+              "flags": [
+                "iframe_demo_clear"
+              ],
+              "gallery": []
+            },
+            "telemetry": {
+              "hits": 4,
+              "needed": 4
+            }
+          },
+          "rewardSaves": [
+            {
+              "currentRealmIndex": 0,
+              "mainCurrencyCount": 0,
+              "secondaryResources": {
+                "练习记录": 3
+              },
+              "unlockedNodeIds": [
+                1,
+                2
+              ],
+              "completedNodeIds": [
+                1
+              ],
+              "unlockedAbilities": [
+                "iframe_focus"
+              ],
+              "activeMultiplier": 1.1,
+              "clickPower": 1.5,
+              "storyFlags": [
+                "iframe_demo_clear",
+                "iframe_jade"
+              ],
+              "unlockedPassives": [],
+              "hp": 100
+            }
+          ]
+        }
+      ],
+      "build": {
+        "revision": "3704b3bb441ce5cd67e9325f338f0537a537eb6c",
+        "cards": [
+          "dodge_counter_boss",
+          "rhythm_timing",
+          "drag_collect_grid",
+          "sequence_synthesis",
+          "turn_based_skill_battle",
+          "side_scrolling_brawler",
+          "survivor_horde",
+          "reaction_pick",
+          "energy_balance",
+          "observe_capture",
+          "drag_to_core",
+          "pressure_survival",
+          "rune_connect_sequence",
+          "branching_dialogue_check",
+          "shooter_duel",
+          "maze_exploration_choice",
+          "platform_escape",
+          "hazard_collect_waves",
+          "sequence_puzzle_combo",
+          "rhythm_then_pickup",
+          "qix_area_capture",
+          "point_drag_progression",
+          "node_iframe_microgame"
+        ],
+        "releaseEligible": false,
+        "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+        "files": [
+          {
+            "name": "nodes/node1.html",
+            "sha256": "6b6eb6dcd70ca172ccdeed79fae27a26793f2cb8922ea7b2bd86b1fe6e9bc4e2"
+          },
+          {
+            "name": "iframe-node.js",
+            "sha256": "ea8913eddedcfef26523273634ccb367b942bb41763a4c2c74ef01958ba6e503"
+          },
+          {
+            "name": "index.html",
+            "sha256": "c0f9c7a5878d2fad8982d3327be6f6e0ac5b87e3d4443d683e35baa6e2b0afb0"
+          },
+          {
+            "name": "game.js",
+            "sha256": "e92a928e85aaa1dc266306e6564e5b1cce16cd162a7cc42ed8424a45a0333f92"
+          },
+          {
+            "name": "game.js.LEGAL.txt",
+            "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+          },
+          {
+            "name": "LICENSE",
+            "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+          },
+          {
+            "name": "THIRD_PARTY_NOTICES.txt",
+            "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+          }
+        ]
+      },
+      "browser": "131.0.6778.33",
+      "finishedAt": "2026-09-21T16:43:55.478Z"
+    }
+  }
+}
