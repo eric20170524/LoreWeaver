@@ -69,7 +69,20 @@ def main() -> int:
         else:
             raise AssertionError("promotion overwrote a different runtime atlas without --force")
 
-    print(json.dumps({"status": "passed", "check": "sprite-gen-bridge"}))
+    route_text = (ROOT / "backend" / "sprite_gen_routes.py").read_text(encoding="utf-8")
+    for endpoint in (
+        "/imagegen/sprite-gen/status",
+        "/workspaces/{ws_id}/imagegen/sprite-gen/generate",
+        "/workspaces/{ws_id}/imagegen/sprite-gen/adopt",
+        "/workspaces/{ws_id}/imagegen/sprite-gen/promote",
+    ):
+        assert endpoint in route_text
+    assert module.VERSION == "2.5.3"
+    requirements = (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8")
+    assert module.PIN in requirements
+    assert 'python_version >= "3.11"' in requirements
+
+    print(json.dumps({"status": "passed", "check": "sprite-gen-bridge", "version": module.VERSION}))
     return 0
 
 
