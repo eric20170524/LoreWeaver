@@ -1,3 +1,4 @@
+import qixCard from '../../minigame_master/gameplay/cards/qix_area_capture.json';
 import rhythmPickupCard from '../../minigame_master/gameplay/cards/rhythm_then_pickup.json';
 import comboCard from '../../minigame_master/gameplay/cards/sequence_puzzle_combo.json';
 import hazardWavesCard from '../../minigame_master/gameplay/cards/hazard_collect_waves.json';
@@ -31,6 +32,14 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  qix_area_capture: {
+    card: qixCard, heading: '21 · 区域占领', title: '区域占领试炼',
+    intro: 'WASD/方向键移动，或点击目的格自动逐格靠近。灰色边框和蓝色区域安全；进入空白画黄线，回到安全区后占领没有敌人的区域。敌人碰到未完成的线会扣 20 生命并回到左侧起点。默认 90 秒内占领内部 70% 获胜。',
+    fields: [ { key: 'captureTarget', label: '目标占领比例' }, { key: 'gridCols', label: '网格列数' }, { key: 'gridRows', label: '网格行数' }, { key: 'enemyCount', label: '敌人数（允许零）' }, { key: 'timeLimitSec', label: '时限（秒）' }, { key: 'playerSpeed', label: '移动速度（基准 140）' }, { key: 'enemySpeed', label: '敌人速度' }, { key: 'pathMinCells', label: '闭合路径最少格数' } ],
+    goal: () => 0, progress: state => `${(100 * (state.captureRatio ?? 0)).toFixed(1)}%`,
+    health: state => state.hp ?? 0, count: state => state.pathHits ?? 0,
+    healthLabel: '生命', progressLabel: '占领', countLabel: '断线'
+  },
   rhythm_then_pickup: {
     card: rhythmPickupCard, heading: '20 · 节奏后拾取', title: '节奏拾取试炼',
     intro: '圆环最大、最亮时点击或按空格，每拍只判定一次。默认命中 12 拍后，20 秒内拾取 5 个紫色目标；点击目标或按空格拾取最早出现的目标。节奏失误可继续，拾取超时失败。',

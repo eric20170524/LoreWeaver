@@ -1,0 +1,517 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "qix_area_capture",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "07e7133ffa052be942cbbefcbcf78c2fb1228170",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check",
+      "shooter_duel",
+      "maze_exploration_choice",
+      "platform_escape",
+      "hazard_collect_waves",
+      "sequence_puzzle_combo",
+      "rhythm_then_pickup",
+      "qix_area_capture"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "50c4c5576134109dbf17704e5be390acff086dbfc1ad4c6b7e216d23b05b9c09"
+      },
+      {
+        "name": "game.js",
+        "sha256": "31c18a5198c2e534ed00fd510ba273e12067c8c2952abb170d09c47652640e0e"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T15:16:32.856Z",
+  "sourceNote": "Checkout revision is the build base; actual bundle SHA-256 identifies uncommitted and concurrent source included in the tested payload.",
+  "unitTests": {
+    "passed": 9,
+    "command": "node productize/jobs/check-qix-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "smokeAdapter": {
+    "enter": true,
+    "spawnOrProgress": true,
+    "retreat": true,
+    "noCrash": true,
+    "warnings": [
+      "no_envKey",
+      "no_bgmKey"
+    ]
+  },
+  "cases": [
+    {
+      "id": "default-keyboard-seventy-percent",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "captureTarget": 0.7,
+        "gridCols": 24,
+        "gridRows": 16,
+        "enemyCount": 2,
+        "timeLimitSec": 90,
+        "playerSpeed": 140,
+        "enemySpeed": 90,
+        "pathMinCells": 4
+      },
+      "actions": [
+        {
+          "kind": "cut",
+          "from": {
+            "c": 0,
+            "r": 5
+          },
+          "to": {
+            "c": 23,
+            "r": 5
+          },
+          "danger": 1.7075703202044015,
+          "ratio": 0,
+          "hp": 100
+        },
+        {
+          "kind": "cut",
+          "from": {
+            "c": 23,
+            "r": 11
+          },
+          "to": {
+            "c": 0,
+            "r": 11
+          },
+          "danger": 0.9788945428141177,
+          "ratio": 0.35714285714285715,
+          "hp": 100
+        },
+        {
+          "kind": "cut",
+          "from": {
+            "c": 13,
+            "r": 11
+          },
+          "to": {
+            "c": 13,
+            "r": 5
+          },
+          "danger": 3.113385191921963,
+          "ratio": 0.42857142857142855,
+          "hp": 100
+        },
+        {
+          "kind": "cut",
+          "from": {
+            "c": 8,
+            "r": 11
+          },
+          "to": {
+            "c": 8,
+            "r": 15
+          },
+          "danger": 4.022162330022113,
+          "ratio": 0.6396103896103896,
+          "hp": 100
+        }
+      ],
+      "state": {
+        "hp": 100,
+        "captureRatio": 0.7857142857142857,
+        "timer": 78.01713000000008,
+        "pathHits": 0
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captureRatio": 0.7857142857142857,
+          "elapsedSec": 11.982869999999915,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "default-five-path-collisions-death",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "captureTarget": 0.7,
+        "gridCols": 24,
+        "gridRows": 16,
+        "enemyCount": 2,
+        "timeLimitSec": 90,
+        "playerSpeed": 140,
+        "enemySpeed": 90,
+        "pathMinCells": 4
+      },
+      "actions": [],
+      "state": {
+        "hp": 0,
+        "captureRatio": 0,
+        "timer": 79.86705000000005,
+        "pathHits": 5
+      },
+      "result": {
+        "success": false,
+        "reason": "hp_zero",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captureRatio": 0,
+          "elapsedSec": 10.132949999999948,
+          "hp": 0
+        }
+      }
+    },
+    {
+      "id": "natural-twenty-second-timeout",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "captureTarget": 0.7,
+        "gridCols": 24,
+        "gridRows": 16,
+        "enemyCount": 2,
+        "timeLimitSec": 20,
+        "playerSpeed": 140,
+        "enemySpeed": 90,
+        "pathMinCells": 4
+      },
+      "actions": [],
+      "state": {
+        "hp": 100,
+        "captureRatio": 0,
+        "timer": 0,
+        "pathHits": 0
+      },
+      "result": {
+        "success": false,
+        "reason": "timer_expired",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captureRatio": 0,
+          "elapsedSec": 20.015859999999968,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "pause-open-path-zero-enemies-three-restarts",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "captureTarget": 0.7,
+        "gridCols": 24,
+        "gridRows": 16,
+        "enemyCount": 0,
+        "timeLimitSec": 90,
+        "playerSpeed": 140,
+        "enemySpeed": 90,
+        "pathMinCells": 4
+      },
+      "actions": [],
+      "state": {
+        "hp": 100,
+        "captureRatio": 0,
+        "timer": 89.88334,
+        "pathHits": 0
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captureRatio": 0,
+          "elapsedSec": 0.1166599999999995,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "maximum-grid-zero-enemy-fill",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "captureTarget": 0.95,
+        "gridCols": 48,
+        "gridRows": 36,
+        "enemyCount": 0,
+        "timeLimitSec": 90,
+        "playerSpeed": 140,
+        "enemySpeed": 90,
+        "pathMinCells": 4
+      },
+      "actions": [
+        {
+          "kind": "cut",
+          "from": {
+            "c": 1,
+            "r": 35
+          },
+          "to": {
+            "c": 1,
+            "r": 0
+          },
+          "danger": null,
+          "ratio": 0,
+          "hp": 100
+        }
+      ],
+      "state": {
+        "hp": 100,
+        "captureRatio": 1,
+        "timer": 82.80030000000001,
+        "pathHits": 0
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captureRatio": 1,
+          "elapsedSec": 7.19969999999999,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-seventy-percent",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "captureTarget": 0.7,
+        "gridCols": 24,
+        "gridRows": 16,
+        "enemyCount": 2,
+        "timeLimitSec": 90,
+        "playerSpeed": 140,
+        "enemySpeed": 90,
+        "pathMinCells": 4
+      },
+      "actions": [
+        {
+          "kind": "cut",
+          "from": {
+            "c": 23,
+            "r": 10
+          },
+          "to": {
+            "c": 0,
+            "r": 10
+          },
+          "danger": 0.6990815187549694,
+          "ratio": 0,
+          "hp": 100
+        },
+        {
+          "kind": "cut",
+          "from": {
+            "c": 6,
+            "r": 10
+          },
+          "to": {
+            "c": 6,
+            "r": 0
+          },
+          "danger": 0.8888760665947346,
+          "ratio": 0.35714285714285715,
+          "hp": 100
+        },
+        {
+          "kind": "cut",
+          "from": {
+            "c": 6,
+            "r": 4
+          },
+          "to": {
+            "c": 23,
+            "r": 4
+          },
+          "danger": 2.8031158025186924,
+          "ratio": 0.38636363636363635,
+          "hp": 100
+        },
+        {
+          "kind": "cut",
+          "from": {
+            "c": 13,
+            "r": 4
+          },
+          "to": {
+            "c": 13,
+            "r": 0
+          },
+          "danger": 2.889001382786294,
+          "ratio": 0.698051948051948,
+          "hp": 100
+        }
+      ],
+      "state": {
+        "hp": 100,
+        "captureRatio": 0.7954545454545454,
+        "timer": 75.20057000000013,
+        "pathHits": 0
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captureRatio": 0.7954545454545454,
+          "elapsedSec": 14.799429999999868,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "offline-default-seventy-percent",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "captureTarget": 0.7,
+        "gridCols": 24,
+        "gridRows": 16,
+        "enemyCount": 2,
+        "timeLimitSec": 90,
+        "playerSpeed": 140,
+        "enemySpeed": 90,
+        "pathMinCells": 4
+      },
+      "actions": [
+        {
+          "kind": "cut",
+          "from": {
+            "c": 14,
+            "r": 15
+          },
+          "to": {
+            "c": 14,
+            "r": 0
+          },
+          "danger": 2.2123987917209886,
+          "ratio": 0,
+          "hp": 100
+        },
+        {
+          "kind": "cut",
+          "from": {
+            "c": 14,
+            "r": 7
+          },
+          "to": {
+            "c": 23,
+            "r": 7
+          },
+          "danger": 1.5677695572773254,
+          "ratio": 0.6363636363636364,
+          "hp": 100
+        }
+      ],
+      "state": {
+        "hp": 100,
+        "captureRatio": 0.8181818181818182,
+        "timer": 82.93364000000001,
+        "pathHits": 0
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captureRatio": 0.8181818181818182,
+          "elapsedSec": 7.066359999999985,
+          "hp": 100
+        }
+      }
+    }
+  ]
+}
