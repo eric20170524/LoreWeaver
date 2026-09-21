@@ -1,0 +1,239 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "pressure_survival",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "969d10f8ad4c13f109ff0b825f9e42207714c387",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "f8eebeb9807b32664c986f02474728ba8a9f568aea85a5dea3c6a1a466fe3067"
+      },
+      {
+        "name": "game.js",
+        "sha256": "e4d2fe14b929791ebc43a393243d18cb87c140d21763466c14f2b353e398ec77"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T13:26:18.553Z",
+  "sourceNote": "Revision is the checkout base; bundle includes uncommitted card changes and concurrent unrelated changes. SHA-256 identifies the tested payload.",
+  "unitTests": {
+    "passed": 7,
+    "command": "node --test productize/jobs/check-pressure-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "cases": [
+    {
+      "id": "default-thirty-second-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 24,
+      "actionKinds": [
+        "pointer-target"
+      ],
+      "result": {
+        "success": true,
+        "reason": "timer_expired",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "pressurePeak": 11.200000000000001,
+          "targetsHit": 24,
+          "skillsUsed": 0,
+          "clicks": 24,
+          "elapsedSec": 30
+        }
+      }
+    },
+    {
+      "id": "default-unattended-pressure-failure",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "natural default pressure growth ends the run without input"
+      ],
+      "actionCount": 0,
+      "actionKinds": [],
+      "result": {
+        "success": false,
+        "reason": "condition_failed",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "pressurePeak": 100,
+          "targetsHit": 0,
+          "skillsUsed": 0,
+          "clicks": 0,
+          "elapsedSec": 12.599999999999971
+        }
+      }
+    },
+    {
+      "id": "skill-cooldown-and-click-spam-no-early-win",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "40 physical clicks cannot satisfy the 30-second goal"
+      ],
+      "actionCount": 0,
+      "actionKinds": [],
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "pressurePeak": 32.000000000000014,
+          "targetsHit": 0,
+          "skillsUsed": 1,
+          "clicks": 40,
+          "elapsedSec": 5.399999999999997
+        }
+      }
+    },
+    {
+      "id": "pause-target-resume-three-restarts",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 4,
+      "actionKinds": [
+        "pointer-target"
+      ],
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "pressurePeak": 0.8,
+          "targetsHit": 0,
+          "skillsUsed": 0,
+          "clicks": 0,
+          "elapsedSec": 0.1
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 24,
+      "actionKinds": [
+        "touch-target"
+      ],
+      "result": {
+        "success": true,
+        "reason": "timer_expired",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "pressurePeak": 12.000000000000002,
+          "targetsHit": 24,
+          "skillsUsed": 0,
+          "clicks": 24,
+          "elapsedSec": 30
+        }
+      }
+    },
+    {
+      "id": "offline-default-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 24,
+      "actionKinds": [
+        "pointer-target"
+      ],
+      "result": {
+        "success": true,
+        "reason": "timer_expired",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "pressurePeak": 15.200000000000005,
+          "targetsHit": 24,
+          "skillsUsed": 0,
+          "clicks": 24,
+          "elapsedSec": 30
+        }
+      }
+    }
+  ]
+}

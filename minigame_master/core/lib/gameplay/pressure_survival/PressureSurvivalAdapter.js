@@ -26,12 +26,16 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
     constructor(context = {}) {
         super(context);
         this.lifecycle = null;
+        this.random = context.random || Math.random;
         this.config = { ...DEFAULT_CONFIG };
         this.Phaser = context.Phaser || globalThis.Phaser;
         this.targets = [];
         this.ui = {};
         this.state = {
             pressure: 0,
+            pressurePeak: 0,
+            targetsHit: 0,
+            skillsUsed: 0,
             elapsed: 0,
             skillCd: 0,
             skillActive: 0,
@@ -45,9 +49,18 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
         super.init(payload);
         const knobs = payload.nodeConfig?.gameplay?.knobs || payload.nodeConfig?.knobs || {};
         this.config = mergeConfig(DEFAULT_CONFIG, { ...(payload.nodeConfig?.gameplay || {}), ...knobs });
-        this.config.durationSec = Number(this.config.durationSec || 30);
+        const bounds = { durationSec: [5, 120], pressureMax: [10, 1000], pressureGrowthPerSec: [1, 100],
+            clickRelief: [1, 100], skillCooldownSec: [1, 30], skillRelief: [1, 100], skillDurationSec: [0.1, 10],
+            targetSpawnIntervalSec: [0.4, 5], targetLifeSec: [0.5, 5], targetClickRelief: [1, 100] };
+        for (const [key, [min, max]] of Object.entries(bounds)) {
+            const value = Number(this.config[key]);
+            this.config[key] = Math.max(min, Math.min(max, Number.isFinite(value) ? value : DEFAULT_CONFIG[key]));
+        }
         this.state = {
             pressure: 0,
+            pressurePeak: 0,
+            targetsHit: 0,
+            skillsUsed: 0,
             elapsed: 0,
             skillCd: 0,
             skillActive: 0,
@@ -65,27 +78,38 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
         this.lifecycle.start();
         const { width, height } = scene.scale;
 
-        this.ui.title = scene.add.text(width / 2, 40, '极限抗压', {
-            fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
+        this.ui.title = scene.add.text(width / 2, 188, '极限抗压', {
+            fontFamily: 'Inter, sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
         this.ui.bar = scene.add.graphics();
-        this.ui.status = scene.add.text(width / 2, 88, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#cbd5e1'
+        this.ui.status = scene.add.text(width / 2, 234, '', {
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', color: '#cbd5e1'
         }).setOrigin(0.5);
-        this.ui.hint = scene.add.text(width / 2, height - 48, '点击画面泄压 · 右下角技能强压', {
-            fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#94a3b8'
+        this.ui.hint = scene.add.text(width / 2, height - 90, '点击画面泄压 · 右下角技能强压', {
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', color: '#94a3b8'
         }).setOrigin(0.5);
 
-        this.ui.skill = scene.add.rectangle(width - 70, height - 90, 100, 44, 0xf97316, 0.9)
+        this.ui.skill = scene.add.rectangle(width - 100, height - 170, 144, 80, 0xf97316, 0.9)
             .setStrokeStyle(2, 0xffffff, 0.35)
             .setInteractive({ useHandCursor: true });
-        this.ui.skillLabel = scene.add.text(width - 70, height - 90, '强压', {
-            fontFamily: 'Inter, sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#0f172a'
+        this.ui.skillLabel = scene.add.text(width - 100, height - 170, '强压', {
+            fontFamily: 'Inter, sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#0f172a'
         }).setOrigin(0.5);
-        this.ui.skill.on('pointerdown', () => this.useSkill());
-
-        scene.input.on('pointerdown', (p) => {
-            if (p.y > height - 120 && p.x > width - 130) return;
+        this.lifecycle.trackListener(scene.input, 'pointerdown', (p) => {
+            if (!this.isRunning()) return;
+            if (Math.abs(p.x - this.ui.skill.x) <= 72 && Math.abs(p.y - this.ui.skill.y) <= 40) {
+                this.useSkill();
+                return;
+            }
+            const target = this.targets.filter(t => t.active && Math.hypot(p.x - t.x, p.y - t.y) <= 44)
+                .sort((a, b) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(p.x - b.x, p.y - b.y))[0];
+            if (target) {
+                this.state.pressure = Math.max(0, this.state.pressure - this.config.targetClickRelief);
+                this.state.targetsHit += 1;
+                this.context.spawnParticles?.(target.x, target.y, 0xa855f7);
+                target.destroy();
+                this.targets = this.targets.filter(t => t !== target);
+            }
             this.onCanvasClick(p);
         });
 
@@ -102,6 +126,7 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
             Object.values(this.ui).forEach((n) => n?.destroy?.());
             this.targets.forEach((t) => t.destroy?.());
             this.targets = [];
+            this.ui = {};
         });
         this.refreshHud();
         this.publishTestState();
@@ -112,20 +137,11 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
         if (!this.isRunning()) return;
         const { width, height } = this.scene.scale;
         const t = this.scene.add.circle(
-            40 + Math.random() * (width - 80),
-            120 + Math.random() * (height - 220),
-            16, 0xa855f7, 0.9
+            48 + this.random() * (width - 96),
+            340 + this.random() * (height - 620),
+            32, 0xa855f7, 0.9
         ).setInteractive({ useHandCursor: true });
         t.born = this.scene.time.now;
-        t.on('pointerdown', () => {
-            if (!t.active) return;
-            this.state.pressure = Math.max(0, this.state.pressure - this.config.targetClickRelief);
-            this.state.score += 2;
-            this.context.spawnParticles?.(t.x, t.y, 0xa855f7);
-            t.destroy();
-            this.targets = this.targets.filter((x) => x !== t);
-            this.refreshHud();
-        });
         this.targets.push(t);
     }
 
@@ -134,13 +150,14 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
         this.state.clicks += 1;
         const relief = this.config.clickRelief * (this.state.skillActive > 0 ? 1.5 : 1);
         this.state.pressure = Math.max(0, this.state.pressure - relief);
-        this.state.score += 1;
+
         this.context.spawnParticles?.(pointer.x, pointer.y, 0x38bdf8);
         this.refreshHud();
     }
 
     useSkill() {
         if (!this.isRunning() || this.state.skillCd > 0) return;
+        this.state.skillsUsed += 1;
         this.state.skillCd = this.config.skillCooldownSec;
         this.state.skillActive = this.config.skillDurationSec;
         this.state.pressure = Math.max(0, this.state.pressure - this.config.skillRelief);
@@ -150,13 +167,16 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
 
     tick(dt) {
         if (!this.isRunning()) return;
-        this.state.elapsed += dt;
+        if (!Number.isFinite(dt) || dt <= 0) return;
+        this.state.elapsed = Math.min(this.config.durationSec, this.state.elapsed + dt);
+        this.state.score = this.state.elapsed;
         this.state.skillCd = Math.max(0, this.state.skillCd - dt);
         this.state.skillActive = Math.max(0, this.state.skillActive - dt);
 
         const growth = this.config.pressureGrowthPerSec * (this.state.skillActive > 0 ? 0.35 : 1);
         this.state.pressure = Math.min(this.config.pressureMax, this.state.pressure + growth * dt);
 
+        this.state.pressurePeak = Math.max(this.state.pressurePeak, this.state.pressure);
         const now = this.scene.time.now;
         this.targets = this.targets.filter((t) => {
             if (now - t.born > this.config.targetLifeSec * 1000) {
@@ -185,9 +205,9 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
         const ratio = this.state.pressure / this.config.pressureMax;
         g.clear();
         g.fillStyle(0x1e293b, 0.9);
-        g.fillRoundedRect(width * 0.15, 60, width * 0.7, 14, 7);
+        g.fillRoundedRect(width * 0.15, 270, width * 0.7, 14, 7);
         g.fillStyle(ratio > 0.7 ? 0xef4444 : 0xf97316, 1);
-        g.fillRoundedRect(width * 0.15, 60, width * 0.7 * ratio, 14, 7);
+        g.fillRoundedRect(width * 0.15, 270, width * 0.7 * ratio, 14, 7);
         const left = Math.max(0, this.config.durationSec - this.state.elapsed);
         this.ui.status?.setText(
             `压力 ${Math.ceil(this.state.pressure)}/${this.config.pressureMax}  ·  剩余 ${left.toFixed(1)}s  ·  技能CD ${this.state.skillCd.toFixed(1)}s`
@@ -198,12 +218,25 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
 
     getTestState() {
         return {
+            ...super.getTestState(),
             adapter: 'PressureSurvivalAdapter',
             status: this.status,
             hp: this.state.hp,
             score: this.state.score,
             pressure: this.state.pressure,
             elapsed: this.state.elapsed,
+            goalValue: this.config.durationSec,
+            durationSec: this.config.durationSec,
+            timer: Math.max(0, this.config.durationSec - this.state.elapsed),
+            pressureMax: this.config.pressureMax,
+            pressurePeak: this.state.pressurePeak,
+            clicks: this.state.clicks,
+            targetsHit: this.state.targetsHit,
+            skillsUsed: this.state.skillsUsed,
+            skillCd: this.state.skillCd,
+            skillActive: this.state.skillActive,
+            skill: this.ui.skill ? { x: this.ui.skill.x, y: this.ui.skill.y } : null,
+            targets: this.targets.map(t => ({ x: t.x, y: t.y })),
             lastResult: this.result
         };
     }
@@ -217,7 +250,9 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
             reason: reason || (success ? NODE_RESULT_REASONS.TIMER_EXPIRED : NODE_RESULT_REASONS.FAILED),
             rewards: success ? { ...(this.config.rewardTable || {}), score: 1 } : {},
             telemetry: {
-                pressurePeak: this.state.pressure,
+                pressurePeak: this.state.pressurePeak,
+                targetsHit: this.state.targetsHit,
+                skillsUsed: this.state.skillsUsed,
                 clicks: this.state.clicks,
                 elapsedSec: this.state.elapsed
             }
@@ -229,9 +264,10 @@ export default class PressureSurvivalAdapter extends GameplayAdapter {
         return result;
     }
 
-    retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
+    pause() { if (this.config.allowPause !== false) super.pause(); }
+    retreat() { return this.config.allowQuit === false ? null : this.finish(false, NODE_RESULT_REASONS.RETREATED); }
     isRunning() { return this.status === 'running' && !this.lifecycle?.transitionLocked; }
-    destroy() { this.lifecycle?.cleanup(); super.destroy(); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
     publishTestState() {
         this.context.testHooks?.update({
             adapterId: this.config.id, status: this.status,
