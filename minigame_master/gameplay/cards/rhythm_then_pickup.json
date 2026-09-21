@@ -19,10 +19,81 @@
     "objective_met"
   ],
   "failure": [
-    "failed",
+    "timer_expired",
     "retreated"
   ],
-  "knobs": {},
+  "knobs": {
+    "phase1Target": {
+      "type": "integer",
+      "default": 12,
+      "min": 3,
+      "max": 40,
+      "patchLevel": "L1"
+    },
+    "bottlesNeeded": {
+      "type": "integer",
+      "default": 5,
+      "min": 1,
+      "max": 20,
+      "patchLevel": "L1"
+    },
+    "phase2LimitSec": {
+      "type": "number",
+      "default": 20,
+      "min": 5,
+      "max": 120,
+      "patchLevel": "L1"
+    },
+    "beatIntervalMs": {
+      "type": "integer",
+      "default": 1200,
+      "min": 400,
+      "max": 2400,
+      "patchLevel": "L1"
+    },
+    "perfectWindowMs": {
+      "type": "integer",
+      "default": 90,
+      "min": 20,
+      "max": 250,
+      "patchLevel": "L1"
+    },
+    "goodWindowMs": {
+      "type": "integer",
+      "default": 180,
+      "min": 40,
+      "max": 400,
+      "patchLevel": "L1"
+    },
+    "bottleAppearMinSec": {
+      "type": "number",
+      "default": 1.2,
+      "min": 0.5,
+      "max": 4,
+      "patchLevel": "L1"
+    },
+    "bottleAppearMaxSec": {
+      "type": "number",
+      "default": 3,
+      "min": 0.5,
+      "max": 4,
+      "patchLevel": "L1"
+    },
+    "bottleLifeMinSec": {
+      "type": "number",
+      "default": 0.9,
+      "min": 0.5,
+      "max": 3,
+      "patchLevel": "L1"
+    },
+    "bottleLifeMaxSec": {
+      "type": "number",
+      "default": 1.5,
+      "min": 0.5,
+      "max": 3,
+      "patchLevel": "L1"
+    }
+  },
   "patchPolicy": {
     "defaultAllowedLevels": [
       "L0",
@@ -42,7 +113,7 @@
   },
   "testFixture": {
     "type": "e2e",
-    "path": null,
+    "path": "productize/jobs/run-rhythm-pickup-card-lab-e2e.mjs",
     "assertions": [
       "playable",
       "NodeResult"

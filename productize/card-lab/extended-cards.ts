@@ -1,3 +1,4 @@
+import rhythmPickupCard from '../../minigame_master/gameplay/cards/rhythm_then_pickup.json';
 import comboCard from '../../minigame_master/gameplay/cards/sequence_puzzle_combo.json';
 import hazardWavesCard from '../../minigame_master/gameplay/cards/hazard_collect_waves.json';
 import platformCard from '../../minigame_master/gameplay/cards/platform_escape.json';
@@ -30,6 +31,15 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  rhythm_then_pickup: {
+    card: rhythmPickupCard, heading: '20 · 节奏后拾取', title: '节奏拾取试炼',
+    intro: '圆环最大、最亮时点击或按空格，每拍只判定一次。默认命中 12 拍后，20 秒内拾取 5 个紫色目标；点击目标或按空格拾取最早出现的目标。节奏失误可继续，拾取超时失败。',
+    fields: [ { key: 'phase1Target', label: '节奏命中目标' }, { key: 'bottlesNeeded', label: '拾取目标数量' }, { key: 'phase2LimitSec', label: '拾取时限（秒）' }, { key: 'beatIntervalMs', label: '节拍间隔（毫秒）' }, { key: 'perfectWindowMs', label: '完美窗口（毫秒）' }, { key: 'goodWindowMs', label: '有效窗口（毫秒）' }, { key: 'bottleAppearMinSec', label: '最短生成间隔（秒）' }, { key: 'bottleAppearMaxSec', label: '最长生成间隔（秒）' }, { key: 'bottleLifeMinSec', label: '最短停留（秒）' }, { key: 'bottleLifeMaxSec', label: '最长停留（秒）' } ],
+    validate: k => k.perfectWindowMs > k.goodWindowMs || k.goodWindowMs >= k.beatIntervalMs / 2 ? '判定窗口需满足：完美 ≤ 有效 < 半个节拍。' : k.bottleAppearMaxSec < k.bottleAppearMinSec || k.bottleLifeMaxSec < k.bottleLifeMinSec ? '最长间隔或停留时间不能小于最短值。' : k.phase2LimitSec < k.bottlesNeeded * k.bottleAppearMaxSec + 0.2 ? '拾取时限不足以生成所需目标，请增加时间或缩短生成间隔。' : null,
+    goal: () => 0, progress: state => state.phase === 1 ? `${state.hits}/${state.phase1Target}` : `${state.bottles}/${state.bottlesNeeded}`,
+    health: state => state.phase ?? 1, count: state => state.targets?.length ?? 0,
+    healthLabel: '阶段', progressLabel: '目标', countLabel: '可拾取'
+  },
   sequence_puzzle_combo: {
     card: comboCard, heading: '19 · 顺序拼图组合', title: '顺序拼图试炼',
     intro: '先观察黄色亮灯，演示结束后按顺序点击或按数字键。答错会重新演示。第二阶段把编号碎片拖到同号槽位；也可按数字键先选碎片，再选槽。拼错可重试，没有死亡或限时失败，可随时撤退。',
