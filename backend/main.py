@@ -33,11 +33,13 @@ from .theme_presets import get_procedural_preset
 from .agents import WorldBuilderAgent
 from .llm_client import llm_status, imagegen_status
 from .visual_audit import run_visual_critic, vlm_probe, find_codex_cli
+from .sprite_gen_routes import router as sprite_gen_router
 
 # Initialize database schema
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="LoreWeaver Backend (FastAPI)")
+app.include_router(sprite_gen_router)
 
 app.add_middleware(
     CORSMiddleware,
