@@ -39,7 +39,8 @@ export async function createLabSuite(cardId) {
     const before=await read(page);
     await page.locator('#start').click();
     await page.waitForFunction(g=>{const s=window.__CARD_LAB__.snapshot();return s.generation===g+1&&!s.starting&&s.state?.status==='running';},before.generation,{timeout:20000});
-    await page.locator('canvas').scrollIntoViewIfNeeded();boxes.set(page,await page.locator('canvas').boundingBox());
+    const surface=page.locator(cardId==='node_iframe_microgame'?'iframe[title^="node_iframe_"]':'canvas');
+    await surface.scrollIntoViewIfNeeded();boxes.set(page,await surface.boundingBox());
     const s=await read(page);assert.equal(s.cardId,cardId);assert.ok(s.state.score>=0 && s.state.score<=initialScoreMax, `initial score ${s.state.score} exceeds ${initialScoreMax}`);
     assert.deepEqual(s.sceneKeys,['LevelActiveScene']); return s;
   }

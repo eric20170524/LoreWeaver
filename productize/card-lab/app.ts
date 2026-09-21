@@ -41,7 +41,7 @@ const seed = $('seed') as HTMLInputElement;
 const explode = $('explode') as HTMLSelectElement;
 const enemyHp = $('enemy-hp') as HTMLInputElement;
 const enemyAtk = $('enemy-atk') as HTMLInputElement;
-let extraFields: Record<string, HTMLInputElement> = {};
+let extraFields: Record<string, HTMLInputElement | HTMLSelectElement> = {};
 for (const [id, metadata] of Object.entries(extraLabCards).sort(([, a], [, b]) => a.heading.localeCompare(b.heading))) {
   const option = document.createElement('option');
   option.value = id; option.textContent = metadata.heading; selector.appendChild(option);
@@ -94,7 +94,7 @@ function focusGame() {
 function launch() {
   if (starting) return;
   const extra = extraLabCards[card.id];
-  const extraValues = Object.fromEntries(Object.entries(extraFields).map(([key, field]) => [key, field.type === 'checkbox' ? field.checked : Number(field.value)]));
+  const extraValues = Object.fromEntries(Object.entries(extraFields).map(([key, field]) => [key, field instanceof HTMLSelectElement ? field.value : field.type === 'checkbox' ? field.checked : Number(field.value)]));
   const firstExtraField = Object.values(extraFields)[0];
   firstExtraField?.setCustomValidity(extra?.validate?.(extraValues) || '');
   const rhythm = card.id === 'rhythm_timing';
@@ -174,7 +174,7 @@ function launch() {
     taunts: [extra ? '观察场上提示，再作选择。' : taunt], mechanics: card.id, rewards: '试验场完成记录',
     goalValue: extra ? extra.goal(runConfig) : goalValue, resourceMultiplier: 1, difficulty: 1,
     durationLimit: Number((brawler || extra) ? 0 : runConfig.durationSec),
-    gameplay: { adapter: 'phaser', cardId: card.id, modifiers: [], knobs: { ...runConfig }, patchLevel: 'L1' as const }
+    gameplay: { adapter: card.id === 'node_iframe_microgame' ? 'iframe' : 'phaser', cardId: card.id, modifiers: [], knobs: { ...runConfig }, patchLevel: 'L1' as const }
   };
   try {
     const initialPlayerState = structuredClone(INITIAL_PLAYER_STATE);
@@ -214,7 +214,7 @@ const refresh = window.setInterval(() => {
     (game.scene.keys.MainScene as any).scene.start('LevelActiveScene', { node: runtime.resolvedSpec.gameSpec.nodes[0] });
   }
   const scene = game.scene.keys.LevelActiveScene as any;
-  if (scene?.adapter) adapter = scene.adapter;
+  if (scene?.adapter || scene?.iframeContainer) adapter = scene.adapter || scene.iframeContainer;
   const state = adapter?.getTestState?.();
   if (starting && state?.status === 'running') {
     starting = false; start.disabled = false;
@@ -228,8 +228,8 @@ const refresh = window.setInterval(() => {
     ended = true;
     $('result').textContent = JSON.stringify(lastResult, null, 2);
   }
-  pause.disabled = !state || !['running', 'paused'].includes(state.status) || ended;
-  quit.disabled = pause.disabled;
+  quit.disabled = !state || !['running', 'paused'].includes(state.status) || ended;
+  pause.disabled = quit.disabled || state?.pauseSupported === false;
   pause.textContent = state?.status === 'paused' ? '继续' : '暂停';
   const phases: Record<string, string> = { idle: '等待出招', warning: '危险预警', active: '攻击判定', counter: '反击窗口' };
   const runningStatus = card.id === 'turn_based_skill_battle'
@@ -280,11 +280,16 @@ function selectCard() {
   for (const { key, label } of extra?.fields || []) {
     const knob = card.knobs[key];
     const caption = document.createElement('label'); caption.htmlFor = `knob-${key}`; caption.textContent = label;
-    const field = document.createElement('input');
-    field.id = caption.htmlFor; field.type = knob.type === 'boolean' ? 'checkbox' : 'number'; field.required = knob.type !== 'boolean';
-    if (knob.type === 'boolean') { field.checked = Boolean(knob.default); field.style.width = 'auto'; }
-    field.value = String(knob.default); field.min = String(knob.min); field.max = String(knob.max);
-    field.step = knob.type === 'integer' ? '1' : 'any';
+    const field = knob.type === 'enum' ? document.createElement('select') : document.createElement('input');
+    field.id = caption.htmlFor;
+    if (field instanceof HTMLSelectElement) {
+      for (const value of knob.values) { const option = document.createElement('option'); option.value = value; option.textContent = value; field.appendChild(option); }
+    } else {
+      field.type = knob.type === 'boolean' ? 'checkbox' : 'number'; field.required = knob.type !== 'boolean';
+      if (knob.type === 'boolean') { field.checked = Boolean(knob.default); field.style.width = 'auto'; }
+      field.min = String(knob.min); field.max = String(knob.max); field.step = knob.type === 'integer' ? '1' : 'any';
+    }
+    field.value = String(knob.default);
     extraFields[key] = field; $('extra-config').append(caption, field);
   }
   $('hp-field').hidden = Boolean(extra);

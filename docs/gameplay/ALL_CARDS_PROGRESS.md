@@ -72,4 +72,6 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 第二十二张 [point_drag_progression](POINT_DRAG_PROGRESSION_CARD_LAB.md) 已完成本地工程验收：十项单测、七个真实浏览器场景、TypeScript 和通用烟测通过。修复落空满失稳不失败、同次满失稳先判胜、隐藏点位匹配、初始阶段和供给不一致、球体重叠、暂停/画布外拖拽、错误分支默认值及输入/资源清理。阶段按目标比例缩放，保留顺滑增益和错配少量进度，键盘可完整操作。默认匹配通关、错配和落空自然失败、暂停与三次重开、200 目标键盘完整通关、触屏与离线均通过。390px 画面已核对，[验收 JSON](../reports/card_lab_22_2026-09-21.json) 保存构建哈希。累计 22/23 张本地工程验收。
 
-最后一张为 `node_iframe_microgame`，尚未本轮验收；之后仍需全库完成审计与远端发布状态核对。
+第二十三张 [node_iframe_microgame](NODE_IFRAME_MICROGAME_CARD_LAB.md) 已通过九项状态机测试、八个真实浏览器场景与 TypeScript。真实 H5 子游戏覆盖编码、标准/旧结果、奖励去重、来源校验、退出/重开、双倒计时暂停、自然/宿主超时、触控和离线。修复 file:// URL 与 MessageEvent 来源序列化差异，同时保留发送窗口校验。390px 画面已核对，[验收 JSON](../reports/card_lab_23_2026-09-21.json) 保存构建哈希。累计 23/23 张已有逐卡本地工程验收；这不等于最终同源码全库验收，也不等于远端 CI 或发布认证。
+
+接下来检查共享合同（零种子、终局玩法 HUD、iframe 源配置），再执行当前工作区全库汇总验证和双构建双浏览器 replay。远端 OAuth 缺少 workflow scope 的推送限制仍需解决；不重写并行提交。

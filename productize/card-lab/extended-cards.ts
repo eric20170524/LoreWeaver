@@ -1,3 +1,4 @@
+import iframeCard from '../../minigame_master/gameplay/cards/node_iframe_microgame.json';
 import pointDragCard from '../../minigame_master/gameplay/cards/point_drag_progression.json';
 import qixCard from '../../minigame_master/gameplay/cards/qix_area_capture.json';
 import rhythmPickupCard from '../../minigame_master/gameplay/cards/rhythm_then_pickup.json';
@@ -33,6 +34,14 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  node_iframe_microgame: {
+    card: iframeCard, heading: '23 · H5 游戏容器', title: 'H5 容器试炼',
+    intro: '在嵌入游戏中点击移动光点，或按空格拾取。默认 15 秒内完成 4 次，子游戏回传真实结果，由宿主写入奖励。可切换载荷编码和旧版/标准结果格式验证兼容性；暂停需子游戏声明支持，本示例支持。',
+    fields: [ { key: 'payloadEncoding', label: '载荷编码' }, { key: 'responseFormat', label: '子游戏结果格式' }, { key: 'fullscreen', label: '覆盖游戏区域' }, { key: 'timeoutMs', label: '消息等待上限（毫秒，0 不限）' }, { key: 'demoTarget', label: '子游戏目标数量' }, { key: 'demoTimeLimitSec', label: '子游戏时限（秒）' } ],
+    goal: () => 0, progress: state => state.ready ? '已就绪' : '加载中',
+    health: state => state.iframeMounted ? 1 : 0, count: state => state.lastResult ? 1 : 0,
+    healthLabel: '嵌入页面', progressLabel: '握手', countLabel: '结算'
+  },
   point_drag_progression: {
     card: pointDragCard, heading: '22 · 点位拖拽进度', title: '点位灌注试炼',
     intro: '把能量池中的球拖到同属性点位。顺滑拖动获得额外进度；数字键先选球编号，再选点位编号，Esc 取消。匹配推动阶段并开放更多点位；错配或落空增加失稳，失稳满时失败。默认进度达到 100 获胜，失稳每秒恢复 4。',
