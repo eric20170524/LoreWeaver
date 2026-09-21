@@ -26,25 +26,33 @@
       "type": "integer",
       "default": 6,
       "patchLevel": "L1",
-      "description": "targetRounds"
+      "description": "targetRounds",
+      "min": 1,
+      "max": 50
     },
     "lives": {
       "type": "integer",
       "default": 3,
       "patchLevel": "L1",
-      "description": "lives"
+      "description": "lives",
+      "min": 1,
+      "max": 20
     },
     "showLifeMinSec": {
       "type": "number",
       "default": 2.2,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob showLifeMinSec"
+      "description": "Lightweight cert knob showLifeMinSec",
+      "min": 0.5,
+      "max": 10
     },
     "showLifeMaxSec": {
       "type": "number",
       "default": 3.2,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob showLifeMaxSec"
+      "description": "Lightweight cert knob showLifeMaxSec",
+      "min": 0.5,
+      "max": 10
     },
     "allowQuit": {
       "type": "boolean",

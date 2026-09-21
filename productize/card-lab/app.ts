@@ -8,15 +8,17 @@ import sequenceCard from '../../minigame_master/gameplay/cards/sequence_synthesi
 import turnBasedCard from '../../minigame_master/gameplay/cards/turn_based_skill_battle.json';
 import brawlerCard from '../../minigame_master/gameplay/cards/side_scrolling_brawler.json';
 import survivorCard from '../../minigame_master/gameplay/cards/survivor_horde.json';
+import { extraLabCards } from './extended-cards';
 
-const cards = {
+const cards: Record<string, any> = {
   dodge_counter_boss: dodgeCard,
   rhythm_timing: rhythmCard,
   drag_collect_grid: collectCard,
   sequence_synthesis: sequenceCard,
   turn_based_skill_battle: turnBasedCard,
   side_scrolling_brawler: brawlerCard,
-  survivor_horde: survivorCard
+  survivor_horde: survivorCard,
+  ...Object.fromEntries(Object.entries(extraLabCards).map(([id, entry]) => [id, entry.card]))
 };
 let card: any = cards[new URLSearchParams(location.search).get('card') as keyof typeof cards] || dodgeCard;
 
@@ -39,6 +41,11 @@ const seed = $('seed') as HTMLInputElement;
 const explode = $('explode') as HTMLSelectElement;
 const enemyHp = $('enemy-hp') as HTMLInputElement;
 const enemyAtk = $('enemy-atk') as HTMLInputElement;
+let extraFields: Record<string, HTMLInputElement> = {};
+for (const [id, metadata] of Object.entries(extraLabCards)) {
+  const option = document.createElement('option');
+  option.value = id; option.textContent = metadata.heading; selector.appendChild(option);
+}
 duration.required = hp.required = enemyHp.required = enemyAtk.required = true;
 let runtime: ReturnType<typeof startLoreWeaverRuntime> | null = null;
 let adapter: any = null;
@@ -86,6 +93,10 @@ function focusGame() {
 }
 function launch() {
   if (starting) return;
+  const extra = extraLabCards[card.id];
+  const extraValues = Object.fromEntries(Object.entries(extraFields).map(([key, field]) => [key, Number(field.value)]));
+  const firstExtraField = Object.values(extraFields)[0];
+  firstExtraField?.setCustomValidity(extra?.validate?.(extraValues) || '');
   const rhythm = card.id === 'rhythm_timing';
   const collect = card.id === 'drag_collect_grid';
   const sequence = card.id === 'sequence_synthesis';
@@ -93,8 +104,8 @@ function launch() {
   const brawler = card.id === 'side_scrolling_brawler';
   const survivor = card.id === 'survivor_horde';
   const fields = [
-    ...(brawler ? [] : [duration]),
-    hp,
+    ...((brawler || extra) ? [] : [duration]),
+    ...(extra ? Object.values(extraFields) : [hp]),
     ...(rhythm ? [target, combo]
       : collect ? [target, hazard, damage]
       : sequence ? [recipe, pool, penalty, seed]
@@ -112,8 +123,9 @@ function launch() {
   $('result').textContent = '本次尚未结算';
   $('status').textContent = '加载中';
   runConfig = Object.fromEntries(Object.entries(card.knobs).map(([key, knob]) => [key, (knob as { default: unknown }).default]));
-  if (!brawler) runConfig.durationSec = Number(duration.value);
-  runConfig.playerHp = Number(hp.value);
+  if (!brawler && !extra) runConfig.durationSec = Number(duration.value);
+  if (extra) Object.assign(runConfig, extraValues);
+  else runConfig.playerHp = Number(hp.value);
   if (collect) {
     runConfig.timeLimitSec = Number(duration.value);
     runConfig.needAmount = runConfig.goalValue = Number(target.value);
@@ -146,27 +158,27 @@ function launch() {
     runConfig.enemyAtk = Number(enemyAtk.value);
   }
 
-  const title = survivor ? '生存围攻试炼' : brawler ? '横版清图试炼' : turnBased ? '回合技能对决试炼' : sequence ? '顺序合成试炼' : collect ? '拖拽收集试炼' : rhythm ? '节奏共鸣试炼' : '闪避反击试炼';
-  const intro = survivor ? '按住拖动或点击选择移动目标，自动攻击附近敌人。撑到时间结束获胜，生命耗尽失败。' : brawler
+  const title = extra?.title || (survivor ? '生存围攻试炼' : brawler ? '横版清图试炼' : turnBased ? '回合技能对决试炼' : sequence ? '顺序合成试炼' : collect ? '拖拽收集试炼' : rhythm ? '节奏共鸣试炼' : '闪避反击试炼');
+  const intro = extra?.intro || (survivor ? '按住拖动或点击选择移动目标，自动攻击附近敌人。撑到时间结束获胜，生命耗尽失败。' : brawler
     ? '推进到波次触发线后进入锁屏战斗。清空当前敌人才能继续前进；完成全部波次与终局 Boss 后结算胜利。'
     : turnBased
     ? '选择技能行动，敌方随后反击。技能冷却按完整玩家回合计算；击败敌人获胜，生命归零或总时限耗尽失败。'
     : sequence ? '按配方顺序投入材料。错误回退已完成步骤，连续错误重置或失败，超时失败。'
     : collect ? '按住横向拖动，接绿珠、避红珠。收集达标获胜，超时或生命归零失败。'
     : rhythm ? '圆环重合时点击中心或按空格。进度与最佳连击均达标才成功。'
-    : '按住拖动离开危险区。金色反击窗口出现时，点击红色 Boss 或按空格。每个窗口只接受一次反击。';
+    : '按住拖动离开危险区。金色反击窗口出现时，点击红色 Boss 或按空格。每个窗口只接受一次反击。');
   const taunt = survivor ? '保持走位，撑到时间结束。' : brawler ? '推进、锁屏、清敌，再继续向前。' : turnBased ? '看清冷却，规划下一回合。' : sequence ? '看清配方，从左到右依次投入。' : collect ? '观察落点，及时走位。' : rhythm ? '听从节拍，看准圆环。' : '看清预警，再抓住反击窗口。';
   const goalValue = Number((brawler || survivor) ? 0 : turnBased ? runConfig.enemyHp : sequence ? 100 : collect ? runConfig.needAmount : rhythm ? runConfig.targetProgress : runConfig.breakGaugeMax);
   const node = {
     id: 1, title, intro,
-    taunts: [taunt], mechanics: card.id, rewards: '试验场完成记录',
-    goalValue, resourceMultiplier: 1, difficulty: 1,
-    durationLimit: Number(brawler ? 0 : runConfig.durationSec),
+    taunts: [extra ? '看清目标，再作选择。' : taunt], mechanics: card.id, rewards: '试验场完成记录',
+    goalValue: extra ? extra.goal(runConfig) : goalValue, resourceMultiplier: 1, difficulty: 1,
+    durationLimit: Number((brawler || extra) ? 0 : runConfig.durationSec),
     gameplay: { adapter: 'phaser', cardId: card.id, modifiers: [], knobs: { ...runConfig }, patchLevel: 'L1' as const }
   };
   try {
     const initialPlayerState = structuredClone(INITIAL_PLAYER_STATE);
-    initialPlayerState.hp = Number(hp.value);
+    initialPlayerState.hp = extra ? 100 : Number(hp.value);
     runtime = startLoreWeaverRuntime({
       title: 'Gameplay Card Lab', themeColor: '#67e8d6',
       economy: { currencyName: '训练点', resources: ['练习记录'], realms: ['练习者'] },
@@ -244,6 +256,12 @@ const refresh = window.setInterval(() => {
       : card.id === 'turn_based_skill_battle' ? String(state.skillsUsed ?? 0)
       : ['side_scrolling_brawler', 'survivor_horde'].includes(card.id) ? String(state.kills ?? 0)
       : String(state.counters ?? 0);
+    const extra = extraLabCards[card.id];
+    if (extra) {
+      $('health').textContent = String(extra.health(state));
+      $('gauge').textContent = extra.progress(state);
+      $('counters').textContent = String(extra.count(state));
+    }
   }
 }, 50);
 window.addEventListener('pagehide', () => { clearInterval(refresh); stop(); });
@@ -257,6 +275,18 @@ function selectCard() {
   const turnBased = card.id === 'turn_based_skill_battle';
   const brawler = card.id === 'side_scrolling_brawler';
   const survivor = card.id === 'survivor_horde';
+  const extra = extraLabCards[card.id];
+  $('extra-config').replaceChildren(); extraFields = {};
+  for (const { key, label } of extra?.fields || []) {
+    const knob = card.knobs[key];
+    const caption = document.createElement('label'); caption.htmlFor = `knob-${key}`; caption.textContent = label;
+    const field = document.createElement('input');
+    field.id = caption.htmlFor; field.type = 'number'; field.required = true;
+    field.value = String(knob.default); field.min = String(knob.min); field.max = String(knob.max);
+    field.step = knob.type === 'integer' ? '1' : '0.1';
+    extraFields[key] = field; $('extra-config').append(caption, field);
+  }
+  $('hp-field').hidden = Boolean(extra);
   document.title = `玩法卡试验场 · ${brawler ? '横版清图' : turnBased ? '回合技能战斗' : sequence ? '顺序合成' : collect ? '拖拽收集' : rhythm ? '节奏点击' : '闪避反击'}`;
   $('heading').textContent = brawler ? '06 · 横版清图' : turnBased ? '05 · 回合制技能战斗' : sequence ? '04 · 顺序合成' : collect ? '03 · 拖拽收集' : rhythm ? '02 · 节奏点击' : '01 · 闪避反击 Boss';
   $('card-id').textContent = card.id;
@@ -272,15 +302,20 @@ function selectCard() {
     : rhythm
     ? '<p>① 外圈收拢到白环时，点击中心或按空格。</p><p>② Perfect ±80ms 得10分；Good ±160ms 得5分。过早或漏拍扣生命并断连击，每拍只结算一次。</p><p>③ 进度和最佳连击同时达标才获胜。默认10次Perfect可完成；不是随意点击加分。</p>'
     : '<p>① 按住拖动青色角色，离开黄 / 红色危险区。</p><p>② 金圈亮起时，点击红色 Boss 或按空格。每个窗口仅一次。</p><p>③ 破势达到100或Boss血量归零获胜；生命耗尽或超时失败。</p>';
-  $('duration-field').hidden = brawler;
+  $('duration-field').hidden = brawler || Boolean(extra);
   if (survivor) {
     document.title = '玩法卡试验场 · 生存围攻';
     $('heading').textContent = '07 · 生存围攻';
     $('subtitle').textContent = '走位、自动攻击，撑到倒计时结束';
     $('instructions').textContent = '点击或按住拖动选择目标位置，角色自动向目标移动、攻击附近敌人。生存至时间结束获胜；生命耗尽失败。暂停时战斗和倒计时停止，可退出或重开。';
   }
-  duration.disabled = brawler;
-  duration.required = !brawler;
+  if (extra) {
+    document.title = `玩法卡试验场 · ${extra.title}`;
+    $('heading').textContent = extra.heading; $('subtitle').textContent = extra.title;
+    $('instructions').textContent = extra.intro;
+  }
+  duration.disabled = brawler || Boolean(extra);
+  duration.required = !duration.disabled;
   $('rhythm-config').hidden = !(rhythm || collect);
   $('combo-field').hidden = !rhythm;
   $('collect-config').hidden = !collect;
@@ -288,7 +323,11 @@ function selectCard() {
   $('turn-based-config').hidden = !turnBased;
   $('progress-label').textContent = survivor ? '得分' : brawler ? '已清波次' : turnBased ? '敌方生命' : sequence ? '配方进度' : collect ? '已收集' : rhythm ? '进度' : '破势';
   $('count-label').textContent = (survivor || brawler) ? '击杀数' : turnBased ? '已用技能' : sequence ? '错误 / 重置' : collect ? '受击次数' : rhythm ? '当前 / 最佳连击' : '反击次数';
-  if (!brawler) {
+  $('health-label').textContent = extra?.healthLabel || '生命';
+  if (extra) {
+    $('progress-label').textContent = extra.progressLabel; $('count-label').textContent = extra.countLabel;
+  }
+  if (!brawler && !extra) {
     const durationKnob = card.knobs.durationSec || card.knobs.timeLimitSec;
     duration.value = String(durationKnob.default);
     duration.min = String(durationKnob.min); duration.max = String(durationKnob.max);
