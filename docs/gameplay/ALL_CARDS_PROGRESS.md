@@ -36,7 +36,7 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 第八、九张最后视觉调整后再次完整回归：17 项单测、14 个真实浏览器场景及 TypeScript 全部通过，390px 活跃游戏截图已核对。辨宝选项与目标文字、能量元素与拖拽命中范围放大，未改为自动作答。验收摘要及实际构建文件哈希见 [08/09 JSON](../reports/card_lab_08_09_2026-09-21.json)。本地报告的 revision 是构建时 checkout 基点，测试时包含未提交代码；报告文件哈希标识实际 payload，不能将基点 SHA 单独当成完全相同源树证明。
 
-继续推进其余 2 张：`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至二十一张。
+继续推进最后 1 张：`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至二十二张。
 
 
 第十张 [observe_capture](OBSERVE_CAPTURE_CARD_LAB.md) 已通过八项状态机回归及六场景真实浏览器验收：默认五次捕捉获胜、误点/错过窗口、暂停/恢复/三次重开、自定义目标、移动触屏和离线通关。修复重复点击判定、挂机通关、暂停误点和结算清理；TypeScript 通过，390px 活跃画面已核对。[证据摘要](../reports/card_lab_10_2026-09-21.json) 保存实际构建哈希。其失败设计只有撤退，不宣称验证了不存在的自然死亡。本次构建包含工作区并行养成改动，不将基点 revision 当成干净提交的证明。
@@ -70,4 +70,6 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 第二十一张 [qix_area_capture](QIX_AREA_CAPTURE_CARD_LAB.md) 已完成本地工程验收：九项单测、七个真实浏览器场景、TypeScript 与通用烟测通过。修复安全边框洪水填充、45% 猜测阈值、敌人反弹滞留占领区、回撤/过短路径、暂停目的地、零敌人参数、同帧结算清理和宿主分数目标。默认两敌人、90 秒、70% 目标在键盘、触屏、离线均实际通关；默认五次断线致死、20 秒配置自然超时、暂停与三次重开、48×36 零敌人填充均通过。浏览器按可见状态规划路线后发送真实输入，未降低默认目标或改写状态。390px 画面已核对，[验收 JSON](../reports/card_lab_21_2026-09-21.json) 保存实际路线和构建哈希。累计 21/23 张本地工程验收。
 
-下一张为 `point_drag_progression`，尚未本轮验收。
+第二十二张 [point_drag_progression](POINT_DRAG_PROGRESSION_CARD_LAB.md) 已完成本地工程验收：十项单测、七个真实浏览器场景、TypeScript 和通用烟测通过。修复落空满失稳不失败、同次满失稳先判胜、隐藏点位匹配、初始阶段和供给不一致、球体重叠、暂停/画布外拖拽、错误分支默认值及输入/资源清理。阶段按目标比例缩放，保留顺滑增益和错配少量进度，键盘可完整操作。默认匹配通关、错配和落空自然失败、暂停与三次重开、200 目标键盘完整通关、触屏与离线均通过。390px 画面已核对，[验收 JSON](../reports/card_lab_22_2026-09-21.json) 保存构建哈希。累计 22/23 张本地工程验收。
+
+最后一张为 `node_iframe_microgame`，尚未本轮验收；之后仍需全库完成审计与远端发布状态核对。

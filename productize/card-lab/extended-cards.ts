@@ -1,3 +1,4 @@
+import pointDragCard from '../../minigame_master/gameplay/cards/point_drag_progression.json';
 import qixCard from '../../minigame_master/gameplay/cards/qix_area_capture.json';
 import rhythmPickupCard from '../../minigame_master/gameplay/cards/rhythm_then_pickup.json';
 import comboCard from '../../minigame_master/gameplay/cards/sequence_puzzle_combo.json';
@@ -32,6 +33,14 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  point_drag_progression: {
+    card: pointDragCard, heading: '22 · 点位拖拽进度', title: '点位灌注试炼',
+    intro: '把能量池中的球拖到同属性点位。顺滑拖动获得额外进度；数字键先选球编号，再选点位编号，Esc 取消。匹配推动阶段并开放更多点位；错配或落空增加失稳，失稳满时失败。默认进度达到 100 获胜，失稳每秒恢复 4。',
+    fields: [ { key: 'targetProgress', label: '目标进度' }, { key: 'instabilityMax', label: '失稳上限' }, { key: 'matchProgress', label: '匹配进度' }, { key: 'nearMatchProgress', label: '错配进度基数（实际乘 0.35）' }, { key: 'instabilityOnMismatch', label: '错配失稳' }, { key: 'instabilityOnMiss', label: '落空失稳' }, { key: 'instabilityDecayPerSec', label: '每秒恢复失稳' }, { key: 'poolSpawnIntervalSec', label: '生成间隔（秒）' } ],
+    goal: () => 0, progress: state => `${Math.floor(state.progress ?? 0)}/${state.targetProgress ?? 100}`,
+    health: state => Math.ceil(state.instabilityMax - state.instability), count: state => state.stage ?? 1,
+    healthLabel: '稳定余量', progressLabel: '进度', countLabel: '阶段'
+  },
   qix_area_capture: {
     card: qixCard, heading: '21 · 区域占领', title: '区域占领试炼',
     intro: 'WASD/方向键移动，或点击目的格自动逐格靠近。灰色边框和蓝色区域安全；进入空白画黄线，回到安全区后占领没有敌人的区域。敌人碰到未完成的线会扣 20 生命并回到左侧起点。默认 90 秒内占领内部 70% 获胜。',
