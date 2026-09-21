@@ -90,3 +90,7 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 CI 配置已在工作区扩展为 23 卡完整矩阵，脚本路径逐项存在，Ruby YAML 解析和目录集合相等检查通过；浏览器步骤上限 10 分钟、job 上限 30 分钟。暂未提交/推送，不能称为云端通过。iframe 奖励映射修复与四项保存状态回归已暂存于 `/tmp/loreweaver-iframe-reward-fix/`，待总回归结束后接入。
 
 最终本地总回归完成：23/23 卡、154 个真实浏览器场景全部通过，前后源码哈希一致。随后仅对 iframe 奖励转换修复 xp=0 与 relic/flags 共存，四项保存回归、十项容器回归、TypeScript 及八个真实浏览器场景通过。该补丁不改变其他 adapter 的玩法路径。证据保存总回归与后续容器构建各自哈希，不把二者混称为同一二进制。远端合并、推送和最新 CI 尚待完成。
+
+最终干净提交复验：远端六个提交已无冲突合并为 `2492977`。独立 worktree 的 tracked source 无差异，27 个运行时/合同脚本、四项 iframe 奖励保存测试、TypeScript 通过；Boss/Survivor/iframe 共 20 个真实浏览器场景通过，Golden Candidate 和双构建双浏览器 replay 通过。新证据见 [clean audit](../reports/final_clean_audit_2026-09-22.json)。23 卡总回归的 154 场景证据与此处差分复验分别记录，未冒称 23 卡都在 clean worktree 重跑。
+
+当前唯一外部阻塞：GitHub 再次拒绝推送工作流提交，当前 OAuth scopes 仅 gist/read:org/repo，缺 workflow。已向用户请求执行 `gh auth refresh -h github.com -s workflow`。在授权并推送后仍需验证最新远端 CI；不宣称整个目标完成。离线试玩包位于 `workflow/reports/final-card-audit/card-lab-2492977.zip`，包含 23 卡，哈希见 clean audit。
