@@ -41,6 +41,21 @@ function fixture(knobs = {}, onEnd, extra = {}) {
 }
 const next = a => a.state.pool.find(m => m.id === a.state.recipe[a.state.stepIndex]);
 const wrong = a => a.state.pool.find(m => m.id !== a.state.recipe[a.state.stepIndex]);
+test('replayed DOM keyboard events cannot feed a recipe twice in one frame', () => {
+  const { a, mock } = fixture({ recipeLength: 20, materialPoolSize: 8, runSeed: 123 });
+  const keyForNext = () => ({ key: String(a.state.pool.findIndex(m => m.id === a.state.recipe[a.state.stepIndex]) + 1) });
+  const first = keyForNext();
+  mock.scene.input.keyboard.emit('keydown', first);
+  const second = keyForNext();
+  mock.scene.input.keyboard.emit('keydown', second);
+  mock.scene.input.keyboard.emit('keydown', first);
+  mock.scene.input.keyboard.emit('keydown', second);
+  assert.equal(a.state.stepIndex, 2);
+  assert.equal(a.state.mistakes, 0);
+  mock.scene.input.keyboard.emit('keydown', keyForNext());
+  assert.equal(a.state.stepIndex, 3);
+  a.destroy();
+});
 function complete(a) {
   for (let guard=0; a.isRunning() && guard<25; guard++) a.onMaterialClick(next(a));
 }

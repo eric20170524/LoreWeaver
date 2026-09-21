@@ -169,7 +169,12 @@ export default class SequenceSynthesisAdapter extends GameplayAdapter {
         this.drawMaterialPool(width, height);
         this.drawProgress(width, height);
 
+        // Phaser can revisit its current-frame DOM event queue when another key
+        // arrives before POST_STEP. A physical keydown may feed only one item.
+        const processedKeyEvents = new WeakSet();
         this.lifecycle.trackListener(scene.input?.keyboard, 'keydown', (event) => {
+            if (!event || processedKeyEvents.has(event)) return;
+            processedKeyEvents.add(event);
             if (!this.isRunning() || event?.repeat || event?.ctrlKey || event?.altKey || event?.metaKey) return;
             const index = /^[1-8]$/.test(event?.key || '') ? Number(event.key) - 1 : -1;
             if (index < 0 || !this.state.pool[index]) return;
