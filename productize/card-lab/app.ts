@@ -42,7 +42,7 @@ const explode = $('explode') as HTMLSelectElement;
 const enemyHp = $('enemy-hp') as HTMLInputElement;
 const enemyAtk = $('enemy-atk') as HTMLInputElement;
 let extraFields: Record<string, HTMLInputElement> = {};
-for (const [id, metadata] of Object.entries(extraLabCards)) {
+for (const [id, metadata] of Object.entries(extraLabCards).sort(([, a], [, b]) => a.heading.localeCompare(b.heading))) {
   const option = document.createElement('option');
   option.value = id; option.textContent = metadata.heading; selector.appendChild(option);
 }
@@ -171,7 +171,7 @@ function launch() {
   const goalValue = Number((brawler || survivor) ? 0 : turnBased ? runConfig.enemyHp : sequence ? 100 : collect ? runConfig.needAmount : rhythm ? runConfig.targetProgress : runConfig.breakGaugeMax);
   const node = {
     id: 1, title, intro,
-    taunts: [extra ? '看清目标，再作选择。' : taunt], mechanics: card.id, rewards: '试验场完成记录',
+    taunts: [extra ? '观察场上提示，再作选择。' : taunt], mechanics: card.id, rewards: '试验场完成记录',
     goalValue: extra ? extra.goal(runConfig) : goalValue, resourceMultiplier: 1, difficulty: 1,
     durationLimit: Number((brawler || extra) ? 0 : runConfig.durationSec),
     gameplay: { adapter: 'phaser', cardId: card.id, modifiers: [], knobs: { ...runConfig }, patchLevel: 'L1' as const }
@@ -283,7 +283,7 @@ function selectCard() {
     const field = document.createElement('input');
     field.id = caption.htmlFor; field.type = 'number'; field.required = true;
     field.value = String(knob.default); field.min = String(knob.min); field.max = String(knob.max);
-    field.step = knob.type === 'integer' ? '1' : '0.1';
+    field.step = knob.type === 'integer' ? '1' : 'any';
     extraFields[key] = field; $('extra-config').append(caption, field);
   }
   $('hp-field').hidden = Boolean(extra);

@@ -16,3 +16,5 @@ node productize/jobs/run-reaction-card-lab-e2e.mjs
 八项 Chromium 场景通过：默认六轮胜利、旧轮计时隔离、选错耗尽机会、自然超时失败、暂停/恢复及三次重开、无效时间区间阻止启动、移动触控六轮胜利、file:// 离线六轮胜利。输入只走浏览器鼠标/触控；snapshot 仅读取画面已有的目标、选项与状态。移动截图已检查，完整六轮结果与按钮可读。
 
 结果：`workflow/reports/card-lab/reaction_pick/browser-latest.json`。这些是本地真实浏览器工程验收；现有远端六卡矩阵尚未包含这张卡，不把旧 `production_ready` 标签或烟测当本轮验收证据。
+
+390px 活跃画面检查后放大了目标提示、道具文字和选项矩形（132×88 游戏坐标），最终布局八场景再次通过，报告时间 2026-09-21T12:51:42.121Z。

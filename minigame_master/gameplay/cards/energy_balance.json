@@ -51,19 +51,25 @@
       "type": "number",
       "default": 0.8,
       "patchLevel": "L1",
-      "description": "Min orb spawn interval."
+      "description": "Min orb spawn interval.",
+      "min": 0.4,
+      "max": 5
     },
     "orbSpawnMaxSec": {
       "type": "number",
       "default": 1.6,
       "patchLevel": "L1",
-      "description": "Max orb spawn interval."
+      "description": "Max orb spawn interval.",
+      "min": 0.4,
+      "max": 5
     },
     "failOverWarn": {
       "type": "integer",
       "default": 8,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob failOverWarn"
+      "description": "Lightweight cert knob failOverWarn",
+      "min": 1,
+      "max": 30
     },
     "allowQuit": {
       "type": "boolean",

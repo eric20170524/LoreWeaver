@@ -1,0 +1,190 @@
+{
+  "schemaVersion": "loreweaver.card-lab-acceptance-summary.v1",
+  "sourceRevisionNote": "build.revision identifies the checkout base; bundle file hashes identify the tested local working-tree payload, including not-yet-committed changes.",
+  "cards": [
+    {
+      "cardId": "reaction_pick",
+      "status": "passed",
+      "synthetic": true,
+      "releaseEligible": false,
+      "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+      "build": {
+        "revision": "ef67e68aae8b54e74f2949865575ca7ba97f77e8",
+        "cards": [
+          "dodge_counter_boss",
+          "rhythm_timing",
+          "drag_collect_grid",
+          "sequence_synthesis",
+          "turn_based_skill_battle",
+          "side_scrolling_brawler",
+          "survivor_horde",
+          "reaction_pick",
+          "energy_balance"
+        ],
+        "releaseEligible": false,
+        "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+        "files": [
+          {
+            "name": "index.html",
+            "sha256": "b5599d50f24e4fcaf7978e36f9f627db8665c1ad37923b262da730ddfd50cd17"
+          },
+          {
+            "name": "game.js",
+            "sha256": "fb945ca87cb6be2c2f6fd53b50ef7c52ccf8f799193eaad4bce175aabb0c4f2d"
+          },
+          {
+            "name": "game.js.LEGAL.txt",
+            "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+          },
+          {
+            "name": "LICENSE",
+            "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+          },
+          {
+            "name": "THIRD_PARTY_NOTICES.txt",
+            "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+          }
+        ]
+      },
+      "browser": "131.0.6778.33",
+      "finishedAt": "2026-09-21T12:51:42.121Z",
+      "sourceReport": "workflow/reports/card-lab/reaction_pick/browser-latest.json",
+      "cases": [
+        {
+          "id": "default-six-round-victory",
+          "passed": true,
+          "errors": [],
+          "inputActions": 6
+        },
+        {
+          "id": "previous-round-timeout-is-cancelled",
+          "passed": true,
+          "errors": [],
+          "inputActions": 2
+        },
+        {
+          "id": "wrong-option-failure",
+          "passed": true,
+          "errors": [],
+          "inputActions": 1
+        },
+        {
+          "id": "natural-timeout-failure",
+          "passed": true,
+          "errors": [],
+          "inputActions": 0
+        },
+        {
+          "id": "pause-resume-and-restart",
+          "passed": true,
+          "errors": [],
+          "inputActions": 2
+        },
+        {
+          "id": "invalid-time-range-does-not-start",
+          "passed": true,
+          "errors": [],
+          "inputActions": 1
+        },
+        {
+          "id": "mobile-touch-six-round-victory",
+          "passed": true,
+          "errors": [],
+          "inputActions": 6
+        },
+        {
+          "id": "offline-six-round-victory",
+          "passed": true,
+          "errors": [],
+          "inputActions": 6
+        }
+      ]
+    },
+    {
+      "cardId": "energy_balance",
+      "status": "passed",
+      "synthetic": true,
+      "releaseEligible": false,
+      "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+      "build": {
+        "revision": "ef67e68aae8b54e74f2949865575ca7ba97f77e8",
+        "cards": [
+          "dodge_counter_boss",
+          "rhythm_timing",
+          "drag_collect_grid",
+          "sequence_synthesis",
+          "turn_based_skill_battle",
+          "side_scrolling_brawler",
+          "survivor_horde",
+          "reaction_pick",
+          "energy_balance"
+        ],
+        "releaseEligible": false,
+        "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+        "files": [
+          {
+            "name": "index.html",
+            "sha256": "b5599d50f24e4fcaf7978e36f9f627db8665c1ad37923b262da730ddfd50cd17"
+          },
+          {
+            "name": "game.js",
+            "sha256": "fb945ca87cb6be2c2f6fd53b50ef7c52ccf8f799193eaad4bce175aabb0c4f2d"
+          },
+          {
+            "name": "game.js.LEGAL.txt",
+            "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+          },
+          {
+            "name": "LICENSE",
+            "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+          },
+          {
+            "name": "THIRD_PARTY_NOTICES.txt",
+            "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+          }
+        ]
+      },
+      "browser": "131.0.6778.33",
+      "finishedAt": "2026-09-21T12:53:26.578Z",
+      "sourceReport": "workflow/reports/card-lab/energy_balance/browser-latest.json",
+      "cases": [
+        {
+          "id": "default-stable-time-victory",
+          "passed": true,
+          "errors": [],
+          "inputActions": 5
+        },
+        {
+          "id": "wrong-direction-failure",
+          "passed": true,
+          "errors": [],
+          "inputActions": 3
+        },
+        {
+          "id": "no-input-does-not-win",
+          "passed": true,
+          "errors": [],
+          "inputActions": 0
+        },
+        {
+          "id": "outside-core-drop-and-pause-restart",
+          "passed": true,
+          "errors": [],
+          "inputActions": 2
+        },
+        {
+          "id": "mobile-touch-default-victory",
+          "passed": true,
+          "errors": [],
+          "inputActions": 4
+        },
+        {
+          "id": "offline-drag-and-retreat",
+          "passed": true,
+          "errors": [],
+          "inputActions": 1
+        }
+      ]
+    }
+  ]
+}

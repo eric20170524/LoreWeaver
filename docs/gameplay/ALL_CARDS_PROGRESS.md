@@ -32,4 +32,8 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 第八张 [reaction_pick](REACTION_PICK_CARD_LAB.md) 已接入：修复跨轮旧计时器扣机会、重复/过期选择、宿主提前结算风险，九项单测及八项真实输入场景通过。新卡参数表单复用独立 metadata，执行仍来自共享 core Adapter。
 
-继续推进其余 15 张：`energy_balance`、`observe_capture`、`drag_to_core`、`pressure_survival`、`rune_connect_sequence`、`branching_dialogue_check`、`shooter_duel`、`maze_exploration_choice`、`platform_escape`、`hazard_collect_waves`、`sequence_puzzle_combo`、`rhythm_then_pickup`、`qix_area_capture`、`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七、八张。
+第九张 [energy_balance](ENERGY_BALANCE_CARD_LAB.md) 已接入：修复默认静止平衡点自动通关、暂停输入、监听/文字泄漏及无限元素增长；八项单测、六项真实输入场景通过，包括鼠标和移动触控分别完成默认 20 秒目标。证据范围以各卡文档为准。
+
+第八、九张最后视觉调整后再次完整回归：17 项单测、14 个真实浏览器场景及 TypeScript 全部通过，390px 活跃游戏截图已核对。辨宝选项与目标文字、能量元素与拖拽命中范围放大，未改为自动作答。验收摘要及实际构建文件哈希见 [08/09 JSON](../reports/card_lab_08_09_2026-09-21.json)。本地报告的 revision 是构建时 checkout 基点，测试时包含未提交代码；报告文件哈希标识实际 payload，不能将基点 SHA 单独当成完全相同源树证明。
+
+继续推进其余 14 张：`observe_capture`、`drag_to_core`、`pressure_survival`、`rune_connect_sequence`、`branching_dialogue_check`、`shooter_duel`、`maze_exploration_choice`、`platform_escape`、`hazard_collect_waves`、`sequence_puzzle_combo`、`rhythm_then_pickup`、`qix_area_capture`、`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至九张。

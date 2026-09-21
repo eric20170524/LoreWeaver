@@ -87,10 +87,10 @@ export default class ReactionPickAdapter extends GameplayAdapter {
             fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
         this.ui.prompt = scene.add.text(width / 2, 234, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#fbbf24'
+            fontFamily: 'Inter, sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#fbbf24'
         }).setOrigin(0.5);
         this.ui.status = scene.add.text(width / 2, height - 110, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
+            fontFamily: 'Inter, sans-serif', fontSize: '18px', color: '#94a3b8'
         }).setOrigin(0.5);
 
         this.lifecycle.addCleanup(() => {
@@ -154,19 +154,19 @@ export default class ReactionPickAdapter extends GameplayAdapter {
         this.ui.prompt?.setText(`找出：${target.label}`).setColor('#fbbf24');
         const { width, height } = this.scene.scale;
         const cols = Math.min(3, pool.length);
-        const btnW = 100;
-        const gap = 16;
+        const btnW = 132;
+        const gap = 20;
         const totalW = cols * btnW + (cols - 1) * gap;
         pool.forEach((item, i) => {
             const col = i % cols;
             const row = Math.floor(i / cols);
             const x = (width - totalW) / 2 + btnW / 2 + col * (btnW + gap);
-            const y = height * 0.4 + row * 70;
-            const bg = this.scene.add.rectangle(x, y, btnW, 52, item.color, 0.9)
+            const y = height * 0.4 + row * 108;
+            const bg = this.scene.add.rectangle(x, y, btnW, 88, item.color, 0.9)
                 .setStrokeStyle(2, 0xffffff, 0.3)
                 .setInteractive({ useHandCursor: true });
             const label = this.scene.add.text(x, y, item.label, {
-                fontFamily: 'Inter, sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#0f172a'
+                fontFamily: 'Inter, sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#0f172a'
             }).setOrigin(0.5);
             bg.on('pointerdown', () => this.pick(item));
             this.options.push({ bg, label, item });
