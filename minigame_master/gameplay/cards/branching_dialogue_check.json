@@ -37,6 +37,20 @@
       "default": [],
       "patchLevel": "L2",
       "description": "Dialogue nodes with choices and requirements."
+    },
+    "realmStage": {
+      "type": "integer",
+      "default": 0,
+      "min": 0,
+      "max": 100,
+      "patchLevel": "L1",
+      "description": "Dialogue realm override; zero follows player stats."
+    },
+    "hasRelic": {
+      "type": "boolean",
+      "default": false,
+      "patchLevel": "L1",
+      "description": "Provide the has_relic story flag for this encounter."
     }
   },
   "patchPolicy": {

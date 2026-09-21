@@ -1,3 +1,4 @@
+import dialogueCard from '../../minigame_master/gameplay/cards/branching_dialogue_check.json';
 import runeCard from '../../minigame_master/gameplay/cards/rune_connect_sequence.json';
 import pressureCard from '../../minigame_master/gameplay/cards/pressure_survival.json';
 import dragCoreCard from '../../minigame_master/gameplay/cards/drag_to_core.json';
@@ -13,7 +14,7 @@ export type ExtraLabCard = {
   title: string;
   intro: string;
   fields: { key: string; label: string }[];
-  validate?: (knobs: Record<string, number>) => string | null;
+  validate?: (knobs: Record<string, any>) => string | null;
   goal: (knobs: any) => number;
   progress: (state: any) => string;
   health: (state: any) => number;
@@ -24,6 +25,14 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  branching_dialogue_check: {
+    card: dialogueCard, heading: '14 · 分支对话检定', title: '分支对话试炼',
+    intro: '阅读对话并点击选项。关键物品与阶段决定路线，灰色选项可进入提示的替代分支。好、普通结局均通过；坏结局失败。可配置初始好感、检定阶段和关键物品。',
+    fields: [ { key: 'startFavor', label: '初始好感' }, { key: 'realmStage', label: '检定阶段（0 跟随玩家）' }, { key: 'hasRelic', label: '持有关键物品' } ],
+    goal: () => 0, progress: state => state.ending || state.nodeId || 'start',
+    health: state => state.favor ?? 0, count: state => state.choicesMade ?? 0,
+    healthLabel: '好感', progressLabel: '对话节点', countLabel: '选择次数'
+  },
   rune_connect_sequence: {
     card: runeCard, heading: '13 · 顺序连线', title: '顺序连线试炼',
     intro: '按提示从蓝色起点拖向黄色终点后松手。默认完成七条连线获胜；起点或终点选错会消耗容错，六次失误失败。在空白处松手会取消连线。',

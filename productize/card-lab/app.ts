@@ -94,7 +94,7 @@ function focusGame() {
 function launch() {
   if (starting) return;
   const extra = extraLabCards[card.id];
-  const extraValues = Object.fromEntries(Object.entries(extraFields).map(([key, field]) => [key, Number(field.value)]));
+  const extraValues = Object.fromEntries(Object.entries(extraFields).map(([key, field]) => [key, field.type === 'checkbox' ? field.checked : Number(field.value)]));
   const firstExtraField = Object.values(extraFields)[0];
   firstExtraField?.setCustomValidity(extra?.validate?.(extraValues) || '');
   const rhythm = card.id === 'rhythm_timing';
@@ -281,7 +281,8 @@ function selectCard() {
     const knob = card.knobs[key];
     const caption = document.createElement('label'); caption.htmlFor = `knob-${key}`; caption.textContent = label;
     const field = document.createElement('input');
-    field.id = caption.htmlFor; field.type = 'number'; field.required = true;
+    field.id = caption.htmlFor; field.type = knob.type === 'boolean' ? 'checkbox' : 'number'; field.required = knob.type !== 'boolean';
+    if (knob.type === 'boolean') { field.checked = Boolean(knob.default); field.style.width = 'auto'; }
     field.value = String(knob.default); field.min = String(knob.min); field.max = String(knob.max);
     field.step = knob.type === 'integer' ? '1' : 'any';
     extraFields[key] = field; $('extra-config').append(caption, field);
