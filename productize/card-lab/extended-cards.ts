@@ -1,3 +1,4 @@
+import comboCard from '../../minigame_master/gameplay/cards/sequence_puzzle_combo.json';
 import hazardWavesCard from '../../minigame_master/gameplay/cards/hazard_collect_waves.json';
 import platformCard from '../../minigame_master/gameplay/cards/platform_escape.json';
 import mazeCard from '../../minigame_master/gameplay/cards/maze_exploration_choice.json';
@@ -29,6 +30,14 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  sequence_puzzle_combo: {
+    card: comboCard, heading: '19 · 顺序拼图组合', title: '顺序拼图试炼',
+    intro: '先观察黄色亮灯，演示结束后按顺序点击或按数字键。答错会重新演示。第二阶段把编号碎片拖到同号槽位；也可按数字键先选碎片，再选槽。拼错可重试，没有死亡或限时失败，可随时撤退。',
+    fields: [ { key: 'sequenceLength', label: '亮灯序列长度' }, { key: 'pieceCount', label: '拼图块数' } ],
+    goal: () => 100, progress: state => `${Math.floor(state.progress ?? 0)}%`,
+    health: state => state.phase ?? 1, count: state => state.mistakes ?? 0,
+    healthLabel: '阶段', progressLabel: '进度', countLabel: '失误'
+  },
   hazard_collect_waves: {
     card: hazardWavesCard, heading: '18 · 闪避采集波次', title: '闪避采集试炼',
     intro: '拖动或 WASD/方向键移动，避开黄色预警区。落雷后出现蓝色能量珠，点击或靠近即可采集并回复 3 生命。每波时间结束时检查数量，默认三波分别需要 4、5、6 颗；数量不足或生命耗尽失败。采集够后仍需等到本波结束。',
