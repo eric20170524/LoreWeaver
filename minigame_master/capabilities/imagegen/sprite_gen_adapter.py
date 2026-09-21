@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 UPSTREAM = "https://github.com/aldegad/sprite-gen"
-PIN = "ff57a644205b83387aa4d1e324eba9eefb257d7c"
-VERSION = "2.5.2"
+PIN = "eb941234bf2d7e5ea9d5f2f180494932a109b9de"
+VERSION = "2.5.3"
 
 
 class BridgeError(RuntimeError):
