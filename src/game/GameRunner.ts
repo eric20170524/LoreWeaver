@@ -244,9 +244,9 @@ export function initializePhaserGame(
       const titleText = this.add.text(width / 2, height / 2 - 220, String(bootKnobs.loadingLabel || "LORE WEAVER"), {
         fontFamily: "Inter, sans-serif",
         fontSize: "28px",
-        fontWeight: "bold",
+        fontStyle: "bold",
         color: spec.themeColor,
-        letterSpacing: "4"
+        letterSpacing: 4
       } as any).setOrigin(0.5);
 
       const subtitleText = this.add.text(width / 2, height / 2 + 190, String(
@@ -1046,9 +1046,9 @@ export function initializePhaserGame(
       this.add.text(width / 2, 140, `${this.node.title.toUpperCase()}`, {
         fontFamily: "Inter, sans-serif",
         fontSize: "24px",
-        style: "bold",
+        fontStyle: "bold",
         color: spec.themeColor,
-        letterSpacing: "1"
+        letterSpacing: 1
       } as any).setOrigin(0.5);
 
       // Lives and Target score indicators

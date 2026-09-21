@@ -811,6 +811,10 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         const context = this.createRuntimeContext();
         this.modifiers.forEach((modifier) => modifier.uninstall(context));
         this.lifecycle?.destroy();
+        // Phaser invalidates Group.children during scene shutdown. Diagnostics
+        // may still retain the ended adapter, so release scene-owned references.
+        this.groups = {};
+        this.player = null;
         this.runtimeEventListeners.clear();
         super.destroy();
     }

@@ -7,6 +7,7 @@ import collectCard from '../../minigame_master/gameplay/cards/drag_collect_grid.
 import sequenceCard from '../../minigame_master/gameplay/cards/sequence_synthesis.json';
 import turnBasedCard from '../../minigame_master/gameplay/cards/turn_based_skill_battle.json';
 import brawlerCard from '../../minigame_master/gameplay/cards/side_scrolling_brawler.json';
+import survivorCard from '../../minigame_master/gameplay/cards/survivor_horde.json';
 
 const cards = {
   dodge_counter_boss: dodgeCard,
@@ -14,7 +15,8 @@ const cards = {
   drag_collect_grid: collectCard,
   sequence_synthesis: sequenceCard,
   turn_based_skill_battle: turnBasedCard,
-  side_scrolling_brawler: brawlerCard
+  side_scrolling_brawler: brawlerCard,
+  survivor_horde: survivorCard
 };
 let card: any = cards[new URLSearchParams(location.search).get('card') as keyof typeof cards] || dodgeCard;
 
@@ -55,6 +57,8 @@ const snapshot = () => structuredClone({
   state: adapter?.getTestState?.() || null, result: lastResult,
   bossPosition: adapter?.boss ? { x: adapter.boss.x, y: adapter.boss.y } : null,
   playerPosition: adapter?.player ? { x: adapter.player.x, y: adapter.player.y } : null,
+  enemies: card.id === 'survivor_horde' ? (adapter?.groups?.enemies?.getChildren?.() || [])
+    .filter((enemy: any) => enemy.active).map((enemy: any) => ({ x: enemy.x, y: enemy.y })) : [],
   saves: structuredClone(saves), logs: logs.slice(-15),
   sceneKeys: runtime?.game.scene.getScenes(true).map(scene => scene.sys.settings.key) || []
 });
@@ -87,6 +91,7 @@ function launch() {
   const sequence = card.id === 'sequence_synthesis';
   const turnBased = card.id === 'turn_based_skill_battle';
   const brawler = card.id === 'side_scrolling_brawler';
+  const survivor = card.id === 'survivor_horde';
   const fields = [
     ...(brawler ? [] : [duration]),
     hp,
@@ -141,8 +146,8 @@ function launch() {
     runConfig.enemyAtk = Number(enemyAtk.value);
   }
 
-  const title = brawler ? '横版清图试炼' : turnBased ? '回合技能对决试炼' : sequence ? '顺序合成试炼' : collect ? '拖拽收集试炼' : rhythm ? '节奏共鸣试炼' : '闪避反击试炼';
-  const intro = brawler
+  const title = survivor ? '生存围攻试炼' : brawler ? '横版清图试炼' : turnBased ? '回合技能对决试炼' : sequence ? '顺序合成试炼' : collect ? '拖拽收集试炼' : rhythm ? '节奏共鸣试炼' : '闪避反击试炼';
+  const intro = survivor ? '按住拖动或点击选择移动目标，自动攻击附近敌人。撑到时间结束获胜，生命耗尽失败。' : brawler
     ? '推进到波次触发线后进入锁屏战斗。清空当前敌人才能继续前进；完成全部波次与终局 Boss 后结算胜利。'
     : turnBased
     ? '选择技能行动，敌方随后反击。技能冷却按完整玩家回合计算；击败敌人获胜，生命归零或总时限耗尽失败。'
@@ -150,8 +155,8 @@ function launch() {
     : collect ? '按住横向拖动，接绿珠、避红珠。收集达标获胜，超时或生命归零失败。'
     : rhythm ? '圆环重合时点击中心或按空格。进度与最佳连击均达标才成功。'
     : '按住拖动离开危险区。金色反击窗口出现时，点击红色 Boss 或按空格。每个窗口只接受一次反击。';
-  const taunt = brawler ? '推进、锁屏、清敌，再继续向前。' : turnBased ? '看清冷却，规划下一回合。' : sequence ? '看清配方，从左到右依次投入。' : collect ? '观察落点，及时走位。' : rhythm ? '听从节拍，看准圆环。' : '看清预警，再抓住反击窗口。';
-  const goalValue = Number(brawler ? 0 : turnBased ? runConfig.enemyHp : sequence ? 100 : collect ? runConfig.needAmount : rhythm ? runConfig.targetProgress : runConfig.breakGaugeMax);
+  const taunt = survivor ? '保持走位，撑到时间结束。' : brawler ? '推进、锁屏、清敌，再继续向前。' : turnBased ? '看清冷却，规划下一回合。' : sequence ? '看清配方，从左到右依次投入。' : collect ? '观察落点，及时走位。' : rhythm ? '听从节拍，看准圆环。' : '看清预警，再抓住反击窗口。';
+  const goalValue = Number((brawler || survivor) ? 0 : turnBased ? runConfig.enemyHp : sequence ? 100 : collect ? runConfig.needAmount : rhythm ? runConfig.targetProgress : runConfig.breakGaugeMax);
   const node = {
     id: 1, title, intro,
     taunts: [taunt], mechanics: card.id, rewards: '试验场完成记录',
@@ -227,7 +232,7 @@ const refresh = window.setInterval(() => {
       ? (state.timerSec == null ? '—' : `${Math.ceil(state.timerSec)}s`)
       : `${Math.ceil(state.timer ?? 0)}s`;
     $('health').textContent = String(state.hp ?? '—');
-    $('gauge').textContent = card.id === 'side_scrolling_brawler'
+    $('gauge').textContent = card.id === 'survivor_horde' ? String(state.score ?? 0) : card.id === 'side_scrolling_brawler'
       ? `${state.wavesCleared ?? 0}/${state.totalWaves ?? 0}`
       : card.id === 'turn_based_skill_battle'
       ? `${Math.ceil(state.enemyHp ?? 0)}/${runConfig?.enemyHp ?? '—'}`
@@ -237,7 +242,7 @@ const refresh = window.setInterval(() => {
       : card.id === 'drag_collect_grid' ? String(state.hazardsHit ?? 0)
       : card.id === 'sequence_synthesis' ? `${state.mistakes ?? 0} / ${state.resets ?? 0}`
       : card.id === 'turn_based_skill_battle' ? String(state.skillsUsed ?? 0)
-      : card.id === 'side_scrolling_brawler' ? String(state.kills ?? 0)
+      : ['side_scrolling_brawler', 'survivor_horde'].includes(card.id) ? String(state.kills ?? 0)
       : String(state.counters ?? 0);
   }
 }, 50);
@@ -251,6 +256,7 @@ function selectCard() {
   const sequence = card.id === 'sequence_synthesis';
   const turnBased = card.id === 'turn_based_skill_battle';
   const brawler = card.id === 'side_scrolling_brawler';
+  const survivor = card.id === 'survivor_horde';
   document.title = `玩法卡试验场 · ${brawler ? '横版清图' : turnBased ? '回合技能战斗' : sequence ? '顺序合成' : collect ? '拖拽收集' : rhythm ? '节奏点击' : '闪避反击'}`;
   $('heading').textContent = brawler ? '06 · 横版清图' : turnBased ? '05 · 回合制技能战斗' : sequence ? '04 · 顺序合成' : collect ? '03 · 拖拽收集' : rhythm ? '02 · 节奏点击' : '01 · 闪避反击 Boss';
   $('card-id').textContent = card.id;
@@ -267,6 +273,12 @@ function selectCard() {
     ? '<p>① 外圈收拢到白环时，点击中心或按空格。</p><p>② Perfect ±80ms 得10分；Good ±160ms 得5分。过早或漏拍扣生命并断连击，每拍只结算一次。</p><p>③ 进度和最佳连击同时达标才获胜。默认10次Perfect可完成；不是随意点击加分。</p>'
     : '<p>① 按住拖动青色角色，离开黄 / 红色危险区。</p><p>② 金圈亮起时，点击红色 Boss 或按空格。每个窗口仅一次。</p><p>③ 破势达到100或Boss血量归零获胜；生命耗尽或超时失败。</p>';
   $('duration-field').hidden = brawler;
+  if (survivor) {
+    document.title = '玩法卡试验场 · 生存围攻';
+    $('heading').textContent = '07 · 生存围攻';
+    $('subtitle').textContent = '走位、自动攻击，撑到倒计时结束';
+    $('instructions').textContent = '点击或按住拖动选择目标位置，角色自动向目标移动、攻击附近敌人。生存至时间结束获胜；生命耗尽失败。暂停时战斗和倒计时停止，可退出或重开。';
+  }
   duration.disabled = brawler;
   duration.required = !brawler;
   $('rhythm-config').hidden = !(rhythm || collect);
@@ -274,8 +286,8 @@ function selectCard() {
   $('collect-config').hidden = !collect;
   $('sequence-config').hidden = !sequence;
   $('turn-based-config').hidden = !turnBased;
-  $('progress-label').textContent = brawler ? '已清波次' : turnBased ? '敌方生命' : sequence ? '配方进度' : collect ? '已收集' : rhythm ? '进度' : '破势';
-  $('count-label').textContent = brawler ? '击杀数' : turnBased ? '已用技能' : sequence ? '错误 / 重置' : collect ? '受击次数' : rhythm ? '当前 / 最佳连击' : '反击次数';
+  $('progress-label').textContent = survivor ? '得分' : brawler ? '已清波次' : turnBased ? '敌方生命' : sequence ? '配方进度' : collect ? '已收集' : rhythm ? '进度' : '破势';
+  $('count-label').textContent = (survivor || brawler) ? '击杀数' : turnBased ? '已用技能' : sequence ? '错误 / 重置' : collect ? '受击次数' : rhythm ? '当前 / 最佳连击' : '反击次数';
   if (!brawler) {
     const durationKnob = card.knobs.durationSec || card.knobs.timeLimitSec;
     duration.value = String(durationKnob.default);

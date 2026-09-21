@@ -8,6 +8,17 @@ import SurvivorHordeAdapter, {
   SURVIVOR_HORDE_DEFAULT_CONFIG
 } from '../../minigame_master/core/lib/gameplay/survivor_horde/SurvivorHordeAdapter.js';
 import WeaponStanceCycleModifier from '../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/WeaponStanceCycleModifier.js';
+import DeterministicSurvivorHordeAdapter from '../../minigame_master/core/lib/gameplay/survivor_horde/DeterministicSurvivorHordeAdapter.js';
+
+test('observation remains readable after Phaser destroys scene-owned enemy groups', () => {
+  const adapter = new DeterministicSurvivorHordeAdapter();
+  adapter.init({ nodeConfig: {} });
+  adapter.groups.enemies = { getChildren() { throw new Error('Phaser group already destroyed'); } };
+  adapter.destroy();
+  const snapshot = adapter.getTestState();
+  assert.equal(snapshot.status, 'destroyed');
+  assert.equal(snapshot.determinism.adapterStateSample.enemyCount, 0);
+});
 
 function entity(x = 0, y = 0, values = {}) {
   const data = new Map(Object.entries(values));

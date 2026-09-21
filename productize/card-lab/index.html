@@ -13,7 +13,7 @@
 <body>
 <header><small>LOREWEAVER / GAMEPLAY LAB</small><h1 id="heading">玩法卡试验场</h1><p>直接试玩真实玩法适配器。跳过修炼与关卡解锁，不使用 API Key，不写入工作区存档。</p></header>
 <main class="layout">
-<section class="panel setup"><span class="badge">非 survivor 玩法样板</span><label for="card">选择玩法卡</label><select id="card"><option value="dodge_counter_boss">01 · 闪避反击 Boss</option><option value="rhythm_timing">02 · 节奏点击</option><option value="drag_collect_grid">03 · 拖拽收集</option><option value="sequence_synthesis">04 · 顺序合成</option><option value="turn_based_skill_battle">05 · 回合制技能战斗</option><option value="side_scrolling_brawler">06 · 横版清图</option></select><h2 id="subtitle" style="margin-top:12px">读招，然后反击</h2>
+<section class="panel setup"><span class="badge">独立玩法样板</span><label for="card">选择玩法卡</label><select id="card"><option value="dodge_counter_boss">01 · 闪避反击 Boss</option><option value="rhythm_timing">02 · 节奏点击</option><option value="drag_collect_grid">03 · 拖拽收集</option><option value="sequence_synthesis">04 · 顺序合成</option><option value="turn_based_skill_battle">05 · 回合制技能战斗</option><option value="side_scrolling_brawler">06 · 横版清图</option><option value="survivor_horde">07 · 生存围攻</option></select><h2 id="subtitle" style="margin-top:12px">读招，然后反击</h2>
 <div class="steps" id="instructions"><p>① 按住拖动青色角色，离开黄 / 红色危险区。</p><p>② 金圈亮起时，点击红色 Boss 或按 <kbd>空格</kbd>。每个窗口仅一次。</p><p>③ 破势达到 100，或 Boss 血量归零即胜利；生命耗尽或超时则失败。</p></div>
 <div id="duration-field"><label for="duration">总时限（秒）</label><input id="duration" type="number" value="90" min="5" max="3600" step="1"></div>
 <label for="hp">玩家生命</label><input id="hp" type="number" value="100" min="1" max="999999" step="1">
@@ -24,7 +24,7 @@
 <p class="muted" style="font-size:12px">参数只在开始新一局时应用。默认配置不加血、不加速、不自动通关。</p>
 <button id="start">开始 / 重新开始</button><div class="controls"><button id="pause" disabled>暂停</button><button id="quit" disabled>退出</button></div>
 <p class="muted" style="font-size:12px">程序化占位图形；不是正式美术或“零 bug”认证。默认静音。</p>
-<div class="next">已接入 6 张非 survivor 玩法卡。<br><span class="muted">每张都按“状态机回归 + 真实浏览器输入”进入试验场。</span></div>
+<div class="next">已接入 7 张玩法卡。<br><span class="muted">每张都按“状态机回归 + 真实浏览器输入”进入试验场。</span></div>
 </section>
 <section class="stage"><div class="stage-title"><span id="card-id">dodge_counter_boss</span><strong id="status" aria-live="polite">尚未开始</strong></div><div id="game"></div></section>
 <aside class="panel results"><h2>本次运行</h2><dl><div><dt>剩余</dt><dd id="timer">—</dd></div><div><dt>生命</dt><dd id="health">—</dd></div><div><dt id="progress-label">破势</dt><dd id="gauge">—</dd></div><div><dt id="count-label">反击次数</dt><dd id="counters">—</dd></div></dl>
