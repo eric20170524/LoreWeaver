@@ -103,6 +103,20 @@ test('a timer created before modifier installation executes the melee sweep', ()
   assert.equal(events(f.adapter, 'weapon-stance-attack').at(-1)?.hitCount, 1);
 });
 
+test('manual stance stays melee across the timer until the player toggles', () => {
+  const f = fixture({ knobs: { controlMode: 'manual' } });
+  const enemy = f.enemy({ hp: 20 });
+  f.tick();
+  assert.equal(f.adapter.groups.bullets.getChildren().length, 0);
+  f.adapter.state.elapsedSeconds = 6;
+  f.tick();
+  assert.equal(f.adapter.groups.bullets.getChildren().length, 0, 'elapsed time must not swap a manual stance');
+  assert.equal(enemy.getData('hp'), 12, 'two manual melee ticks should spend 4+4 before the toggle');
+  f.modifier.toggleStance({ adapter: f.adapter, events: { emit() {} } });
+  f.tick();
+  assert.equal(f.adapter.groups.bullets.getChildren().length, 2);
+});
+
 test('the same timer cycles melee -> ranged -> melee; ranged bullets deal real damage', () => {
   const f = fixture();
   const enemy = f.enemy({ hp: 12 });

@@ -120,10 +120,10 @@
 - [x] 产出项目 Design Seed / GDD v0.1。
 - [x] 产出首版 preset / manifest seed。
 - [x] 新增刀弓双态的可复用 runtime modifier。
-- [ ] 首个核心节点在 Emulator 中完成实际运行验证。
+- [x] 首个核心节点在 Emulator 中完成实际运行验证。
 - [ ] NodeResult 正常结算并回写成长。
-- [ ] 角色能力至少有一次可感知的跨局成长。
-- [ ] 通过基础 build/runtime gate。
+- [x] 角色能力至少有一次可感知的跨局成长。
+- [x] 通过基础 build/runtime gate。
 - [ ] 完成 Node 1–3 第一轮可玩复盘。
 
 ## 7. 暂不做

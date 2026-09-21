@@ -322,10 +322,16 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         this.groups.collectibles = scene.physics.add.group();
 
         this.lifecycle.addCleanup(() => {
-            Object.values(this.groups).forEach((group) => group?.clear?.(true, true));
+            Object.values(this.groups || {}).forEach((group) => {
+                try {
+                    if (group?.children) group.clear(true, true);
+                } catch {
+                    /* Phaser invalidates Group.children during scene shutdown. */
+                }
+            });
             this.playerAura?.destroy?.();
-            this.player?.destroy?.();
-            this.background?.destroy?.();
+            try { this.player?.destroy?.(); } catch { /* already destroyed with the scene */ }
+            try { this.background?.destroy?.(); } catch { /* already destroyed with the scene */ }
         });
 
         this.bindInput();
@@ -826,7 +832,8 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
     getPlayerVisualDesign() {
         const catalog = this.config.visuals?.characterDesignCatalog || [];
         return catalog.find((item) => item.role === 'player_character')
-            || catalog.find((item) => /player|hero|avatar|protagonist|main_?character|xing_?xiao/i.test(`${item.id || ''} ${item.name || ''}`))
+            || catalog.find((item) => item.role === 'player')
+            || catalog.find((item) => /player|hero|avatar|protagonist|main_?character/i.test(`${item.id || ''} ${item.name || ''}`))
             || null;
     }
 

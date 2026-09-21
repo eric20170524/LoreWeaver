@@ -66,28 +66,89 @@ try {
     const scale = await page.evaluate(() => ({ w: window.harness.game.scale.width, h: window.harness.game.scale.height }));
     await page.mouse.click(box.x + point.x / scale.w * box.width, box.y + point.y / scale.h * box.height);
   };
+  const startAuthoredNode = async (nodeId, adapterId) => {
+    await page.evaluate((id) => {
+      const h = window.harness;
+      const node = h.spec.nodes.find(item => item.id === id);
+      const host = h.game.scene.isActive('LevelActiveScene')
+        ? h.game.scene.keys.LevelActiveScene
+        : h.game.scene.keys.MainScene;
+      host.scene.start('LevelActiveScene', { node });
+    }, nodeId);
+    const isReady = (expected) => {
+      const adapter = window.harness.game.scene.keys.LevelActiveScene?.adapter;
+      const state = adapter?.getTestState?.() || {};
+      return adapter?.status === 'running' && (state.adapterId === expected || state.configId === expected);
+    };
+    for (let i = 0; i < 12; i++) {
+      if (await page.evaluate(isReady, adapterId)) break;
+      const size = await page.evaluate(() => ({ x: window.harness.game.scale.width / 2, y: window.harness.game.scale.height / 2 }));
+      await clickPoint(size);
+      await page.waitForTimeout(250);
+    }
+    await page.waitForFunction(isReady, adapterId, { timeout: 8000 });
+  };
   const perkPoint = await page.evaluate(() => window.harness.game.scene.keys.MainScene.activeUIPlugin.perkBtn.getCenter());
   await clickPoint(perkPoint);
   await page.waitForTimeout(100);
   const perkText = await text();
   assert.match(perkText, /疾风刀势/);
+  assert.match(perkText, /连珠箭/);
   assert.match(perkText, /规划中/);
   assert.doesNotMatch(perkText, /太古骨文|狻猊骨文/);
-  report.assertions.push('passive modal displays authored skills as planned, not purchasable combat upgrades');
+  report.assertions.push('passive modal still marks unimplemented skills as planned');
 
   await page.evaluate(() => {
-    const h = window.harness;
-    // Match the actual node-card handler: ScenePlugin.start stops MainScene.
-    // SceneManager.start alone leaves the old modal/input scene running above it.
-    h.game.scene.keys.MainScene.scene.start('LevelActiveScene', { node: h.spec.nodes.find(node => node.id === 2) });
+    const scene = window.harness.game.scene.keys.MainScene;
+    scene.state.mainCurrencyCount = 100;
+    scene.saveStateToStore();
   });
-  for (let i = 0; i < 12; i++) {
-    if (await page.evaluate(() => window.harness.game.scene.keys.LevelActiveScene?.adapter?.status === 'running')) break;
-    const size = await page.evaluate(() => ({ x: window.harness.game.scale.width / 2, y: window.harness.game.scale.height / 2 }));
-    await clickPoint(size);
-    await page.waitForTimeout(250);
-  }
-  await page.waitForFunction(() => window.harness.game.scene.keys.LevelActiveScene?.adapter?.status === 'running', null, { timeout: 5000 });
+  await clickPoint(await page.evaluate(() => {
+    const scene = window.harness.game.scene.keys.MainScene;
+    const walk = objects => objects.flatMap(object => [object, ...(object.list ? walk(object.list) : [])]);
+    const close = walk(scene.children.list).find(object => typeof object.text === 'string' && object.text.includes('关闭'));
+    return close.getCenter();
+  }));
+  await clickPoint(perkPoint);
+  await page.waitForTimeout(100);
+  const buyPoint = await page.evaluate(() => {
+    const scene = window.harness.game.scene.keys.MainScene;
+    const walk = objects => objects.flatMap(object => [object, ...(object.list ? walk(object.list) : [])]);
+    const action = walk(scene.children.list).find(object => typeof object.text === 'string' && /研习：20/.test(object.text));
+    return action.getCenter();
+  });
+  await clickPoint(buyPoint);
+  await page.waitForTimeout(100);
+  const ownedText = await text();
+  assert.match(ownedText, /已研习/);
+  assert.match(ownedText, /规划中/);
+  assert.equal(await page.evaluate(() => window.harness.game.scene.keys.MainScene.state.unlockedPassives.includes('blade_speed_1')), true);
+  assert.equal(await page.evaluate(() => window.harness.saves.at(-1).unlockedPassives.includes('blade_speed_1')), true);
+  report.assertions.push('疾风刀势 can be purchased into the save while 连珠箭 stays planned');
+
+  await startAuthoredNode(1, 'survivor_horde');
+  const stance = await page.evaluate(() => {
+    const adapter = window.harness.game.scene.keys.LevelActiveScene.adapter;
+    const modifier = adapter.modifiers.find(item => item.id === 'weapon_stance_cycle');
+    const before = modifier.getTestState();
+    const toggled = adapter.handleSemanticInput({ action: 'toggle_stance' });
+    return {
+      meleeDamage: modifier.config.meleeDamage,
+      controlMode: before.controlMode,
+      before: before.currentStance,
+      toggled,
+      after: modifier.getTestState().currentStance,
+      playerHp: adapter.state.hp
+    };
+  });
+  assert.equal(stance.controlMode, 'manual');
+  assert.equal(stance.meleeDamage, 5.75);
+  assert.equal(stance.toggled.accepted, true);
+  assert.equal(stance.before, 'melee');
+  assert.equal(stance.after, 'ranged');
+  report.assertions.push('purchased 疾风刀势 raises node 1 melee damage and stance toggles by player input');
+
+  await startAuthoredNode(2, 'dodge_counter_boss');
   const nodeState = await page.evaluate(() => {
     const h = window.harness;
     h.adapter = h.game.scene.keys.LevelActiveScene.adapter;

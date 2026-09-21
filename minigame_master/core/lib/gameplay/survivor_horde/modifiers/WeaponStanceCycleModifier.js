@@ -2,6 +2,8 @@ import GameplayModifier from '../../GameplayModifier.js';
 import RunGrowthMilestonesModifier from './RunGrowthMilestonesModifier.js';
 
 const DEFAULT_CONFIG = Object.freeze({
+    controlMode: 'timed',
+    initialStance: 'melee',
     meleeDurationSec: 5,
     rangedDurationSec: 5,
     meleeRadius: 92,
@@ -11,6 +13,11 @@ const DEFAULT_CONFIG = Object.freeze({
     rangedBurstCount: 2,
     rangedDamageMultiplier: 1,
     announceStance: true,
+    meleeLabel: 'MELEE',
+    rangedLabel: 'RANGED',
+    toggleHint: 'Q / SHIFT',
+    showToggleButton: true,
+    runGrowth: true,
     migrateLegacyFirstNodeGrowth: true
 });
 
@@ -56,14 +63,33 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
     constructor(config = {}) {
         super({ ...DEFAULT_CONFIG, ...config });
         this._originalFireAtNearestEnemy = null;
+        this._originalSemanticActions = null;
+        this._originalHandleSemanticInput = null;
         this._lastStance = null;
+        this._stance = this.normalizeStance(this.config.initialStance);
         this._runGrowth = null;
+        this._toggleButton = null;
+        this._boundToggle = null;
+    }
+
+    isManual() {
+        return String(this.config.controlMode || DEFAULT_CONFIG.controlMode).toLowerCase() === 'manual';
+    }
+
+    normalizeStance(value) {
+        return String(value || '').toLowerCase() === 'ranged' ? 'ranged' : 'melee';
     }
 
     install(context) {
         super.install(context);
         const adapter = context.adapter;
         this._originalFireAtNearestEnemy = adapter.fireAtNearestEnemy.bind(adapter);
+        this._originalSemanticActions = adapter.semanticActions?.bind(adapter);
+        this._originalHandleSemanticInput = adapter.handleSemanticInput?.bind(adapter);
+        this._boundToggle = (event) => {
+            if (event?.repeat) return;
+            this.toggleStance(context);
+        };
 
         adapter.fireAtNearestEnemy = () => {
             if (!adapter.isRunning()) return;
@@ -78,11 +104,27 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             this.performRangedBurst(context);
         };
 
-        // Compatibility bridge: GameRunner still contains a legacy, IP-specific
-        // first-node growth loop. When this reusable stance modifier is active on
-        // that node, migrate ownership to the manifest/modifier layer immediately
-        // so legacy skill names and mutations never reach the playable loop.
-        if (this.config.migrateLegacyFirstNodeGrowth !== false && context.scene?.runGrowthState?.enabled) {
+        adapter.semanticActions = () => {
+            const actions = this._originalSemanticActions ? this._originalSemanticActions() : [];
+            if (!actions.includes('toggle_stance')) actions.push('toggle_stance');
+            return actions;
+        };
+        adapter.handleSemanticInput = (payload = {}) => {
+            if (String(payload?.action || '').trim() === 'toggle_stance') {
+                return this.toggleStance(context);
+            }
+            if (this._originalHandleSemanticInput) {
+                return this._originalHandleSemanticInput(payload);
+            }
+            return { action: payload?.action, accepted: false };
+        };
+        adapter.toggleWeaponStance = () => this.toggleStance(context);
+
+        this.bindToggleInput(context);
+        this.mountToggleButton(context);
+        this.announceIfChanged(context, this._stance);
+
+        if (this.config.runGrowth !== false) {
             const growthConfig = this.config.runGrowth && typeof this.config.runGrowth === 'object'
                 ? { ...DEFAULT_STANCE_GROWTH, ...this.config.runGrowth }
                 : DEFAULT_STANCE_GROWTH;
@@ -92,16 +134,84 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         }
     }
 
+    bindToggleInput(context) {
+        const keyboard = context.scene?.input?.keyboard;
+        if (!keyboard || !this.isManual()) return;
+        const bind = (eventName) => {
+            if (context.lifecycle?.trackListener) {
+                context.lifecycle.trackListener(keyboard, eventName, this._boundToggle);
+                return;
+            }
+            if (typeof keyboard.on === 'function') keyboard.on(eventName, this._boundToggle);
+        };
+        bind('keydown-Q');
+        bind('keydown-SHIFT');
+    }
+
+    mountToggleButton(context) {
+        if (!this.isManual() || this.config.showToggleButton === false) return;
+        const scene = context.scene;
+        if (!scene?.add?.text) return;
+        const width = scene.scale?.width || 720;
+        const height = scene.scale?.height || 1280;
+        this._toggleButton = scene.add.text(width - 24, height * 0.58, this.toggleButtonLabel(), {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '16px',
+            fontStyle: 'bold',
+            color: '#fff7ed',
+            backgroundColor: 'rgba(15, 23, 42, 0.82)',
+            padding: { x: 10, y: 8 },
+            align: 'right'
+        });
+        this._toggleButton.setOrigin?.(1, 0.5);
+        this._toggleButton.setDepth?.(40);
+        this._toggleButton.setScrollFactor?.(0);
+        this._toggleButton.setInteractive?.({ useHandCursor: true });
+        this._toggleButton.on?.('pointerdown', (pointer) => {
+            pointer?.event?.stopPropagation?.();
+            this.toggleStance(context);
+        });
+        context.lifecycle?.addCleanup?.(() => {
+            this._toggleButton?.destroy?.();
+            this._toggleButton = null;
+        });
+    }
+
+    toggleButtonLabel() {
+        const stance = this._stance === 'ranged' ? this.config.rangedLabel : this.config.meleeLabel;
+        const hint = this.config.toggleHint ? `\n${this.config.toggleHint}` : '';
+        return `${stance}${hint}`;
+    }
+
+    refreshToggleButton() {
+        this._toggleButton?.setText?.(this.toggleButtonLabel());
+    }
+
+    toggleStance(context) {
+        if (!this.isManual()) {
+            return { action: 'toggle_stance', accepted: false, stance: this.resolveStance(context?.adapter?.state?.elapsedSeconds || 0) };
+        }
+        this._stance = this._stance === 'melee' ? 'ranged' : 'melee';
+        this.announceIfChanged(context, this._stance);
+        this.refreshToggleButton();
+        context?.adapter?.updateObservationState?.({
+            semanticAction: { action: 'toggle_stance', stance: this._stance }
+        });
+        return { action: 'toggle_stance', accepted: true, stance: this._stance };
+    }
+
     update(context, time, delta) {
         this._runGrowth?.update(context, time, delta);
     }
 
     resolveStance(elapsedSeconds) {
+        if (this.isManual()) return this._stance;
         const meleeDuration = clampPositive(this.config.meleeDurationSec, DEFAULT_CONFIG.meleeDurationSec);
         const rangedDuration = clampPositive(this.config.rangedDurationSec, DEFAULT_CONFIG.rangedDurationSec);
         const cycleDuration = meleeDuration + rangedDuration;
         const cursor = elapsedSeconds % cycleDuration;
-        return cursor < meleeDuration ? 'melee' : 'ranged';
+        this._stance = cursor < meleeDuration ? 'melee' : 'ranged';
+        return this._stance;
     }
 
     announceIfChanged(context, stance) {
@@ -112,7 +222,7 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         context.events?.emit?.('presentation', {
             kind: 'weapon-stance',
             stance,
-            label: stance === 'melee' ? 'MELEE' : 'RANGED'
+            label: stance === 'melee' ? this.config.meleeLabel : this.config.rangedLabel
         });
     }
 
@@ -198,10 +308,23 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
     uninstall(context) {
         this._runGrowth?.uninstall(context);
         this._runGrowth = null;
-        if (this._originalFireAtNearestEnemy && context?.adapter) {
-            context.adapter.fireAtNearestEnemy = this._originalFireAtNearestEnemy;
+        const adapter = context?.adapter;
+        if (this._originalFireAtNearestEnemy && adapter) {
+            adapter.fireAtNearestEnemy = this._originalFireAtNearestEnemy;
         }
+        if (this._originalSemanticActions && adapter) {
+            adapter.semanticActions = this._originalSemanticActions;
+        }
+        if (this._originalHandleSemanticInput && adapter) {
+            adapter.handleSemanticInput = this._originalHandleSemanticInput;
+        }
+        if (adapter) delete adapter.toggleWeaponStance;
+        this._toggleButton?.destroy?.();
+        this._toggleButton = null;
         this._originalFireAtNearestEnemy = null;
+        this._originalSemanticActions = null;
+        this._originalHandleSemanticInput = null;
+        this._boundToggle = null;
         this._lastStance = null;
         super.uninstall(context);
     }
@@ -209,7 +332,8 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
     getTestState() {
         return {
             ...super.getTestState(),
-            currentStance: this._lastStance,
+            controlMode: this.config.controlMode,
+            currentStance: this._lastStance || this._stance,
             meleeDurationSec: this.config.meleeDurationSec,
             rangedDurationSec: this.config.rangedDurationSec,
             runGrowth: this._runGrowth?.getTestState?.() || null

@@ -28,14 +28,76 @@ export function abilityRecorded(item: AbilitySpec, state: PlayerState): boolean 
 }
 
 type PurchaseStatus = 'available' | 'owned' | 'planned' | 'unsupported' | 'requires' | 'insufficient';
-const TARGETS = new Set(['clickPower', 'activeMultiplier']);
+const IDLE_TARGETS = new Set(['clickPower', 'activeMultiplier']);
+const COMBAT_TARGETS = new Set([
+  'player.hp',
+  'weapon_stance_cycle.meleeDamage',
+  'weapon_stance_cycle.meleeRadius',
+  'weapon_stance_cycle.rangedBurstCount',
+  'weapon_stance_cycle.rangedDamageMultiplier',
+  'adapter.weapon.bulletDamage'
+]);
 const OPS = new Set(['add', 'multiply', 'set']);
+
+export function isSupportedPassiveTarget(target: string): boolean {
+  return IDLE_TARGETS.has(target) || COMBAT_TARGETS.has(target);
+}
+
+export function applyNumericOp(before: number, op: string, value: number): number {
+  if (op === 'add') return before + value;
+  if (op === 'multiply') return before * value;
+  if (op === 'set') return value;
+  return before;
+}
+
+function ownedImplementedPassives(state: PlayerState, catalog: PassiveSkillSpec[] = []): PassiveSkillSpec[] {
+  const owned = new Set(state.unlockedPassives || []);
+  return catalog.filter((item) => owned.has(item.id) && item.runtimeStatus !== 'planned');
+}
+
+export function foldPassiveEffectsIntoKnobs(
+  modifierId: string,
+  knobs: Record<string, any>,
+  state: PlayerState,
+  catalog: PassiveSkillSpec[] = []
+): Record<string, any> {
+  const next = { ...knobs };
+  const prefixes = [`${modifierId}.`, `modifier.${modifierId}.`];
+  for (const item of ownedImplementedPassives(state, catalog)) {
+    for (const effect of item.effects || []) {
+      const target = String(effect.target || '');
+      const prefix = prefixes.find((entry) => target.startsWith(entry));
+      if (!prefix || !OPS.has(effect.op) || typeof effect.value !== 'number') continue;
+      const key = target.slice(prefix.length);
+      const before = Number(next[key]);
+      const after = applyNumericOp(Number.isFinite(before) ? before : 0, effect.op, effect.value);
+      if (Number.isFinite(after) && after >= 0) next[key] = after;
+    }
+  }
+  return next;
+}
+
+export function resolveCombatHp(
+  state: PlayerState,
+  catalog: PassiveSkillSpec[] = [],
+  baseHp = 100
+): number {
+  let hp = Number.isFinite(baseHp) && baseHp > 0 ? baseHp : 100;
+  for (const item of ownedImplementedPassives(state, catalog)) {
+    for (const effect of item.effects || []) {
+      if (effect.target !== 'player.hp' || !OPS.has(effect.op) || typeof effect.value !== 'number') continue;
+      const after = applyNumericOp(hp, effect.op, effect.value);
+      if (Number.isFinite(after) && after >= 0) hp = after;
+    }
+  }
+  return hp;
+}
 
 export function passivePurchaseStatus(item: PassiveSkillSpec, state: PlayerState): PurchaseStatus {
   // Old saves may have bought a planned skill. Never display that as implemented.
   if (item.runtimeStatus === 'planned') return 'planned';
   if (!Number.isFinite(item.cost) || item.cost < 0 || !Array.isArray(item.effects) || !item.effects.length) return 'unsupported';
-  if (item.effects.some(effect => !TARGETS.has(effect.target) || !OPS.has(effect.op)
+  if (item.effects.some(effect => !isSupportedPassiveTarget(effect.target) || !OPS.has(effect.op)
       || typeof effect.value !== 'number' || !Number.isFinite(effect.value))) return 'unsupported';
   if (state.unlockedPassives?.includes(item.id)) return 'owned';
   if (item.requires && !state.unlockedPassives?.includes(item.requires)) return 'requires';
@@ -48,9 +110,9 @@ export function purchasePassive(item: PassiveSkillSpec, state: PlayerState): boo
   if (passivePurchaseStatus(item, state) !== 'available') return false;
   const next: Record<string, number> = { clickPower: state.clickPower, activeMultiplier: state.activeMultiplier };
   for (const effect of item.effects) {
+    if (!IDLE_TARGETS.has(effect.target)) continue;
     const before = next[effect.target];
-    const value = effect.value as number;
-    const after = effect.op === 'add' ? before + value : effect.op === 'multiply' ? before * value : value;
+    const after = applyNumericOp(before, effect.op, effect.value as number);
     if (!Number.isFinite(after) || after < 0) return false;
     next[effect.target] = after;
   }

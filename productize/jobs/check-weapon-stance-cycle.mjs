@@ -73,6 +73,46 @@ const context = {
 modifier.install(context);
 assert.equal(legacyGrowth.enabled, false, 'legacy IP-specific first-node growth must be disabled');
 assert.match(hudText, /架势熟练/);
+assert.equal(modifier.toggleStance(context).accepted, false, 'timed mode ignores player toggle');
+
+const manual = createSurvivorHordeModifier({
+  id: 'weapon_stance_cycle',
+  knobs: { controlMode: 'manual', initialStance: 'melee', runGrowth: false }
+});
+assert.equal(manual.resolveStance(0), 'melee');
+assert.equal(manual.resolveStance(99), 'melee', 'manual mode must not follow the timer');
+manual.install({
+  ...context,
+  adapter: { ...adapter, fireAtNearestEnemy: () => {}, semanticActions: () => [], handleSemanticInput: () => ({}) },
+  scene: { ...context.scene, runGrowthState: { enabled: false }, add: {}, input: {} }
+});
+const toggled = manual.toggleStance(context);
+assert.equal(toggled.accepted, true);
+assert.equal(toggled.stance, 'ranged');
+assert.equal(manual.resolveStance(0), 'ranged');
+
+const growthOnly = createSurvivorHordeModifier({
+  id: 'weapon_stance_cycle',
+  knobs: { meleeDamage: 4, runGrowth: true }
+});
+growthOnly.install({
+  adapter: {
+    status: 'running',
+    state: { elapsedSeconds: 0, score: 0 },
+    config: { weapon: { bulletDamage: 2 } },
+    modifiers: [growthOnly],
+    isRunning: () => true,
+    fireAtNearestEnemy: () => {},
+    semanticActions: () => [],
+    handleSemanticInput: () => ({})
+  },
+  state: { elapsedSeconds: 0, score: 0 },
+  scene: { scale: { width: 1280, height: 720 }, add: {}, input: {} },
+  groups: {},
+  player: null,
+  events: { emit: () => {} }
+});
+assert.ok(growthOnly.getTestState().runGrowth, 'run growth must install without a legacy GameRunner loop');
 
 adapter.state.score = 4;
 modifier.update(context, 0, 16);

@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { GameSpec, PlayerState, AuditReport, GameplayAssignment, ManifestPatch, Locale } from "./types";
 import { startLoreWeaverRuntime } from "./runtime/LoreWeaverRuntimeKernel";
-import { INITIAL_PLAYER_STATE, normalizePlayerState } from "./runtime/playerState";
+import {
+  INITIAL_PLAYER_STATE,
+  clearStoredPlayerState,
+  readStoredPlayerState,
+  writeStoredPlayerState
+} from "./runtime/playerState";
 import { synth } from "./utils/AudioSynth";
 import { WorkspaceMeta } from "./components/WorkspaceSelector";
 import {
@@ -125,13 +130,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return null;
   });
   const [pendingPatch, setPendingPatch] = useState<ManifestPatch | null>(null);
-  const [playerState, setPlayerState] = useState<PlayerState>(() => {
-    const cached = localStorage.getItem("loreweaver_player_state");
-    if (cached) {
-      try { return normalizePlayerState(JSON.parse(cached)); } catch (e) { /* ignore */ }
-    }
-    return INITIAL_PLAYER_STATE;
-  });
+  const [playerState, setPlayerState] = useState<PlayerState>(() => readStoredPlayerState(localStorage));
 
   const [auditReport, setAuditReport] = useState<AuditReport | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
@@ -154,9 +153,8 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Sync to local storage
   const handleSaveState = (newState: PlayerState) => {
-    const normalizedState = normalizePlayerState(newState);
+    const normalizedState = writeStoredPlayerState(localStorage, newState, activeWorkspace?.id);
     setPlayerState(normalizedState);
-    localStorage.setItem("loreweaver_player_state", JSON.stringify(normalizedState));
   };
 
   // Add system console log trace
@@ -176,6 +174,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const handleLoadWorkspace = async (ws: WorkspaceMeta) => {
     setActiveWorkspace(ws);
+    setPlayerState(readStoredPlayerState(localStorage, ws.id));
     addLog(`📂 用户切换至隔离工作区：${ws.name}`);
     setThemeInput(ws.theme);
 
@@ -404,8 +403,7 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
        }
        if (currentJob.result && JSON.stringify(currentJob.result) !== JSON.stringify(gameSpec)) {
            setGameSpec(ensureGameplayManifest(currentJob.result));
-           localStorage.setItem("loreweaver_player_state", JSON.stringify(INITIAL_PLAYER_STATE));
-           setPlayerState(INITIAL_PLAYER_STATE);
+           setPlayerState(writeStoredPlayerState(localStorage, INITIAL_PLAYER_STATE, activeWorkspace?.id));
        }
        return;
     }
@@ -678,8 +676,8 @@ export const WorkbenchProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const handleResetProgress = () => {
-    localStorage.removeItem("loreweaver_player_state");
-    setPlayerState(INITIAL_PLAYER_STATE);
+    clearStoredPlayerState(localStorage, activeWorkspace?.id);
+    setPlayerState({ ...INITIAL_PLAYER_STATE });
     addLog("🧹 已成功重置所有本地数据库、清除修为积累并解锁第 1 关。");
     if (gameSpec) {
       restartGameInstance(gameSpec);

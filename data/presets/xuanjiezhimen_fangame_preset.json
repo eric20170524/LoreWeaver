@@ -123,7 +123,7 @@
       "treeTier": "T1",
       "cost": 20,
       "requires": null,
-      "runtimeStatus": "planned",
+      "runtimeStatus": "implemented",
       "effects": [{"target": "weapon_stance_cycle.meleeDamage", "op": "multiply", "value": 1.15}],
       "affectedRuntimeSkillIds": ["melee_sweep"],
       "description": "提高近战架势的清怪效率。"
@@ -257,7 +257,7 @@
         "adapter": "phaser",
         "cardId": "survivor_horde",
         "modifiers": [
-          {"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 4, "rangedDurationSec": 5, "meleeRadius": 96, "meleeDamage": 5, "meleeMaxTargets": 10, "rangedBurstCount": 2, "rangedDamageMultiplier": 1.0}},
+          {"id": "weapon_stance_cycle", "knobs": {"controlMode": "manual", "initialStance": "melee", "meleeLabel": "黑刀", "rangedLabel": "紫钢弓", "toggleHint": "Q / SHIFT", "meleeDurationSec": 4, "rangedDurationSec": 5, "meleeRadius": 96, "meleeDamage": 5, "meleeMaxTargets": 10, "rangedBurstCount": 2, "rangedDamageMultiplier": 1.0}},
           {"id": "horde_intensity", "knobs": {"spawnMultiplier": 2, "eliteChance": 0.12}},
           {"id": "arena_wave_boss", "knobs": {"totalWaves": 3, "interWaveDelayMs": 1800}}
         ],
@@ -319,7 +319,7 @@
         "adapter": "phaser",
         "cardId": "survivor_horde",
         "modifiers": [
-          {"id": "weapon_stance_cycle", "knobs": {"meleeDurationSec": 5, "rangedDurationSec": 4, "meleeRadius": 102, "meleeDamage": 6, "rangedBurstCount": 2}},
+          {"id": "weapon_stance_cycle", "knobs": {"controlMode": "manual", "initialStance": "melee", "meleeLabel": "黑刀", "rangedLabel": "紫钢弓", "toggleHint": "Q / SHIFT", "meleeDurationSec": 5, "rangedDurationSec": 4, "meleeRadius": 102, "meleeDamage": 6, "rangedBurstCount": 2}},
           {"id": "hazard_telegraph", "knobs": {"warningMs": 900, "activeMs": 260, "damage": 16, "shape": "circle"}},
           {"id": "boss_phases", "knobs": {"phaseThresholds": [0.66, 0.33], "phaseAnnouncement": true}}
         ],

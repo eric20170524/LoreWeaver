@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cultivationView, abilityRecorded, passivePurchaseStatus, purchasePassive } from '../../src/game/ui/cultivationModel.ts';
+import {
+  cultivationView, abilityRecorded, passivePurchaseStatus, purchasePassive,
+  foldPassiveEffectsIntoKnobs, resolveCombatHp
+} from '../../src/game/ui/cultivationModel.ts';
 
 const state = (): any => ({ mainCurrencyCount: 500, currentRealmIndex: 3, clickPower: 2, activeMultiplier: 1,
   unlockedAbilities: ['foreign_ability'], unlockedPassives: [], unlockedNodeIds: [1], completedNodeIds: [], secondaryResources: {} });
@@ -41,12 +44,47 @@ test('planned skills cannot spend currency, including already purchased legacy I
   s.unlockedPassives.push('train');
   assert.equal(passivePurchaseStatus(planned, s), 'planned');
 });
-test('unsupported combat effects cannot charge for a no-op or partial effect', () => {
+test('unknown effect targets cannot charge for a no-op or partial effect', () => {
   const s = state();
-  const unsupported = { ...skill, effects: [...skill.effects, { target: 'weapon_stance_cycle.meleeDamage', op: 'multiply', value: 2 }] };
+  const unsupported = { ...skill, effects: [...skill.effects, { target: 'not_a_runtime_stat', op: 'multiply', value: 2 }] };
   const before = structuredClone(s);
   assert.equal(purchasePassive(unsupported, s), false);
   assert.deepEqual(s, before);
+});
+test('implemented combat passives spend once and fold into stance knobs', () => {
+  const s = state();
+  const blade = {
+    id: 'blade_speed_1', name: '疾风刀势', cost: 20, runtimeStatus: 'implemented',
+    effects: [{ target: 'weapon_stance_cycle.meleeDamage', op: 'multiply', value: 1.15 }]
+  };
+  assert.equal(passivePurchaseStatus(blade, s), 'available');
+  assert.equal(purchasePassive(blade, s), true);
+  assert.equal(s.mainCurrencyCount, 480);
+  assert.equal(s.clickPower, 2);
+  assert.deepEqual(s.unlockedPassives, ['blade_speed_1']);
+  assert.equal(foldPassiveEffectsIntoKnobs('weapon_stance_cycle', { meleeDamage: 5 }, s, [blade]).meleeDamage, 5.75);
+  assert.equal(purchasePassive(blade, s), false);
+});
+test('planned combat passives stay inert even if a legacy save already owns them', () => {
+  const s = state();
+  s.unlockedPassives = ['bow_burst_1'];
+  const bow = {
+    id: 'bow_burst_1', runtimeStatus: 'planned',
+    effects: [{ target: 'weapon_stance_cycle.rangedBurstCount', op: 'add', value: 1 }]
+  };
+  assert.equal(passivePurchaseStatus(bow, s), 'planned');
+  assert.equal(foldPassiveEffectsIntoKnobs('weapon_stance_cycle', { rangedBurstCount: 2 }, s, [bow]).rangedBurstCount, 2);
+});
+test('player.hp passives change the node payload hp and leave idle stats alone', () => {
+  const s = state();
+  const toughness = {
+    id: 'bloodline_toughness', cost: 60, runtimeStatus: 'implemented',
+    effects: [{ target: 'player.hp', op: 'multiply', value: 1.2 }]
+  };
+  s.mainCurrencyCount = 60;
+  assert.equal(purchasePassive(toughness, s), true);
+  assert.equal(s.activeMultiplier, 1);
+  assert.equal(resolveCombatHp(s, [toughness], 120), 144);
 });
 test('purchases apply multiply/set/add correctly and remain idempotent', () => {
   const s = state();

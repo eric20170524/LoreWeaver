@@ -33,7 +33,7 @@ jobs:
       - name: Existing behavioral baseline
         run: |
           node --test productize/jobs/check-survivor-combat-runtime.mjs productize/jobs/check-dodge-counter-runtime.mjs
-          npx tsx --test productize/jobs/check-cultivation-model.ts
+          npx tsx --test productize/jobs/check-cultivation-model.ts productize/jobs/check-player-state.ts
       - name: Reproducible source diagnostic bundle
         if: always()
         run: |

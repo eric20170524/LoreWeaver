@@ -6,11 +6,15 @@ on:
       - 'src/game/**'
       - 'src/runtime/**'
       - 'minigame_master/core/lib/gameplay/dodge_counter_boss/**'
+      - 'minigame_master/core/lib/gameplay/survivor_horde/**'
       - 'minigame_master/core/lib/gameplay/GameplayAdapter.js'
       - 'minigame_master/core/lib/contracts/**'
+      - 'src/store.tsx'
+      - 'src/runtime/playerState.ts'
       - 'data/presets/xuanjiezhimen_fangame_preset.json'
       - 'productize/jobs/check-dodge-counter-runtime.mjs'
       - 'productize/jobs/check-cultivation-model.ts'
+      - 'productize/jobs/check-player-state.ts'
       - 'productize/jobs/run-xuanjie-local-play-e2e.mjs'
       - '.github/workflows/fangame-local-play-regression.yml'
   workflow_dispatch:
@@ -34,7 +38,7 @@ jobs:
       - name: Combat and cultivation transaction regressions
         run: |
           node --test productize/jobs/check-dodge-counter-runtime.mjs
-          npx tsx --test productize/jobs/check-cultivation-model.ts
+          npx tsx --test productize/jobs/check-cultivation-model.ts productize/jobs/check-player-state.ts
       - name: Install browser
         run: npx playwright install --with-deps chromium
       - name: Actual RuntimeKernel node 2 and cultivation UI

@@ -56,4 +56,4 @@ node productize/jobs/run-xuanjie-local-play-e2e.mjs
 
 前三关自然连续流程、旧 Golden Candidate loading 阻塞、白猿变身、跨局战斗被动落地及完整长期养成仍不在本轮验收声明内。
 
-store.tsx 仍使用全局 `loreweaver_player_state` 存储键；本轮不删除或迁移已有进度。跨工作区状态隔离仍是独立风险，不能把 UI 去旧主题误报为存档隔离已完成。
+存档键已改为 `loreweaver_player_state_${workspaceId}`（无工作区时回退旧全局键）。切换工作区读取对应存档，缺失则用初始状态，不把全局旧档迁入新项目。详见 `src/runtime/playerState.ts`。
