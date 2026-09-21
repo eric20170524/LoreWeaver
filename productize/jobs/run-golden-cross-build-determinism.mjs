@@ -21,6 +21,7 @@ const WORKSPACE = path.join(ROOT, WORKSPACE_REL);
 const SEED = "golden-survivor-cross-build-v2";
 const ADVANCE_FRAMES = 120;
 const REQUIRED_BROWSERS = ["chromium", "firefox"];
+const HEADLESS = process.env.DETERMINISM_HEADED !== "1";
 const PROJECTION_PATHS = [
   "hp",
   "score",
@@ -252,7 +253,7 @@ async function executeBuild(playwright, browserName, build) {
   const errors = [];
   const requests = [];
   try {
-    browser = await browserType.launch({ headless: true });
+    browser = await browserType.launch({ headless: HEADLESS });
     const browserVersion = browser.version();
     page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
     page.on("requestfailed", (request) => requests.push({ url: request.url(), error: request.failure()?.errorText }));
@@ -427,6 +428,18 @@ function compactComparison(comparison, extra, runs) {
 }
 
 async function main() {
+  // Linux Firefox needs an X display for this WebGL runtime. Re-enter the same
+  // verification under Xvfb (installed by Playwright --with-deps), without
+  // changing gameplay or requiring CI workflow permissions.
+  if (process.platform === "linux" && !process.env.DISPLAY) {
+    const result = spawnSync("xvfb-run", ["-a", process.execPath, ...process.argv.slice(1)], {
+      cwd: ROOT,
+      env: { ...process.env, DETERMINISM_HEADED: "1", LIBGL_ALWAYS_SOFTWARE: "1" },
+      stdio: "inherit"
+    });
+    if (result.error) fail("xvfb_launch_failed", { error: result.error.message });
+    process.exit(result.status ?? 2);
+  }
   if (!fs.existsSync(WORKSPACE)) fail("golden_workspace_missing_run_golden_candidate_first");
   let playwright;
   try { playwright = await import("playwright"); }
@@ -524,7 +537,7 @@ async function main() {
     synthetic: false,
     stale: false,
     freshness: "fresh",
-    headless: true,
+    headless: HEADLESS,
     releaseEligible: false,
     waivers: [],
     runtimeAuthority: "LoreWeaverRuntimeKernel",

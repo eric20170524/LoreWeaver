@@ -16,6 +16,8 @@
 
 TypeScript、RuntimeObservation、RuntimeDeterminism、16 项 Survivor combat 单测、通用 current-workspace Candidate 浏览器验证均通过。Action Boss alignment 原脚本在暂停状态发送反击，被正确拒绝；改为同一同步 evaluate 内先 resume 再输入，未改变暂停时禁止攻击的运行时规则，两次独立浏览器会话回归通过。
 
+云端 run `35589426870` 的新增失败现场确认原启动故障：Firefox/build-a 页面明确显示 `Cannot create WebGL context, aborting.`，gamePresent=false、specPresent=true，无网络错误。CI 改用 Xvfb + Mesa 软件 GL 的有显示 Firefox/Chromium，会在报告中如实记录 headless=false；没有更换 gameplay runtime 或缩减浏览器矩阵。该 CI 配置仍待云端运行验证。
+
 ## 全库范围与后续验收
 
 范围为 cards 目录中的 23 张顶层卡（含 iframe 容器卡），不凭卡片 `status` 标签认定本轮完成。前六张有 Card Lab 真实输入套件；Survivor 有 Golden Candidate、独立 demo 和 replay 套件。其余卡逐一核对参数、真实操作、胜败/退出、暂停/重开、移动输入和离线构建；不把只启动成功当完整验收。
