@@ -1,3 +1,4 @@
+import runeCard from '../../minigame_master/gameplay/cards/rune_connect_sequence.json';
 import pressureCard from '../../minigame_master/gameplay/cards/pressure_survival.json';
 import dragCoreCard from '../../minigame_master/gameplay/cards/drag_to_core.json';
 import observeCard from '../../minigame_master/gameplay/cards/observe_capture.json';
@@ -23,6 +24,15 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  rune_connect_sequence: {
+    card: runeCard, heading: '13 · 顺序连线', title: '顺序连线试炼',
+    intro: '按提示从蓝色起点拖向黄色终点后松手。默认完成七条连线获胜；起点或终点选错会消耗容错，六次失误失败。在空白处松手会取消连线。',
+    fields: [ { key: 'runeCount', label: '符文数量' }, { key: 'snapRadius', label: '吸附半径' }, { key: 'maxMistakes', label: '失误上限' } ],
+    goal: knobs => (knobs.runeCount - 1) * 10,
+    progress: state => `${state.stepIndex ?? 0}/${state.linksNeeded ?? 7}`,
+    health: state => Math.max(0, state.maxMistakes - state.mistakes), count: state => state.mistakes ?? 0,
+    healthLabel: '容错', progressLabel: '完成连线', countLabel: '失误'
+  },
   pressure_survival: {
     card: pressureCard, heading: '12 · 极限抗压', title: '极限抗压试炼',
     intro: '坚持到倒计时结束。点击画面减压，紫色目标提供额外减压；右下角“强压”立即减压，并暂时降低压力增长、增强点击效果。压力满格即失败。',

@@ -36,7 +36,7 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 第八、九张最后视觉调整后再次完整回归：17 项单测、14 个真实浏览器场景及 TypeScript 全部通过，390px 活跃游戏截图已核对。辨宝选项与目标文字、能量元素与拖拽命中范围放大，未改为自动作答。验收摘要及实际构建文件哈希见 [08/09 JSON](../reports/card_lab_08_09_2026-09-21.json)。本地报告的 revision 是构建时 checkout 基点，测试时包含未提交代码；报告文件哈希标识实际 payload，不能将基点 SHA 单独当成完全相同源树证明。
 
-继续推进其余 11 张：`rune_connect_sequence`、`branching_dialogue_check`、`shooter_duel`、`maze_exploration_choice`、`platform_escape`、`hazard_collect_waves`、`sequence_puzzle_combo`、`rhythm_then_pickup`、`qix_area_capture`、`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至十二张。
+继续推进其余 10 张：`branching_dialogue_check`、`shooter_duel`、`maze_exploration_choice`、`platform_escape`、`hazard_collect_waves`、`sequence_puzzle_combo`、`rhythm_then_pickup`、`qix_area_capture`、`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至十三张。
 
 
 第十张 [observe_capture](OBSERVE_CAPTURE_CARD_LAB.md) 已通过八项状态机回归及六场景真实浏览器验收：默认五次捕捉获胜、误点/错过窗口、暂停/恢复/三次重开、自定义目标、移动触屏和离线通关。修复重复点击判定、挂机通关、暂停误点和结算清理；TypeScript 通过，390px 活跃画面已核对。[证据摘要](../reports/card_lab_10_2026-09-21.json) 保存实际构建哈希。其失败设计只有撤退，不宣称验证了不存在的自然死亡。本次构建包含工作区并行养成改动，不将基点 revision 当成干净提交的证明。
@@ -52,4 +52,6 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 `969d10f` 八项远端 workflow 全绿，包括 Golden Candidate `35604940230` 和 Card Lab `35604940125`。新卡的本地工程验证与既有云端六卡矩阵覆盖范围继续分别记录。
 
-下一张 `rune_connect_sequence` 初步检查：onUp/onMove 缺少运行状态检查、输入监听未登记清理、wrongLinkPenalty 没有使用、目标进度与宿主分数须核对、runSeed=0 被替换为当前时间。尚未修复或验收。
+第十三张 [rune_connect_sequence](RUNE_CONNECT_SEQUENCE_CARD_LAB.md) 已完成：修复暂停/画布外释放残留、监听器清理、错误惩罚、目标进度与 seed 0。七项单测、六个真实浏览器场景和 TypeScript 通过，包括默认七连胜利、错误起点/终点失败、暂停/三次重开、16 符文及最大吸附半径、390px 触控和离线通关。移动画面已核对。[验收 JSON](../reports/card_lab_13_2026-09-21.json) 保存实际构建哈希，保留 runtime_ready 标记。
+
+`e67719f` 八项远端 workflow 全部通过，包括 Golden Candidate `35605746649` 和 Card Lab `35605746792`。下一张继续 `branching_dialogue_check`，尚未进行本轮验收。

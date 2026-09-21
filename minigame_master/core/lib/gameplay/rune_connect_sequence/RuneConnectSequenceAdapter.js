@@ -17,9 +17,9 @@ function mergeConfig(base, patch) {
 }
 
 function seededRandom(seed) {
-    let s = Number(seed) || 1;
+    let s = Number(seed) >>> 0;
     return () => {
-        s = (s * 1664525 + 1013904223) % 4294967296;
+        s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
         return s / 4294967296;
     };
 }
@@ -30,6 +30,7 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
         this.lifecycle = null;
         this.config = { ...DEFAULT_CONFIG };
         this.Phaser = context.Phaser || (typeof globalThis !== 'undefined' ? globalThis.Phaser : null);
+        this.connectOrder = [];
         this.runes = [];
         this.links = [];
         this.lineGfx = null;
@@ -49,15 +50,17 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
         super.init(payload);
         const knobs = payload.nodeConfig?.gameplay?.knobs || payload.nodeConfig?.knobs || {};
         this.config = mergeConfig(DEFAULT_CONFIG, { ...(payload.nodeConfig?.gameplay || {}), ...knobs });
-        this.config.runeCount = Math.max(3, Number(this.config.runeCount || knobs.RUNE_COUNT || 8));
-        this.config.snapRadius = Number(this.config.snapRadius || 36);
-        this.config.maxMistakes = Number(this.config.maxMistakes || 6);
+        if (knobs.runeCount === undefined && knobs.RUNE_COUNT !== undefined) this.config.runeCount = knobs.RUNE_COUNT;
+        for (const [key, min, max] of [['runeCount', 3, 16], ['snapRadius', 24, 60], ['maxMistakes', 1, 30], ['wrongLinkPenalty', 1, 10]]) {
+            const value = Number(this.config[key]);
+            this.config[key] = Math.round(Math.max(min, Math.min(max, Number.isFinite(value) ? value : DEFAULT_CONFIG[key])));
+        }
         this.state.stepIndex = 0;
         this.state.mistakes = 0;
         this.state.elapsedSec = 0;
         this.state.hp = payload.playerStats?.hp || 100;
         this.state.score = 0;
-        this._rng = seededRandom(payload.runSeed || Date.now() % 100000);
+        this._rng = seededRandom(payload.runSeed ?? 1);
         return this;
     }
 
@@ -68,23 +71,26 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
         this.lifecycle.start();
         const { width, height } = scene.scale;
 
-        this.ui.title = scene.add.text(width / 2, 40, '顺序连线', {
-            fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
+        this.ui.title = scene.add.text(width / 2, 188, '顺序连线', {
+            fontFamily: 'Inter, sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
-        this.ui.hint = scene.add.text(width / 2, 68, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#fbbf24'
+        this.ui.hint = scene.add.text(width / 2, 234, '', {
+            fontFamily: 'Inter, sans-serif', fontSize: '24px', color: '#fbbf24'
         }).setOrigin(0.5);
-        this.ui.status = scene.add.text(width / 2, height - 36, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
+        this.ui.status = scene.add.text(width / 2, height - 110, '', {
+            fontFamily: 'Inter, sans-serif', fontSize: '24px', color: '#94a3b8'
         }).setOrigin(0.5);
 
+        this.ui.feedback = scene.add.text(width / 2, 278, '', { fontSize: '22px', color: '#f87171' }).setOrigin(0.5);
         this.lineGfx = scene.add.graphics().setDepth(1);
         this.previewLine = scene.add.graphics().setDepth(2);
         this.layoutRunes(width, height);
 
-        scene.input.on('pointerdown', (p) => this.onDown(p));
-        scene.input.on('pointermove', (p) => this.onMove(p));
-        scene.input.on('pointerup', (p) => this.onUp(p));
+        this.lifecycle.trackListener(scene.input, 'pointerdown', (p) => this.onDown(p));
+        this.lifecycle.trackListener(scene.input, 'pointermove', (p) => this.onMove(p));
+        this.lifecycle.trackListener(scene.input, 'pointerup', (p) => this.onUp(p));
+
+        this.lifecycle.trackListener(scene.input, 'pointerupoutside', () => this.cancelDrag());
 
         this.lifecycle.trackTimer(scene.time.addEvent({
             delay: 1000, loop: true,
@@ -96,6 +102,12 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
             this.lineGfx?.destroy();
             this.previewLine?.destroy();
             Object.values(this.ui).forEach((n) => n?.destroy?.());
+            this.runes = [];
+            this.links = [];
+            this.ui = {};
+            this.dragFrom = null;
+            this.lineGfx = null;
+            this.previewLine = null;
         });
 
         this.refreshHud();
@@ -121,12 +133,12 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
             const angle = -Math.PI / 2 + (i / n) * Math.PI * 2;
             const x = cx + Math.cos(angle) * rx;
             const y = cy + Math.sin(angle) * ry;
-            const circle = this.scene.add.circle(x, y, 22, 0x312e81, 0.95)
+            const circle = this.scene.add.circle(x, y, 32, 0x312e81, 0.95)
                 .setStrokeStyle(2, 0xa78bfa, 0.9)
                 .setDepth(5)
                 .setInteractive({ useHandCursor: true });
             const label = this.scene.add.text(x, y, String(i + 1), {
-                fontFamily: 'Inter, sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#e2e8f0'
+                fontFamily: 'Inter, sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#e2e8f0'
             }).setOrigin(0.5).setDepth(6);
             return { index: i, x, y, circle, label, linked: false };
         });
@@ -148,12 +160,14 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
 
     hitRune(x, y) {
         const r = this.config.snapRadius;
-        return this.runes.find((rune) => Math.hypot(rune.x - x, rune.y - y) <= r) || null;
+        return this.runes.filter(rune => Math.hypot(rune.x - x, rune.y - y) <= r)
+            .sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0] || null;
     }
 
     onDown(pointer) {
         if (!this.isRunning()) return;
         if (this.state.stepIndex >= this.linksNeeded()) return;
+        this.cancelDrag();
         const rune = this.hitRune(pointer.x, pointer.y);
         if (!rune) return;
         // Drag must start from the current sequence node
@@ -165,14 +179,14 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
     }
 
     onMove(pointer) {
-        if (!this.dragFrom) return;
+        if (!this.isRunning() || !pointer.isDown || !this.dragFrom) return;
         this.previewLine.clear();
         this.previewLine.lineStyle(3, 0x38bdf8, 0.7);
         this.previewLine.lineBetween(this.dragFrom.x, this.dragFrom.y, pointer.x, pointer.y);
     }
 
     onUp(pointer) {
-        if (!this.dragFrom) return;
+        if (!this.isRunning() || !this.dragFrom) return;
         this.previewLine.clear();
         const target = this.hitRune(pointer.x, pointer.y);
         const requiredTo = this.requiredToIndex();
@@ -185,14 +199,16 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
             this.drawLinks();
             this.dragFrom.circle.setFillStyle(0x7c3aed, 1);
             target.circle.setFillStyle(0x7c3aed, 1);
+            this.ui.feedback?.setText('');
             this.state.stepIndex += 1;
             this.state.score += 10;
             this.context.spawnParticles?.(target.x, target.y, 0xa78bfa);
             if (this.state.stepIndex >= this.linksNeeded()) {
-                this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
+                return this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
             }
         } else {
             this.registerMistake('连线顺序错误');
+            if (!this.isRunning()) return;
         }
         this.dragFrom = null;
         this.refreshHud();
@@ -200,8 +216,11 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
     }
 
     registerMistake(msg) {
-        this.state.mistakes += 1;
-        this.ui.hint?.setText(`反噬：${msg}`).setColor('#f87171');
+        if (!this.isRunning()) return;
+        this.state.mistakes = Math.min(this.config.maxMistakes, this.state.mistakes + this.config.wrongLinkPenalty);
+        this.ui.feedback?.setText(`反噬：${msg}`);
+        this.refreshHud();
+        this.publishTestState();
         this.scene.cameras.main.shake(100, 0.01);
         if (this.state.mistakes >= this.config.maxMistakes) {
             this.finish(false, NODE_RESULT_REASONS.CONDITION_FAILED);
@@ -235,6 +254,7 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
 
     getTestState() {
         return {
+            ...super.getTestState(),
             adapter: 'RuneConnectSequenceAdapter',
             status: this.status,
             hp: this.state.hp,
@@ -242,6 +262,13 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
             stepIndex: this.state.stepIndex,
             runeCount: this.config.runeCount,
             mistakes: this.state.mistakes,
+            maxMistakes: this.config.maxMistakes,
+            goalValue: (this.config.runeCount - 1) * 10,
+            linksNeeded: this.config.runeCount - 1,
+            requiredFrom: this.requiredFromIndex(),
+            requiredTo: this.requiredToIndex(),
+            runes: this.runes.map(r => ({ index: r.index, x: r.x, y: r.y })),
+            elapsedSec: this.state.elapsedSec,
             lastResult: this.result
         };
     }
@@ -268,9 +295,11 @@ export default class RuneConnectSequenceAdapter extends GameplayAdapter {
         return result;
     }
 
-    retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
+    cancelDrag() { this.dragFrom = null; this.previewLine?.clear(); }
+    pause() { if (this.config.allowPause !== false) { this.cancelDrag(); super.pause(); } }
+    retreat() { return this.config.allowQuit === false ? null : this.finish(false, NODE_RESULT_REASONS.RETREATED); }
     isRunning() { return this.status === 'running' && !this.lifecycle?.transitionLocked; }
-    destroy() { this.lifecycle?.cleanup(); super.destroy(); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
     publishTestState() {
         this.context.testHooks?.update({
             adapterId: this.config.id,
