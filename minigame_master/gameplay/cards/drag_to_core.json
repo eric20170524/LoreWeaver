@@ -18,7 +18,6 @@
     "progress_100"
   ],
   "failure": [
-    "retreated",
     "retreated"
   ],
   "knobs": {
@@ -26,25 +25,33 @@
       "type": "integer",
       "default": 14,
       "patchLevel": "L1",
-      "description": "fragCount"
+      "description": "fragCount",
+      "min": 1,
+      "max": 24
     },
     "hazardCount": {
       "type": "integer",
       "default": 3,
       "patchLevel": "L1",
-      "description": "hazardCount"
+      "description": "hazardCount",
+      "min": 0,
+      "max": 8
     },
     "hazardPenalty": {
       "type": "integer",
       "default": 12,
       "patchLevel": "L1",
-      "description": "hazardPenalty"
+      "description": "hazardPenalty",
+      "min": 0,
+      "max": 100
     },
     "hazardSpeed": {
       "type": "integer",
       "default": 70,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob hazardSpeed"
+      "description": "Lightweight cert knob hazardSpeed",
+      "min": 0,
+      "max": 300
     },
     "allowQuit": {
       "type": "boolean",

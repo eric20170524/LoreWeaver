@@ -242,7 +242,7 @@ const refresh = window.setInterval(() => {
   if (state) {
     $('timer').textContent = card.id === 'side_scrolling_brawler'
       ? (state.timerSec == null ? '—' : `${Math.ceil(state.timerSec)}s`)
-      : `${Math.ceil(state.timer ?? 0)}s`;
+      : (state.timer == null ? '—' : `${Math.ceil(state.timer)}s`);
     $('health').textContent = String(state.hp ?? '—');
     $('gauge').textContent = card.id === 'survivor_horde' ? String(state.score ?? 0) : card.id === 'side_scrolling_brawler'
       ? `${state.wavesCleared ?? 0}/${state.totalWaves ?? 0}`
