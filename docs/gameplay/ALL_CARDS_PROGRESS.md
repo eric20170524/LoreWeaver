@@ -36,7 +36,7 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 第八、九张最后视觉调整后再次完整回归：17 项单测、14 个真实浏览器场景及 TypeScript 全部通过，390px 活跃游戏截图已核对。辨宝选项与目标文字、能量元素与拖拽命中范围放大，未改为自动作答。验收摘要及实际构建文件哈希见 [08/09 JSON](../reports/card_lab_08_09_2026-09-21.json)。本地报告的 revision 是构建时 checkout 基点，测试时包含未提交代码；报告文件哈希标识实际 payload，不能将基点 SHA 单独当成完全相同源树证明。
 
-继续推进其余 8 张：`maze_exploration_choice`、`platform_escape`、`hazard_collect_waves`、`sequence_puzzle_combo`、`rhythm_then_pickup`、`qix_area_capture`、`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至十五张。
+继续推进其余 7 张：`platform_escape`、`hazard_collect_waves`、`sequence_puzzle_combo`、`rhythm_then_pickup`、`qix_area_capture`、`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至十六张。
 
 
 第十张 [observe_capture](OBSERVE_CAPTURE_CARD_LAB.md) 已通过八项状态机回归及六场景真实浏览器验收：默认五次捕捉获胜、误点/错过窗口、暂停/恢复/三次重开、自定义目标、移动触屏和离线通关。修复重复点击判定、挂机通关、暂停误点和结算清理；TypeScript 通过，390px 活跃画面已核对。[证据摘要](../reports/card_lab_10_2026-09-21.json) 保存实际构建哈希。其失败设计只有撤退，不宣称验证了不存在的自然死亡。本次构建包含工作区并行养成改动，不将基点 revision 当成干净提交的证明。
@@ -58,4 +58,6 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 远端推送尚未完成：`4f7a6be` 的父提交包含并行工作 `5606c4c`，修改了 workflow，GitHub 明确拒绝当前缺少 workflow scope 的 OAuth 推送。2026-09-21 再次 fetch 确认远端仍为 `e67719f`；未重写并行提交，也不把本地验收当远端 CI。继续本地推进。
 
-第十五张 [shooter_duel](SHOOTER_DUEL_CARD_LAB.md) 已完成本地工程验收：六项单测、六个真实浏览器场景、TypeScript 通过。默认 100/300 HP、60 秒配置下，键盘、触屏、离线鼠标分别完成 Boss 击杀；另有默认自然死亡、配置超时、暂停和三次重开。修复宿主分数提前结束、输入/对象/反馈 timer 清理，补齐按住射击并移除共享适配器硬编码 IP 敌人名。390px 活跃画面已检查。[验收 JSON](../reports/card_lab_15_2026-09-21.json) 保存构建哈希与各场景配置。下一张为 `maze_exploration_choice`，尚未本轮验收。
+第十五张 [shooter_duel](SHOOTER_DUEL_CARD_LAB.md) 已完成本地工程验收：六项单测、六个真实浏览器场景、TypeScript 通过。默认 100/300 HP、60 秒配置下，键盘、触屏、离线鼠标分别完成 Boss 击杀；另有默认自然死亡、配置超时、暂停和三次重开。修复宿主分数提前结束、输入/对象/反馈 timer 清理，补齐按住射击并移除共享适配器硬编码 IP 敌人名。390px 活跃画面已检查。[验收 JSON](../reports/card_lab_15_2026-09-21.json) 保存构建哈希与各场景配置。第十六张 [maze_exploration_choice](MAZE_EXPLORATION_CHOICE_CARD_LAB.md) 已完成本地工程验收：九项单测、六个真实浏览器场景、TypeScript 通过。修复零能量默认值、重复/暂停救援、按钮冒泡额外移动、分数提前通关、地图救援点位置与资源清理；真实浏览器发现并修复连续短按被 JustDown 轮询漏掉。默认键盘/触屏/离线均实际走到出口，零能量与零成本分支、暂停重开、尺寸/种子可达性均有证据。390px 弹窗已核对，[验收 JSON](../reports/card_lab_16_2026-09-21.json) 保存构建哈希。没有自然死亡或限时失败，不虚构此类结果。
+
+下一张为 `platform_escape`，尚未本轮验收。

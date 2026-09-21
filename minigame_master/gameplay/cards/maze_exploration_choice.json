@@ -19,10 +19,50 @@
     "objective_met"
   ],
   "failure": [
-    "failed",
     "retreated"
   ],
-  "knobs": {},
+  "knobs": {
+    "mazeW": {
+      "type": "integer",
+      "default": 15,
+      "min": 5,
+      "max": 31,
+      "patchLevel": "L1",
+      "description": "Maze width; even dimensions round up to odd."
+    },
+    "mazeH": {
+      "type": "integer",
+      "default": 11,
+      "min": 5,
+      "max": 31,
+      "patchLevel": "L1",
+      "description": "Maze height; even dimensions round up to odd."
+    },
+    "startingQi": {
+      "type": "integer",
+      "default": 80,
+      "min": 0,
+      "max": 1000,
+      "patchLevel": "L1",
+      "description": "Starting rescue energy."
+    },
+    "rescueCost": {
+      "type": "integer",
+      "default": 60,
+      "min": 0,
+      "max": 1000,
+      "patchLevel": "L1",
+      "description": "Energy consumed by rescue."
+    },
+    "runSeed": {
+      "type": "integer",
+      "default": 1,
+      "min": 0,
+      "max": 4294967295,
+      "patchLevel": "L1",
+      "description": "Seed for repeatable maze generation."
+    }
+  },
   "patchPolicy": {
     "defaultAllowedLevels": [
       "L0",

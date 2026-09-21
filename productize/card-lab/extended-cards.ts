@@ -1,3 +1,4 @@
+import mazeCard from '../../minigame_master/gameplay/cards/maze_exploration_choice.json';
 import shooterCard from '../../minigame_master/gameplay/cards/shooter_duel.json';
 import dialogueCard from '../../minigame_master/gameplay/cards/branching_dialogue_check.json';
 import runeCard from '../../minigame_master/gameplay/cards/rune_connect_sequence.json';
@@ -26,6 +27,14 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  maze_exploration_choice: {
+    card: mazeCard, heading: '16 · 迷宫抉择', title: '迷宫抉择试炼',
+    intro: '用 WASD/方向键逐格移动，或点击角色周围指定方向。黄色格会询问是否花费能量救援，绿色格是出口。救援可获额外奖励；跳过或能量不足仍能通关。没有限时，可随时撤退。',
+    fields: [ { key: 'mazeW', label: '迷宫宽（偶数向上取奇数）' }, { key: 'mazeH', label: '迷宫高（偶数向上取奇数）' }, { key: 'startingQi', label: '初始能量' }, { key: 'rescueCost', label: '救援能量消耗' }, { key: 'runSeed', label: '地图种子' } ],
+    goal: () => 0, progress: state => `(${state.gx},${state.gy})`,
+    health: state => state.qi ?? 0, count: state => state.rescued ? 1 : 0,
+    healthLabel: '能量', progressLabel: '所在格', countLabel: '救援'
+  },
   shooter_duel: {
     card: shooterCard, heading: '15 · 对决射击', title: '对决射击试炼',
     intro: 'A/D 或方向键横移，按住 J/空格射击；鼠标或触屏按住拖动可同时移动和连续射击。预判红色 Boss 的移动，避开红色弹丸；击败 Boss 获胜，生命耗尽或超时失败。',

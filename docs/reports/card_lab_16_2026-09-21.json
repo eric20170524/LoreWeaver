@@ -1,0 +1,262 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "maze_exploration_choice",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "d8877b2034241fd7a69e148774432a48051bc18a",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check",
+      "shooter_duel",
+      "maze_exploration_choice"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "6ac0ca1a28a78043192eec60c8d0c06a19291682e046682588d133058984d6d5"
+      },
+      {
+        "name": "game.js",
+        "sha256": "a9b03953fddefb15d3370207118748513761249332c9f9159981c6122bbe36ba"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T14:05:12.330Z",
+  "sourceNote": "Checkout revision is the build base; actual bundle SHA-256 identifies uncommitted and concurrent source included in the tested payload.",
+  "unitTests": {
+    "passed": 9,
+    "command": "node --test productize/jobs/check-maze-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "cases": [
+    {
+      "id": "default-keyboard-rescue-and-exit",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "mazeW": 15,
+        "mazeH": 11,
+        "startingQi": 80,
+        "rescueCost": 60,
+        "runSeed": 1
+      },
+      "actionCount": 37,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "relic": "rescue_token"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "rescued_npc"
+          ],
+          "gallery": []
+        },
+        "telemetry": {
+          "qi": 20,
+          "rescued": true,
+          "score": 86
+        }
+      }
+    },
+    {
+      "id": "zero-energy-rescue-fails-exploration-succeeds",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "mazeW": 15,
+        "mazeH": 11,
+        "startingQi": 0,
+        "rescueCost": 60,
+        "runSeed": 1
+      },
+      "actionCount": 37,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "qi": 0,
+          "rescued": false,
+          "score": 36
+        }
+      }
+    },
+    {
+      "id": "paused-choice-and-three-restarts",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "mazeW": 5,
+        "mazeH": 5,
+        "startingQi": 80,
+        "rescueCost": 60,
+        "runSeed": 1
+      },
+      "actionCount": 5,
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "qi": 80,
+          "rescued": false,
+          "score": 0
+        }
+      }
+    },
+    {
+      "id": "even-dimensions-and-zero-cost",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "mazeW": 6,
+        "mazeH": 6,
+        "startingQi": 0,
+        "rescueCost": 0,
+        "runSeed": 1
+      },
+      "actionCount": 9,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "relic": "rescue_token"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "rescued_npc"
+          ],
+          "gallery": []
+        },
+        "telemetry": {
+          "qi": 0,
+          "rescued": true,
+          "score": 58
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-rescue-exit",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "mazeW": 15,
+        "mazeH": 11,
+        "startingQi": 80,
+        "rescueCost": 60,
+        "runSeed": 1
+      },
+      "actionCount": 37,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "relic": "rescue_token"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "rescued_npc"
+          ],
+          "gallery": []
+        },
+        "telemetry": {
+          "qi": 20,
+          "rescued": true,
+          "score": 86
+        }
+      }
+    },
+    {
+      "id": "offline-default-decline-exit",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "mazeW": 15,
+        "mazeH": 11,
+        "startingQi": 80,
+        "rescueCost": 60,
+        "runSeed": 1
+      },
+      "actionCount": 37,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "qi": 80,
+          "rescued": false,
+          "score": 36
+        }
+      }
+    }
+  ]
+}
