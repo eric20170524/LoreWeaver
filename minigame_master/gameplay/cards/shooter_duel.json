@@ -12,13 +12,15 @@
     "template": "shooter_duel"
   },
   "inputs": [
-    "pointer"
+    "pointer",
+    "keyboard"
   ],
   "objectives": [
     "boss_defeated"
   ],
   "failure": [
     "hp_zero",
+    "timer_expired",
     "retreated"
   ],
   "knobs": {
@@ -26,19 +28,25 @@
       "type": "integer",
       "default": 100,
       "patchLevel": "L1",
-      "description": "playerHp"
+      "description": "playerHp",
+      "min": 1,
+      "max": 1000
     },
     "bossHp": {
       "type": "integer",
       "default": 300,
       "patchLevel": "L1",
-      "description": "bossHp"
+      "description": "bossHp",
+      "min": 12,
+      "max": 3000
     },
     "timeLimitSec": {
       "type": "integer",
       "default": 60,
       "patchLevel": "L1",
-      "description": "timeLimitSec"
+      "description": "timeLimitSec",
+      "min": 3,
+      "max": 180
     }
   },
   "patchPolicy": {
@@ -57,7 +65,7 @@
     "Collision"
   ],
   "resultContract": {
-    "successReason": "objective_met"
+    "successReason": "boss_defeated"
   },
   "testFixture": {
     "type": "e2e",

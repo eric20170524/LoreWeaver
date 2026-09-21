@@ -1,3 +1,4 @@
+import shooterCard from '../../minigame_master/gameplay/cards/shooter_duel.json';
 import dialogueCard from '../../minigame_master/gameplay/cards/branching_dialogue_check.json';
 import runeCard from '../../minigame_master/gameplay/cards/rune_connect_sequence.json';
 import pressureCard from '../../minigame_master/gameplay/cards/pressure_survival.json';
@@ -25,6 +26,14 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  shooter_duel: {
+    card: shooterCard, heading: '15 · 对决射击', title: '对决射击试炼',
+    intro: 'A/D 或方向键横移，按住 J/空格射击；鼠标或触屏按住拖动可同时移动和连续射击。预判红色 Boss 的移动，避开红色弹丸；击败 Boss 获胜，生命耗尽或超时失败。',
+    fields: [ { key: 'playerHp', label: '玩家生命' }, { key: 'bossHp', label: 'Boss 生命' }, { key: 'timeLimitSec', label: '时间上限（秒）' } ],
+    goal: () => 0, progress: state => String(state.bossHp ?? 0),
+    health: state => state.hp ?? 0, count: state => (state.bullets?.length ?? 0) + (state.enemyBullets?.length ?? 0),
+    healthLabel: '生命', progressLabel: 'Boss 生命', countLabel: '场上弹丸'
+  },
   branching_dialogue_check: {
     card: dialogueCard, heading: '14 · 分支对话检定', title: '分支对话试炼',
     intro: '阅读对话并点击选项。关键物品与阶段决定路线，灰色选项可进入提示的替代分支。好、普通结局均通过；坏结局失败。可配置初始好感、检定阶段和关键物品。',
