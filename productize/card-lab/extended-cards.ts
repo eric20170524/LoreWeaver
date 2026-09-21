@@ -1,3 +1,4 @@
+import hazardWavesCard from '../../minigame_master/gameplay/cards/hazard_collect_waves.json';
 import platformCard from '../../minigame_master/gameplay/cards/platform_escape.json';
 import mazeCard from '../../minigame_master/gameplay/cards/maze_exploration_choice.json';
 import shooterCard from '../../minigame_master/gameplay/cards/shooter_duel.json';
@@ -28,6 +29,15 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  hazard_collect_waves: {
+    card: hazardWavesCard, heading: '18 · 闪避采集波次', title: '闪避采集试炼',
+    intro: '拖动或 WASD/方向键移动，避开黄色预警区。落雷后出现蓝色能量珠，点击或靠近即可采集并回复 3 生命。每波时间结束时检查数量，默认三波分别需要 4、5、6 颗；数量不足或生命耗尽失败。采集够后仍需等到本波结束。',
+    fields: [ { key: 'maxWave', label: '波次数' }, { key: 'waveTimeSec', label: '每波时间（秒）' }, { key: 'collectTargetPerWave', label: '第一波采集目标' }, { key: 'warningSec', label: '落雷预警（秒）' }, { key: 'strikeDamage', label: '落雷伤害' }, { key: 'hazardIntervalSec', label: '落雷间隔（秒）' } ],
+    validate: knobs => knobs.waveTimeSec < (knobs.collectTargetPerWave + knobs.maxWave - 1) * knobs.hazardIntervalSec + knobs.warningSec + 0.2 ? '每波时间不足以生成最后一波需要的能量珠，请增加时间或减少目标/间隔。' : null,
+    goal: () => 0, progress: state => `${state.collected ?? 0}/${state.need ?? 4}`,
+    health: state => state.hp ?? 0, count: state => state.wave ?? 1,
+    healthLabel: '生命', progressLabel: '本波采集', countLabel: '波次'
+  },
   platform_escape: {
     card: platformCard, heading: '17 · 平台逃生', title: '平台逃生试炼',
     intro: '自动向终点推进。A/D 或左右键移动，W/上键/空格或点击画布跳跃。躲开红色刀刃和灰色落石；进度到 100 获胜，生命耗尽失败。默认路程约需 22.5 秒，触屏点击即可起跳。',

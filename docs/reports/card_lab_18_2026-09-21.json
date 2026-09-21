@@ -1,0 +1,380 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "hazard_collect_waves",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "15d89fa5e5ed67b3f1b92f18d007aee0430c8731",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check",
+      "shooter_duel",
+      "maze_exploration_choice",
+      "platform_escape",
+      "hazard_collect_waves"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "ed49e8123056adb60dd871d87fa2cf262baa4c1799f731ab81e94b75a3db3d57"
+      },
+      {
+        "name": "game.js",
+        "sha256": "156c32c736c2d78fdfdcbb26f97341a69f5551e0eb32ccae82c98797fb882e60"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T14:44:46.660Z",
+  "sourceNote": "Checkout revision is the build base; actual bundle SHA-256 identifies uncommitted and concurrent source included in the tested payload.",
+  "unitTests": {
+    "passed": 9,
+    "command": "node productize/jobs/check-hazard-waves-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "smokeAdapter": {
+    "enter": true,
+    "spawnOrProgress": true,
+    "retreat": true,
+    "noCrash": true,
+    "warnings": [
+      "no_envKey",
+      "no_bgmKey"
+    ]
+  },
+  "cases": [
+    {
+      "id": "maximum-config-and-supply-validation",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "maximum supported configuration starts; insufficient supply is rejected before replacing a session"
+      ],
+      "config": {
+        "maxWave": 10,
+        "waveTimeSec": 120,
+        "collectTargetPerWave": 20,
+        "warningSec": 2,
+        "strikeDamage": 20,
+        "hazardIntervalSec": 4
+      },
+      "actionCount": 0,
+      "state": {
+        "hp": 100,
+        "wave": 1,
+        "collected": 0,
+        "need": 20,
+        "hits": 0,
+        "timer": 119.9
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "wave": 1,
+          "collected": 0,
+          "nascent": 0,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "default-three-waves-keyboard-and-mouse",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed waves: 1,2,3"
+      ],
+      "config": {
+        "maxWave": 3,
+        "waveTimeSec": 15,
+        "collectTargetPerWave": 4,
+        "warningSec": 0.9,
+        "strikeDamage": 20,
+        "hazardIntervalSec": 2.2
+      },
+      "actionCount": 22,
+      "state": {
+        "hp": 100,
+        "wave": 3,
+        "collected": 7,
+        "need": 6,
+        "hits": 0,
+        "timer": 3.655409308578328e-14
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "wave": 3,
+          "collected": 7,
+          "nascent": 100,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "default-quota-shortage",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "maxWave": 3,
+        "waveTimeSec": 15,
+        "collectTargetPerWave": 4,
+        "warningSec": 0.9,
+        "strikeDamage": 20,
+        "hazardIntervalSec": 2.2
+      },
+      "actionCount": 0,
+      "state": {
+        "hp": 100,
+        "wave": 1,
+        "collected": 0,
+        "need": 4,
+        "hits": 0,
+        "timer": 3.655409308578328e-14
+      },
+      "result": {
+        "success": false,
+        "reason": "condition_failed",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "wave": 1,
+          "collected": 0,
+          "nascent": 0,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "default-six-strikes-death",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "default 20 damage and 3 healing per pickup still lead to six-strike death"
+      ],
+      "config": {
+        "maxWave": 3,
+        "waveTimeSec": 15,
+        "collectTargetPerWave": 4,
+        "warningSec": 0.9,
+        "strikeDamage": 20,
+        "hazardIntervalSec": 2.2
+      },
+      "actionCount": 0,
+      "state": {
+        "hp": 0,
+        "wave": 1,
+        "collected": 5,
+        "need": 4,
+        "hits": 6,
+        "timer": 0.9000000000000364
+      },
+      "result": {
+        "success": false,
+        "reason": "hp_zero",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "wave": 1,
+          "collected": 5,
+          "nascent": 60,
+          "hp": 0
+        }
+      }
+    },
+    {
+      "id": "paused-pickup-and-three-restarts",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed waves: 1"
+      ],
+      "config": {
+        "maxWave": 1,
+        "waveTimeSec": 4,
+        "collectTargetPerWave": 1,
+        "warningSec": 0.5,
+        "strikeDamage": 20,
+        "hazardIntervalSec": 1
+      },
+      "actionCount": 3,
+      "state": {
+        "hp": 100,
+        "wave": 1,
+        "collected": 0,
+        "need": 1,
+        "hits": 0,
+        "timer": 3.9
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "wave": 1,
+          "collected": 0,
+          "nascent": 0,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-three-waves",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed waves: 1,2,3"
+      ],
+      "config": {
+        "maxWave": 3,
+        "waveTimeSec": 15,
+        "collectTargetPerWave": 4,
+        "warningSec": 0.9,
+        "strikeDamage": 20,
+        "hazardIntervalSec": 2.2
+      },
+      "actionCount": 20,
+      "state": {
+        "hp": 100,
+        "wave": 3,
+        "collected": 7,
+        "need": 6,
+        "hits": 0,
+        "timer": 3.655409308578328e-14
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "wave": 3,
+          "collected": 7,
+          "nascent": 100,
+          "hp": 100
+        }
+      }
+    },
+    {
+      "id": "offline-default-three-waves",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed waves: 1,2,3"
+      ],
+      "config": {
+        "maxWave": 3,
+        "waveTimeSec": 15,
+        "collectTargetPerWave": 4,
+        "warningSec": 0.9,
+        "strikeDamage": 20,
+        "hazardIntervalSec": 2.2
+      },
+      "actionCount": 23,
+      "state": {
+        "hp": 100,
+        "wave": 3,
+        "collected": 7,
+        "need": 6,
+        "hits": 0,
+        "timer": 3.655409308578328e-14
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "wave": 3,
+          "collected": 7,
+          "nascent": 100,
+          "hp": 100
+        }
+      }
+    }
+  ]
+}

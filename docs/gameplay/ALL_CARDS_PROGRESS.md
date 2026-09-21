@@ -36,7 +36,7 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 第八、九张最后视觉调整后再次完整回归：17 项单测、14 个真实浏览器场景及 TypeScript 全部通过，390px 活跃游戏截图已核对。辨宝选项与目标文字、能量元素与拖拽命中范围放大，未改为自动作答。验收摘要及实际构建文件哈希见 [08/09 JSON](../reports/card_lab_08_09_2026-09-21.json)。本地报告的 revision 是构建时 checkout 基点，测试时包含未提交代码；报告文件哈希标识实际 payload，不能将基点 SHA 单独当成完全相同源树证明。
 
-继续推进其余 6 张：`hazard_collect_waves`、`sequence_puzzle_combo`、`rhythm_then_pickup`、`qix_area_capture`、`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至十七张。
+继续推进其余 5 张：`sequence_puzzle_combo`、`rhythm_then_pickup`、`qix_area_capture`、`point_drag_progression`、`node_iframe_microgame`。这些尚未在本轮逐卡验收，不标记为完成。Card Lab 新卡暂未进入六卡 workflow matrix（现有 GitHub OAuth 无 workflow 写权限）；本地验收脚本已提供，不能宣称该矩阵覆盖第七至十八张。
 
 
 第十张 [observe_capture](OBSERVE_CAPTURE_CARD_LAB.md) 已通过八项状态机回归及六场景真实浏览器验收：默认五次捕捉获胜、误点/错过窗口、暂停/恢复/三次重开、自定义目标、移动触屏和离线通关。修复重复点击判定、挂机通关、暂停误点和结算清理；TypeScript 通过，390px 活跃画面已核对。[证据摘要](../reports/card_lab_10_2026-09-21.json) 保存实际构建哈希。其失败设计只有撤退，不宣称验证了不存在的自然死亡。本次构建包含工作区并行养成改动，不将基点 revision 当成干净提交的证明。
@@ -62,4 +62,6 @@ Survivor replay 的云端验收已通过：[run 35590056668](https://github.com/
 
 第十七张 [platform_escape](PLATFORM_ESCAPE_CARD_LAB.md) 已完成本地工程验收：八项单测、六个真实浏览器场景和 TypeScript 通过。修复死亡过程中清理后继续访问对象、短按跳跃漏输入、监听器和键盘清理、暂停/退出开关以及宿主规范目标。随机速度会造成障碍追越，统一为原范围中值 240 保留随机类型和默认路程；100 组种子的默认跳跃间隔验证无伤通过。默认约 22.5 秒键盘、触屏、离线通关，默认自然死亡、暂停/三次重开与连续短按都有真实浏览器证据。390px 画面已核对，[验收 JSON](../reports/card_lab_17_2026-09-21.json) 保存构建哈希。当前累计 17/23 张本地工程验收；发布认证和远端推送限制仍未解决。
 
-下一张为 `hazard_collect_waves`，尚未本轮验收。
+第十八张 [hazard_collect_waves](HAZARD_COLLECT_WAVES_CARD_LAB.md) 已完成本地工程验收：九项单测、七个真实浏览器场景、TypeScript 和通用适配器烟测通过。修复暂停/过期拾取、致死迭代清理、零生命默认值、输入和资源清理、采集分数提前判胜；补齐键盘移动、场地边界和参数供给校验，保留最高 10 波/首波 20 颗的既有配置范围。默认完整 45 秒三波在鼠标、触屏、离线均通关，缺额失败、默认六次落雷致死、暂停拾取拦截及三次重开都有证据。最大配置仅验证启动/撤退，不冒称最长配置通关。390px 画面已核对，[验收 JSON](../reports/card_lab_18_2026-09-21.json) 保存最终构建哈希；缺少正式环境/音乐的警告保留。当前累计 18/23 张本地工程验收。
+
+下一张为 `sequence_puzzle_combo`，尚未本轮验收。
