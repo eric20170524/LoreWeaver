@@ -156,7 +156,7 @@ Current catalog (all wired through `minigame_master` + `GameRunner`):
 Prerequisites:
 
 - Node.js
-- Python 3
+- Python 3.11+ (required by the pinned `sprite-gen` backend)
 - Optional LLM key for AI generation, refinement, and department prep:
   - **Recommended:** `XAI_API_KEY` (Grok / xAI, OpenAI-compatible)
   - Fallback: `GEMINI_API_KEY` (Google Gemini)
@@ -238,7 +238,7 @@ The backend exposes workspace and pipeline endpoints through `/api`:
   a standalone `index.html` preview shell, and the reusable `core/lib` and
   `core/demo` runtime sources.
 - `POST /api/audit` - submit screenshot/audit payloads.
-
+- `GET /api/imagegen/sprite-gen/status` - report the pinned sprite-gen backend availability/version.\n- `POST /api/workspaces/{id}/imagegen/sprite-gen/generate` - generate a candidate multi-frame sprite atlas from a workspace base image.\n- `POST /api/workspaces/{id}/imagegen/sprite-gen/adopt` - adapt an existing sprite-gen run into LoreWeaver candidate assets.\n- `POST /api/workspaces/{id}/imagegen/sprite-gen/promote` - explicitly promote a reviewed candidate into `assets/imagegen` for RuntimeArtBinder.\n
 ## Local Model Support
 
 Ollama/local-model routing is intentionally deferred for now. If
