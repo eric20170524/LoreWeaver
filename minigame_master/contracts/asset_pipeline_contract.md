@@ -39,7 +39,7 @@ Each generated or imported workspace may store:
   "artAssets": {
     "manifestPath": "assets/imagegen/manifest.json",
     "scriptManifestPath": "assets/imagegen/manifest.js",
-    "imagegenProvider": "antigravity (LOREWEAVER_ENABLE_ANTIGRAVITY_IMAGEGEN=1) | auto | procedural_fallback",
+    "imagegenProvider": "antigravity (LOREWEAVER_ENABLE_ANTIGRAVITY_IMAGEGEN=1) | sprite-gen bridge | auto | procedural_fallback",
     "groups": ["heroes", "enemies", "items", "props", "setpieces", "decorations"],
     "spriteClips": ["idle", "walk", "attack", "hurt", "death"],
     "runtimeBinding": "atlas first, simple canvas fallback last",
@@ -114,6 +114,18 @@ Wiring rules:
 7. **Modifier props**: semantic keys `core`, `escort`, `wall`, `portal`,
    `chest`, `ballista`, `whirlpool` resolve `core_eye`, `escort_npc`,
    `wall_segment`, `portal_ring`, etc.
+
+### 4.2 sprite-gen bridge
+
+LoreWeaver may use `minigame_master/capabilities/imagegen/sprite_gen_bridge.py` for character sprite production. The bridge is deliberately outside generic `AssetRecipe` operations so recipe data cannot inject arbitrary executable commands.
+
+- The reviewed upstream is `aldegad/sprite-gen` 2.5.2 pinned to `ff57a644205b83387aa4d1e324eba9eefb257d7c` (Apache-2.0).
+- `sprite-gen` owns generation, extraction and atlas composition. LoreWeaver consumes its composed `manifest.json.frame_layout`; it does not re-infer frame boxes.
+- Conversion first writes a candidate under `assets/imagegen/sprite-gen/<character-id>/loreweaver/`.
+- Runtime replacement is a separate explicit `promote` step. A different existing `assets/imagegen/atlas.png` is not overwritten without `--force`.
+- Promotion emits the existing `atlas.png + manifest.json + manifest.js + provenance.json` contract, so `RuntimeArtBinder` and downstream `atlas_verify` stay unchanged.
+
+See `docs/guides/sprite_gen_integration.md` for commands and scope.
 
 ## 5. Audio Asset Requirements
 

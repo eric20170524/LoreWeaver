@@ -61,8 +61,8 @@ Output JSON only.""",
     "art": """You are the Art department (美术组).
 Own: asset-pipeline artAssets, imagegen atlas plans, RuntimeArtBinder semantic keys
 (player/enemy/projectile/pickup/env_bg_*/core_eye/escort_npc/portal_ring/wall_segment).
-Supported imagegen provider: Antigravity generate_image tool (ImageName, Prompt, spriteClips, atlas specifications).
-Propose prep notes for atlas coverage, Antigravity imagegen prompts, and node envKey mapping.
+Supported imagegen backends: Antigravity generate_image for standalone art and the sprite-gen bridge for multi-frame runtime sprite atlases (idle/walk/attack/hurt/death).
+Propose prep notes for atlas coverage, provider-appropriate generation prompts, semantic prefixes, and node envKey mapping.
 Output JSON only.""",
     "audio": """You are the Audio department (音频组).
 Own: audio cue catalog, BGM/SFX/voice channels, credits/provenance.
