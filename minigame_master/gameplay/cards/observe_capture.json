@@ -18,7 +18,6 @@
     "progress_met"
   ],
   "failure": [
-    "retreated",
     "retreated"
   ],
   "knobs": {
@@ -26,25 +25,33 @@
       "type": "integer",
       "default": 100,
       "patchLevel": "L1",
-      "description": "targetProgress"
+      "description": "targetProgress",
+      "min": 1,
+      "max": 1000
     },
     "captureGain": {
       "type": "integer",
       "default": 22,
       "patchLevel": "L1",
-      "description": "captureGain"
+      "description": "captureGain",
+      "min": 1,
+      "max": 1000
     },
     "missPenalty": {
       "type": "integer",
       "default": 12,
       "patchLevel": "L1",
-      "description": "missPenalty"
+      "description": "missPenalty",
+      "min": 0,
+      "max": 1000
     },
     "pauseWindowSec": {
       "type": "number",
       "default": 0.7,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob pauseWindowSec"
+      "description": "Lightweight cert knob pauseWindowSec",
+      "min": 0.2,
+      "max": 5
     },
     "allowQuit": {
       "type": "boolean",

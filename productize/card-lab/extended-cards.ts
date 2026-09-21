@@ -1,3 +1,4 @@
+import observeCard from '../../minigame_master/gameplay/cards/observe_capture.json';
 import reactionCard from '../../minigame_master/gameplay/cards/reaction_pick.json';
 import energyCard from '../../minigame_master/gameplay/cards/energy_balance.json';
 
@@ -20,6 +21,20 @@ export type ExtraLabCard = {
 };
 
 export const extraLabCards: Record<string, ExtraLabCard> = {
+  observe_capture: {
+    card: observeCard, heading: '10 · 观形捕捉', title: '观形捕捉试炼',
+    intro: '观察粉色目标，在蓝色锁定环出现时点击它。默认每次捕捉增加 22 进度，达到 100 获胜；移动时误点扣 12 进度。错过窗口可继续等待，没有生命耗尽或限时失败；可随时撤退。',
+    fields: [
+      { key: 'targetProgress', label: '目标进度' },
+      { key: 'captureGain', label: '每次捕捉增加进度' },
+      { key: 'missPenalty', label: '移动时误点扣除进度' },
+      { key: 'pauseWindowSec', label: '锁定窗口（秒）' }
+    ],
+    goal: knobs => knobs.targetProgress,
+    progress: state => `${state.progress ?? 0}/${state.targetProgress ?? 100}`,
+    health: state => state.captures ?? 0, count: state => state.misses ?? 0,
+    healthLabel: '捕捉', progressLabel: '进度', countLabel: '误点'
+  },
   energy_balance: {
     card: energyCard,
     heading: '09 · 能量平衡', title: '能量平衡试炼',
