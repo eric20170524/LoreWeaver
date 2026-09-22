@@ -69,18 +69,30 @@ def sprite_gen_generate(ws_id: str, payload: dict[str, Any]):
     provider = str(payload.get("provider") or os.getenv("SPRITE_GEN_PROVIDER") or "codex").strip().lower()
     if provider not in {"codex", "grok"}:
         raise HTTPException(status_code=400, detail="provider must be codex or grok")
+    subject = str(payload.get("subject") or "character").strip().lower()
+    if subject not in {"character", "effect"}:
+        raise HTTPException(status_code=400, detail="subject must be character or effect")
+    asset_id = str(payload.get("assetId") or payload.get("characterId") or "").strip()
+    if not asset_id:
+        raise HTTPException(status_code=400, detail="assetId is required")
 
     args = [
         "generate",
         "--workspace", ws_id,
         "--base-image", _required(payload, "baseImage"),
-        "--character-id", _required(payload, "characterId"),
-        "--semantic-prefix", str(payload.get("semanticPrefix") or "player"),
-        "--states", str(payload.get("states") or "idle,walk,attack,hurt,death"),
+        "--asset-id", asset_id,
+        "--subject", subject,
         "--provider", provider,
         "--cell-size", str(int(payload.get("cellSize") or 256)),
         "--concurrency", str(int(payload.get("concurrency") or 4)),
     ]
+    if payload.get("semanticPrefix"):
+        args += ["--semantic-prefix", str(payload["semanticPrefix"])]
+    if payload.get("states"):
+        states = payload["states"]
+        if isinstance(states, list):
+            states = ",".join(str(item) for item in states)
+        args += ["--states", str(states)]
     if payload.get("model"):
         args += ["--model", str(payload["model"])]
     if payload.get("logicalHeight") is not None:
@@ -93,22 +105,28 @@ def sprite_gen_generate(ws_id: str, payload: dict[str, Any]):
 
 @router.post("/workspaces/{ws_id}/imagegen/sprite-gen/adopt")
 def sprite_gen_adopt(ws_id: str, payload: dict[str, Any]):
+    asset_id = str(payload.get("assetId") or payload.get("characterId") or "").strip()
+    if not asset_id:
+        raise HTTPException(status_code=400, detail="assetId is required")
     args = [
         "adopt",
         "--workspace", ws_id,
         "--run-dir", _required(payload, "runDir"),
-        "--character-id", _required(payload, "characterId"),
-        "--semantic-prefix", str(payload.get("semanticPrefix") or "player"),
+        "--asset-id", asset_id,
+        "--semantic-prefix", _required(payload, "semanticPrefix"),
     ]
     return {"success": True, "data": _run_bridge(args, timeout=120)}
 
 
 @router.post("/workspaces/{ws_id}/imagegen/sprite-gen/promote")
 def sprite_gen_promote(ws_id: str, payload: dict[str, Any]):
+    asset_id = str(payload.get("assetId") or payload.get("characterId") or "").strip()
+    if not asset_id:
+        raise HTTPException(status_code=400, detail="assetId is required")
     args = [
         "promote",
         "--workspace", ws_id,
-        "--character-id", _required(payload, "characterId"),
+        "--asset-id", asset_id,
     ]
     if bool(payload.get("force")):
         args.append("--force")
