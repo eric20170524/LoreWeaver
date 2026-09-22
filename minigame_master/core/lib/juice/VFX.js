@@ -53,11 +53,11 @@ class VFX {
     static spriteClip(scene, runtimeArt, effectId, x, y, config = {}) {
         if (!runtimeArt || !effectId) return null;
         const clip = config.clip || 'loop';
+        const role = String(effectId).startsWith('vfx_') ? String(effectId) : `vfx_${effectId}`;
         let sprite = null;
         if (typeof runtimeArt.createEffect === 'function') {
             sprite = runtimeArt.createEffect(effectId, { ...config, x, y, clip });
         } else if (typeof runtimeArt.createSprite === 'function') {
-            const role = String(effectId).startsWith('vfx_') ? String(effectId) : `vfx_${effectId}`;
             sprite = runtimeArt.createSprite(role, { ...config, x, y, clip, critical: false });
         }
         if (!sprite || sprite.getData?.('artSource') === 'primitive' || sprite.getData?.('artSource') === 'fallback') {
@@ -66,6 +66,18 @@ class VFX {
         }
         if (config.depth != null) sprite.setDepth?.(config.depth);
         if (config.scale != null) sprite.setScale?.(config.scale);
+
+        // One-shot sprite VFX must clean themselves up. Timing comes from the same
+        // manifest clip contract RuntimeArtBinder uses for playback, so there is no
+        // second hard-coded duration table to drift.
+        const spec = runtimeArt.resolveClipSpec?.(role, clip);
+        if (spec?.loop === false && config.destroyOnComplete !== false) {
+            const frameCount = Array.isArray(spec.keys) && spec.keys.length ? spec.keys.length : 1;
+            const fps = Number(spec.fps) > 0 ? Number(spec.fps) : 8;
+            const durationMs = Math.max(16, Math.ceil((frameCount / fps) * 1000));
+            sprite.setData?.('artClipDurationMs', durationMs);
+            scene?.time?.delayedCall?.(durationMs, () => sprite?.destroy?.());
+        }
         return sprite;
     }
 
