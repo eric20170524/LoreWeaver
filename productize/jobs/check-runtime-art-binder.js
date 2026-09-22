@@ -15,6 +15,7 @@ import RuntimeArtBinder, {
 } from "../../minigame_master/core/lib/graphics/RuntimeArtBinder.js";
 import { createMockPhaser } from "../../minigame_master/core/lib/testing/MockPhaserScene.js";
 import TestHooks from "../../minigame_master/core/lib/contracts/TestHooks.js";
+import VFX from "../../minigame_master/core/lib/juice/VFX.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "../..");
@@ -272,6 +273,20 @@ function testManifestDrivenClipSets() {
   binder.playClip(sprite, "vfx_void_slash", "impact");
   if (!created || created.frameRate !== 18 || created.repeat !== 0) {
     return fail(`manifest one-shot timing expected fps=18 repeat=0, got ${JSON.stringify(created)}`);
+  }
+
+  const runtimeArt = binder.createContext(mock.scene);
+  const effect = VFX.spriteClip(mock.scene, runtimeArt, "void_slash", 10, 20, { clip: "impact" });
+  if (!effect || effect.getData?.("artSource") !== "atlas") {
+    return fail("VFX.spriteClip should consume promoted atlas VFX before procedural fallback");
+  }
+  const expectedDuration = Math.ceil((2 / 18) * 1000);
+  if (effect.getData?.("artClipDurationMs") !== expectedDuration) {
+    return fail("one-shot VFX duration must derive from manifest keys/fps");
+  }
+  mock.tick(expectedDuration + 1);
+  if (effect.active !== false) {
+    return fail("one-shot atlas VFX must destroy itself after manifest-derived duration");
   }
 
   console.log("[PASS] manifest clipSets drive arbitrary frame counts, fps, loop, and generic VFX roles");
