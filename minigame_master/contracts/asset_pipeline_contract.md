@@ -104,10 +104,10 @@ Wiring rules:
    `groups`, `frameKeys`, and binder identity for VLM / E2E gates.
 4. **Fallback**: Missing workspace imagegen is not a hard fail — adapters must
    remain playable with primitives/procedural sprites.
-5. **Clips**: `playClip(sprite, role, clip)` registers Phaser animations from
-   multi-frame keys (`player_walk_0/1`) or single-frame enemy clips
-   (`enemy_*_walk` / `_attack` / `_hurt` / `_death`), with idle pairing when
-   only one frame exists.
+5. **Clips**: `manifest.clipSets[semanticPrefix][clip]` is the runtime SSoT for
+   frame keys, fps, and loop/one-shot behavior. `playClip(sprite, role, clip)`
+   consumes all declared keys; the historical player-8/enemy-4 probing remains
+   compatibility fallback only for old manifests.
 6. **Environment**: `createBackground({ nodeId, prefer })` maps nodes to
    `env_bg_*` frames and optionally layers `env_ground_patch` /
    `env_landmark_rock`.
@@ -117,13 +117,16 @@ Wiring rules:
 
 ### 4.2 sprite-gen bridge
 
-LoreWeaver may use `minigame_master/capabilities/imagegen/sprite_gen_bridge.py` for character sprite production. The bridge is deliberately outside generic `AssetRecipe` operations so recipe data cannot inject arbitrary executable commands.
+LoreWeaver uses `minigame_master/capabilities/imagegen/sprite_gen_bridge.py` as an optional Art Department backend for component-row sprites, sparse effects, deterministic layer composites, and video-derived motion. The bridge stays outside generic `AssetRecipe` operations so recipe data cannot inject executable commands.
 
-- The reviewed upstream is `aldegad/sprite-gen` 2.5.2 pinned to `ff57a644205b83387aa4d1e324eba9eefb257d7c` (Apache-2.0).
-- `sprite-gen` owns generation, extraction and atlas composition. LoreWeaver consumes its composed `manifest.json.frame_layout`; it does not re-infer frame boxes.
-- Conversion first writes a candidate under `assets/imagegen/sprite-gen/<character-id>/loreweaver/`.
-- Runtime replacement is a separate explicit `promote` step. A different existing `assets/imagegen/atlas.png` is not overwritten without `--force`.
-- Promotion emits the existing `atlas.png + manifest.json + manifest.js + provenance.json` contract, so `RuntimeArtBinder` and downstream `atlas_verify` stay unchanged.
+- The reviewed upstream is `aldegad/sprite-gen` 2.5.3 pinned to `eb941234bf2d7e5ea9d5f2f180494932a109b9de` (Apache-2.0, Python 3.11+).
+- `sprite-gen` owns generation, extraction, layer composition, video-loop selection, and its source manifests. LoreWeaver consumes declared `frame_layout` or strip metadata; it does not infer frames from alpha.
+- Every source first becomes an isolated candidate under `assets/imagegen/sprite-gen/<asset-id>/loreweaver/`.
+- Supported candidate kinds are `character`, `effect`, `layer`, and `video-loop`.
+- Runtime publication is a separate explicit `promote` step. Promotion deterministically repacks all active candidates into one `atlas.png + manifest.json + manifest.js + provenance.json` bundle.
+- One semantic prefix has one active producer. Promoting a new producer for the same prefix replaces only that producer while preserving unrelated promoted assets.
+- `manifest.clipSets` normalizes component rows, layer bakes, and video strips into the same RuntimeArtBinder contract.
+- A runtime atlas modified outside the sprite-gen publisher fails promotion unless `--force` is explicit.
 
 See `docs/guides/sprite_gen_integration.md` for commands and scope.
 
