@@ -345,12 +345,12 @@
         "adapter": "phaser",
         "cardId": "survivor_horde",
         "modifiers": [
-          {"id": "weapon_stance_cycle", "knobs": {"controlMode": "manual", "initialStance": "melee", "meleeLabel": "黑刀", "rangedLabel": "紫钢弓", "toggleHint": "Q / SHIFT", "meleeDurationSec": 5, "rangedDurationSec": 4, "meleeRadius": 102, "meleeDamage": 6, "rangedBurstCount": 2, "swapBurst": true}},
+          {"id": "weapon_stance_cycle", "knobs": {"controlMode": "manual", "initialStance": "melee", "meleeLabel": "黑刀", "rangedLabel": "紫钢弓", "toggleHint": "Q / SHIFT", "meleeDurationSec": 5, "rangedDurationSec": 4, "meleeRadius": 140, "meleeDamage": 8, "rangedBurstCount": 2, "swapBurst": true}},
           {"id": "overdrive_transformation", "knobs": {"durationSec": 6, "hpTriggerRatio": 0.45, "requiresPassive": "white_ape_overdrive_passive"}},
-          {"id": "hazard_telegraph", "knobs": {"warningMs": 900, "activeMs": 260, "damage": 16, "shape": "circle"}},
+          {"id": "hazard_telegraph", "knobs": {"warningMs": 900, "activeMs": 260, "intervalMs": 2800, "radius": 56, "damage": 16, "shape": "circle"}},
           {"id": "boss_phases", "knobs": {"phaseThresholds": [0.66, 0.33], "phaseAnnouncement": true}}
         ],
-        "knobs": {"durationSec": 85, "difficulty": 2, "goalValue": 120, "enemySpawnRateSec": 1.0, "enemyPool": ["rock_golem", "bandit_cultivator"], "bossId": "human_genius"},
+        "knobs": {"durationSec": 85, "difficulty": 2, "goalValue": 120, "enemySpawnRateSec": 1.0, "enemyPool": ["rock_golem", "bandit_cultivator"], "bossId": "human_genius", "weapon": {"fireIntervalMs": 800, "bulletSpeed": 500, "bulletDamage": 3, "bulletRadius": 4, "bulletColor": 16773570}, "player": {"hp": 120, "speed": 170}},
         "patchLevel": "L2"
       },
       "planning": {

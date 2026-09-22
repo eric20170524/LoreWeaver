@@ -314,20 +314,28 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         adapter.runtimeArt?.playClip?.(player, 'player', 'attack', { repeat: 0, frameRate: 12 });
 
         const color = Number(this.config.meleeColor ?? DEFAULT_CONFIG.meleeColor);
-        const slash = scene.add?.circle?.(player.x, player.y, radius, color, 0.05);
-        slash?.setStrokeStyle?.(4, color, 0.8);
-        slash?.setDepth?.(4);
-        if (slash && scene.tweens?.add) {
-            scene.tweens.add({
-                targets: slash,
-                alpha: 0,
-                scale: 1.12,
-                duration: 180,
-                onComplete: () => slash.destroy?.()
-            });
-        } else {
-            slash?.destroy?.();
-        }
+        const fadeSlash = (node, scale) => {
+            if (!node) return;
+            if (scene.tweens?.add) {
+                scene.tweens.add({
+                    targets: node,
+                    alpha: 0,
+                    scale,
+                    duration: 340,
+                    onComplete: () => node.destroy?.()
+                });
+            } else {
+                node.destroy?.();
+            }
+        };
+        const slash = scene.add?.circle?.(player.x, player.y, Math.max(12, radius * 0.72), color, 0.35);
+        slash?.setStrokeStyle?.(8, color, 0.95);
+        slash?.setDepth?.(12);
+        const ring = scene.add?.circle?.(player.x, player.y, radius, color, 0);
+        ring?.setStrokeStyle?.(6, 0xffe08a, 0.9);
+        ring?.setDepth?.(12);
+        fadeSlash(slash, 1.35);
+        fadeSlash(ring, 1.18);
 
         const hitCount = targets.reduce((count, { enemy }) => (
             count + (adapter.damageEnemy(enemy, damage) ? 1 : 0)

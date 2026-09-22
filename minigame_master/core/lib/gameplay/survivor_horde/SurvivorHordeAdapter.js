@@ -586,6 +586,32 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         bullet.setData('createdAt', this.scene.time.now);
         this.groups.bullets.add(bullet);
         this.scene.physics.moveToObject(bullet, target, this.config.weapon.bulletSpeed);
+        this.drawProjectileStreak(this.player.x, this.player.y, target.x, target.y, this.config.weapon.bulletColor);
+    }
+
+    drawProjectileStreak(fromX, fromY, toX, toY, color) {
+        const graphics = this.scene.add?.graphics?.();
+        if (!graphics?.lineStyle) return;
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const length = Math.hypot(dx, dy) || 1;
+        const reach = 52;
+        graphics.setDepth?.(11);
+        graphics.lineStyle(4, color ?? 0xfff1c2, 0.9);
+        graphics.beginPath?.();
+        graphics.moveTo?.(fromX, fromY);
+        graphics.lineTo?.(fromX + (dx / length) * reach, fromY + (dy / length) * reach);
+        graphics.strokePath?.();
+        if (this.scene.tweens?.add) {
+            this.scene.tweens.add({
+                targets: graphics,
+                alpha: 0,
+                duration: 160,
+                onComplete: () => graphics.destroy?.()
+            });
+        } else {
+            this.lifecycle?.trackTimer?.(this.scene.time.delayedCall(160, () => graphics.destroy?.()));
+        }
     }
 
     createProjectile(x, y) {

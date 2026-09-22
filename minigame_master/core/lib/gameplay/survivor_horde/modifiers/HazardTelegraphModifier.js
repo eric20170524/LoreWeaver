@@ -17,9 +17,19 @@ function distance(a, b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+function pickPositive(primary, secondary, fallback) {
+    const value = Number(primary ?? secondary);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 export default class HazardTelegraphModifier extends GameplayModifier {
     constructor(config = {}) {
-        super({ ...DEFAULT_CONFIG, ...config });
+        super({
+            ...DEFAULT_CONFIG,
+            ...config,
+            warningDelayMs: pickPositive(config.warningMs, config.warningDelayMs, DEFAULT_CONFIG.warningDelayMs),
+            strikeDurationMs: pickPositive(config.activeMs, config.strikeDurationMs, DEFAULT_CONFIG.strikeDurationMs)
+        });
         this.timer = null;
         this.activeObjects = new Set();
     }
