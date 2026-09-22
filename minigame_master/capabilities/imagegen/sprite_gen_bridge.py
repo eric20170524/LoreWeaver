@@ -10,7 +10,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from sprite_gen_adapter import BridgeError, PIN, UPSTREAM, VERSION, adopt, promote, rel, slug
+from sprite_gen_adapter import (
+    BridgeError, PIN, UPSTREAM, VERSION,
+    adopt, adopt_layer, adopt_video_set, promote, rel, slug,
+)
 
 ROOT = Path(os.getenv("LOREWEAVER_ROOT") or Path(__file__).resolve().parents[3]).resolve()
 WORKSPACES = (ROOT / "data" / "workspaces").resolve()
@@ -71,6 +74,23 @@ def default_prefix(subject: str, asset_id: str) -> str:
     return "player"
 
 
+def parse_layer_contract(raw: str | None) -> dict:
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except ValueError as exc:
+        raise BridgeError("layer_contract_invalid_json") from exc
+    if not isinstance(value, dict):
+        raise BridgeError("layer_contract_must_be_object")
+    unknown = sorted(set(value) - {"rig", "layers", "tracks"})
+    if unknown:
+        raise BridgeError(f"layer_contract_unknown_keys:{','.join(unknown)}")
+    if "tracks" in value and not isinstance(value["tracks"], dict):
+        raise BridgeError("layer_contract_tracks_must_be_object")
+    return value
+
+
 def generate(ws: Path, args: argparse.Namespace) -> dict:
     base = within(ws, args.base_image)
     if not base.is_file():
@@ -88,6 +108,20 @@ def generate(ws: Path, args: argparse.Namespace) -> dict:
 
     asset_id = slug(args.asset_id)
     prefix = slug(args.semantic_prefix or default_prefix(subject, asset_id))
+    layer_contract = parse_layer_contract(args.layer_contract_json)
+    tracks = layer_contract.get("tracks") or {}
+    for state, track in tracks.items():
+        normalized = slug(str(state))
+        if normalized not in specs:
+            raise BridgeError(f"layer_track_state_not_requested:{normalized}")
+        specs[normalized]["track"] = str(track)
+
+    request_payload = {"states": specs}
+    if layer_contract.get("rig") is not None:
+        request_payload["rig"] = layer_contract["rig"]
+    if layer_contract.get("layers") is not None:
+        request_payload["layers"] = layer_contract["layers"]
+
     run = run_dir(ws, asset_id)
     prepare = [
         "prepare",
@@ -97,7 +131,7 @@ def generate(ws: Path, args: argparse.Namespace) -> dict:
         "--subject", subject,
         "--cell-size", str(args.cell_size),
         "--chroma-key", "auto",
-        "--request-json", json.dumps({"states": specs}),
+        "--request-json", json.dumps(request_payload),
     ]
     if args.logical_height:
         prepare += ["--fit-pixel-unfake", "--fit-logical-height", str(args.logical_height)]
@@ -126,6 +160,66 @@ def generate(ws: Path, args: argparse.Namespace) -> dict:
     return result
 
 
+def compose_layer_candidate(ws: Path, args: argparse.Namespace) -> dict:
+    source_id = slug(args.source_asset_id)
+    run = run_dir(ws, source_id)
+    if not run.is_dir():
+        raise BridgeError(f"source_run_missing:{source_id}")
+    layer_name = slug(args.layer_name)
+    sg("compose-layers", "--run-dir", str(run), "--names", layer_name)
+    output_id = slug(args.asset_id or f"{source_id}_{layer_name}")
+    prefix = slug(args.semantic_prefix or layer_name)
+    result = adopt_layer(ws, run, layer_name, output_id, prefix)
+    result.update({
+        "status": "layer_candidate_ready",
+        "sourceAssetId": source_id,
+        "layerName": layer_name,
+    })
+    return result
+
+
+def generate_video_set(ws: Path, args: argparse.Namespace) -> dict:
+    base = within(ws, args.base_image)
+    if not base.is_file():
+        raise BridgeError("base_image_not_file")
+    asset_id = slug(args.asset_id)
+    prefix = slug(args.semantic_prefix or "player")
+    states = args.states or "idle,walk,run,jump,attack"
+    selected_states = [slug(state) for state in states.split(",") if state.strip()]
+    if not selected_states:
+        raise BridgeError("states_required")
+    out_dir = ws / "assets" / "imagegen" / "sprite-gen" / asset_id / "video-set"
+    command = [
+        "video-set",
+        "--base", f"{args.direction}={base}",
+        "--states", ",".join(selected_states),
+        "--out-dir", str(out_dir),
+        "--facing", args.facing,
+        "--facing-fix", args.facing_fix,
+        "--anchor", args.anchor,
+        "--concurrency", str(args.concurrency),
+    ]
+    if args.character:
+        command += ["--character", args.character]
+    if args.force:
+        command.append("--force")
+    sg(*command)
+    result = adopt_video_set(
+        ws,
+        out_dir,
+        asset_id,
+        prefix,
+        direction=args.direction,
+        states=selected_states,
+    )
+    result.update({
+        "status": "video_candidate_ready",
+        "runDir": rel(ws, out_dir),
+        "provider": "grok-video",
+    })
+    return result
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -143,7 +237,29 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument("--cell-size", type=int, default=256)
     gen.add_argument("--logical-height", type=int)
     gen.add_argument("--concurrency", type=int, default=4)
+    gen.add_argument("--layer-contract-json", help="JSON object with rig/layers/tracks; command-neutral data only")
     gen.add_argument("--force", action="store_true")
+
+    layer_parser = sub.add_parser("compose-layer")
+    layer_parser.add_argument("--workspace", required=True)
+    layer_parser.add_argument("--source-asset-id", required=True)
+    layer_parser.add_argument("--layer-name", required=True)
+    layer_parser.add_argument("--asset-id")
+    layer_parser.add_argument("--semantic-prefix")
+
+    video_parser = sub.add_parser("video-set")
+    video_parser.add_argument("--workspace", required=True)
+    video_parser.add_argument("--base-image", required=True)
+    video_parser.add_argument("--asset-id", "--character-id", dest="asset_id", required=True)
+    video_parser.add_argument("--semantic-prefix")
+    video_parser.add_argument("--states", default="idle,walk,run,jump,attack")
+    video_parser.add_argument("--direction", choices=("side", "front", "back"), default="side")
+    video_parser.add_argument("--facing", choices=("right", "left"), default="right")
+    video_parser.add_argument("--facing-fix", choices=("none", "mirror"), default="none")
+    video_parser.add_argument("--anchor", choices=("none", "feet"), default="feet")
+    video_parser.add_argument("--character")
+    video_parser.add_argument("--concurrency", type=int, default=3)
+    video_parser.add_argument("--force", action="store_true")
 
     adopt_parser = sub.add_parser("adopt")
     adopt_parser.add_argument("--workspace", required=True)
@@ -168,10 +284,16 @@ def main() -> int:
                 "pinnedCommit": PIN,
                 "repository": UPSTREAM,
                 "subjects": ["character", "effect"],
+                "postProcessing": ["compose-layer"],
+                "motionBackends": ["component-row", "video-set"],
                 "publishMode": "multi-candidate-bundle",
             }
         elif args.cmd == "generate":
             result = generate(ws_path(args.workspace), args)
+        elif args.cmd == "compose-layer":
+            result = compose_layer_candidate(ws_path(args.workspace), args)
+        elif args.cmd == "video-set":
+            result = generate_video_set(ws_path(args.workspace), args)
         elif args.cmd == "adopt":
             ws = ws_path(args.workspace)
             result = adopt(ws, within(ws, args.run_dir), args.asset_id, args.semantic_prefix)
