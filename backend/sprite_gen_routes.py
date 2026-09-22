@@ -87,6 +87,8 @@ def sprite_gen_generate(ws_id: str, payload: dict[str, Any]):
         args += ["--logical-height", str(int(payload["logicalHeight"]))]
     if bool(payload.get("force")):
         args.append("--force")
+    if bool(payload.get("facePlusX")):
+        args.append("--face-plus-x")
 
     return {"success": True, "data": _run_bridge(args)}
 
@@ -110,6 +112,32 @@ def sprite_gen_promote(ws_id: str, payload: dict[str, Any]):
         "--workspace", ws_id,
         "--character-id", _required(payload, "characterId"),
     ]
+    if bool(payload.get("force")):
+        args.append("--force")
+    return {"success": True, "data": _run_bridge(args, timeout=120)}
+
+
+@router.post("/workspaces/{ws_id}/imagegen/sprite-gen/pack")
+def sprite_gen_pack(ws_id: str, payload: dict[str, Any]):
+    characters = payload.get("characters") or payload.get("characterIds")
+    if isinstance(characters, list):
+        character_arg = ",".join(str(item).strip() for item in characters if str(item).strip())
+    else:
+        character_arg = str(characters or "").strip()
+    if not character_arg:
+        raise HTTPException(status_code=400, detail="characters is required")
+    args = [
+        "pack",
+        "--workspace", ws_id,
+        "--characters", character_arg,
+        "--columns", str(int(payload.get("columns") or 2)),
+        "--max-edge", str(int(payload.get("maxEdge") or 4096)),
+    ]
+    aliases = payload.get("aliases") or []
+    if isinstance(aliases, dict):
+        aliases = [f"{src}={','.join(dst)}" for src, dst in aliases.items() if isinstance(dst, (list, tuple))]
+    for item in aliases:
+        args += ["--alias", str(item)]
     if bool(payload.get("force")):
         args.append("--force")
     return {"success": True, "data": _run_bridge(args, timeout=120)}

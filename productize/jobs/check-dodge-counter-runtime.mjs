@@ -17,7 +17,16 @@ function fixture(knobs = {}, onEnd) {
   const timers = [], results = [];
   const scene = {
     scale: { width: 720, height: 1280 },
-    add: { circle: (x, y) => object(x, y), text: (x, y) => object(x, y), graphics: () => object() },
+    add: {
+      circle: (x, y) => object(x, y),
+      text: (x, y, content, style) => {
+        const o = object(x, y);
+        o.text = content || '';
+        o.style = style || {};
+        return o;
+      },
+      graphics: () => object()
+    },
     input: Object.assign(new EventEmitter(), { keyboard: new EventEmitter() }),
     events: new EventEmitter(), cameras: { main: { shake() {}, flash() {} } },
     time: { now: 0, delayedCall(ms, callback) { const timer = { ms, callback, removed: false, remove() { this.removed = true; } }; timers.push(timer); return timer; } }
@@ -36,6 +45,14 @@ function fixture(knobs = {}, onEnd) {
   return { adapter, scene, timers, results, step, counterWindow };
 }
 
+test('phase hint sits in the header band, clear of the host footer', () => {
+  const f = fixture();
+  const hint = f.adapter.ui.hint;
+  assert.match(hint.text, /拖动/);
+  assert.ok(hint.y < f.scene.scale.height - 100, `hint y ${hint.y} collides with host HUD`);
+  assert.ok(parseInt(hint.style.fontSize, 10) >= 18);
+  assert.equal(hint.style.color.toLowerCase(), '#f8fafc');
+});
 test('payload duration is honored and timeout is a single failure, not a win', () => {
   const f = fixture();
   assert.equal(f.adapter.getTestState().timer, 70);

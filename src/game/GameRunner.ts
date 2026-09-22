@@ -776,6 +776,7 @@ export function initializePhaserGame(
           this.adapter = new DodgeCounterBossAdapter({
             Phaser,
             testHooks: this.testHooks,
+            runtimeArt,
             onEnd: (result: any) => this.handleAdapterEnd(result),
             spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
           });

@@ -69,12 +69,50 @@ def main() -> int:
         else:
             raise AssertionError("promotion overwrote a different runtime atlas without --force")
 
+        from PIL import Image
+        red = Image.new("RGBA", (64, 64), (255, 0, 0, 255))
+        blue = Image.new("RGBA", (64, 64), (0, 0, 255, 255))
+        for name, color, prefix, image in (
+            ("hero", (255, 0, 0, 255), "player", red),
+            ("bandit", (0, 0, 255, 255), "enemy_bandit_cultivator", blue),
+        ):
+            cand = ws / "assets/imagegen/sprite-gen" / name / "loreweaver"
+            cand.mkdir(parents=True, exist_ok=True)
+            image.save(cand / "atlas.png")
+            (cand / "manifest.json").write_text(json.dumps({
+                "semanticPrefix": prefix,
+                "clips": {"idle": {"keys": [f"{prefix}_idle_0"], "fps": 4, "loop": True}},
+                "frameSize": {"w": 64, "h": 64},
+                "frames": {prefix: {"frame": {"x": 0, "y": 0, "w": 64, "h": 64}}, f"{prefix}_idle_0": {"frame": {"x": 0, "y": 0, "w": 64, "h": 64}}},
+            }), encoding="utf-8")
+            (cand / "provenance.json").write_text("{}", encoding="utf-8")
+        try:
+            module.pack_candidates(ws, ["hero", "bandit"], columns=2, max_edge=100, force=True)
+        except module.BridgeError as exc:
+            assert str(exc).startswith("atlas_exceeds_webgl_max_edge:")
+        else:
+            raise AssertionError("pack accepted an atlas larger than the WebGL max edge")
+        packed = module.pack_candidates(
+            ws, ["hero", "bandit"],
+            aliases={"enemy_bandit_cultivator": ["enemy_arena_elite_1"]},
+            columns=2, max_edge=4096, force=True,
+        )
+        assert packed["status"] == "packed"
+        assert packed["atlasSize"] == {"w": 128, "h": 64}
+        runtime = json.loads((ws / "assets/imagegen/manifest.json").read_text(encoding="utf-8"))
+        assert runtime["frames"]["player"]["frame"]["x"] == 0
+        assert runtime["frames"]["enemy_bandit_cultivator"]["frame"]["x"] == 64
+        assert runtime["frames"]["enemy_arena_elite_1"]["frame"]["x"] == 64
+        assert runtime["atlasSize"]["w"] <= module.MAX_ATLAS_EDGE
+        assert runtime["atlasSize"]["h"] <= module.MAX_ATLAS_EDGE
+
     route_text = (ROOT / "backend" / "sprite_gen_routes.py").read_text(encoding="utf-8")
     for endpoint in (
         "/imagegen/sprite-gen/status",
         "/workspaces/{ws_id}/imagegen/sprite-gen/generate",
         "/workspaces/{ws_id}/imagegen/sprite-gen/adopt",
         "/workspaces/{ws_id}/imagegen/sprite-gen/promote",
+        "/workspaces/{ws_id}/imagegen/sprite-gen/pack",
     ):
         assert endpoint in route_text
     assert module.VERSION == "2.5.3"

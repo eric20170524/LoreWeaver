@@ -35,11 +35,15 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.randomMetadata = typeof context.randomMetadata === 'function' ? context.randomMetadata : null;
         this.player = null;
         this.boss = null;
+        this.playerSprite = null;
+        this.bossSprite = null;
         this.telegraph = null;
         this.figures = null;
         this.slash = null;
         this.playerHitFlash = 0;
         this.bossHitFlash = 0;
+        this.runtimeArt = context.runtimeArt || context.art || null;
+        this.bossEnemyId = 'arena_champion';
         this.ui = {};
         this.state = this.initialState();
     }
@@ -70,6 +74,8 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.config.durationSec = positive(playability.durationSec, DEFAULT_CONFIG.durationSec);
         const payloadHp = Number(payload.playerStats?.hp);
         if (Number.isFinite(payloadHp) && payloadHp > 0) this.config.playerHp = payloadHp;
+        this.runtimeArt = payload.runtimeArt || payload.art || this.runtimeArt || this.context.runtimeArt || null;
+        this.bossEnemyId = knobs.bossId || knobs.enemyId || 'arena_champion';
         this.state = this.initialState();
         this.result = null;
         return this;
@@ -121,13 +127,19 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.ui.title = scene.add.text(width / 2, 188, '闪避 → 反击 → 破势', {
             fontFamily: 'Inter, sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
-        this.ui.status = scene.add.text(width / 2, 218, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
-        }).setOrigin(0.5);
-        this.ui.hint = scene.add.text(width / 2, height - 72, DODGE_HINT, {
-            fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#94a3b8',
-            align: 'center', wordWrap: { width: width - 48 }
-        }).setOrigin(0.5);
+        this.ui.status = scene.add.text(width / 2, 216, '', {
+            fontFamily: 'Inter, sans-serif', fontSize: '18px', color: '#e2e8f0'
+        }).setOrigin(0.5).setDepth(30);
+        // Host HUD owns the bottom strip (score/HP at height-42, 20px). A 12px
+        // slate hint there sits under sprites and the phone bezel, so keep the
+        // phase prompt in the header band, above the break gauge and the boss.
+        this.ui.hint = scene.add.text(width / 2, 286, DODGE_HINT, {
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc',
+            align: 'center',
+            backgroundColor: 'rgba(2, 6, 23, 0.82)',
+            padding: { x: 14, y: 8 },
+            wordWrap: { width: width - 80, useAdvancedWrap: true }
+        }).setOrigin(0.5).setDepth(30);
         this.ui.bar = scene.add.graphics();
         this.boss = scene.add.circle(width / 2, Math.max(292, height * 0.40), 40, 0xef4444, 0.18)
             .setInteractive({ useHandCursor: true });
@@ -135,8 +147,9 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.telegraph = scene.add.circle(0, 0, 50, 0xef4444, 0).setStrokeStyle(3, 0xfbbf24, 0);
         this.figures = scene.add.graphics();
         this.slash = scene.add.graphics();
-        this.figures.setDepth?.(8);
-        this.slash.setDepth?.(9);
+        this.figures.setDepth?.(11);
+        this.slash.setDepth?.(12);
+        this.bindAtlasSprites();
         this.drawPresentation();
 
         this.lifecycle.trackListener(this.boss, 'pointerdown', () => this.tryCounter());
@@ -159,8 +172,11 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             this.telegraph?.destroy();
             this.figures?.destroy?.();
             this.slash?.destroy?.();
+            this.playerSprite?.destroy?.();
+            this.bossSprite?.destroy?.();
             this.ui = {};
             this.boss = this.player = this.telegraph = this.figures = this.slash = null;
+            this.playerSprite = this.bossSprite = null;
         });
         this.refreshHud();
         this.publishTestState();
@@ -272,7 +288,7 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             this.state.phase = 'idle';
             this.state.phaseLeft = this.config.attackIntervalSec;
             this.boss.setStrokeStyle(0);
-            this.ui.hint?.setText(DODGE_HINT).setColor('#94a3b8');
+            this.ui.hint?.setText(DODGE_HINT).setColor('#f8fafc');
         }
         this.drawPresentation();
         this.refreshHud();
@@ -294,6 +310,68 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         }));
     }
 
+    bindAtlasSprites() {
+        const scene = this.scene;
+        if (typeof scene?.add?.sprite !== 'function') return;
+        if (!this.runtimeArt && scene.game?.registry?.get) {
+            const binder = scene.game.registry.get('runtimeArtBinder');
+            if (binder?.createContext) this.runtimeArt = binder.createContext(scene);
+            else this.runtimeArt = scene.game.registry.get('runtimeArt') || null;
+        } else if (this.runtimeArt?.binder && scene) {
+            this.runtimeArt = this.runtimeArt.binder.createContext(scene);
+        }
+        const mount = (role, options) => {
+            if (!this.runtimeArt?.createSprite) return null;
+            const sprite = this.runtimeArt.createSprite(role, {
+                ...options,
+                fallbackFactory: () => null
+            });
+            if (!sprite || sprite.getData?.('artSource') !== 'atlas') {
+                sprite?.destroy?.();
+                return null;
+            }
+            sprite.setOrigin?.(0.5, 0.82);
+            return sprite;
+        };
+        if (this.player) {
+            this.playerSprite = mount('player', {
+                x: this.player.x,
+                y: this.player.y,
+                displaySize: 88,
+                depth: 10,
+                clip: 'idle',
+                frameRate: 4,
+                repeat: -1
+            });
+        }
+        if (this.boss) {
+            this.bossSprite = mount('enemy', {
+                enemyId: this.bossEnemyId,
+                x: this.boss.x,
+                y: this.boss.y,
+                displaySize: 132,
+                depth: 10,
+                clip: 'idle',
+                frameRate: 4,
+                repeat: -1
+            }) || mount('enemy', {
+                enemyId: 'human_genius',
+                x: this.boss.x,
+                y: this.boss.y,
+                displaySize: 132,
+                depth: 10,
+                clip: 'idle',
+                frameRate: 4,
+                repeat: -1
+            });
+        }
+    }
+
+    playRoleClip(sprite, role, clip, options = {}) {
+        if (!sprite?.active || sprite.getData?.('artClip') === clip) return;
+        this.runtimeArt?.playClip?.(sprite, role, clip, options);
+    }
+
     drawPresentation() {
         const g = this.figures;
         if (!g?.clear || !this.player || !this.boss) return;
@@ -301,8 +379,31 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         const bossLunge = this.state.phase === 'active' ? 18 : this.state.phase === 'warning' ? 8 : 0;
         const playerColor = this.playerHitFlash > 0 ? 0xf8fafc : 0x66fcf1;
         const bossColor = this.bossHitFlash > 0 ? 0xfafafa : 0xb91c1c;
-        this.drawFighter(g, this.player.x, this.player.y, 16, playerColor, false);
-        this.drawFighter(g, this.boss.x, this.boss.y + bossLunge, 28, bossColor, true);
+        if (this.playerSprite?.active) {
+            this.playerSprite.setPosition?.(this.player.x, this.player.y);
+            this.playRoleClip(
+                this.playerSprite,
+                'player',
+                this.playerHitFlash > 0 ? 'hurt' : 'idle',
+                { repeat: this.playerHitFlash > 0 ? 0 : -1, frameRate: this.playerHitFlash > 0 ? 8 : 4 }
+            );
+        } else {
+            this.drawFighter(g, this.player.x, this.player.y, 16, playerColor, false);
+        }
+        if (this.bossSprite?.active) {
+            this.bossSprite.setPosition?.(this.boss.x, this.boss.y + bossLunge);
+            if (this.bossSprite.setFlipX) this.bossSprite.setFlipX(this.player.x < this.boss.x);
+            const bossClip = this.bossHitFlash > 0
+                ? 'hurt'
+                : (this.state.phase === 'active' ? 'attack' : 'idle');
+            this.playRoleClip(this.bossSprite, 'enemy', bossClip, {
+                enemyId: this.bossEnemyId,
+                repeat: bossClip === 'idle' ? -1 : 0,
+                frameRate: bossClip === 'attack' ? 10 : 6
+            });
+        } else {
+            this.drawFighter(g, this.boss.x, this.boss.y + bossLunge, 28, bossColor, true);
+        }
         if (this.state.phase === 'warning' || this.state.phase === 'active') {
             const zone = this.state.attackZone;
             if (zone) {
@@ -359,6 +460,8 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             lastFeedback: this.state.lastFeedback,
             playerFigure: this.state.playerFigure,
             bossFigure: this.state.bossFigure,
+            playerArt: this.playerSprite?.getData?.('artKey') || 'silhouette',
+            bossArt: this.bossSprite?.getData?.('artKey') || 'silhouette',
             playerPosition: this.player ? { x: this.player.x, y: this.player.y } : null,
             determinism: this.randomMetadata ? { random: this.randomMetadata() } : null
         };

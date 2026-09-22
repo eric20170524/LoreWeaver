@@ -89,6 +89,40 @@ Promotion is explicit:
 
 If the workspace already has a different runtime atlas, promotion stops. Replacing it requires an explicit `--force`.
 
+**Do not `promote` a second character.** Promotion copies one candidate over `assets/imagegen/atlas.png` and drops everyone else. Multi-character workspaces must `pack`.
+
+## Face +x, then pack under 4096
+
+Sprite-gen rows often face left. Survivor and dodge-counter flip with `setFlipX(dx < 0)`, so default art must face screen +x:
+
+```bash
+.venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py generate \
+  --workspace <workspace-id> \
+  --base-image assets/source/hero.png \
+  --character-id hero \
+  --semantic-prefix player \
+  --provider grok \
+  --face-plus-x
+```
+
+WebGL commonly caps a single texture at 4096px. Stacking 1280px character sheets vertically will drop later characters (Node 2 `arena_champion` sat at y=3840 and never loaded). Pack left-to-right, then down, two columns:
+
+```bash
+.venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py pack \
+  --workspace <workspace-id> \
+  --characters shi_mu,bandit_cultivator,human_genius,arena_champion,rock_golem \
+  --alias enemy_bandit_cultivator=enemy_arena_elite,enemy_arena_elite_1,enemy_arena_elite_2,enemy_arena_elite_3,enemy_elite_brute \
+  --alias enemy_human_genius=enemy_arena_boss,enemy_arena_boss_1,enemy_arena_boss_2,enemy_arena_boss_3 \
+  --alias enemy_arena_champion=enemy_dodge_counter_boss \
+  --force
+```
+
+`pack` refuses any result whose width or height exceeds 4096.
+
+Alias spawn ids that the adapter actually creates (`arena_elite_1`, `arena_boss_2`, `elite_brute`) onto catalog prefixes. RuntimeArtBinder looks up `enemy_<spawnId>_*`, not the design catalog id.
+
+Adapters that still draw silhouettes (dodge-counter) must mount atlas sprites through `runtimeArt.createSprite` when `scene.add.sprite` exists. Keep hit circles for input.
+
 Promotion publishes the existing LoreWeaver runtime contract:
 
 ```text
