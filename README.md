@@ -238,7 +238,13 @@ The backend exposes workspace and pipeline endpoints through `/api`:
   a standalone `index.html` preview shell, and the reusable `core/lib` and
   `core/demo` runtime sources.
 - `POST /api/audit` - submit screenshot/audit payloads.
-- `GET /api/imagegen/sprite-gen/status` - report the pinned sprite-gen backend availability/version.\n- `POST /api/workspaces/{id}/imagegen/sprite-gen/generate` - generate a candidate multi-frame sprite atlas from a workspace base image.\n- `POST /api/workspaces/{id}/imagegen/sprite-gen/adopt` - adapt an existing sprite-gen run into LoreWeaver candidate assets.\n- `POST /api/workspaces/{id}/imagegen/sprite-gen/promote` - explicitly promote a reviewed candidate into `assets/imagegen` for RuntimeArtBinder.\n
+- `GET /api/imagegen/sprite-gen/status` - report the pinned sprite-gen backend capability/version.
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/generate` - generate character or effect candidates.
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/compose-layer` - bake and adopt a declared layer composite.
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/video-set` - generate and adopt video-derived motion clips.
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/adopt` - adapt an existing component-row run.
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/promote` - publish the reviewed multi-candidate runtime bundle.
+
 ## Local Model Support
 
 Ollama/local-model routing is intentionally deferred for now. If
