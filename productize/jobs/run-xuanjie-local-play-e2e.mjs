@@ -70,6 +70,7 @@ try {
     await page.evaluate((id) => {
       const h = window.harness;
       const node = h.spec.nodes.find(item => item.id === id);
+      if (h.game.scene.isActive('MainScene')) h.game.scene.stop('MainScene');
       const host = h.game.scene.isActive('LevelActiveScene')
         ? h.game.scene.keys.LevelActiveScene
         : h.game.scene.keys.MainScene;
@@ -78,7 +79,8 @@ try {
     const isReady = (expected) => {
       const adapter = window.harness.game.scene.keys.LevelActiveScene?.adapter;
       const state = adapter?.getTestState?.() || {};
-      return adapter?.status === 'running' && (state.adapterId === expected || state.configId === expected);
+      const card = adapter?.config?.id || state.adapterId || state.configId;
+      return adapter?.status === 'running' && card === expected;
     };
     for (let i = 0; i < 12; i++) {
       if (await page.evaluate(isReady, adapterId)) break;
@@ -147,6 +149,110 @@ try {
   assert.equal(stance.before, 'melee');
   assert.equal(stance.after, 'ranged');
   report.assertions.push('purchased 疾风刀势 raises node 1 melee damage and stance toggles by player input');
+  const meleeBeforeUnlock = stance.meleeDamage;
+
+  const readProgress = () => page.evaluate(() => {
+    const state = window.harness.game.registry.get('playerState');
+    return {
+      completed: [...(state?.completedNodeIds || [])],
+      abilities: [...(state?.unlockedAbilities || [])]
+    };
+  });
+  const clearRunningNode = async () => {
+    const settled = await page.evaluate(() => {
+      const adapter = window.harness.game.scene.keys.LevelActiveScene.adapter;
+      const card = adapter.config?.id;
+      const limit = 8000;
+      if (card === 'survivor_horde') {
+        const cap = Math.ceil(Number(adapter.config.duration) || 30) + 3;
+        let ticks = 0;
+        while (adapter.status === 'running' && ticks < cap) {
+          adapter.onSecondTick();
+          ticks += 1;
+        }
+      } else if (card === 'dodge_counter_boss') {
+        let steps = 0;
+        while (adapter.status === 'running' && steps < limit) {
+          if (adapter.player) {
+            adapter.player.x = 24;
+            adapter.player.y = 24;
+          }
+          if (adapter.state.phase === 'counter' && !adapter.state.counterUsed) adapter.tryCounter();
+          adapter.update(0, 200);
+          steps += 1;
+        }
+      } else if (card === 'shooter_duel') {
+        let steps = 0;
+        while (adapter.status === 'running' && steps < limit) {
+          adapter.boss.x = adapter.player.x;
+          adapter.bossVx = 0;
+          adapter.scene.time.now += Number(adapter.config.playerFireCooldownMs) + 1;
+          adapter.tryFire();
+          const bullet = adapter.bullets.at(-1);
+          if (bullet) {
+            bullet.x = adapter.boss.x;
+            bullet.y = adapter.boss.y;
+          }
+          adapter.update(adapter.scene.time.now, 16);
+          steps += 1;
+        }
+      } else if (card === 'rhythm_timing') {
+        let steps = 0;
+        while (adapter.status === 'running' && steps < 80) {
+          const round = adapter.rhythmRound;
+          const offset = round.state.elapsedMs - round.targetMs;
+          if (round.state.resolved) {
+            round.advance(round.config.beatIntervalMs);
+          } else if (offset < -1) {
+            round.advance(-offset);
+            adapter.primaryAction();
+          } else if (Math.abs(offset) <= round.config.perfectWindowMs) {
+            adapter.primaryAction();
+          } else {
+            round.advance(round.config.beatIntervalMs);
+            const landed = round.state.elapsedMs - round.targetMs;
+            if (!round.state.resolved && Math.abs(landed) <= round.config.perfectWindowMs) adapter.primaryAction();
+          }
+          steps += 1;
+        }
+      } else if (card === 'side_scrolling_brawler') {
+        let steps = 0;
+        while (adapter.status === 'running' && steps < limit) {
+          const wave = adapter.config.waveList[adapter.state.waveIndex];
+          if (!wave) break;
+          adapter.player.x = wave.triggerX + 1;
+          adapter.checkWaveTriggers();
+          for (const enemy of adapter.enemies) {
+            if (!enemy.alive) continue;
+            adapter.player.x = enemy.sprite.x;
+            adapter.player.y = enemy.sprite.y;
+            adapter.state.attackReadyAt = 0;
+            adapter.scene.time.now += 400;
+            adapter.tryAttack(true, adapter.scene.time.now);
+          }
+          adapter.update(adapter.scene.time.now, 32);
+          steps += 1;
+        }
+      }
+      return { card, status: adapter.status, result: adapter.result };
+    });
+    if (settled.status !== 'ended') {
+      await page.waitForFunction(() => {
+        const adapter = window.harness.game.scene.keys.LevelActiveScene?.adapter;
+        return adapter?.status === 'ended' && adapter?.result?.success === true;
+      }, null, { timeout: 4000 });
+    }
+    const result = await page.evaluate(() => window.harness.game.scene.keys.LevelActiveScene.adapter.result);
+    assert.equal(result?.success, true, `${settled.card} must emit a success NodeResult (${result?.reason || settled.status})`);
+    return result;
+  };
+
+  const node1Result = await clearRunningNode();
+  assert.equal(node1Result.reason, 'timer_expired');
+  const afterNode1 = await readProgress();
+  assert.ok(afterNode1.completed.includes(1));
+  assert.equal(afterNode1.abilities.includes('black_blade_flame'), false);
+  report.assertions.push('node 1 survival writes completion without the node 3 unlock');
 
   await startAuthoredNode(2, 'dodge_counter_boss');
   const nodeState = await page.evaluate(() => {
@@ -191,7 +297,72 @@ try {
   assert.equal(outcome.state.gauge, 100);
   report.outcome = outcome;
   report.assertions.push('six separate counter windows settle victory and persist node 2 completion without a disposed-HUD exception');
-  await page.waitForTimeout(1800);
+  const afterNode2 = await readProgress();
+  assert.deepEqual(afterNode2.completed.filter(id => id <= 3).sort((a, b) => a - b), [1, 2]);
+  assert.equal(afterNode2.abilities.includes('black_blade_flame'), false);
+
+  await startAuthoredNode(3, 'survivor_horde');
+  const retreated = await page.evaluate(() => {
+    const adapter = window.harness.game.scene.keys.LevelActiveScene.adapter;
+    return adapter.retreat();
+  });
+  assert.equal(retreated.success, false);
+  assert.equal(retreated.reason, 'retreated');
+  const afterRetreat = await readProgress();
+  assert.equal(afterRetreat.completed.includes(3), false);
+  assert.equal(afterRetreat.abilities.includes('black_blade_flame'), false);
+  report.assertions.push('node 3 retreat does not grant black_blade_flame');
+
+  await startAuthoredNode(3, 'survivor_horde');
+  const node3Result = await clearRunningNode();
+  assert.equal(node3Result.reason, 'timer_expired');
+  const afterNode3 = await readProgress();
+  assert.ok(afterNode3.completed.includes(1) && afterNode3.completed.includes(2) && afterNode3.completed.includes(3));
+  assert.ok(afterNode3.abilities.includes('black_blade_flame'));
+  report.assertions.push('node 3 survival writes completion and black_blade_flame');
+
+  const laterCards = {
+    4: 'side_scrolling_brawler',
+    5: 'shooter_duel',
+    6: 'survivor_horde',
+    7: 'rhythm_timing',
+    8: 'survivor_horde',
+    9: 'survivor_horde',
+    10: 'dodge_counter_boss',
+    11: 'survivor_horde',
+    12: 'survivor_horde'
+  };
+  for (const [id, card] of Object.entries(laterCards)) {
+    await startAuthoredNode(Number(id), card);
+    const result = await clearRunningNode();
+    assert.equal(result.success, true, `node ${id} success`);
+    const progress = await readProgress();
+    assert.ok(progress.completed.includes(Number(id)), `node ${id} completed`);
+  }
+  const finale = await readProgress();
+  const savedTrail = await page.evaluate(() => window.harness.saves.map(state => state.completedNodeIds));
+  assert.deepEqual([...finale.completed].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    `final completed=${JSON.stringify(finale.completed)} trail=${JSON.stringify(savedTrail)}`);
+  assert.ok(finale.abilities.includes('swallow_moon'));
+  assert.ok(finale.abilities.includes('white_ape_overdrive'));
+  report.assertions.push('nodes 1-12 each emit a success NodeResult and the save keeps every clear');
+
+  await startAuthoredNode(1, 'survivor_horde');
+  const heated = await page.evaluate((before) => {
+    const spec = window.harness.spec;
+    const modifier = window.harness.game.scene.keys.LevelActiveScene.adapter.modifiers.find(item => item.id === 'weapon_stance_cycle');
+    const effect = spec.abilityCatalog.find(item => item.id === 'black_blade_flame').effects
+      .find(item => item.target === 'weapon_stance_cycle.meleeDamage');
+    const expected = effect.op === 'multiply' ? before * effect.value
+      : effect.op === 'add' ? before + effect.value
+      : effect.value;
+    return { meleeDamage: modifier.config.meleeDamage, expected, op: effect.op, value: effect.value };
+  }, meleeBeforeUnlock);
+  assert.equal(heated.meleeDamage, heated.expected);
+  assert.notEqual(heated.meleeDamage, meleeBeforeUnlock);
+  report.assertions.push('owned black_blade_flame changes the next node 1 melee stat');
+  report.campaign = finale;
+  await page.waitForTimeout(300);
   assert.deepEqual(report.errors, []);
   report.status = 'passed';
 } catch (error) {

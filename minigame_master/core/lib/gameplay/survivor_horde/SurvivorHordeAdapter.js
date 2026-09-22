@@ -586,7 +586,11 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         bullet.setData('createdAt', this.scene.time.now);
         this.groups.bullets.add(bullet);
         this.scene.physics.moveToObject(bullet, target, this.config.weapon.bulletSpeed);
-        this.drawProjectileStreak(this.player.x, this.player.y, target.x, target.y, this.config.weapon.bulletColor);
+        if (bullet.getData?.('artSource') === 'atlas' && bullet.getData?.('effectId') === 'purple_bolt') {
+            bullet.setRotation?.(Math.atan2(target.y - this.player.y, target.x - this.player.x));
+        } else {
+            this.drawProjectileStreak(this.player.x, this.player.y, target.x, target.y, this.config.weapon.bulletColor);
+        }
     }
 
     drawProjectileStreak(fromX, fromY, toX, toY, color) {
@@ -616,6 +620,17 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
     createProjectile(x, y) {
         const radius = this.config.weapon.bulletRadius || 5;
+        const bolt = this.runtimeArt?.createEffect?.('purple_bolt', { x, y, clip: 'loop', depth: 11 });
+        if (bolt?.getData?.('artSource') === 'atlas') {
+            this.artStats.projectiles = bolt.getData('artKey') || 'vfx_purple_bolt';
+            this.scene.physics.add.existing(bolt);
+            const length = Math.max(28, radius * 7);
+            bolt.setDisplaySize(length, Math.round(length * 0.42));
+            bolt.body?.setCircle?.(radius);
+            bolt.setData('effectId', 'purple_bolt');
+            return bolt;
+        }
+        bolt?.destroy?.();
         const artKey = this.runtimeArt?.resolve?.('projectile')
             || this.runtimeArt?.projectileKey?.();
         if (artKey && this.scene.textures.exists(artKey)) {

@@ -864,3 +864,159 @@ def pack_candidates(
         "frameCount": len(frames),
         "characters": names,
     }
+
+
+def _unused_pack_cell(provenance: dict[str, Any], atlas_size: tuple[int, int]) -> dict[str, int] | None:
+    """The next empty cell in a packed character grid, if one exists inside the atlas."""
+    layout = provenance.get("atlasLayout") or {}
+    cell = layout.get("cell") if isinstance(layout.get("cell"), dict) else {}
+    try:
+        cols = int(layout.get("cols") or 0)
+        rows = int(layout.get("rows") or 0)
+        cell_w = int(cell.get("w") or 0)
+        cell_h = int(cell.get("h") or 0)
+    except (TypeError, ValueError):
+        return None
+    names = provenance.get("characters") if isinstance(provenance.get("characters"), list) else []
+    if cols < 1 or rows < 1 or cell_w < 1 or cell_h < 1 or len(names) >= cols * rows:
+        return None
+    index = len(names)
+    origin_x, origin_y = (index % cols) * cell_w, (index // cols) * cell_h
+    if origin_x + cell_w > atlas_size[0] or origin_y + cell_h > atlas_size[1]:
+        return None
+    return {"x": origin_x, "y": origin_y, "w": cell_w, "h": cell_h}
+
+
+def _rect_is_clear(image: Image.Image, x: int, y: int, w: int, h: int) -> bool:
+    if w <= 0 or h <= 0 or x < 0 or y < 0 or x + w > image.width or y + h > image.height:
+        return False
+    alpha = image.crop((x, y, x + w, y + h)).getextrema()[3]
+    return alpha[1] == 0
+
+
+def append_effects(
+    ws: Path,
+    effect_ids: list[str],
+    max_edge: int = MAX_ATLAS_EDGE,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Paste effect candidate sheets into a packed runtime atlas.
+
+    Character frames stay where `pack` put them. The paste target is the unused
+    grid cell when one exists. Candidates are left unpromoted: `promote` only
+    republishes candidates flagged promoted, and would otherwise replace this pack.
+    Re-running starts from the character-pack snapshot, so a second paste does not
+    stack effects on top of the previous ones.
+    """
+    names = [slug(item) for item in effect_ids if str(item).strip()]
+    if not names:
+        raise BridgeError("effects_required")
+    _assert_runtime_safe(ws, force)
+    runtime = ws / "assets" / "imagegen"
+    snapshot = runtime / "character-pack"
+    if not (snapshot / "atlas.png").is_file():
+        current_prov = _runtime_provenance(ws) or {}
+        if current_prov.get("effects"):
+            raise BridgeError("character_pack_snapshot_missing")
+        snapshot.mkdir(parents=True, exist_ok=True)
+        for filename in ("atlas.png", "manifest.json", "provenance.json"):
+            shutil.copy2(runtime / filename, snapshot / filename)
+
+    base_atlas = Image.open(snapshot / "atlas.png").convert("RGBA")
+    manifest = read_json(snapshot / "manifest.json")
+    provenance = read_json(snapshot / "provenance.json")
+    if not _is_sprite_gen_provenance(provenance):
+        raise BridgeError("runtime_art_not_sprite_gen_use_force")
+
+    opened: list[tuple[dict[str, Any], Image.Image]] = []
+    for name in names:
+        item = _candidate(ws, name)
+        if item["assetKind"] != "effect":
+            raise BridgeError(f"not_an_effect:{name}")
+        image = Image.open(item["atlas"]).convert("RGBA")
+        opened.append((item, image))
+
+    gap = 0
+    total_h = sum(image.height for _, image in opened)
+    max_w = max(image.width for _, image in opened)
+    cell = _unused_pack_cell(provenance, base_atlas.size)
+    if cell and max_w <= cell["w"] and total_h <= cell["h"]:
+        origin_x, origin_y = cell["x"], cell["y"]
+        canvas = base_atlas.copy()
+    else:
+        new_w = max(base_atlas.width, max_w)
+        new_h = base_atlas.height + total_h
+        if new_w > max_edge or new_h > max_edge:
+            have = f"{cell['w']}x{cell['h']}" if cell else "none"
+            raise BridgeError(f"effects_do_not_fit:{max_w}x{total_h}:cell={have}")
+        origin_x, origin_y = 0, base_atlas.height
+        canvas = Image.new("RGBA", (new_w, new_h), (0, 0, 0, 0))
+        canvas.paste(base_atlas, (0, 0))
+
+    frames = dict(manifest.get("frames") or {})
+    clip_sets = dict(manifest.get("clipSets") or {})
+    placements: list[dict[str, Any]] = []
+    cursor_y = origin_y
+    for item, image in opened:
+        if not _rect_is_clear(canvas, origin_x, cursor_y, image.width, image.height):
+            raise BridgeError(f"effect_destination_not_empty:{item['assetId']}")
+        canvas.paste(image, (origin_x, cursor_y), image)
+        prefix = item["prefix"]
+        if prefix in clip_sets:
+            raise BridgeError(f"duplicate_semantic_prefix:{prefix}")
+        source_sets = item["manifest"].get("clipSets") or {}
+        clips = source_sets.get(prefix) if isinstance(source_sets, dict) else None
+        if not isinstance(clips, dict):
+            clips = item["manifest"].get("clips") or {}
+        clip_sets[prefix] = clips
+        for key, value in (item["manifest"].get("frames") or {}).items():
+            if key in frames:
+                raise BridgeError(f"duplicate_frame_key:{key}")
+            box = dict((value or {}).get("frame") or {})
+            if not {"x", "y", "w", "h"}.issubset(box):
+                raise BridgeError(f"bad_candidate_frame:{item['assetId']}:{key}")
+            frames[key] = {
+                "frame": {
+                    "x": int(box["x"]) + origin_x,
+                    "y": int(box["y"]) + cursor_y,
+                    "w": int(box["w"]),
+                    "h": int(box["h"]),
+                }
+            }
+        placements.append({
+            "assetId": item["assetId"],
+            "semanticPrefix": prefix,
+            "placement": {"x": origin_x, "y": cursor_y, "w": image.width, "h": image.height},
+        })
+        cursor_y += image.height + gap
+
+    manifest["frames"] = frames
+    manifest["clipSets"] = clip_sets
+    manifest["atlasSize"] = {"w": canvas.width, "h": canvas.height}
+    manifest["effects"] = [item["assetId"] for item in placements]
+    provenance = dict(provenance)
+    provenance["effects"] = manifest["effects"]
+    provenance["effectPlacements"] = placements
+    provenance["postprocess"] = list(dict.fromkeys([*(provenance.get("postprocess") or []), "append_effects_keep_character_pack"]))
+
+    tmp_atlas = runtime / ".atlas.append-effects.tmp.png"
+    canvas.save(tmp_atlas, format="PNG")
+    provenance["runtimeAtlasSha256"] = digest(tmp_atlas)
+    tmp_manifest = runtime / ".manifest.append-effects.tmp.json"
+    tmp_manifest_js = runtime / ".manifest.append-effects.tmp.js"
+    tmp_provenance = runtime / ".provenance.append-effects.tmp.json"
+    write_json(tmp_manifest, manifest)
+    tmp_manifest_js.write_text("export default " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
+    write_json(tmp_provenance, provenance)
+    tmp_atlas.replace(runtime / "atlas.png")
+    tmp_manifest.replace(runtime / "manifest.json")
+    tmp_manifest_js.replace(runtime / "manifest.js")
+    tmp_provenance.replace(runtime / "provenance.json")
+    return {
+        "status": "effects_appended",
+        "atlas": "assets/imagegen/atlas.png",
+        "atlasSize": manifest["atlasSize"],
+        "effects": manifest["effects"],
+        "frameCount": len(frames),
+        "clipSets": sorted(clip_sets),
+    }

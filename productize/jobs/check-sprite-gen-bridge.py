@@ -241,6 +241,49 @@ def main() -> int:
         assert runtime["atlasSize"]["w"] <= module.MAX_ATLAS_EDGE
         assert runtime["atlasSize"]["h"] <= module.MAX_ATLAS_EDGE
 
+        # Packed character atlas: effects occupy the unused cell and must not move characters.
+        clear = Image.new("RGBA", (128, 64), (0, 0, 0, 0))
+        clear.paste(Image.new("RGBA", (64, 64), (255, 0, 0, 255)), (0, 0))
+        clear.save(ws / "assets/imagegen/atlas.png")
+        packed_manifest = json.loads((ws / "assets/imagegen/manifest.json").read_text(encoding="utf-8"))
+        packed_manifest["frames"] = {
+            "player_idle_0": {"frame": {"x": 0, "y": 0, "w": 64, "h": 64}}
+        }
+        (ws / "assets/imagegen/manifest.json").write_text(json.dumps(packed_manifest), encoding="utf-8")
+        (ws / "assets/imagegen/provenance.json").write_text(json.dumps({
+            "schemaVersion": "loreweaver.sprite-gen-provenance.v1",
+            "provider": "sprite-gen",
+            "characters": ["hero"],
+            "atlasLayout": {"cols": 2, "rows": 1, "cell": {"w": 64, "h": 64}},
+            "runtimeAtlasSha256": "ignored-by-force",
+        }), encoding="utf-8")
+        fx = ws / "assets/imagegen/sprite-gen/void_slash/loreweaver"
+        fx.mkdir(parents=True, exist_ok=True)
+        Image.new("RGBA", (32, 16), (0, 255, 255, 255)).save(fx / "atlas.png")
+        (fx / "manifest.json").write_text(json.dumps({
+            "assetKind": "effect",
+            "semanticPrefix": "vfx_void_slash",
+            "clips": {"impact": {"keys": ["vfx_void_slash_impact_0"], "fps": 15, "loop": False}},
+            "clipSets": {"vfx_void_slash": {"impact": {"keys": ["vfx_void_slash_impact_0"], "fps": 15, "loop": False}}},
+            "frames": {
+                "vfx_void_slash_impact_0": {"frame": {"x": 0, "y": 0, "w": 32, "h": 16}}
+            },
+        }), encoding="utf-8")
+        (fx / "provenance.json").write_text(json.dumps({
+            "assetId": "void_slash",
+            "assetKind": "effect",
+            "semanticPrefix": "vfx_void_slash",
+            "promoted": False,
+        }), encoding="utf-8")
+        appended = module.append_effects(ws, ["void_slash"], force=True)
+        assert appended["status"] == "effects_appended"
+        assert appended["atlasSize"] == {"w": 128, "h": 64}
+        appended_manifest = json.loads((ws / "assets/imagegen/manifest.json").read_text(encoding="utf-8"))
+        assert appended_manifest["frames"]["player_idle_0"]["frame"] == {"x": 0, "y": 0, "w": 64, "h": 64}
+        assert appended_manifest["frames"]["vfx_void_slash_impact_0"]["frame"]["x"] == 64
+        assert appended_manifest["clipSets"]["vfx_void_slash"]["impact"]["loop"] is False
+        assert json.loads((fx / "provenance.json").read_text(encoding="utf-8"))["promoted"] is False
+
     route_text = (ROOT / "backend" / "sprite_gen_routes.py").read_text(encoding="utf-8")
     for endpoint in (
         "/imagegen/sprite-gen/status",
@@ -258,6 +301,7 @@ def main() -> int:
     bridge_text = (ROOT / "minigame_master" / "capabilities" / "imagegen" / "sprite_gen_bridge.py").read_text(encoding="utf-8")
     assert "--subject" in bridge_text
     assert "EFFECT_STATES" in bridge_text
+    assert '--fit-align-y", "center"' in bridge_text
     assert "compose-layer" in bridge_text
     assert "video-set" in bridge_text
     assert "layer-contract-json" in bridge_text

@@ -3,12 +3,19 @@
 // Deterministic combat unit tests. Phaser timers/physics are test doubles;
 // this suite does not claim browser rendering, collision broadphase, or balance coverage.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import SurvivorHordeAdapter, {
   SURVIVOR_HORDE_DEFAULT_CONFIG
 } from '../../minigame_master/core/lib/gameplay/survivor_horde/SurvivorHordeAdapter.js';
 import WeaponStanceCycleModifier from '../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/WeaponStanceCycleModifier.js';
+import HazardTelegraphModifier from '../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/HazardTelegraphModifier.js';
 import DeterministicSurvivorHordeAdapter from '../../minigame_master/core/lib/gameplay/survivor_horde/DeterministicSurvivorHordeAdapter.js';
+
+const preset = JSON.parse(fs.readFileSync(fileURLToPath(new URL('../../data/presets/xuanjiezhimen_fangame_preset.json', import.meta.url)), 'utf8'));
+const presetNode = (id) => preset.nodes.find((node) => node.id === id);
+const presetModifier = (nodeId, modifierId) => presetNode(nodeId).gameplay.modifiers.find((item) => item.id === modifierId);
 
 test('observation remains readable after Phaser destroys scene-owned enemy groups', () => {
   const adapter = new DeterministicSurvivorHordeAdapter();
@@ -337,6 +344,56 @@ test('ranged damage multiplier is restored even when firing throws', () => {
   assert.throws(() => f.adapter.fireAtNearestEnemy(), /projectile allocation failure/);
   assert.equal(f.adapter.config.weapon.bulletDamage, original);
   modifier.uninstall(f.adapter.createRuntimeContext());
+});
+
+test('one manual melee sweep damages every enemy inside the authored radius', () => {
+  const knobs = presetModifier(1, 'weapon_stance_cycle').knobs;
+  const f = fixture({ knobs: { ...knobs, runGrowth: false } });
+  const near = f.enemy({ hp: 20, x: 20, id: 'near' });
+  const far = f.enemy({ hp: 20, x: knobs.meleeRadius - 4, id: 'far' });
+  const outside = f.enemy({ hp: 20, x: knobs.meleeRadius + 30, id: 'outside' });
+  f.tick();
+  assert.equal(near.getData('hp'), 20 - knobs.meleeDamage);
+  assert.equal(far.getData('hp'), 20 - knobs.meleeDamage);
+  assert.equal(outside.getData('hp'), 20);
+  assert.equal(events(f.adapter, 'weapon-stance-attack').at(-1).hitCount, 2);
+});
+
+test('manual ranged fire damages an enemy on the attack interval', () => {
+  const node = presetNode(1);
+  const knobs = { ...presetModifier(1, 'weapon_stance_cycle').knobs, initialStance: 'ranged', swapBurst: false, runGrowth: false };
+  const f = fixture({ knobs });
+  f.adapter.config.weapon.bulletDamage = node.gameplay.knobs.weapon.bulletDamage;
+  const enemy = f.enemy({ hp: 20, x: 30, id: 'archer_target' });
+  const before = enemy.getData('hp');
+  assert.equal(f.adapter.groups.bullets.getChildren().length, 0);
+  f.tick();
+  const bullets = f.adapter.groups.bullets.getChildren();
+  assert.equal(bullets.length, knobs.rangedBurstCount);
+  for (const bullet of bullets) f.adapter.handleBulletEnemyOverlap(bullet, enemy);
+  const expected = before - node.gameplay.knobs.weapon.bulletDamage * knobs.rangedDamageMultiplier * knobs.rangedBurstCount;
+  assert.equal(enemy.getData('hp'), expected);
+  assert.ok(enemy.getData('hp') < before);
+});
+
+test('node 3 hazard damages only after the authored warning while the horde loop stays active', () => {
+  const node = presetNode(3);
+  assert.equal(node.gameplay.cardId, 'survivor_horde');
+  const hazardKnobs = presetModifier(3, 'hazard_telegraph').knobs;
+  const f = fixture({ knobs: { ...presetModifier(3, 'weapon_stance_cycle').knobs, runGrowth: false } });
+  assert.equal(f.adapter.config.id, 'survivor_horde');
+  f.adapter.addModifier(new HazardTelegraphModifier({ ...hazardKnobs }));
+  const before = f.adapter.state.hp;
+  const timer = f.timers.find((item) => item.delay === hazardKnobs.intervalMs && item.loop);
+  timer.callback();
+  assert.equal(f.adapter.state.hp, before);
+  const warning = f.delayed.find((item) => item.delay === hazardKnobs.warningMs);
+  const enemy = f.enemy({ hp: 30, x: 12, id: 'during_warning' });
+  f.tick();
+  assert.ok(enemy.getData('hp') < 30);
+  assert.equal(f.adapter.state.hp, before);
+  warning.callback();
+  assert.equal(f.adapter.state.hp, before - hazardKnobs.damage);
 });
 
 test('invalid damage does not mutate enemy health or counters', () => {

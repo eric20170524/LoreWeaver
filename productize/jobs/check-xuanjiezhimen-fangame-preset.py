@@ -14,6 +14,8 @@ if str(ROOT) not in sys.path:
 from backend.theme_presets import get_procedural_preset  # noqa: E402
 
 PRESET_PATH = ROOT / "data" / "presets" / "xuanjiezhimen_fangame_preset.json"
+WORKSPACE_PATH = ROOT / "data" / "workspaces" / "xuanjie-shimu-local" / "manifest.json"
+MELEE_TARGETS = {"weapon_stance_cycle.meleeDamage", "weapon_stance_cycle.meleeRadius"}
 
 
 def require(condition: bool, message: str) -> None:
@@ -21,12 +23,34 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+def slice_signature(doc: dict) -> dict:
+    signature = {}
+    for node in doc.get("nodes", []):
+        gameplay = node.get("gameplay") or {}
+        signature[node["id"]] = {
+            "card": gameplay.get("cardId"),
+            "modifiers": [item.get("id") for item in gameplay.get("modifiers") or []],
+            "rewards": list((node.get("planning") or {}).get("rewardUnlocks") or []),
+        }
+    return signature
+
+
+def melee_effects(doc: dict) -> list:
+    ability = next(item for item in doc.get("abilityCatalog", []) if item.get("id") == "black_blade_flame")
+    return [
+        effect for effect in ability.get("effects") or []
+        if effect.get("target") in MELEE_TARGETS
+    ]
+
+
 def main() -> None:
     preset = json.loads(PRESET_PATH.read_text(encoding="utf-8"))
+    require(WORKSPACE_PATH.is_file(), "workspace manifest missing")
+    workspace = json.loads(WORKSPACE_PATH.read_text(encoding="utf-8"))
 
     require(preset.get("title") == "玄界之门·石牧武途（同人原型）", "unexpected title")
     require(len(preset.get("nodes", [])) == 12, "fangame route must keep the 12-node shell")
-    require(preset.get("uiConfig", {}).get("focusNodeIds") == [1, 2, 3], "golden slice must focus nodes 1-3")
+    require(preset.get("uiConfig", {}).get("focusNodeIds") == list(range(1, 13)), "playable route must focus nodes 1-12")
 
     progression_ids = {item.get("id") for item in preset.get("progressionSystems", [])}
     require(
@@ -87,6 +111,36 @@ def main() -> None:
     for alias in ("玄界之门", "玄界", "石牧", "xuanjie", "xuanjiezhimen"):
         loaded = get_procedural_preset(alias)
         require(loaded.get("title") == preset.get("title"), f"preset alias failed: {alias}")
+
+    require(workspace.get("title") == preset.get("title"), "workspace title drifted from the preset seed")
+    preset_slice = slice_signature(preset)
+    workspace_slice = slice_signature(workspace)
+    require(preset_slice == workspace_slice, "nodes 1-12 card ids, modifier ids, or rewards diverged")
+    require(set(preset_slice) == set(range(1, 13)), "campaign must contain nodes 1-12")
+    require(preset_slice[3]["rewards"] == ["black_blade_flame"], "node 3 reward must be black_blade_flame")
+    require(preset_slice[6]["rewards"] == ["swallow_moon"], "node 6 reward must be swallow_moon")
+    require(preset_slice[10]["rewards"] == ["white_ape_overdrive"], "node 10 reward must be white_ape_overdrive")
+    for label, doc in (("preset", preset), ("workspace", workspace)):
+        for node in doc["nodes"]:
+            stance = next((item for item in node["gameplay"].get("modifiers") or [] if item.get("id") == "weapon_stance_cycle"), None)
+            if stance:
+                require(stance.get("knobs", {}).get("controlMode") == "manual", f"{label} node {node['id']} stance must be manual")
+        effects = melee_effects(doc)
+        require(effects, f"{label} black_blade_flame needs a numeric melee effect")
+        for effect in effects:
+            require(effect.get("op") in {"add", "multiply", "set"}, f"{label} melee effect op")
+            require(isinstance(effect.get("value"), (int, float)) and not isinstance(effect.get("value"), bool), f"{label} melee effect value")
+        for ability_id, target in (
+            ("swallow_moon", "weapon_stance_cycle.rangedDamageMultiplier"),
+            ("white_ape_overdrive", "overdrive_transformation.damageMultiplier"),
+        ):
+            ability = next(item for item in doc["abilityCatalog"] if item.get("id") == ability_id)
+            require(any(effect.get("target") == target for effect in ability.get("effects") or []), f"{label} {ability_id} missing {target}")
+        for node_id in (11, 12):
+            node = next(item for item in doc["nodes"] if item["id"] == node_id)
+            gate = next(item for item in node["gameplay"]["modifiers"] if item.get("id") == "overdrive_transformation")
+            require(gate.get("knobs", {}).get("requiresAbility") == "white_ape_overdrive", f"{label} node {node_id} overdrive gate")
+    require(melee_effects(preset) == melee_effects(workspace), "black_blade_flame melee effects diverged")
 
     print("PASS xuanjiezhimen fangame preset contract")
 

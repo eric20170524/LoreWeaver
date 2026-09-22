@@ -158,4 +158,23 @@ assert.equal(odAdapter.config.player.speed, 125);
 assert.equal(odAdapter.damageEnemy({}, 10), 15.5);
 overdrive.uninstall(odContext);
 
+const abilityGate = createSurvivorHordeModifier({
+  id: 'overdrive_transformation',
+  knobs: { requiresAbility: 'white_ape_overdrive', durationSec: 4, damageMultiplier: 1.55 }
+});
+const abilityAdapter = {
+  ...odAdapter,
+  state: { elapsedSeconds: 1, hp: 40 },
+  config: { player: { speed: 100 }, weapon: { bulletDamage: 2 } },
+  payload: { inventory: { unlockedPassives: [], unlockedAbilities: [] } },
+  damageEnemy: (_enemy, damage) => damage,
+  damagePlayer: (amount) => amount
+};
+const abilityContext = { adapter: abilityAdapter, scene: { add: {}, input: {} }, player: { x: 0, y: 0 }, events: { emit: () => {} } };
+abilityGate.install(abilityContext);
+assert.equal(abilityGate.tryActivate(abilityContext).reason, 'unarmed');
+abilityAdapter.payload.inventory.unlockedAbilities = ['white_ape_overdrive'];
+assert.equal(abilityGate.tryActivate(abilityContext).accepted, true);
+abilityGate.uninstall(abilityContext);
+
 console.log('PASS weapon stance + manifest growth migration + survivor knob normalization smoke check');

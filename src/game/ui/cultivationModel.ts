@@ -1,4 +1,25 @@
 import type { GameSpec, PlayerState, PassiveSkillSpec, AbilitySpec } from '../../types';
+import { WEAPON_STANCE_CYCLE_DEFAULT_CONFIG } from '../../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/WeaponStanceCycleModifier.js';
+import { OVERDRIVE_TRANSFORMATION_DEFAULT_CONFIG } from '../../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/OverdriveTransformationModifier.js';
+
+/** Shipped modifier defaults. A missing preset knob must scale from these, not from 0. */
+const MODIFIER_NUMERIC_DEFAULTS: Record<string, Record<string, unknown>> = {
+  weapon_stance_cycle: WEAPON_STANCE_CYCLE_DEFAULT_CONFIG,
+  overdrive_transformation: OVERDRIVE_TRANSFORMATION_DEFAULT_CONFIG,
+};
+
+function positiveKnob(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function knobBase(modifierId: string, knobs: Record<string, any>, key: string): number | null {
+  if (knobs[key] !== undefined && knobs[key] !== null) {
+    const present = positiveKnob(knobs[key]);
+    if (present !== null) return present;
+  }
+  return positiveKnob(MODIFIER_NUMERIC_DEFAULTS[modifierId]?.[key]);
+}
 
 /** Presentation comes from the active manifest, never from a built-in IP. */
 export function cultivationView(spec: GameSpec) {
@@ -57,6 +78,58 @@ function ownedImplementedPassives(state: PlayerState, catalog: PassiveSkillSpec[
   return catalog.filter((item) => owned.has(item.id) && item.runtimeStatus !== 'planned');
 }
 
+/** Initial rows are owned at the start. Node rewards count only after RewardApplier writes them. */
+function abilityOwned(item: AbilitySpec, state: PlayerState): boolean {
+  if (!item || item.runtimeStatus === 'planned') return false;
+  if (item.unlockSource === 'initial') return true;
+  return Boolean(state.unlockedAbilities?.includes(item.id));
+}
+
+function combatKnobKey(modifierId: string, target: string): string | null {
+  if (!COMBAT_TARGETS.has(target) || target === 'player.hp') return null;
+  const prefixes = [`${modifierId}.`, `modifier.${modifierId}.`];
+  const prefix = prefixes.find((entry) => target.startsWith(entry));
+  return prefix ? target.slice(prefix.length) : null;
+}
+
+export function foldOwnedAbilityEffectsIntoKnobs(
+  modifierId: string,
+  knobs: Record<string, any>,
+  state: PlayerState,
+  catalog: AbilitySpec[] = []
+): Record<string, any> {
+  const next = { ...knobs };
+  for (const item of catalog) {
+    if (!abilityOwned(item, state)) continue;
+    for (const effect of item.effects || []) {
+      const key = combatKnobKey(modifierId, String(effect.target || ''));
+      if (!key || !OPS.has(effect.op) || typeof effect.value !== 'number') continue;
+      const before = knobBase(modifierId, next, key);
+      if (before === null) continue;
+      const after = applyNumericOp(before, effect.op, effect.value);
+      if (positiveKnob(after) !== null) next[key] = after;
+    }
+  }
+  return next;
+}
+
+export function foldOwnedAbilityHp(
+  state: PlayerState,
+  catalog: AbilitySpec[] = [],
+  baseHp = 100
+): number {
+  let hp = baseHp;
+  for (const item of catalog) {
+    if (!abilityOwned(item, state)) continue;
+    for (const effect of item.effects || []) {
+      if (effect.target !== 'player.hp' || !OPS.has(effect.op) || typeof effect.value !== 'number') continue;
+      const after = applyNumericOp(hp, effect.op, effect.value);
+      if (Number.isFinite(after) && after >= 0) hp = after;
+    }
+  }
+  return hp;
+}
+
 export function foldPassiveEffectsIntoKnobs(
   modifierId: string,
   knobs: Record<string, any>,
@@ -107,21 +180,27 @@ export function realmCombatScale(realmIndex: number) {
 export function resolveNodeCombatStats(
   state: PlayerState,
   catalog: PassiveSkillSpec[] = [],
-  bases: { hp: number; stanceKnobs?: Record<string, any> } = { hp: 100 }
+  bases: { hp: number; stanceKnobs?: Record<string, any> } = { hp: 100 },
+  abilities: AbilitySpec[] = []
 ) {
   const scale = realmCombatScale(state.currentRealmIndex);
   const baseHp = (Number.isFinite(bases.hp) && bases.hp > 0 ? bases.hp : 100) * scale.hpMultiplier;
-  const stance = foldPassiveEffectsIntoKnobs(
+  const stance = foldOwnedAbilityEffectsIntoKnobs(
     'weapon_stance_cycle',
-    { ...(bases.stanceKnobs || {}) },
+    foldPassiveEffectsIntoKnobs(
+      'weapon_stance_cycle',
+      { ...(bases.stanceKnobs || {}) },
+      state,
+      catalog
+    ),
     state,
-    catalog
+    abilities
   );
   if (Number.isFinite(Number(stance.meleeDamage))) {
     stance.meleeDamage = Number(stance.meleeDamage) * scale.meleeDamageMultiplier;
   }
   return {
-    hp: resolveCombatHp(state, catalog, baseHp),
+    hp: foldOwnedAbilityHp(state, abilities, resolveCombatHp(state, catalog, baseHp)),
     stanceKnobs: stance,
     realm: scale
   };

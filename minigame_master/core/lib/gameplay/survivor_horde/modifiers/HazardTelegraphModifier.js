@@ -1,4 +1,5 @@
 import GameplayModifier from '../../GameplayModifier.js';
+import VFX from '../../../juice/VFX.js';
 import { NODE_RESULT_REASONS } from '../../../contracts/NodeContracts.js';
 
 const DEFAULT_CONFIG = Object.freeze({
@@ -48,8 +49,18 @@ export default class HazardTelegraphModifier extends GameplayModifier {
         if (!context.adapter.isRunning()) return;
 
         const point = this.pickPoint(context);
-        const warning = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.warningColor, this.config.alpha);
-        warning.setStrokeStyle?.(2, this.config.warningColor, 0.8);
+        const diameter = Math.round(this.config.radius * 2.4);
+        let warning = VFX.spriteClip(context.scene, context.adapter?.runtimeArt, 'hazard_mark', point.x, point.y, {
+            clip: 'loop',
+            depth: 4,
+            destroyOnComplete: false
+        });
+        if (warning) {
+            warning.setDisplaySize?.(diameter, diameter);
+        } else {
+            warning = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.warningColor, this.config.alpha);
+            warning.setStrokeStyle?.(2, this.config.warningColor, 0.8);
+        }
         this.activeObjects.add(warning);
 
         context.lifecycle.trackTimer(context.scene.time.delayedCall(this.config.warningDelayMs, () => {

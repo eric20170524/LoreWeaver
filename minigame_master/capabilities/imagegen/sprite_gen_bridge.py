@@ -12,7 +12,7 @@ from pathlib import Path
 
 from sprite_gen_adapter import (
     BridgeError, PIN, UPSTREAM, VERSION,
-    adopt, adopt_layer, adopt_video_set, flip_run_frames, pack_candidates, promote, rel, slug,
+    adopt, adopt_layer, adopt_video_set, append_effects, flip_run_frames, pack_candidates, promote, rel, slug,
 )
 
 ROOT = Path(os.getenv("LOREWEAVER_ROOT") or Path(__file__).resolve().parents[3]).resolve()
@@ -25,9 +25,9 @@ CHARACTER_STATES = {
     "death": (4, 6, False, "defeat motion ending in a stable pose"),
 }
 EFFECT_STATES = {
-    "cast": (4, 12, False, "clear anticipation and release for a game VFX"),
-    "loop": (6, 12, True, "seamless repeating effect motion with stable center"),
-    "impact": (5, 15, False, "impact expansion followed by readable dissipation"),
+    "cast": (4, 12, False, "clear anticipation and release for a game VFX, stable center and facing"),
+    "loop": (6, 12, True, "seamless pulse with a stable center, silhouette, and facing; do not rotate or travel"),
+    "impact": (5, 15, False, "impact expansion then fade, staying centered with a stable facing"),
 }
 
 
@@ -135,6 +135,10 @@ def generate(ws: Path, args: argparse.Namespace) -> dict:
     ]
     if args.logical_height:
         prepare += ["--fit-pixel-unfake", "--fit-logical-height", str(args.logical_height)]
+    # Character rows pin feet to the cell floor. Effects have no feet; that anchor
+    # parks a slash or bolt on the bottom edge and makes a later rotation orbit.
+    if subject == "effect":
+        prepare += ["--fit-align-x", "centroid", "--fit-align-y", "center"]
     if args.force:
         prepare.append("--force")
     sg(*prepare)
@@ -294,6 +298,12 @@ def build_parser() -> argparse.ArgumentParser:
     pack_parser.add_argument("--columns", type=int, default=2)
     pack_parser.add_argument("--max-edge", type=int, default=4096)
     pack_parser.add_argument("--force", action="store_true")
+
+    effects_parser = sub.add_parser("append-effects")
+    effects_parser.add_argument("--workspace", required=True)
+    effects_parser.add_argument("--effects", required=True, help="comma-separated effect asset ids")
+    effects_parser.add_argument("--max-edge", type=int, default=4096)
+    effects_parser.add_argument("--force", action="store_true")
     return parser
 
 
@@ -323,6 +333,9 @@ def main() -> int:
         elif args.cmd == "pack":
             characters = [item.strip() for item in args.characters.split(",") if item.strip()]
             result = pack_candidates(ws_path(args.workspace), characters, parse_aliases(args.alias), args.columns, args.max_edge, args.force)
+        elif args.cmd == "append-effects":
+            effects = [item.strip() for item in args.effects.split(",") if item.strip()]
+            result = append_effects(ws_path(args.workspace), effects, args.max_edge, args.force)
         else:
             result = promote(ws_path(args.workspace), args.asset_id, args.force)
         print(json.dumps(result, ensure_ascii=False, indent=2))

@@ -121,23 +121,23 @@ Boss/波次压力 -> 结算 -> 主干强化
 - [x] Node 1 黑刀与弓箭两种阶段均实际造成伤害。
 - [x] 玩家能在不读说明的情况下从反馈上区分两个阶段。
 - [ ] 第一关至少出现一次“被围 -> 黑刀清开”的明显爽点。
-- [ ] 远程阶段不是空窗，能持续处理目标。
+- [x] 远程阶段不是空窗，能持续处理目标。
 - [ ] Node 3 弹幕/预警不会遮蔽核心可读性。
 
 ### 成长
 
-- [ ] 首通 Node 1 后主干状态发生变化。
+- [x] 首通 Node 1 后主干状态发生变化。
 - [x] 至少一个成长项能改变下一次战斗的真实参数。
 - [x] 境界、连珠箭、异血强身、吞月参悟可映射到局内 HP / 弹数 / 吐纳效率。
-- [ ] Node 3 的黑刀强化不是纯文案奖励。
+- [x] Node 3 的黑刀强化不是纯文案奖励。
 
 ### 工程
 
-- [ ] `玄界之门` / `石牧` alias 可直接加载 preset。
-- [ ] preset JSON 通过结构校验。
-- [ ] `weapon_stance_cycle` 能通过 registry 创建。
-- [ ] build / TypeScript / 现有 convergence checks 不被破坏。
-- [ ] 不修改稳定 core contract。
+- [x] `玄界之门` / `石牧` alias 可直接加载 preset。
+- [x] preset JSON 通过结构校验。
+- [x] `weapon_stance_cycle` 能通过 registry 创建。
+- [x] build / TypeScript / 现有 convergence checks 不被破坏。
+- [x] 不修改稳定 core contract。
 
 ## 6. 当前明确不做
 

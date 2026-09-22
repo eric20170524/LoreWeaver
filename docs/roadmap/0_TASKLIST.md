@@ -407,6 +407,16 @@
 
 ---
 
+## 同人原型落地记录：玄界之门·石牧武途（2026-09-22）
+
+这一节只记录已经跑过的同人原型，不代替下面仍开着的阶段。
+
+- 预设 `玄界之门·石牧武途（同人原型）` 的节点 1–12 都能从 RuntimeKernel 开局，并打出成功 `NodeResult`。
+- 存档 `completedNodeIds` 含 1–12。Node 3 撤退不给 `black_blade_flame`；通关后该能力把下一场 `weapon_stance_cycle.meleeDamage` 乘 1.25。Node 6 的 `swallow_moon` 把远程倍率乘 1.2。Node 10 的 `white_ape_overdrive` 改变生命和爆发数值。Node 11–12 用通用 `requiresAbility` 武装爆发。
+- 本地试玩连续两遍 `status=passed`、`errors=[]`。单测 `check-cultivation-model.ts` 13 项、`check-survivor-combat-runtime.mjs` 23 项、刀弓检查、预设检查和 `tsc --noEmit` 通过。
+- 编排入口 `WorldBuilderAgent.generate_gdd`：有密钥时 provider=`grok`，样例标题 `Clockwork Harbor Ascension`，12 个节点，没有写回石牧预设。无密钥时两次都返回程序预设，provider 不是 grok；设置 `OLLAMA_API_BASE` 也不会改道。
+- 仍不勾：`docs/0_TASKLIST.md` 的 Icebox D（真机 5 分钟）、本文件 Phase 11、14.3、18.5、18.6。Chromium 试玩不是手机验收，Ollama 仍未接入，全卡运行化和三国资产流水线样本仍未做。
+
 ## Phase 11：全玩法可运行化长期规划 -- 现阶段不考虑，除非指定要实现，不然默认跳过
 
 目标：将 Phase 1 盘点出的玩法候选逐步从“文档候选”推进到“可选择、可配置、可运行、可测试”的 Gameplay Card 资产。
@@ -514,6 +524,7 @@
   - 打包生成包含 `index.html` + `core` 静态文件 + 当前配置 `manifest.json` 的单页独立运行 zip，可随时部署至 itch.io 等 Web 托管平台
 - [ ] 14.3 **Ollama 本地模型接入：暂不考虑支持**
   - 现阶段不通过 `OLLAMA_API_BASE` 路由到本地模型；如环境变量存在，后端仅输出忽略提示，并继续使用 Gemini 或 procedural fallback。
+  - 2026-09-22 复核：无 Grok 密钥时编排回退仍是程序预设，不是 Ollama。本项保持未勾。
 
 ## Phase 18：资产流水线优先接入 (Ability VFX Voice / Art / Audio Pipelines)
 

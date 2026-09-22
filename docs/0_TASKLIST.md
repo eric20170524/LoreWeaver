@@ -2,7 +2,7 @@
 
 ## 🎯 当前迭代目标 (Current Sprint Goal)
 
-关闭 Icebox E：通用爆发变身 `overdrive_transformation`，以及手动刀弓切态的短时增益。
+把《玄界之门·石牧武途（同人原型）》做成可打完的 12 节点同人原型：每一关都能从预设开局、打出真实 `NodeResult`，首通成长改下一场战斗。Icebox D 真机试玩仍不做。构建走现有 Grok 客户端，没有密钥时用程序预设，禁止把回退标成 grok。
 
 ## ⚠️ AI 工作流要求 (Workflow Rules)
 
@@ -19,6 +19,7 @@
 - 修炼购买层只认 `clickPower` / `activeMultiplier` 时，manifest 里的战斗 `effects` 会被写成“规划中”并通过测试——那是诚实性护栏，不是养成闭环。闭环必须另测：购买 → 存档 → 入局 knobs 变化。
 - `weapon_stance_cycle` 默认定时轮换是为兼容既有 survivor 单测；石牧 preset 必须显式 `controlMode: "manual"`。
 - `GameRunner.setupFirstNodeGrowthLoop` 一旦存在，通用 modifier 只能打补丁禁用它。删除宿主特例，让 modifier 自己挂 `run_growth_milestones`。
+- 主界面每秒把 `this.state` 写回 registry。若 MainScene 没停干净，后写的通关列表会被旧的 `[1,2]` 盖掉。进关卡必须 `scene.stop('MainScene')`，写档时合并已通关 id。
 
 ## 🐛 遗留问题与技术债 (Icebox)
 
@@ -68,3 +69,14 @@
 
 - [x] **Task 4.1:** 跑本轮验证命令一次，更新本文件审计，沉淀坑点到 `docs/fangame/`。
   - **Decision & Audit:** 命令见 `docs/2_ARCHITECTURE.md`。E2E 首次失败：Node 1→2 时 MainScene 已停、survivor group.clear 在 shutdown 抛错。已改为从活动场景 restart，cleanup 对失效 Group 容错。见 [[pitfall_cultivation_passthrough_and_scene_restart]]。
+
+### Task 5: 十二节点可玩，首通改下一场
+
+- [x] **Task 5.1:** `black_blade_flame`、`swallow_moon`、`white_ape_overdrive` 在 preset 与 `xuanjie-shimu-local` 上带数值效果；`RewardApplier` 成功才写入，失败/撤退不解锁。
+- [x] **Task 5.2:** 入局把已拥有能力折进 `weapon_stance_cycle` / `overdrive_transformation` / `player.hp`。Node 11–12 的爆发用通用 `requiresAbility` 武装，core 不写石牧技能名。
+- [x] **Task 5.3:** 所有带刀弓的关卡显式 `controlMode: "manual"`。`focusNodeIds` 为 1–12。两份规格的卡牌、modifier、首通奖励一致。
+- [x] **Task 5.4:** 近战一扫多目标、远程开火有伤害、Node 3 危险在预警结束后才扣血，且宿主仍是 `survivor_horde`。
+- [x] **Task 5.5:** 本地试玩从预设启动节点 1–12，成功 `NodeResult` 写入 `completedNodeIds`；Node 3 撤退不给 `black_blade_flame`。
+- [x] **Task 5.6:** `WorldBuilderAgent.generate_gdd` 有 `XAI_API_KEY` / `GROK_API_KEY` 时走 grok；没有密钥时返回程序预设，且 `OLLAMA_API_BASE` 不改道。不得覆盖石牧预设。
+- **AC:** `check-cultivation-model.ts`、`check-survivor-combat-runtime.mjs`、`check-xuanjiezhimen-fangame-preset.py`、`check-weapon-stance-cycle.mjs`、`run-xuanjie-local-play-e2e.mjs`、`tsc --noEmit` 通过。Icebox D 保持未勾。
+  - **Decision & Audit:** 烈炎改 `weapon_stance_cycle.meleeDamage`（×1.25），吞月改远程倍率（×1.2），白猿改爆发伤害/时长和生命。单测 `check-cultivation-model.ts`、`check-survivor-combat-runtime.mjs`、`check-weapon-stance-cycle.mjs`、`check-xuanjiezhimen-fangame-preset.py` 通过。E2E 连续两遍 `status=passed`、`errors=[]`，存档含节点 1–12；Node 3 撤退不给 `black_blade_flame`，通关后下一场 Node 1 近战高于 5.75。主界面挂机计时器曾把通关列表盖回 `[1,2]`，现进入关卡会停掉 MainScene，存档合并已通关 id。Grok 实调 provider=`grok`，标题 `Clockwork Harbor Ascension`，12 个节点；无密钥两次回退都是程序预设，provider 不是 grok，也不是 ollama。`tsc --noEmit` 通过。预设没写的战斗旋钮按 modifier 默认值再乘能力，不写成 0：Node 8 远程倍率是默认 1×1.2，Node 3 爆发伤害是默认 1.55×1.2。Icebox D 仍未做。

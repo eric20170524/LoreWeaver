@@ -1,9 +1,20 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { RewardApplier } from '../../src/utils/RewardApplier.ts';
+import { createSurvivorHordeModifier } from '../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/registry.js';
+import { WEAPON_STANCE_CYCLE_DEFAULT_CONFIG } from '../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/WeaponStanceCycleModifier.js';
+import { OVERDRIVE_TRANSFORMATION_DEFAULT_CONFIG } from '../../minigame_master/core/lib/gameplay/survivor_horde/modifiers/OverdriveTransformationModifier.js';
 import {
   cultivationView, abilityRecorded, passivePurchaseStatus, purchasePassive,
-  foldPassiveEffectsIntoKnobs, resolveCombatHp, resolveNodeCombatStats
+  applyNumericOp, foldPassiveEffectsIntoKnobs, foldOwnedAbilityEffectsIntoKnobs,
+  realmCombatScale, resolveCombatHp, resolveNodeCombatStats
 } from '../../src/game/ui/cultivationModel.ts';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const loadSpec = (relative: string) => JSON.parse(fs.readFileSync(path.join(root, relative), 'utf8'));
 
 const state = (): any => ({ mainCurrencyCount: 500, currentRealmIndex: 3, clickPower: 2, activeMultiplier: 1,
   unlockedAbilities: ['foreign_ability'], unlockedPassives: [], unlockedNodeIds: [1], completedNodeIds: [], secondaryResources: {} });
@@ -118,6 +129,245 @@ test('purchases apply multiply/set/add correctly and remain idempotent', () => {
   assert.equal(purchasePassive({ ...skill, id: 'add', effects: [{ target: 'activeMultiplier', op: 'add', value: 2 }] }, s), true);
   assert.equal(s.activeMultiplier, 6);
 });
+function freshMainline(): any {
+  return {
+    mainCurrencyCount: 0, currentRealmIndex: 0, clickPower: 1.5, activeMultiplier: 1,
+    unlockedAbilities: [], unlockedPassives: [], unlockedNodeIds: [1], completedNodeIds: [],
+    secondaryResources: {}, storyFlags: []
+  };
+}
+
+function hostSuccess(node: any): any {
+  return {
+    success: true,
+    rewards: {
+      unlockedAbilities: [...(node.planning?.rewardUnlocks || [])],
+      unlockNextNode: true
+    }
+  };
+}
+
+test('first-clear reward apply folds black_blade_flame into the next stance melee stat', () => {
+  const specs = [
+    loadSpec('data/presets/xuanjiezhimen_fangame_preset.json'),
+    loadSpec('data/workspaces/xuanjie-shimu-local/manifest.json')
+  ];
+  for (const spec of specs) {
+    const node3 = spec.nodes.find((node: any) => node.id === 3);
+    const node1 = spec.nodes.find((node: any) => node.id === 1);
+    const stance = node3.gameplay.modifiers.find((item: any) => item.id === 'weapon_stance_cycle').knobs;
+    const ability = spec.abilityCatalog.find((item: any) => item.id === 'black_blade_flame');
+    const effects = (ability.effects || []).filter((effect: any) =>
+      effect.target === 'weapon_stance_cycle.meleeDamage' || effect.target === 'weapon_stance_cycle.meleeRadius');
+    assert.ok(effects.length >= 1, 'catalog row without a melee effect does not count');
+    assert.deepEqual(node3.planning.rewardUnlocks, ['black_blade_flame']);
+
+    const ownedCatalogOnly = freshMainline();
+    const before = resolveNodeCombatStats(ownedCatalogOnly, spec.passiveSkillCatalog, {
+      hp: node3.gameplay.knobs.player.hp, stanceKnobs: stance
+    }, spec.abilityCatalog);
+    const realm = realmCombatScale(ownedCatalogOnly.currentRealmIndex).meleeDamageMultiplier;
+    for (const effect of effects) {
+      const key = effect.target.split('.').pop();
+      const presetValue = Number(stance[key]);
+      const expectedBefore = key === 'meleeDamage' ? presetValue * realm : presetValue;
+      assert.equal(before.stanceKnobs[key], expectedBefore);
+    }
+    assert.equal(foldOwnedAbilityEffectsIntoKnobs('weapon_stance_cycle', { ...stance }, ownedCatalogOnly, [{
+      ...ability, effects: []
+    }]).meleeDamage, stance.meleeDamage);
+
+    const failed = RewardApplier.apply(freshMainline(), node3, { success: false, reason: 'hp_zero' });
+    const retreated = RewardApplier.apply(freshMainline(), node3, { success: false, reason: 'retreated' });
+    for (const skipped of [failed, retreated]) {
+      assert.deepEqual(skipped.completedNodeIds, []);
+      assert.deepEqual(skipped.unlockedAbilities, []);
+    }
+
+    const cleared = RewardApplier.apply(freshMainline(), node3, hostSuccess(node3));
+    assert.ok(cleared.completedNodeIds.includes(3));
+    assert.ok(cleared.unlockedAbilities.includes('black_blade_flame'));
+    const after = resolveNodeCombatStats(cleared, spec.passiveSkillCatalog, {
+      hp: node3.gameplay.knobs.player.hp, stanceKnobs: stance
+    }, spec.abilityCatalog);
+    for (const effect of effects) {
+      const key = effect.target.split('.').pop();
+      const folded = applyNumericOp(Number(stance[key]), effect.op, effect.value);
+      const expected = key === 'meleeDamage' ? folded * realm : folded;
+      assert.equal(after.stanceKnobs[key], expected);
+      assert.notEqual(after.stanceKnobs[key], before.stanceKnobs[key]);
+    }
+
+    const node1Clear = RewardApplier.apply(freshMainline(), node1, hostSuccess(node1));
+    assert.ok(node1Clear.completedNodeIds.includes(1));
+    assert.equal(node1Clear.unlockedAbilities.includes('black_blade_flame'), false);
+    assert.deepEqual(node1Clear.unlockedAbilities, node1.planning.rewardUnlocks);
+  }
+});
+
+test('clearing nodes 1 through 12 writes the campaign and later rewards change the next fight', () => {
+  const spec = loadSpec('data/presets/xuanjiezhimen_fangame_preset.json');
+  let state = freshMainline();
+  const completed: number[] = [];
+  const nodes = [...spec.nodes].sort((a: any, b: any) => a.id - b.id);
+  for (const node of nodes) {
+    assert.equal(node.id, completed.length + 1);
+    const skipped = RewardApplier.apply(state, node, { success: false, reason: 'retreated' });
+    assert.deepEqual(skipped.completedNodeIds, completed);
+    state = RewardApplier.apply(state, node, hostSuccess(node));
+    completed.push(node.id);
+    assert.deepEqual([...state.completedNodeIds], completed);
+    if (node.id < 12) assert.ok(state.unlockedNodeIds.includes(node.id + 1));
+  }
+  assert.deepEqual(completed, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  assert.ok(state.unlockedAbilities.includes('black_blade_flame'));
+  assert.ok(state.unlockedAbilities.includes('swallow_moon'));
+  assert.ok(state.unlockedAbilities.includes('white_ape_overdrive'));
+
+  const node11 = spec.nodes.find((node: any) => node.id === 11);
+  const stance = node11.gameplay.modifiers.find((item: any) => item.id === 'weapon_stance_cycle').knobs;
+  const overdrive = node11.gameplay.modifiers.find((item: any) => item.id === 'overdrive_transformation').knobs;
+  const before = freshMainline();
+  const afterStance = resolveNodeCombatStats(state, spec.passiveSkillCatalog, { hp: 180, stanceKnobs: stance }, spec.abilityCatalog);
+  const beforeStance = resolveNodeCombatStats(before, spec.passiveSkillCatalog, { hp: 180, stanceKnobs: stance }, spec.abilityCatalog);
+  const meleeEffect = spec.abilityCatalog.find((item: any) => item.id === 'black_blade_flame').effects
+    .find((effect: any) => effect.target === 'weapon_stance_cycle.meleeDamage');
+  const rangedEffect = spec.abilityCatalog.find((item: any) => item.id === 'swallow_moon').effects
+    .find((effect: any) => effect.target === 'weapon_stance_cycle.rangedDamageMultiplier');
+  const realm = realmCombatScale(0).meleeDamageMultiplier;
+  assert.equal(afterStance.stanceKnobs.meleeDamage, applyNumericOp(stance.meleeDamage, meleeEffect.op, meleeEffect.value) * realm);
+  assert.notEqual(afterStance.stanceKnobs.meleeDamage, beforeStance.stanceKnobs.meleeDamage);
+  assert.equal(afterStance.stanceKnobs.rangedDamageMultiplier, applyNumericOp(stance.rangedDamageMultiplier, rangedEffect.op, rangedEffect.value));
+  const foldedOverdrive = foldOwnedAbilityEffectsIntoKnobs('overdrive_transformation', { ...overdrive }, state, spec.abilityCatalog);
+  const damageEffect = spec.abilityCatalog.find((item: any) => item.id === 'white_ape_overdrive').effects
+    .find((effect: any) => effect.target === 'overdrive_transformation.damageMultiplier');
+  const durationEffect = spec.abilityCatalog.find((item: any) => item.id === 'white_ape_overdrive').effects
+    .find((effect: any) => effect.target === 'overdrive_transformation.durationSec');
+  assert.equal(foldedOverdrive.damageMultiplier, applyNumericOp(overdrive.damageMultiplier, damageEffect.op, damageEffect.value));
+  assert.equal(foldedOverdrive.durationSec, applyNumericOp(overdrive.durationSec, durationEffect.op, durationEffect.value));
+  assert.equal(foldOwnedAbilityEffectsIntoKnobs('overdrive_transformation', { ...overdrive }, before, spec.abilityCatalog).damageMultiplier, overdrive.damageMultiplier);
+});
+
+test('missing preset knobs scale from the shipped modifier default, not from zero', () => {
+  const spec = loadSpec('data/presets/xuanjiezhimen_fangame_preset.json');
+  const nodeById = (id: number) => spec.nodes.find((node: any) => node.id === id);
+  const knobsOf = (node: any, modifierId: string) => node.gameplay.modifiers.find((item: any) => item.id === modifierId).knobs;
+  let state = freshMainline();
+  state = RewardApplier.apply(state, nodeById(6), hostSuccess(nodeById(6)));
+  state = RewardApplier.apply(state, nodeById(10), hostSuccess(nodeById(10)));
+  assert.ok(state.unlockedAbilities.includes('swallow_moon'));
+  assert.ok(state.unlockedAbilities.includes('white_ape_overdrive'));
+
+  const node8Stance = knobsOf(nodeById(8), 'weapon_stance_cycle');
+  const node9Stance = knobsOf(nodeById(9), 'weapon_stance_cycle');
+  assert.equal(node8Stance.rangedDamageMultiplier, undefined);
+  assert.equal(node9Stance.rangedDamageMultiplier, undefined);
+  const rangedEffect = spec.abilityCatalog.find((item: any) => item.id === 'swallow_moon').effects
+    .find((effect: any) => effect.target === 'weapon_stance_cycle.rangedDamageMultiplier');
+  const expectedRanged = applyNumericOp(
+    WEAPON_STANCE_CYCLE_DEFAULT_CONFIG.rangedDamageMultiplier,
+    rangedEffect.op,
+    rangedEffect.value
+  );
+  const resolved = resolveNodeCombatStats(state, spec.passiveSkillCatalog, {
+    hp: 120,
+    stanceKnobs: node8Stance
+  }, spec.abilityCatalog);
+  assert.equal(resolved.stanceKnobs.rangedDamageMultiplier, expectedRanged);
+  assert.notEqual(resolved.stanceKnobs.rangedDamageMultiplier, 0);
+  const node9Resolved = resolveNodeCombatStats(state, spec.passiveSkillCatalog, {
+    hp: 120,
+    stanceKnobs: node9Stance
+  }, spec.abilityCatalog);
+  assert.equal(node9Resolved.stanceKnobs.rangedDamageMultiplier, expectedRanged);
+  const node9StanceModifier = createSurvivorHordeModifier({
+    id: 'weapon_stance_cycle',
+    knobs: node9Resolved.stanceKnobs
+  });
+  assert.equal(node9StanceModifier.config.rangedDamageMultiplier, expectedRanged);
+
+  const stance = createSurvivorHordeModifier({
+    id: 'weapon_stance_cycle',
+    knobs: { ...resolved.stanceKnobs, runGrowth: false }
+  });
+  assert.equal(stance.config.rangedDamageMultiplier, expectedRanged);
+  const bulletDamage = 3;
+  let firedDamage = 0;
+  const stanceAdapter: any = {
+    status: 'running',
+    state: { elapsedSeconds: 0 },
+    config: { weapon: { bulletDamage } },
+    modifiers: [stance],
+    isRunning: () => true,
+    fireAtNearestEnemy() { firedDamage = stanceAdapter.config.weapon.bulletDamage; },
+    semanticActions: () => [],
+    handleSemanticInput: () => ({})
+  };
+  const stanceContext = {
+    adapter: stanceAdapter,
+    scene: { scale: { width: 720, height: 1280 }, add: {}, input: {} },
+    player: { x: 0, y: 0 },
+    groups: {},
+    events: { emit() {} }
+  };
+  stance.install(stanceContext);
+  stance.toggleStance(stanceContext);
+  stance._rangedSwapShots = 0;
+  stanceAdapter.fireAtNearestEnemy();
+  assert.equal(firedDamage, bulletDamage * expectedRanged);
+  assert.notEqual(firedDamage, bulletDamage);
+  stance.uninstall(stanceContext);
+
+  const node3Overdrive = knobsOf(nodeById(3), 'overdrive_transformation');
+  assert.equal(node3Overdrive.damageMultiplier, undefined);
+  const damageEffect = spec.abilityCatalog.find((item: any) => item.id === 'white_ape_overdrive').effects
+    .find((effect: any) => effect.target === 'overdrive_transformation.damageMultiplier');
+  const expectedDamage = applyNumericOp(
+    OVERDRIVE_TRANSFORMATION_DEFAULT_CONFIG.damageMultiplier,
+    damageEffect.op,
+    damageEffect.value
+  );
+  const folded = foldOwnedAbilityEffectsIntoKnobs(
+    'overdrive_transformation',
+    { ...node3Overdrive },
+    state,
+    spec.abilityCatalog
+  );
+  assert.equal(folded.damageMultiplier, expectedDamage);
+  assert.notEqual(folded.damageMultiplier, 0);
+  assert.notEqual(folded.damageMultiplier, OVERDRIVE_TRANSFORMATION_DEFAULT_CONFIG.damageMultiplier);
+
+  const overdrive = createSurvivorHordeModifier({ id: 'overdrive_transformation', knobs: folded });
+  assert.equal(overdrive.config.damageMultiplier, expectedDamage);
+  const overdriveAdapter: any = {
+    status: 'running',
+    state: { elapsedSeconds: 1, hp: 80 },
+    config: { player: { speed: 100 } },
+    payload: {
+      inventory: {
+        unlockedPassives: overdrive.config.requiresPassive ? [overdrive.config.requiresPassive] : [],
+        unlockedAbilities: state.unlockedAbilities
+      }
+    },
+    modifiers: [],
+    isRunning: () => true,
+    damageEnemy: (_enemy: unknown, damage: number) => damage,
+    damagePlayer: (amount: number) => amount
+  };
+  const overdriveContext = {
+    adapter: overdriveAdapter,
+    scene: { add: {}, input: {} },
+    player: { x: 0, y: 0 },
+    events: { emit() {} }
+  };
+  overdrive.install(overdriveContext);
+  assert.equal(overdrive.tryActivate(overdriveContext).accepted, true);
+  assert.equal(overdriveAdapter.damageEnemy({}, 10), 10 * expectedDamage);
+  assert.notEqual(overdriveAdapter.damageEnemy({}, 10), 10);
+  assert.notEqual(overdriveAdapter.damageEnemy({}, 10), 10 * OVERDRIVE_TRANSFORMATION_DEFAULT_CONFIG.damageMultiplier);
+  overdrive.uninstall(overdriveContext);
+});
+
 test('prerequisites, affordability and invalid results are checked before spending', () => {
   const s = state();
   const before = structuredClone(s);

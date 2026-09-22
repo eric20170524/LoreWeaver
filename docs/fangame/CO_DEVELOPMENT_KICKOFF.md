@@ -121,10 +121,12 @@
 - [x] 产出首版 preset / manifest seed。
 - [x] 新增刀弓双态的可复用 runtime modifier。
 - [x] 首个核心节点在 Emulator 中完成实际运行验证。
-- [ ] NodeResult 正常结算并回写成长。
+- [x] NodeResult 正常结算并回写成长。
+  - **Decision & Audit:** 预设导入的 RuntimeKernel 试玩连续两遍通过。节点 1–12 都打出成功 `NodeResult`，存档 `completedNodeIds` 含 1–12。Node 3 撤退不写入 `black_blade_flame`；通关后该能力把下一场近战伤害乘上目录里的 1.25。证据：`xuanjie-e2e-1.log` / `xuanjie-e2e-2.log`（`status=passed`，`errors=[]`）与 `check-cultivation-model.ts`。
 - [x] 角色能力至少有一次可感知的跨局成长。
 - [x] 通过基础 build/runtime gate。
-- [ ] 完成 Node 1–3 第一轮可玩复盘。
+- [x] 完成 Node 1–3 第一轮可玩复盘。
+  - **Decision & Audit:** Node 1 手动刀弓：一扫命中半径内多个目标，远程开火按间隔扣血。Node 2 六次独立反击破势。Node 3 危险在 900ms 预警之后才造成 16 点伤害，宿主仍是 `survivor_horde`。同一次复盘把节点 4–12 也打完；这仍是 Chromium 代理，不是真机 5 分钟试玩。
 
 ## 7. 暂不做
 

@@ -9,6 +9,7 @@ const DEFAULT_CONFIG = Object.freeze({
     speedMultiplier: 1.25,
     meleeRadiusBonus: 24,
     requiresPassive: null,
+    requiresAbility: null,
     auraColor: 0xf5e6b8,
     label: 'OVERDRIVE'
 });
@@ -90,10 +91,15 @@ export default class OverdriveTransformationModifier extends GameplayModifier {
     }
 
     isArmed(adapter) {
-        const required = this.config.requiresPassive;
-        if (!required) return true;
-        const passives = adapter?.payload?.inventory?.unlockedPassives || [];
-        return passives.includes(required);
+        const requiredPassive = this.config.requiresPassive;
+        const requiredAbility = this.config.requiresAbility;
+        if (!requiredPassive && !requiredAbility) return true;
+        const inventory = adapter?.payload?.inventory || {};
+        const passives = inventory.unlockedPassives || [];
+        const abilities = inventory.unlockedAbilities || [];
+        if (requiredPassive && !passives.includes(requiredPassive)) return false;
+        if (requiredAbility && !abilities.includes(requiredAbility)) return false;
+        return true;
     }
 
     tryActivate(context, source = 'api') {

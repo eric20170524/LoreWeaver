@@ -50,6 +50,9 @@ export interface AbilitySpec {
     powerCurve?: string;
     counterplay?: string;
   };
+  /** Numeric combat fold. Same targets as passive skills. IP stays in the catalog. */
+  effects?: PassiveSkillEffectSpec[];
+  runtimeStatus?: "planned" | "implemented" | "validated" | string;
 }
 
 export interface PassiveSkillEffectSpec {

@@ -43,7 +43,7 @@ import { UIPlugin, UIPluginContext } from "./ui/UIPlugin";
 import { GAMEPLAY_CARD_OPTIONS } from "../utils/gameplayManifest";
 import { DefaultUIPlugin } from "./ui/DefaultUIPlugin";
 import { CultivationUIPlugin } from "./ui/CultivationUIPlugin";
-import { foldPassiveEffectsIntoKnobs, resolveNodeCombatStats } from "./ui/cultivationModel";
+import { foldOwnedAbilityEffectsIntoKnobs, foldPassiveEffectsIntoKnobs, resolveNodeCombatStats } from "./ui/cultivationModel";
 
 const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
   hazard_telegraph: {
@@ -430,6 +430,19 @@ export function initializePhaserGame(
     };
 
     private saveStateToStore() {
+      const latest = this.game.registry.get("playerState") as PlayerState | undefined;
+      if (latest && latest !== this.state) {
+        const union = (left?: string[] | number[], right?: string[] | number[]) => (
+          [...new Set([...(left || []), ...(right || [])])]
+        );
+        this.state.completedNodeIds = union(this.state.completedNodeIds, latest.completedNodeIds) as number[];
+        this.state.unlockedNodeIds = union(this.state.unlockedNodeIds, latest.unlockedNodeIds) as number[];
+        this.state.unlockedAbilities = union(this.state.unlockedAbilities, latest.unlockedAbilities) as string[];
+        this.state.unlockedPassives = union(this.state.unlockedPassives, latest.unlockedPassives) as string[];
+        if ((latest.activeMultiplier || 0) > (this.state.activeMultiplier || 0)) {
+          this.state.activeMultiplier = latest.activeMultiplier;
+        }
+      }
       this.game.registry.set("playerState", this.state);
       onSaveState(this.state);
     }
@@ -483,6 +496,7 @@ export function initializePhaserGame(
     }
 
     init(data: { node: NodeSpec }) {
+      if (this.scene.isActive("MainScene")) this.scene.stop("MainScene");
       (this as any)._didRetreat = false;
       (this as any)._retreatBtn = null;
       this.node = data.node;
@@ -569,7 +583,7 @@ export function initializePhaserGame(
         const knobHp = Number(
           (mergedKnobs as any).player?.hp ?? mergedRaw.player?.hp ?? mergedRaw.playerHp ?? 100
         );
-        const combatStats = resolveNodeCombatStats(pState, spec.passiveSkillCatalog || [], { hp: knobHp, stanceKnobs: {} });
+        const combatStats = resolveNodeCombatStats(pState, spec.passiveSkillCatalog || [], { hp: knobHp, stanceKnobs: {} }, abilityCatalog);
         const payload = createNodePayload({
           id: this.node.id,
           nodeId: `node_${this.node.id}`,
@@ -621,12 +635,17 @@ export function initializePhaserGame(
                 ? resolveNodeCombatStats(pState, spec.passiveSkillCatalog || [], {
                     hp: knobHp,
                     stanceKnobs: baseKnobs
-                  }).stanceKnobs
-                : foldPassiveEffectsIntoKnobs(
+                  }, abilityCatalog).stanceKnobs
+                : foldOwnedAbilityEffectsIntoKnobs(
                   modSpec.id,
-                  baseKnobs,
+                  foldPassiveEffectsIntoKnobs(
+                    modSpec.id,
+                    baseKnobs,
+                    pState,
+                    spec.passiveSkillCatalog || []
+                  ),
                   pState,
-                  spec.passiveSkillCatalog || []
+                  abilityCatalog
                 );
               return [createSurvivorHordeModifier({
                 id: modSpec.id,

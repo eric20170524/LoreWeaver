@@ -2,7 +2,9 @@
 
 ## 1. 编码信条
 
-- 用最少代码打通 Icebox E。真机试玩仍不做。爆发变身必须是通用 modifier，IP 名只出现在 preset。
+- 当前推进的是 12 节点同人原型，不是再开一轮只修前三关。每完成一段，就更新 `docs/0_TASKLIST.md` 到 `docs/5_AGENT_RULES.md`，让下一次还能从任务单接着做。
+- 真机试玩仍不做。Icebox D 保持未勾，Chromium 试玩不能写成手机验收。
+- 爆发变身必须是通用 modifier。IP 名只出现在 preset。`requiresAbility` 只比较存档里的能力 id。
 - 降级门禁时必须同步 catalog 政策测试：自动选卡集合缩小后，禁止再断言轻量批为 production_ready。
 - 改公共函数前检索调用方、夹具、CI。
 - 禁止 `TODO` 占位和半截签名。
@@ -18,11 +20,11 @@
 
 ## 4. 拒绝假成功
 
-未跑通命令的任务不得打勾。E2E 脚本不得把“规划中且不能买”当成养成闭环的成功条件。
+未跑通命令的任务不得打勾。E2E 脚本不得把“规划中且不能买”当成养成闭环的成功条件。目录里有一行能力但没有数值效果，不算首通成长。没有密钥时不得伪造 provider `grok`。
 
 ## 6. 环境陷阱
 
-- Phaser `scene.start` 必须从**当前活动**场景发出；MainScene 被 LevelActiveScene 停掉后不能再当 host。
+- Phaser `scene.start` 必须从**当前活动**场景发出；MainScene 被 LevelActiveScene 停掉后不能再当 host。进关卡时再 `scene.stop('MainScene')` 一次，避免挂机计时器用旧存档覆盖通关列表。
 - survivor 物理组在 shutdown 时 `children` 可能已空，cleanup 必须容错，否则 console.error 会打爆 Playwright pageerror 断言。
 - `weapon_stance_cycle` 默认定时是给既有夹具用的；石牧身份必须在 preset knobs 里写 `controlMode: "manual"`。
 - 多个 modifier 包装 `handleSemanticInput` / `damagePlayer` 时，uninstall 必须倒序，否则会把已拆掉的包装装回去。

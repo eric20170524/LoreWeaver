@@ -1,4 +1,5 @@
 import GameplayModifier from '../../GameplayModifier.js';
+import VFX from '../../../juice/VFX.js';
 import RunGrowthMilestonesModifier from './RunGrowthMilestonesModifier.js';
 
 const DEFAULT_CONFIG = Object.freeze({
@@ -314,28 +315,38 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         adapter.runtimeArt?.playClip?.(player, 'player', 'attack', { repeat: 0, frameRate: 12 });
 
         const color = Number(this.config.meleeColor ?? DEFAULT_CONFIG.meleeColor);
-        const fadeSlash = (node, scale) => {
-            if (!node) return;
-            if (scene.tweens?.add) {
-                scene.tweens.add({
-                    targets: node,
-                    alpha: 0,
-                    scale,
-                    duration: 340,
-                    onComplete: () => node.destroy?.()
-                });
-            } else {
-                node.destroy?.();
-            }
-        };
-        const slash = scene.add?.circle?.(player.x, player.y, Math.max(12, radius * 0.72), color, 0.35);
-        slash?.setStrokeStyle?.(8, color, 0.95);
-        slash?.setDepth?.(12);
-        const ring = scene.add?.circle?.(player.x, player.y, radius, color, 0);
-        ring?.setStrokeStyle?.(6, 0xffe08a, 0.9);
-        ring?.setDepth?.(12);
-        fadeSlash(slash, 1.35);
-        fadeSlash(ring, 1.18);
+        const slashSprite = VFX.spriteClip(scene, adapter.runtimeArt, 'black_blade', player.x, player.y, {
+            clip: 'impact',
+            depth: 12
+        });
+        if (slashSprite) {
+            const diameter = Math.max(48, radius * 2.2);
+            slashSprite.setDisplaySize?.(diameter, diameter);
+            slashSprite.setFlipX?.(Boolean(player.flipX));
+        } else {
+            const fadeSlash = (node, scale) => {
+                if (!node) return;
+                if (scene.tweens?.add) {
+                    scene.tweens.add({
+                        targets: node,
+                        alpha: 0,
+                        scale,
+                        duration: 340,
+                        onComplete: () => node.destroy?.()
+                    });
+                } else {
+                    node.destroy?.();
+                }
+            };
+            const slash = scene.add?.circle?.(player.x, player.y, Math.max(12, radius * 0.72), color, 0.35);
+            slash?.setStrokeStyle?.(8, color, 0.95);
+            slash?.setDepth?.(12);
+            const ring = scene.add?.circle?.(player.x, player.y, radius, color, 0);
+            ring?.setStrokeStyle?.(6, 0xffe08a, 0.9);
+            ring?.setDepth?.(12);
+            fadeSlash(slash, 1.35);
+            fadeSlash(ring, 1.18);
+        }
 
         const hitCount = targets.reduce((count, { enemy }) => (
             count + (adapter.damageEnemy(enemy, damage) ? 1 : 0)
