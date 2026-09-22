@@ -1,24 +1,23 @@
 # sprite-gen integration
 
-LoreWeaver integrates [`aldegad/sprite-gen`](https://github.com/aldegad/sprite-gen) as an optional Art Department sprite-production backend.
+LoreWeaver integrates [`aldegad/sprite-gen`](https://github.com/aldegad/sprite-gen) as an optional Art Department backend for component-row characters, sparse VFX, deterministic layer composites, and video-derived motion clips.
 
-The boundary is intentional:
+The runtime boundary is intentionally narrow:
 
 ```text
-accepted base image
-  -> sprite-gen prepare / gen-set / extract / compose-atlas / inspect
-  -> sprite-gen run manifest.frame_layout
-  -> LoreWeaver deterministic adapter
+sprite-gen generation / video / layer bake
+  -> LoreWeaver candidate adapter
   -> explicit promotion
+  -> deterministic multi-candidate bundle
   -> assets/imagegen/atlas.png + manifest.json
-  -> RuntimeArtBinder
+  -> RuntimeArtBinder (manifest.clipSets)
 ```
 
-`AssetRecipe` remains command-neutral. The bridge does **not** put shell commands or executable paths into recipe parameters.
+`AssetRecipe` remains command-neutral. The bridge accepts data contracts (states / rig / layers / tracks), but it never stores shell commands or executable paths in recipe parameters.
 
 ## Installation
 
-`backend/requirements.txt` pins sprite-gen to the reviewed upstream commit. `start.sh` / `start.bat` install that dependency into LoreWeaver's `.venv` on Python 3.10+.
+`backend/requirements.txt` pins sprite-gen 2.5.3 to reviewed commit `eb941234bf2d7e5ea9d5f2f180494932a109b9de` (Apache-2.0). sprite-gen requires Python 3.11+.
 
 Check availability:
 
@@ -26,70 +25,220 @@ Check availability:
 .venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py status
 ```
 
-The reviewed pin is sprite-gen 2.5.2 at commit `ff57a644205b83387aa4d1e324eba9eefb257d7c` (Apache-2.0).
+The status payload reports the reviewed version, supported subjects, post-processing routes, motion backends, and the `multi-candidate-bundle` publish mode.
 
-## Generate a candidate
+## Runtime contract: candidates first, one bundle at promotion
 
-The base image must live inside the selected LoreWeaver workspace. The default state set matches `RuntimeArtBinder` clips: `idle,walk,attack,hurt,death`.
+Every generated/adopted asset is isolated under:
+
+```text
+assets/imagegen/sprite-gen/<asset-id>/
+  run/ or video-set/             # upstream-owned work
+  loreweaver/
+    atlas.png                    # normalized candidate
+    manifest.json
+    manifest.js
+    provenance.json
+```
+
+Nothing changes `assets/imagegen/atlas.png` until explicit promotion.
+
+Promotion no longer copies one candidate over the runtime atlas. It deterministically repacks all currently promoted candidates into one runtime bundle:
+
+```text
+character hero
+enemy A
+VFX slash
+layer composite
+video-loop replacement
+       |
+       v
+assets/imagegen/
+  atlas.png
+  manifest.json
+  manifest.js
+  provenance.json
+```
+
+Each semantic prefix has exactly one active producer. Promoting a new candidate with an existing prefix replaces that producer (for example, a video-loop `player` candidate can replace the earlier component-row `player` candidate) while unrelated enemies/VFX/layers stay in the bundle.
+
+If runtime art was modified outside the sprite-gen bundle publisher, promotion fails unless `--force` is explicit.
+
+## 1. Component-row characters
+
+The default character state set remains:
+
+```text
+idle,walk,attack,hurt,death
+```
+
+Generate:
 
 ```bash
 .venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py generate \
   --workspace <workspace-id> \
   --base-image assets/source/hero.png \
-  --character-id hero \
+  --asset-id hero \
   --semantic-prefix player \
+  --subject character \
   --provider codex
 ```
 
-For an enemy, use a runtime semantic prefix such as:
+`--character-id` is kept as a backwards-compatible alias for `--asset-id`.
+
+Enemy example:
 
 ```text
---character-id wild-rhino --semantic-prefix enemy_wild_rhino
+--asset-id wild-rhino --semantic-prefix enemy_wild_rhino
 ```
 
-Provider selection is explicit (`codex` or `grok`). `SPRITE_GEN_PROVIDER` and `SPRITE_GEN_MODEL` may provide defaults. Use `--logical-height N` only for pixel-art runs that should enable sprite-gen's pixel-unfake path.
+The adapter uses upstream `manifest.json.frame_layout` as truth. It never re-infers frame boxes from alpha.
 
-The generated candidate is written under:
+## 2. Sprite VFX (`subject=effect`)
+
+Sparse VFX use the same deterministic component-row path but opt into sprite-gen's effect subject profile:
+
+```bash
+.venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py generate \
+  --workspace <workspace-id> \
+  --base-image assets/source/void-slash.png \
+  --asset-id void-slash \
+  --subject effect \
+  --semantic-prefix vfx_void_slash \
+  --provider codex
+```
+
+When no states are supplied, effect defaults are:
 
 ```text
-assets/imagegen/sprite-gen/<character-id>/
-  run/                         # canonical sprite-gen run
-  loreweaver/
-    atlas.png                  # candidate atlas
-    manifest.json              # LoreWeaver RuntimeArtBinder shape
-    manifest.js
-    provenance.json
+cast   4 frames @ 12 fps, one-shot
+loop   6 frames @ 12 fps, looping
+impact 5 frames @ 15 fps, one-shot
 ```
 
-Nothing in `assets/imagegen/atlas.png` is changed at this stage.
+A custom comma-separated state list is also accepted.
 
-## Adopt an existing sprite-gen run
+Runtime keys are normalized exactly like character clips:
 
-A composed run can be converted without running an image provider again:
+```text
+vfx_void_slash
+vfx_void_slash_cast
+vfx_void_slash_cast_0 ...
+vfx_void_slash_loop_0 ...
+vfx_void_slash_impact_0 ...
+```
+
+`RuntimeArtBinder.createEffect()` and `VFX.spriteClip()` provide an atlas-first path. Existing procedural VFX remain the fallback when no promoted sprite effect exists.
+
+## 3. Layer composites
+
+Layer declarations stay upstream-owned. LoreWeaver forwards only the command-neutral contract:
+
+```json
+{
+  "rig": { "...": "sprite-gen rig contract" },
+  "tracks": {
+    "walk": "base",
+    "sword": "prop_effect"
+  },
+  "layers": {
+    "armed_walk": {
+      "stack": ["... upstream layer stack ..."]
+    }
+  }
+}
+```
+
+Through the API this object is passed as `layerContract`; through the CLI it is passed as `--layer-contract-json`.
+
+After the component rows are generated/extracted, bake one declared composite and normalize it into a new LoreWeaver candidate:
+
+```bash
+.venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py compose-layer \
+  --workspace <workspace-id> \
+  --source-asset-id hero \
+  --layer-name armed_walk \
+  --asset-id hero-armed \
+  --semantic-prefix player_armed
+```
+
+The bridge calls upstream `compose-layers`, then consumes `layers/<name>.manifest.json.frame_layout`. Rig landmarks, masks, offsets, and track semantics do **not** enter RuntimeArtBinder. The baked layer becomes an ordinary runtime clip.
+
+## 4. Video-derived motion loops
+
+Video motion is generated by upstream `video-set` and normalized into the same LoreWeaver clip contract:
+
+```bash
+.venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py video-set \
+  --workspace <workspace-id> \
+  --base-image assets/source/hero-side.png \
+  --asset-id hero-video \
+  --semantic-prefix player \
+  --states idle,walk,run,jump,attack \
+  --direction side \
+  --facing right \
+  --anchor feet
+```
+
+This route requires the upstream video prerequisites (`ffmpeg`, `img2webp >= 1.5`, and the user's Grok/xAI video credentials).
+
+The adapter consumes each successful `*.strip.png + *.strip.json` and preserves:
+
+- every emitted frame (not an 8/4-frame cap);
+- effective playback fps derived from `delay_ms`;
+- `loop: true|false`;
+- upstream `kind` such as `periodic` or `one-shot`.
+
+A video candidate promoted with semantic prefix `player` replaces the prior `player` producer but leaves other promoted assets intact.
+
+## 5. Manifest-driven clips
+
+Runtime animation no longer guesses the useful frame count. The canonical runtime surface is:
+
+```json
+{
+  "clipSets": {
+    "player": {
+      "walk": {
+        "keys": ["player_walk_0", "player_walk_1", "..."],
+        "fps": 24,
+        "loop": true
+      }
+    },
+    "vfx_void_slash": {
+      "impact": {
+        "keys": ["vfx_void_slash_impact_0", "..."],
+        "fps": 18,
+        "loop": false
+      }
+    }
+  }
+}
+```
+
+`RuntimeArtBinder.resolveClipSpec()`, `resolveClipKeys()`, and `playClip()` consume this data. The historical player-8/enemy-4 key probing remains only as a compatibility fallback for old manifests.
+
+## 6. Adopt an existing component-row run
+
+A composed upstream run can be converted without generating again:
 
 ```bash
 .venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py adopt \
   --workspace <workspace-id> \
   --run-dir assets/imagegen/sprite-gen/hero/run \
-  --character-id hero \
+  --asset-id hero \
   --semantic-prefix player
 ```
 
-The adapter treats `manifest.json.frame_layout` as the source of truth. It never re-infers frame boxes from alpha.
-
-## Promote to runtime
-
-Promotion is explicit:
+## 7. Promote
 
 ```bash
 .venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py promote \
   --workspace <workspace-id> \
-  --character-id hero
+  --asset-id hero
 ```
 
-If the workspace already has a different runtime atlas, promotion stops. Replacing it requires an explicit `--force`.
-
-Promotion publishes the existing LoreWeaver runtime contract:
+Promotion publishes:
 
 ```text
 assets/imagegen/atlas.png
@@ -98,37 +247,59 @@ assets/imagegen/manifest.js
 assets/imagegen/provenance.json
 ```
 
-No `RuntimeArtBinder` fork is needed. The adapter emits generic aliases plus numbered clip keys, for example:
+The provenance file lists every candidate included in the bundle, its semantic prefix, type, source hash, and placement.
 
-```text
-player
-player_idle
-player_idle_0 ...
-player_walk
-player_walk_0 ...
-player_attack
-player_attack_0 ...
-```
+## API surface
 
-and equivalent `enemy_<id>_<clip>_<n>` keys for enemies.
+- `GET /api/imagegen/sprite-gen/status`
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/generate`
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/compose-layer`
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/video-set`
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/adopt`
+- `POST /api/workspaces/{id}/imagegen/sprite-gen/promote`
+
+`generate` accepts `subject: "character" | "effect"`, `assetId`, `semanticPrefix`, `states`, and optional `layerContract`.
 
 ## Verification
 
-Run the deterministic adapter contract check:
+Run:
 
 ```bash
 npm run check:sprite-gen-bridge
-```
-
-After promotion, run the existing art checks as usual:
-
-```bash
 npm run check:art-binder
 npm run check:atlas-integrity
 ```
 
-`productize:asset-job atlas_verify ...` remains the downstream verification path because the promoted files keep LoreWeaver's existing imagegen manifest contract.
+The sprite-gen bridge check now covers:
 
-## Current scope
+- character candidates;
+- effect candidates;
+- deterministic multi-candidate bundling;
+- layer-manifest adoption;
+- video-strip adoption;
+- arbitrary video frame counts;
+- one-shot timing;
+- semantic-prefix replacement;
+- external runtime atlas tamper protection.
 
-This first integration intentionally covers sprite-gen's component-row character sprite workflow. Video-to-loop, curation UI, recolor, layer rigs, effects, and scene/background tooling remain upstream sprite-gen capabilities and are not separately wired into LoreWeaver yet.
+## Current boundary
+
+Integrated now:
+
+- component-row characters;
+- `subject=effect` VFX;
+- deterministic `compose-layers` output;
+- `video-set` / video-loop strip output;
+- multi-candidate bundle publication;
+- manifest-driven runtime clip timing.
+
+Still upstream-only / not separately surfaced in LoreWeaver:
+
+- curation web UI;
+- recolor/palette variants;
+- projected shadows;
+- repeating background tiling;
+- full sprite-gen scene renderer;
+- Aseprite/Flame export tooling.
+
+These can be added later without changing the runtime contract: they should still terminate in a normalized candidate or another explicit LoreWeaver asset domain rather than teaching RuntimeArtBinder upstream-internal formats.
