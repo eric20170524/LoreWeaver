@@ -3,7 +3,7 @@
   "id": "drag_collect_grid",
   "title": "Drag Collect / Falling Collect",
   "category": "collection",
-  "status": "runtime_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "phaser",
@@ -302,7 +302,7 @@
   ],
   "exportPolicy": {
     "productionReady": false,
-    "blockReason": "Current Card Lab default-collection verification is separate from historical gates; full release and optional Boss browser coverage pending."
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package."
   },
   "historicalCertification": {
     "status": "production_ready",

@@ -98,7 +98,7 @@
 
 ### C. 暂不新增
 
-- 白猿专属 runtime：先不写 IP 硬编码；后续若验证需要，新增通用 `overdrive_transformation`。
+- 白猿变身使用通用 `overdrive_transformation`；IP 名只留在 preset 被动目录。
 - 新 core contract：当前没有必要。
 - 大规模美术资产：战斗手感通过后再生产。
 

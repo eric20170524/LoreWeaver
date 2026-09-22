@@ -14,7 +14,7 @@
 
 ## 3. 目录
 
-- 战斗 modifier：`minigame_master/core/lib/gameplay/survivor_horde/modifiers/`
+- 战斗 modifier：`minigame_master/core/lib/gameplay/survivor_horde/modifiers/`（含 `overdrive_transformation`）
 - 修炼交易：`src/game/ui/cultivationModel.ts`
 - 宿主入局：`src/game/GameRunner.ts`
 - 存档：`src/runtime/playerState.ts`、`src/store.tsx`
@@ -28,9 +28,12 @@ node productize/jobs/check-weapon-stance-cycle.mjs
 npx tsx --test productize/jobs/check-cultivation-model.ts
 npx tsx --test productize/jobs/check-player-state.ts
 python productize/jobs/check-xuanjiezhimen-fangame-preset.py
+python productize/jobs/check-gameplay-catalog-policy.py
 node --test productize/jobs/check-dodge-counter-runtime.mjs
 node productize/jobs/run-xuanjie-local-play-e2e.mjs
 npx tsc --noEmit
 ```
+
+自动选卡只认 `status=production_ready` 且 `exportPolicy.productionReady=true`。本轮降级后默认只剩 `survivor_horde`。
 
 优先 E2E 验证 AC。命令只跑一次；通过即视为物理验证。

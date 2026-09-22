@@ -134,7 +134,7 @@
       "treeTier": "T1",
       "cost": 20,
       "requires": null,
-      "runtimeStatus": "planned",
+      "runtimeStatus": "implemented",
       "effects": [{"target": "weapon_stance_cycle.rangedBurstCount", "op": "add", "value": 1}],
       "affectedRuntimeSkillIds": ["starter_projectile"],
       "description": "提高远程架势的连射数量。"
@@ -145,10 +145,35 @@
       "treeTier": "T2",
       "cost": 60,
       "requires": "blade_speed_1",
-      "runtimeStatus": "planned",
+      "runtimeStatus": "implemented",
       "effects": [{"target": "player.hp", "op": "multiply", "value": 1.2}],
       "affectedRuntimeSkillIds": ["bloodline_overdrive"],
       "description": "以血脉力量提高高压关卡中的生存空间。"
+    },
+    {
+      "id": "moon_insight_1",
+      "name": "吞月参悟",
+      "treeTier": "T2",
+      "cost": 40,
+      "requires": null,
+      "runtimeStatus": "implemented",
+      "effects": [
+        {"target": "clickPower", "op": "multiply", "value": 1.25},
+        {"target": "activeMultiplier", "op": "multiply", "value": 1.2}
+      ],
+      "affectedRuntimeSkillIds": ["moon_insight_bonus"],
+      "description": "提高吐纳与自动积累效率，让跨局成长更快兑现。"
+    },
+    {
+      "id": "white_ape_overdrive_passive",
+      "name": "白猿变身",
+      "treeTier": "T3",
+      "cost": 80,
+      "requires": "bloodline_toughness",
+      "runtimeStatus": "implemented",
+      "effects": [{"target": "player.hp", "op": "multiply", "value": 1.15}],
+      "affectedRuntimeSkillIds": ["bloodline_overdrive"],
+      "description": "高压时触发通用爆发变身：伤害提升、减伤、加速。按 E 或生命过低自动发动。"
     }
   ],
   "characterDesignCatalog": [
@@ -257,7 +282,8 @@
         "adapter": "phaser",
         "cardId": "survivor_horde",
         "modifiers": [
-          {"id": "weapon_stance_cycle", "knobs": {"controlMode": "manual", "initialStance": "melee", "meleeLabel": "黑刀", "rangedLabel": "紫钢弓", "toggleHint": "Q / SHIFT", "meleeDurationSec": 4, "rangedDurationSec": 5, "meleeRadius": 96, "meleeDamage": 5, "meleeMaxTargets": 10, "rangedBurstCount": 2, "rangedDamageMultiplier": 1.0}},
+          {"id": "weapon_stance_cycle", "knobs": {"controlMode": "manual", "initialStance": "melee", "meleeLabel": "黑刀", "rangedLabel": "紫钢弓", "toggleHint": "Q / SHIFT", "meleeDurationSec": 4, "rangedDurationSec": 5, "meleeRadius": 96, "meleeDamage": 5, "meleeMaxTargets": 10, "rangedBurstCount": 2, "rangedDamageMultiplier": 1.0, "swapBurst": true}},
+          {"id": "overdrive_transformation", "knobs": {"durationSec": 6, "hpTriggerRatio": 0.45, "damageMultiplier": 1.55, "incomingDamageMultiplier": 0.7, "speedMultiplier": 1.25, "meleeRadiusBonus": 24, "requiresPassive": "white_ape_overdrive_passive", "label": "OVERDRIVE"}},
           {"id": "horde_intensity", "knobs": {"spawnMultiplier": 2, "eliteChance": 0.12}},
           {"id": "arena_wave_boss", "knobs": {"totalWaves": 3, "interWaveDelayMs": 1800}}
         ],
@@ -319,7 +345,8 @@
         "adapter": "phaser",
         "cardId": "survivor_horde",
         "modifiers": [
-          {"id": "weapon_stance_cycle", "knobs": {"controlMode": "manual", "initialStance": "melee", "meleeLabel": "黑刀", "rangedLabel": "紫钢弓", "toggleHint": "Q / SHIFT", "meleeDurationSec": 5, "rangedDurationSec": 4, "meleeRadius": 102, "meleeDamage": 6, "rangedBurstCount": 2}},
+          {"id": "weapon_stance_cycle", "knobs": {"controlMode": "manual", "initialStance": "melee", "meleeLabel": "黑刀", "rangedLabel": "紫钢弓", "toggleHint": "Q / SHIFT", "meleeDurationSec": 5, "rangedDurationSec": 4, "meleeRadius": 102, "meleeDamage": 6, "rangedBurstCount": 2, "swapBurst": true}},
+          {"id": "overdrive_transformation", "knobs": {"durationSec": 6, "hpTriggerRatio": 0.45, "requiresPassive": "white_ape_overdrive_passive"}},
           {"id": "hazard_telegraph", "knobs": {"warningMs": 900, "activeMs": 260, "damage": 16, "shape": "circle"}},
           {"id": "boss_phases", "knobs": {"phaseThresholds": [0.66, 0.33], "phaseAnnouncement": true}}
         ],

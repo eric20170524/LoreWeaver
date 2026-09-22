@@ -675,7 +675,7 @@ export default class RuntimeArtBinder {
             .replace(/^lw_enemy_/, '');
         // Prefer explicit clip frames, then numbered, then base
         push(resolveFrame(`enemy_${id}_${clip}`));
-        for (let i = 0; i < 4; i += 1) {
+        for (let i = 0; i < 8; i += 1) {
             push(resolveFrame(`enemy_${id}_${clip}_${i}`));
         }
         if (clip === 'idle' || clip === 'walk') {

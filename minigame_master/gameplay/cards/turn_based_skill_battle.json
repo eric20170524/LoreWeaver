@@ -3,7 +3,7 @@
   "id": "turn_based_skill_battle",
   "title": "Turn-Based Skill Battle",
   "category": "combat",
-  "status": "production_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "html_canvas",
@@ -210,8 +210,8 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
+    "productionReady": false,
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package.",
     "conditionalWaivers": [
       "device_class_fps: headless soak avgFps proxy",
       "vlm_visual_overflow: deferred; deterministic visual_audit used",

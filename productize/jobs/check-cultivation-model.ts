@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   cultivationView, abilityRecorded, passivePurchaseStatus, purchasePassive,
-  foldPassiveEffectsIntoKnobs, resolveCombatHp
+  foldPassiveEffectsIntoKnobs, resolveCombatHp, resolveNodeCombatStats
 } from '../../src/game/ui/cultivationModel.ts';
 
 const state = (): any => ({ mainCurrencyCount: 500, currentRealmIndex: 3, clickPower: 2, activeMultiplier: 1,
@@ -75,6 +75,26 @@ test('planned combat passives stay inert even if a legacy save already owns them
   assert.equal(passivePurchaseStatus(bow, s), 'planned');
   assert.equal(foldPassiveEffectsIntoKnobs('weapon_stance_cycle', { rangedBurstCount: 2 }, s, [bow]).rangedBurstCount, 2);
 });
+test('realm, bow burst, bloodline hp and moon insight all change runtime numbers', () => {
+  const s = state();
+  s.currentRealmIndex = 2;
+  const bow = { id: 'bow_burst_1', cost: 20, runtimeStatus: 'implemented',
+    effects: [{ target: 'weapon_stance_cycle.rangedBurstCount', op: 'add', value: 1 }] };
+  const blood = { id: 'bloodline_toughness', cost: 60, runtimeStatus: 'implemented',
+    effects: [{ target: 'player.hp', op: 'multiply', value: 1.2 }] };
+  const moon = { id: 'moon_insight_1', cost: 40, runtimeStatus: 'implemented',
+    effects: [{ target: 'clickPower', op: 'multiply', value: 1.25 }, { target: 'activeMultiplier', op: 'multiply', value: 1.2 }] };
+  assert.equal(purchasePassive(bow, s), true);
+  assert.equal(purchasePassive(blood, s), true);
+  assert.equal(purchasePassive(moon, s), true);
+  assert.equal(s.clickPower, 2.5);
+  assert.equal(s.activeMultiplier, 1.2);
+  const combat = resolveNodeCombatStats(s, [bow, blood, moon], { hp: 120, stanceKnobs: { meleeDamage: 5, rangedBurstCount: 2 } });
+  assert.equal(combat.hp, 120 * 1.24 * 1.2);
+  assert.equal(combat.stanceKnobs.meleeDamage, 5 * 1.16);
+  assert.equal(combat.stanceKnobs.rangedBurstCount, 3);
+});
+
 test('player.hp passives change the node payload hp and leave idle stats alone', () => {
   const s = state();
   const toughness = {

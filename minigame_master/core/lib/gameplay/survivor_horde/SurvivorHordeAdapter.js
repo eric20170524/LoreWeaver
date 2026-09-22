@@ -503,6 +503,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
             const target = this.selectEnemyTarget(enemy);
             const speed = enemy.getData('speed') || this.config.enemies.pool[0]?.speed || 80;
             this.scene.physics.moveToObject(enemy, target, speed);
+            if (enemy.setFlipX) enemy.setFlipX((enemy.body?.velocity?.x || 0) < 0);
         });
     }
 
@@ -788,7 +789,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         });
 
         const context = this.createRuntimeContext();
-        this.modifiers.forEach((modifier) => modifier.uninstall(context));
+        [...this.modifiers].reverse().forEach((modifier) => modifier.uninstall(context));
         this.lifecycle.cleanup();
         this.lifecycle.finishEnd();
         this.context.onEnd?.(result, this);
@@ -815,7 +816,7 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
 
     destroy() {
         const context = this.createRuntimeContext();
-        this.modifiers.forEach((modifier) => modifier.uninstall(context));
+        [...this.modifiers].reverse().forEach((modifier) => modifier.uninstall(context));
         this.lifecycle?.destroy();
         // Phaser invalidates Group.children during scene shutdown. Diagnostics
         // may still retain the ended adapter, so release scene-owned references.

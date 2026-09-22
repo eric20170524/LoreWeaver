@@ -3,7 +3,7 @@
   "id": "sequence_synthesis",
   "title": "Sequence Synthesis",
   "category": "crafting_puzzle",
-  "status": "runtime_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -218,7 +218,7 @@
   ],
   "exportPolicy": {
     "productionReady": false,
-    "blockReason": "Current revision requires per-card browser, device, visual and export validation; historical demo certification is not inherited."
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package."
   },
   "historicalCertification": {
     "status": "production_ready",

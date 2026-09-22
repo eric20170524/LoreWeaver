@@ -17,6 +17,7 @@ import MirrorBossModifier from './MirrorBossModifier.js';
 import SelfDestructEnemyModifier from './SelfDestructEnemyModifier.js';
 import WeaponStanceCycleModifier from './WeaponStanceCycleModifier.js';
 import RunGrowthMilestonesModifier from './RunGrowthMilestonesModifier.js';
+import OverdriveTransformationModifier from './OverdriveTransformationModifier.js';
 
 export const SURVIVOR_HORDE_MODIFIER_REGISTRY = Object.freeze({
     hazard_telegraph: HazardTelegraphModifier,
@@ -37,7 +38,8 @@ export const SURVIVOR_HORDE_MODIFIER_REGISTRY = Object.freeze({
     mirror_boss: MirrorBossModifier,
     self_destruct_enemy: SelfDestructEnemyModifier,
     weapon_stance_cycle: WeaponStanceCycleModifier,
-    run_growth_milestones: RunGrowthMilestonesModifier
+    run_growth_milestones: RunGrowthMilestonesModifier,
+    overdrive_transformation: OverdriveTransformationModifier
 });
 
 export const SURVIVOR_HORDE_SUPPORTED_MODIFIERS = Object.freeze(

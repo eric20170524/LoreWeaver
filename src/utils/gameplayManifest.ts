@@ -29,6 +29,7 @@ export type MaturityStatus =
   | "ui_registered"
   | "runtime_ready"
   | "gate_verified"
+  | "verified_prototype"
   | "production_ready";
 
 export interface GameplayCardOption {
@@ -164,7 +165,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "敌方 HP 归零",
     victoryEn: "Enemy HP reaches zero",
     failure: "玩家 HP 归零或撤退",
@@ -204,7 +205,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "吸收到达目标灵力值并战胜阵眼首领",
     victoryEn: "Reach target energy and defeat Mandala Boss",
     failure: "玩家生命值归零 (HP <= 0) 或雷劫超时",
@@ -260,7 +261,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "收集灵珠到达目标值并击败雷兽首领",
     victoryEn: "Collect target gems and defeat Thunder Beast Boss",
     failure: "玩家生命值归零 (HP <= 0) 或雷劫超时",
@@ -322,7 +323,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "按配方顺序完成全部材料投入",
     victoryEn: "Complete full recipe sequence",
     failure: "撤退或爆炸重置后放弃",
@@ -401,7 +402,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "指针在安全区累计稳定时长达标",
     victoryEn: "Hold pointer in safe zone for target duration",
     failure: "失衡违规次数耗尽",
@@ -503,7 +504,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "限时内压力未满",
     victoryEn: "Keep pressure under max until timer ends",
     failure: "压力条满",
@@ -522,7 +523,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "完成指定正确轮数",
     victoryEn: "Complete target correct rounds",
     failure: "机会耗尽",
@@ -540,7 +541,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "捕捉进度达标",
     victoryEn: "Reach capture progress target",
     failure: "撤退",
@@ -577,7 +578,7 @@ export const GAMEPLAY_CARD_OPTIONS: GameplayCardOption[] = [
     category: "base",
     adapter: "phaser",
     implementationStatus: "implemented",
-    maturityStatus: "production_ready",
+    maturityStatus: "verified_prototype",
     victory: "汇聚进度 100%",
     victoryEn: "Reach 100% deposit progress",
     failure: "撤退",

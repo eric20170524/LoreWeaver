@@ -3,7 +3,7 @@
   "id": "pressure_survival",
   "title": "Pressure Survival",
   "category": "microgame",
-  "status": "production_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -168,8 +168,8 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
+    "productionReady": false,
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package.",
     "conditionalWaivers": [
       "device_class_fps: headless soak proxy",
       "vlm_visual_overflow: deferred",

@@ -12,7 +12,7 @@
 
 - [x] 23 张基础/容器 Gameplay Card + 24 张 modifier（V2 schema 全量迁移）
 - [x] 成熟度模型六级：`inventoried` → `card_json` → `ui_registered` → `runtime_ready` → `gate_verified` → `production_ready`
-- [x] 基础卡成熟度：**10 张 production_ready**（survivor / rhythm / drag_collect / turn_battle / sequence / reaction_pick / energy_balance / observe_capture / drag_to_core / pressure_survival）；其余 runtime_ready（含 brawler 等重卡）
+- [x] 基础卡成熟度：**1 张 production_ready**（`survivor_horde`，有条件）；轻量批 ×5 与 rhythm / drag_collect / turn_battle / sequence 已降为 `verified_prototype`（2026-09-21 挤水）
 - [x] `GameRunner` 接入 Phaser adapter；`NodePayload` / `NodeResult` / Adapter / Modifier / SceneLifecycle / TestHooks
 - [x] Theme Content Pack schema + adapter/core 去题材化 + 题材词静态门禁
 - [x] 23 张卡 `requiredAssets` 合同 + RuntimeArtBinder 语义绑定（结构层）
@@ -208,11 +208,11 @@
 #### E3. 首批认证顺序（逐张）
 
 - [x] `survivor_horde` — **`production_ready`**（有条件；见 step_C7_production_ready.md）
-- [x] `rhythm_timing` — **`production_ready`**（有条件 residual；见 step_E3_rhythm_timing_production_ready.md）
-- [x] `drag_collect_grid` — **`production_ready`**（有条件 residual；见 step_E3_drag_collect_grid_production_ready.md）
-- [x] `turn_based_skill_battle` — **`production_ready`**（有条件 residual；见 step_E3_turn_based_skill_battle_production_ready.md）
-- [x] `sequence_synthesis` — **`production_ready`**（有条件 residual；见 step_E3_sequence_synthesis_production_ready.md）
-- [x] 轻量批：`reaction_pick` / `energy_balance` / `observe_capture` / `drag_to_core` / `pressure_survival` — **`production_ready`**（`check:light-batch`；见 step_E3_lightweight_batch_production_ready.md）
+- [x] `rhythm_timing` — 曾有条件认证，**2026-09-21 降为 `verified_prototype`**
+- [x] `drag_collect_grid` — 曾有条件认证，**2026-09-21 降为 `verified_prototype`**
+- [x] `turn_based_skill_battle` — 曾有条件认证，**2026-09-21 降为 `verified_prototype`**
+- [x] `sequence_synthesis` — 曾有条件认证，**2026-09-21 降为 `verified_prototype`**
+- [x] 轻量批：`reaction_pick` / `energy_balance` / `observe_capture` / `drag_to_core` / `pressure_survival` — **2026-09-21 降为 `verified_prototype`**
 - [ ] `side_scrolling_brawler` — 多输入 / 镜头 / 性能 / 资产流水线完成后
 - [ ] 其余 runtime_ready 中等/重卡按复用价值逐张认证
 

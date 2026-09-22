@@ -35,7 +35,9 @@ const COMBAT_TARGETS = new Set([
   'weapon_stance_cycle.meleeRadius',
   'weapon_stance_cycle.rangedBurstCount',
   'weapon_stance_cycle.rangedDamageMultiplier',
-  'adapter.weapon.bulletDamage'
+  'adapter.weapon.bulletDamage',
+  'overdrive_transformation.damageMultiplier',
+  'overdrive_transformation.durationSec'
 ]);
 const OPS = new Set(['add', 'multiply', 'set']);
 
@@ -91,6 +93,38 @@ export function resolveCombatHp(
     }
   }
   return hp;
+}
+
+/** Realm index is long-term 境界: HP and melee scale before passives. */
+export function realmCombatScale(realmIndex: number) {
+  const realm = Math.max(0, Math.floor(Number(realmIndex) || 0));
+  return {
+    hpMultiplier: 1 + realm * 0.12,
+    meleeDamageMultiplier: 1 + realm * 0.08
+  };
+}
+
+export function resolveNodeCombatStats(
+  state: PlayerState,
+  catalog: PassiveSkillSpec[] = [],
+  bases: { hp: number; stanceKnobs?: Record<string, any> } = { hp: 100 }
+) {
+  const scale = realmCombatScale(state.currentRealmIndex);
+  const baseHp = (Number.isFinite(bases.hp) && bases.hp > 0 ? bases.hp : 100) * scale.hpMultiplier;
+  const stance = foldPassiveEffectsIntoKnobs(
+    'weapon_stance_cycle',
+    { ...(bases.stanceKnobs || {}) },
+    state,
+    catalog
+  );
+  if (Number.isFinite(Number(stance.meleeDamage))) {
+    stance.meleeDamage = Number(stance.meleeDamage) * scale.meleeDamageMultiplier;
+  }
+  return {
+    hp: resolveCombatHp(state, catalog, baseHp),
+    stanceKnobs: stance,
+    realm: scale
+  };
 }
 
 export function passivePurchaseStatus(item: PassiveSkillSpec, state: PlayerState): PurchaseStatus {

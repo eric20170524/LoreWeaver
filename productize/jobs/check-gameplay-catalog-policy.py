@@ -18,12 +18,17 @@ from backend.gameplay_catalog import (  # noqa: E402
 
 EXPECTED = {
     "survivor_horde",
+}
+RESIDUAL_PROTOTYPES = {
     "turn_based_skill_battle",
     "reaction_pick",
     "energy_balance",
     "observe_capture",
     "drag_to_core",
     "pressure_survival",
+    "rhythm_timing",
+    "drag_collect_grid",
+    "sequence_synthesis",
 }
 
 
@@ -34,8 +39,15 @@ def main() -> int:
     assert not missing, f"missing production cards: {missing}"
     assert default_production_card_id() == "survivor_horde"
 
+    # Residual / lightweight cards keep historical notes but cannot auto-select.
+    for cid in sorted(RESIDUAL_PROTOTYPES):
+        assert cid not in prod_ids, cid
+        blocked = resolve_card_id(preferred=cid, allow_experimental=False)
+        assert blocked["cardId"] == "survivor_horde" and blocked["productionReady"], blocked
+        allowed = resolve_card_id(preferred=cid, allow_experimental=True)
+        assert allowed["cardId"] == cid and allowed["experimental"] and not allowed["productionReady"], allowed
+
     # Card Lab runtime acceptance deliberately does not grant release certification.
-    # These cards must remain behind the explicit experimental opt-in.
     for mechanics, cid in {
         "tap_reaction": "rhythm_timing",
         "collect_dodge": "drag_collect_grid",

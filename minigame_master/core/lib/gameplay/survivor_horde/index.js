@@ -84,6 +84,10 @@ export {
     RUN_GROWTH_MILESTONES_DEFAULT_CONFIG
 } from './modifiers/RunGrowthMilestonesModifier.js';
 export {
+    default as OverdriveTransformationModifier,
+    OVERDRIVE_TRANSFORMATION_DEFAULT_CONFIG
+} from './modifiers/OverdriveTransformationModifier.js';
+export {
     SURVIVOR_HORDE_MODIFIER_REGISTRY,
     SURVIVOR_HORDE_SUPPORTED_MODIFIERS,
     createSurvivorHordeModifier,

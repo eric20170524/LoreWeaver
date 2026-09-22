@@ -2,7 +2,7 @@
 
 ## 🎯 当前迭代目标 (Current Sprint Goal)
 
-把石牧 Vertical Slice 从“门禁自洽、战斗空转”收成一条可感知闭环：玩家能主动切刀弓、至少一条养成改变局内伤害、Runner 不再夹带旧 IP、存档按工作区隔离。
+关闭 Icebox E：通用爆发变身 `overdrive_transformation`，以及手动刀弓切态的短时增益。
 
 ## ⚠️ AI 工作流要求 (Workflow Rules)
 
@@ -22,10 +22,15 @@
 
 ## 🐛 遗留问题与技术债 (Icebox)
 
-- [ ] **Icebox A：** 批量 `production_ready` 降级为 `verified_prototype`（轻量批 ×5 + residual 卡）。触及 catalog / export 自动选卡，超出本轮竖切。
-- [ ] **Icebox B：** Node 2 `dodge_counter_boss` 几何原型升级为有招式/受击反馈的 Boss 卡。
-- [ ] **Icebox C：** 其余四条成长线（境界 HP、兵刃连射、血脉、吞月）接入运行时。
+- [x] **Icebox A：** 批量 `production_ready` 降级为 `verified_prototype`（轻量批 ×5 + residual 卡）。
+  - **Decision & Audit:** 9 张卡 `status=verified_prototype` 且 `exportPolicy.productionReady=false`。自动选卡只剩 `survivor_horde`。同步 `gameplayManifest.ts`、`check-gameplay-catalog-policy.py`、`report.md`、`task.md`。历史认证字段保留。
+- [x] **Icebox B：** Node 2 `dodge_counter_boss` 几何原型升级为有招式/受击反馈的 Boss 卡。
+  - **Decision & Audit:** 命中圈保留给判定/测试；叠加战士/Boss 剪影、预警斩线、受击闪白、反击刀光。`lastFeedback` = `player_hurt` / `boss_stagger`。规则未改。
+- [x] **Icebox C：** 其余四条成长线（境界 HP、兵刃连射、血脉、吞月）接入运行时。
+  - **Decision & Audit:** `resolveNodeCombatStats` 把境界乘到 HP/近战；连珠箭、异血强身、吞月参悟可买。白猿变身仍 planned。Node 2 读取 `playerStats.hp`。
 - [ ] **Icebox D：** 真机 5 分钟 Node 1 试玩（本轮用 Chromium E2E 代理，不宣称真机）。
+- [x] **Icebox E：** 白猿变身通用 `overdrive_transformation`；切态短时增益。
+  - **Decision & Audit:** 手动切刀 1.5s 范围/伤害提升 + 30% 减伤；切弓前 3 发暴击击穿。`overdrive_transformation` 无 IP 名，preset 用 `requiresPassive: white_ape_overdrive_passive` 武装，E / 低血量触发。叠加 wrapper 时 modifier uninstall 倒序。
 
 ---
 

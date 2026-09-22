@@ -72,7 +72,7 @@ Boss/波次压力 -> 结算 -> 主干强化
 | 成长 | 吞月式 | 设计层 | 月华/熟练度/血脉成长加速 |
 | 后期 | 白猿血脉·爆发 | 设计层 | 范围、伤害、抗压终局爆发 |
 
-`white_ape_overdrive` 暂不伪装成已完成能力：Vertical Slice 通过后再新增通用 transformation/overdrive modifier。
+`white_ape_overdrive` 通过通用 `overdrive_transformation` 接入：preset 用 `requiresPassive` 武装，core 不写白猿技能名。
 
 ## 4. Golden Vertical Slice：只做节点 1–3
 
@@ -128,6 +128,7 @@ Boss/波次压力 -> 结算 -> 主干强化
 
 - [ ] 首通 Node 1 后主干状态发生变化。
 - [x] 至少一个成长项能改变下一次战斗的真实参数。
+- [x] 境界、连珠箭、异血强身、吞月参悟可映射到局内 HP / 弹数 / 吐纳效率。
 - [ ] Node 3 的黑刀强化不是纯文案奖励。
 
 ### 工程
@@ -153,6 +154,6 @@ Vertical Slice v0.2 的优先顺序：
 
 1. 让 `weapon_stance_cycle` 进入测试/观测合同，确认近战/远程攻击事件可回放。
 2. 把 Node 1 的成长奖励真正映射到第二局参数，而不是只有 abilityCatalog。
-3. 根据实测决定双态是继续自动循环，还是升级为玩家主动切换。
-4. 只有 Node 1–3 战斗闭环通过后，才实现通用 `overdrive_transformation`，用于白猿血脉。
+3. 石牧竖切已升级为手动切态，并带切态短时增益。
+4. 通用 `overdrive_transformation` 已接入白猿血脉被动。
 5. 战斗手感通过后，再进入石牧角色、黑刀、弓箭、敌人和环境的 RuntimeArtBinder 素材生产。

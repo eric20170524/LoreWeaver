@@ -1,7 +1,8 @@
 # minigame_master 关卡生产化进度与质量报告 (report.md)
 
-> **当前总体状态**: **10 张 production_ready 卡**  
-> **更新时间**: 2026-07-24
+> **当前总体状态**: **1 张 production_ready 卡**（`survivor_horde`，有条件 residual）  
+> **更新时间**: 2026-09-21  
+> 轻量批 ×5 与 E3 residual 卡已降为 `verified_prototype`，禁止自动选卡 / 生产导出。历史认证记录保留在各卡 `historicalCertification` / `certificationNotes`。
 
 ---
 

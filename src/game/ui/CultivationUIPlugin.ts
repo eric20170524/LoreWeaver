@@ -113,7 +113,7 @@ export class CultivationUIPlugin implements UIPlugin {
       state.activeMultiplier += 1.8;
       state.clickPower += 1.5;
       context.saveStateToStore();
-      context.onLog(`突破至 ${spec.economy.realms[state.currentRealmIndex]}。`);
+      context.onLog(`突破至 ${spec.economy.realms[state.currentRealmIndex]}。下一局生命与近战伤害随境界提升。`);
       synth.playBreakthrough();
       scene.scene.restart();
     });

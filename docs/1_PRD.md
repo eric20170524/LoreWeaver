@@ -14,17 +14,19 @@
 
 ## 3. MVP 功能范围
 
-- **P0:** 手动刀弓、疾风刀势入局、Runner 去旧 IP、工作区存档隔离、回归测试。
-- **P1:** 切态短时增益（击退抗性 / 前三箭暴击）——本轮不做。
+- **P0 (已完成):** 手动刀弓、疾风刀势入局、Runner 去旧 IP、工作区存档隔离。
+- **P0 (已完成):** Icebox A/B/C。
+- **P0 (本轮):** Icebox E — 通用 `overdrive_transformation` + 手动切态短时增益。
+- **P1:** 真机试玩（Icebox D）。
 
 ## 4. 明确不做
 
 - 不改四层作者进程栈。
-- 不批量改 `production_ready` 标签。
-- 不重做 Node 2 美术与招式。
-- 不实现白猿变身 / 吞月 / 烈炎运行时。
+- 不把 `survivor_horde` 从自动选卡里拿掉（它是唯一带真人 signoff 的竖切卡；仍带 residual）。
+- 不做完整骨骼动画或正式 Boss 立绘；Node 2 用程序化人形/招式图形。
+- 不把白猿技能名写进 core modifier；preset 用 `requiresPassive` 把变身接到通用 overdrive。
 - 不改 NodePayload / NodeResult 稳定合同字段。
-- 不把 Phaser 战斗文案迁到 `t()`；游戏文案以 manifest 为准，工作台沿用 `UI_COPY`。
+- 不把 Phaser 战斗文案迁到 `t()`。
 
 ## 5. 核心实体
 

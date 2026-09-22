@@ -3,7 +3,7 @@
   "id": "rhythm_timing",
   "title": "Rhythm Timing",
   "category": "timing",
-  "status": "runtime_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -257,7 +257,7 @@
   ],
   "exportPolicy": {
     "productionReady": false,
-    "blockReason": "Card Lab is synthetic browser acceptance, not full release certification."
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package."
   },
   "historicalCertification": {
     "status": "production_ready",

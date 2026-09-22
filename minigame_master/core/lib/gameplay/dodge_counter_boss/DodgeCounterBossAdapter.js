@@ -36,6 +36,10 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.player = null;
         this.boss = null;
         this.telegraph = null;
+        this.figures = null;
+        this.slash = null;
+        this.playerHitFlash = 0;
+        this.bossHitFlash = 0;
         this.ui = {};
         this.state = this.initialState();
     }
@@ -46,7 +50,10 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             gauge: 0, phase: 'idle', phaseLeft: this.config.attackIntervalSec,
             invuln: 0, attackZone: null, hitThisAttack: false, counterUsed: false,
             score: 0, dodges: 0, counters: 0, elapsedSeconds: 0,
-            timeRemaining: this.config.durationSec
+            timeRemaining: this.config.durationSec,
+            lastFeedback: 'idle',
+            playerFigure: 'fighter',
+            bossFigure: 'brute'
         };
     }
 
@@ -61,6 +68,8 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             }
         }
         this.config.durationSec = positive(playability.durationSec, DEFAULT_CONFIG.durationSec);
+        const payloadHp = Number(payload.playerStats?.hp);
+        if (Number.isFinite(payloadHp) && payloadHp > 0) this.config.playerHp = payloadHp;
         this.state = this.initialState();
         this.result = null;
         return this;
@@ -120,10 +129,15 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             align: 'center', wordWrap: { width: width - 48 }
         }).setOrigin(0.5);
         this.ui.bar = scene.add.graphics();
-        this.boss = scene.add.circle(width / 2, Math.max(292, height * 0.40), 40, 0xef4444, 1)
+        this.boss = scene.add.circle(width / 2, Math.max(292, height * 0.40), 40, 0xef4444, 0.18)
             .setInteractive({ useHandCursor: true });
-        this.player = scene.add.circle(width / 2, height * 0.72, 18, 0x66fcf1, 1);
+        this.player = scene.add.circle(width / 2, height * 0.72, 18, 0x66fcf1, 0.18);
         this.telegraph = scene.add.circle(0, 0, 50, 0xef4444, 0).setStrokeStyle(3, 0xfbbf24, 0);
+        this.figures = scene.add.graphics();
+        this.slash = scene.add.graphics();
+        this.figures.setDepth?.(8);
+        this.slash.setDepth?.(9);
+        this.drawPresentation();
 
         this.lifecycle.trackListener(this.boss, 'pointerdown', () => this.tryCounter());
         const move = (pointer) => {
@@ -143,8 +157,10 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             this.boss?.destroy();
             this.player?.destroy();
             this.telegraph?.destroy();
+            this.figures?.destroy?.();
+            this.slash?.destroy?.();
             this.ui = {};
-            this.boss = this.player = this.telegraph = null;
+            this.boss = this.player = this.telegraph = this.figures = this.slash = null;
         });
         this.refreshHud();
         this.publishTestState();
@@ -184,6 +200,10 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.state.score = this.state.gauge;
         this.context.spawnParticles?.(this.boss.x, this.boss.y, 0xfbbf24);
         this.scene.cameras.main.shake(80, 0.006);
+        this.scene.cameras.main.flash?.(70, 250, 220, 80);
+        this.bossHitFlash = 0.22;
+        this.state.lastFeedback = 'boss_stagger';
+        this.drawSlash(this.player?.x, this.player?.y, this.boss?.x, this.boss?.y, 0xfbbf24);
         if (this.state.gauge >= this.config.breakGaugeMax || this.state.bossHp <= 0) {
             this.finish(true, NODE_RESULT_REASONS.BOSS_DEFEATED);
             return true; // finish destroys UI; never refresh it afterwards.
@@ -209,6 +229,8 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             return;
         }
         this.state.invuln = Math.max(0, this.state.invuln - dt);
+        this.playerHitFlash = Math.max(0, this.playerHitFlash - dt);
+        this.bossHitFlash = Math.max(0, this.bossHitFlash - dt);
         this.state.phaseLeft -= dt;
         if (this.state.phase === 'idle') {
             if (this.state.phaseLeft <= 0) this.beginAttack();
@@ -228,6 +250,10 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
                     this.state.playerHp = Math.max(0, this.state.playerHp - this.config.attackDamage);
                     this.state.invuln = this.config.dodgeIFrameSec;
                     this.scene.cameras.main.shake(120, 0.012);
+                    this.scene.cameras.main.flash?.(90, 180, 40, 40);
+                    this.playerHitFlash = 0.2;
+                    this.state.lastFeedback = 'player_hurt';
+                    this.drawSlash(this.boss?.x, this.boss?.y, this.player?.x, this.player?.y, 0xef4444);
                     if (this.state.playerHp <= 0) {
                         this.finish(false, NODE_RESULT_REASONS.HP_ZERO);
                         return;
@@ -248,8 +274,60 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             this.boss.setStrokeStyle(0);
             this.ui.hint?.setText(DODGE_HINT).setColor('#94a3b8');
         }
+        this.drawPresentation();
         this.refreshHud();
         this.publishTestState();
+    }
+
+    drawSlash(x1, y1, x2, y2, color) {
+        const g = this.slash;
+        if (!g?.clear) return;
+        g.clear();
+        if (![x1, y1, x2, y2].every(Number.isFinite)) return;
+        g.lineStyle?.(8, color, 0.9);
+        g.beginPath?.();
+        g.moveTo?.(x1, y1);
+        g.lineTo?.(x2, y2);
+        g.strokePath?.();
+        this.lifecycle?.trackTimer?.(this.scene.time.delayedCall(120, () => {
+            if (this.slash?.active) this.slash.clear();
+        }));
+    }
+
+    drawPresentation() {
+        const g = this.figures;
+        if (!g?.clear || !this.player || !this.boss) return;
+        g.clear();
+        const bossLunge = this.state.phase === 'active' ? 18 : this.state.phase === 'warning' ? 8 : 0;
+        const playerColor = this.playerHitFlash > 0 ? 0xf8fafc : 0x66fcf1;
+        const bossColor = this.bossHitFlash > 0 ? 0xfafafa : 0xb91c1c;
+        this.drawFighter(g, this.player.x, this.player.y, 16, playerColor, false);
+        this.drawFighter(g, this.boss.x, this.boss.y + bossLunge, 28, bossColor, true);
+        if (this.state.phase === 'warning' || this.state.phase === 'active') {
+            const zone = this.state.attackZone;
+            if (zone) {
+                g.lineStyle?.(4, this.state.phase === 'active' ? 0xef4444 : 0xfbbf24, 0.85);
+                g.beginPath?.();
+                g.moveTo?.(this.boss.x, this.boss.y + 20);
+                g.lineTo?.(zone.x, zone.y);
+                g.strokePath?.();
+            }
+        }
+    }
+
+    drawFighter(graphics, x, y, radius, color, brute) {
+        const bodyH = brute ? radius * 2.2 : radius * 1.8;
+        const bodyW = brute ? radius * 1.5 : radius * 1.1;
+        graphics.fillStyle?.(color, 1);
+        graphics.fillRoundedRect?.(x - bodyW / 2, y - bodyH * 0.15, bodyW, bodyH, 6);
+        graphics.fillCircle?.(x, y - bodyH * 0.45, brute ? radius * 0.62 : radius * 0.48);
+        graphics.fillRoundedRect?.(
+            x + (brute ? -bodyW * 0.7 : bodyW * 0.15),
+            y - 8,
+            brute ? 16 : 28,
+            brute ? 44 : 8,
+            3
+        );
     }
 
     refreshHud() {
@@ -278,6 +356,9 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             invuln: this.state.invuln, counterUsed: this.state.counterUsed,
             attackZone: this.state.attackZone ? { ...this.state.attackZone } : null,
             dodges: this.state.dodges, counters: this.state.counters,
+            lastFeedback: this.state.lastFeedback,
+            playerFigure: this.state.playerFigure,
+            bossFigure: this.state.bossFigure,
             playerPosition: this.player ? { x: this.player.x, y: this.player.y } : null,
             determinism: this.randomMetadata ? { random: this.randomMetadata() } : null
         };

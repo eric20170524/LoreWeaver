@@ -82,8 +82,8 @@ function fixture({ collectibles = false, stance = true, knobs = {} } = {}) {
     const timer = timers[index];
     timer.callback.call(timer.callbackScope);
   }
-  function enemy({ hp = 10, x = 10, y = 0, score = 1 } = {}) {
-    const target = entity(x, y, { id: 'test_enemy', hp, damage: 10, speed: 80, reward: { score } });
+  function enemy({ hp = 10, x = 10, y = 0, score = 1, id = 'test_enemy' } = {}) {
+    const target = entity(x, y, { id, hp, damage: 10, speed: 80, reward: { score } });
     adapter.groups.enemies.add(target);
     return target;
   }
@@ -101,6 +101,36 @@ test('a timer created before modifier installation executes the melee sweep', ()
   assert.equal(enemy.getData('hp'), 6);
   assert.equal(f.adapter.groups.bullets.getChildren().length, 0);
   assert.equal(events(f.adapter, 'weapon-stance-attack').at(-1)?.hitCount, 1);
+});
+
+test('manual melee swap burst hits harder and reduces incoming damage', () => {
+  const f = fixture({ knobs: { controlMode: 'manual' } });
+  const ctx = { adapter: f.adapter, events: { emit() {} } };
+  f.modifier.toggleStance(ctx);
+  f.modifier.toggleStance(ctx);
+  const enemy = f.enemy({ hp: 20 });
+  f.tick();
+  assert.equal(enemy.getData('hp'), 14.8);
+  assert.equal(events(f.adapter, 'weapon-stance-attack').at(-1)?.swapBurst, true);
+  f.adapter.damagePlayer(10);
+  assert.equal(f.adapter.state.hp, 93);
+});
+
+test('manual ranged swap marks the first shots as crit pierce', () => {
+  const f = fixture({ knobs: { controlMode: 'manual' } });
+  const first = f.enemy({ hp: 10, x: 8, id: 'one' });
+  const second = f.enemy({ hp: 10, x: 12, id: 'two' });
+  f.modifier.toggleStance({ adapter: f.adapter, events: { emit() {} } });
+  f.tick();
+  const bullets = f.adapter.groups.bullets.getChildren();
+  assert.equal(bullets.length, 2);
+  assert.equal(bullets[0].getData('pierce'), true);
+  assert.equal(bullets[0].getData('damage'), 4);
+  f.adapter.handleBulletEnemyOverlap(bullets[0], first);
+  assert.equal(first.getData('hp'), 6);
+  assert.equal(bullets[0].active, true);
+  f.adapter.handleBulletEnemyOverlap(bullets[0], second);
+  assert.equal(second.getData('hp'), 6);
 });
 
 test('manual stance stays melee across the timer until the player toggles', () => {

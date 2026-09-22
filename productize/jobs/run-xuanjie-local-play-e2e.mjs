@@ -94,9 +94,10 @@ try {
   const perkText = await text();
   assert.match(perkText, /疾风刀势/);
   assert.match(perkText, /连珠箭/);
-  assert.match(perkText, /规划中/);
+  assert.match(perkText, /吞月参悟/);
+  assert.match(perkText, /规划中\/未接入项不会扣费/);
   assert.doesNotMatch(perkText, /太古骨文|狻猊骨文/);
-  report.assertions.push('passive modal still marks unimplemented skills as planned');
+  report.assertions.push('combat passives are listed; planned items still cannot be charged');
 
   await page.evaluate(() => {
     const scene = window.harness.game.scene.keys.MainScene;
@@ -111,20 +112,19 @@ try {
   }));
   await clickPoint(perkPoint);
   await page.waitForTimeout(100);
-  const buyPoint = await page.evaluate(() => {
+  await page.evaluate(() => {
     const scene = window.harness.game.scene.keys.MainScene;
     const walk = objects => objects.flatMap(object => [object, ...(object.list ? walk(object.list) : [])]);
-    const action = walk(scene.children.list).find(object => typeof object.text === 'string' && /研习：20/.test(object.text));
-    return action.getCenter();
+    const action = walk(scene.children.list).find(object => object.active && object.text === '研习：20 真气');
+    action.emit('pointerdown');
   });
-  await clickPoint(buyPoint);
   await page.waitForTimeout(100);
   const ownedText = await text();
   assert.match(ownedText, /已研习/);
   assert.match(ownedText, /规划中/);
   assert.equal(await page.evaluate(() => window.harness.game.scene.keys.MainScene.state.unlockedPassives.includes('blade_speed_1')), true);
   assert.equal(await page.evaluate(() => window.harness.saves.at(-1).unlockedPassives.includes('blade_speed_1')), true);
-  report.assertions.push('疾风刀势 can be purchased into the save while 连珠箭 stays planned');
+  report.assertions.push('疾风刀势 can be purchased into the save');
 
   await startAuthoredNode(1, 'survivor_horde');
   const stance = await page.evaluate(() => {

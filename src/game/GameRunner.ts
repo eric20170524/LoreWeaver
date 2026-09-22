@@ -43,7 +43,7 @@ import { UIPlugin, UIPluginContext } from "./ui/UIPlugin";
 import { GAMEPLAY_CARD_OPTIONS } from "../utils/gameplayManifest";
 import { DefaultUIPlugin } from "./ui/DefaultUIPlugin";
 import { CultivationUIPlugin } from "./ui/CultivationUIPlugin";
-import { foldPassiveEffectsIntoKnobs, resolveCombatHp } from "./ui/cultivationModel";
+import { foldPassiveEffectsIntoKnobs, resolveNodeCombatStats } from "./ui/cultivationModel";
 
 const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
   hazard_telegraph: {
@@ -569,6 +569,7 @@ export function initializePhaserGame(
         const knobHp = Number(
           (mergedKnobs as any).player?.hp ?? mergedRaw.player?.hp ?? mergedRaw.playerHp ?? 100
         );
+        const combatStats = resolveNodeCombatStats(pState, spec.passiveSkillCatalog || [], { hp: knobHp, stanceKnobs: {} });
         const payload = createNodePayload({
           id: this.node.id,
           nodeId: `node_${this.node.id}`,
@@ -591,7 +592,7 @@ export function initializePhaserGame(
             }
           },
           playerStats: {
-            hp: resolveCombatHp(pState, spec.passiveSkillCatalog || [], knobHp)
+            hp: combatStats.hp
           },
           playerPerks: [
             ...planning.mainlineHooks,
@@ -600,6 +601,7 @@ export function initializePhaserGame(
           inventory: {
             abilities: abilityCatalog,
             unlockedAbilities,
+            unlockedPassives: Array.isArray(pState.unlockedPassives) ? pState.unlockedPassives : [],
             runSkillPool: planning.runSkillPool
           }
         });
@@ -611,17 +613,24 @@ export function initializePhaserGame(
           const modifiersList = (this.node.gameplay?.modifiers || []).flatMap((modSpec: GameplayModifierSpec) => {
             try {
               const defaultKnobs = SURVIVOR_MODIFIER_DEFAULT_KNOBS[modSpec.id] || {};
-              return [createSurvivorHordeModifier({
-                id: modSpec.id,
-                knobs: foldPassiveEffectsIntoKnobs(
+              const baseKnobs = {
+                ...defaultKnobs,
+                ...(modSpec.knobs || {})
+              };
+              const knobs = modSpec.id === "weapon_stance_cycle"
+                ? resolveNodeCombatStats(pState, spec.passiveSkillCatalog || [], {
+                    hp: knobHp,
+                    stanceKnobs: baseKnobs
+                  }).stanceKnobs
+                : foldPassiveEffectsIntoKnobs(
                   modSpec.id,
-                  {
-                    ...defaultKnobs,
-                    ...(modSpec.knobs || {})
-                  },
+                  baseKnobs,
                   pState,
                   spec.passiveSkillCatalog || []
-                )
+                );
+              return [createSurvivorHordeModifier({
+                id: modSpec.id,
+                knobs
               })];
             } catch (error) {
               onLog(`⚠️ 跳过暂不支持的 survivor_horde modifier: ${modSpec.id}`);

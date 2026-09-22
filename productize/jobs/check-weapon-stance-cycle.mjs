@@ -17,6 +17,10 @@ assert.ok(
   SURVIVOR_HORDE_SUPPORTED_MODIFIERS.includes('run_growth_milestones'),
   'run_growth_milestones must be registered'
 );
+assert.ok(
+  SURVIVOR_HORDE_SUPPORTED_MODIFIERS.includes('overdrive_transformation'),
+  'overdrive_transformation must be registered'
+);
 
 const modifier = createSurvivorHordeModifier({
   id: 'weapon_stance_cycle',
@@ -127,5 +131,31 @@ assert.deepEqual(testState.runGrowth.reached, ['melee_mastery', 'ranged_mastery'
 assert.equal(testState.runGrowth.effects.length, 3);
 
 modifier.uninstall(context);
+
+const overdrive = createSurvivorHordeModifier({
+  id: 'overdrive_transformation',
+  knobs: { requiresPassive: 'white_ape_overdrive_passive', durationSec: 4 }
+});
+const odAdapter = {
+  status: 'running',
+  state: { elapsedSeconds: 1, hp: 40 },
+  config: { player: { speed: 100 }, weapon: { bulletDamage: 2 } },
+  payload: { inventory: { unlockedPassives: [] } },
+  modifiers: [],
+  isRunning: () => true,
+  damageEnemy: (_enemy, damage) => damage,
+  damagePlayer: (amount) => amount,
+  semanticActions: () => [],
+  handleSemanticInput: () => ({})
+};
+const odContext = { adapter: odAdapter, scene: { add: {}, input: {} }, player: { x: 0, y: 0 }, events: { emit: () => {} } };
+overdrive.install(odContext);
+assert.equal(overdrive.tryActivate(odContext).reason, 'unarmed');
+odAdapter.payload.inventory.unlockedPassives = ['white_ape_overdrive_passive'];
+assert.equal(overdrive.tryActivate(odContext).accepted, true);
+assert.equal(overdrive.getTestState().active, true);
+assert.equal(odAdapter.config.player.speed, 125);
+assert.equal(odAdapter.damageEnemy({}, 10), 15.5);
+overdrive.uninstall(odContext);
 
 console.log('PASS weapon stance + manifest growth migration + survivor knob normalization smoke check');

@@ -18,7 +18,14 @@ const DEFAULT_CONFIG = Object.freeze({
     toggleHint: 'Q / SHIFT',
     showToggleButton: true,
     runGrowth: true,
-    migrateLegacyFirstNodeGrowth: true
+    migrateLegacyFirstNodeGrowth: true,
+    swapBurst: true,
+    meleeSwapWindowSec: 1.5,
+    meleeSwapDamageMultiplier: 1.3,
+    meleeSwapRadiusMultiplier: 1.35,
+    meleeSwapKnockbackResist: 0.3,
+    rangedSwapShots: 3,
+    rangedSwapCritMultiplier: 2
 });
 
 const DEFAULT_STANCE_GROWTH = Object.freeze({
@@ -70,6 +77,11 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         this._runGrowth = null;
         this._toggleButton = null;
         this._boundToggle = null;
+        this._originalDamagePlayer = null;
+        this._originalBulletOverlap = null;
+        this._swapUntil = 0;
+        this._swapStance = null;
+        this._rangedSwapShots = 0;
     }
 
     isManual() {
@@ -119,6 +131,33 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             return { action: payload?.action, accepted: false };
         };
         adapter.toggleWeaponStance = () => this.toggleStance(context);
+
+        if (typeof adapter.damagePlayer === 'function') {
+            this._originalDamagePlayer = adapter.damagePlayer.bind(adapter);
+            adapter.damagePlayer = (amount, reason) => {
+                let next = amount;
+                if (this.isMeleeSwapActive(adapter) && Number.isFinite(next)) {
+                    next *= 1 - clampPositive(this.config.meleeSwapKnockbackResist, 0);
+                    if (next < 0) next = 0;
+                }
+                return this._originalDamagePlayer(next, reason);
+            };
+        }
+        if (typeof adapter.handleBulletEnemyOverlap === 'function') {
+            this._originalBulletOverlap = adapter.handleBulletEnemyOverlap.bind(adapter);
+            adapter.handleBulletEnemyOverlap = (bullet, enemy) => {
+                if (bullet?.getData?.('pierce')) {
+                    if (!adapter.isRunning() || !bullet?.active || !adapter.isEnemyTargetable?.(enemy)) return;
+                    const hit = bullet._piercedIds || (bullet._piercedIds = new Set());
+                    const id = enemy.getData?.('id') || enemy;
+                    if (hit.has(id)) return;
+                    hit.add(id);
+                    adapter.damageEnemy(enemy, bullet.getData('damage') || adapter.config.weapon.bulletDamage);
+                    return;
+                }
+                return this._originalBulletOverlap(bullet, enemy);
+            };
+        }
 
         this.bindToggleInput(context);
         this.mountToggleButton(context);
@@ -216,22 +255,47 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
 
     announceIfChanged(context, stance) {
         if (this._lastStance === stance) return;
+        const previous = this._lastStance;
         this._lastStance = stance;
+        if (previous && this.isManual() && this.config.swapBurst !== false) {
+            this.beginSwapBurst(context?.adapter, stance);
+        }
         if (!this.config.announceStance) return;
 
         context.events?.emit?.('presentation', {
             kind: 'weapon-stance',
             stance,
-            label: stance === 'melee' ? this.config.meleeLabel : this.config.rangedLabel
+            label: stance === 'melee' ? this.config.meleeLabel : this.config.rangedLabel,
+            swapBurst: this.isMeleeSwapActive(context?.adapter) || this._rangedSwapShots > 0
         });
+    }
+
+    beginSwapBurst(adapter, stance) {
+        const elapsed = Number(adapter?.state?.elapsedSeconds || 0);
+        this._swapStance = stance;
+        if (stance === 'melee') {
+            this._swapUntil = elapsed + clampPositive(this.config.meleeSwapWindowSec, DEFAULT_CONFIG.meleeSwapWindowSec);
+            this._rangedSwapShots = 0;
+        } else {
+            this._swapUntil = 0;
+            this._rangedSwapShots = Math.max(0, Math.floor(Number(this.config.rangedSwapShots) || 0));
+        }
+    }
+
+    isMeleeSwapActive(adapter) {
+        return this._swapStance === 'melee'
+            && Number(adapter?.state?.elapsedSeconds || 0) < this._swapUntil;
     }
 
     performMeleeSweep(context) {
         const { adapter, scene, player, groups } = context;
         if (!player || !groups?.enemies) return;
 
-        const radius = clampPositive(this.config.meleeRadius, DEFAULT_CONFIG.meleeRadius);
-        const damage = clampPositive(this.config.meleeDamage, DEFAULT_CONFIG.meleeDamage);
+        const swap = this.isMeleeSwapActive(adapter);
+        const radius = clampPositive(this.config.meleeRadius, DEFAULT_CONFIG.meleeRadius)
+            * (swap ? clampPositive(this.config.meleeSwapRadiusMultiplier, 1) : 1);
+        const damage = clampPositive(this.config.meleeDamage, DEFAULT_CONFIG.meleeDamage)
+            * (swap ? clampPositive(this.config.meleeSwapDamageMultiplier, 1) : 1);
         const maxTargets = Math.max(1, Math.floor(clampPositive(
             this.config.meleeMaxTargets,
             DEFAULT_CONFIG.meleeMaxTargets
@@ -272,7 +336,8 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             stance: 'melee',
             hitCount,
             damage,
-            radius
+            radius,
+            swapBurst: swap
         });
     }
 
@@ -290,9 +355,26 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         const originalDamage = adapter.config.weapon.bulletDamage;
         adapter.config.weapon.bulletDamage = originalDamage * multiplier;
 
+        const groups = adapter.groups?.bullets;
+        let critShots = 0;
         try {
             for (let i = 0; i < burstCount; i += 1) {
+                const before = groups?.getChildren?.()?.length || 0;
+                const crit = this._rangedSwapShots > 0;
+                if (crit) {
+                    adapter.config.weapon.bulletDamage = originalDamage * multiplier
+                        * clampPositive(this.config.rangedSwapCritMultiplier, 1);
+                    this._rangedSwapShots -= 1;
+                    critShots += 1;
+                } else {
+                    adapter.config.weapon.bulletDamage = originalDamage * multiplier;
+                }
                 this._originalFireAtNearestEnemy();
+                if (crit && groups?.getChildren) {
+                    const bullets = groups.getChildren();
+                    const newest = bullets[bullets.length - 1];
+                    if (newest && bullets.length > before) newest.setData?.('pierce', true);
+                }
             }
         } finally {
             adapter.config.weapon.bulletDamage = originalDamage;
@@ -301,7 +383,9 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         context.events?.emit?.('weapon-stance-attack', {
             stance: 'ranged',
             burstCount,
-            damageMultiplier: multiplier
+            damageMultiplier: multiplier,
+            swapBurst: critShots > 0,
+            critShots
         });
     }
 
@@ -318,14 +402,25 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         if (this._originalHandleSemanticInput && adapter) {
             adapter.handleSemanticInput = this._originalHandleSemanticInput;
         }
+        if (this._originalDamagePlayer && adapter) {
+            adapter.damagePlayer = this._originalDamagePlayer;
+        }
+        if (this._originalBulletOverlap && adapter) {
+            adapter.handleBulletEnemyOverlap = this._originalBulletOverlap;
+        }
         if (adapter) delete adapter.toggleWeaponStance;
         this._toggleButton?.destroy?.();
         this._toggleButton = null;
         this._originalFireAtNearestEnemy = null;
         this._originalSemanticActions = null;
         this._originalHandleSemanticInput = null;
+        this._originalDamagePlayer = null;
+        this._originalBulletOverlap = null;
         this._boundToggle = null;
         this._lastStance = null;
+        this._swapUntil = 0;
+        this._swapStance = null;
+        this._rangedSwapShots = 0;
         super.uninstall(context);
     }
 
@@ -336,6 +431,9 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             currentStance: this._lastStance || this._stance,
             meleeDurationSec: this.config.meleeDurationSec,
             rangedDurationSec: this.config.rangedDurationSec,
+            swapBurst: this.config.swapBurst,
+            rangedSwapShots: this._rangedSwapShots,
+            meleeSwapUntil: this._swapUntil,
             runGrowth: this._runGrowth?.getTestState?.() || null
         };
     }

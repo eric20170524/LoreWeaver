@@ -5,7 +5,7 @@ import DodgeCounterBossAdapter from '../../minigame_master/core/lib/gameplay/dod
 
 function object(x = 0, y = 0) {
   const o = Object.assign(new EventEmitter(), { x, y, active: true, text: '' });
-  for (const method of ['setOrigin', 'setInteractive', 'setStrokeStyle', 'setFillStyle', 'setRadius', 'setAlpha', 'setColor', 'fillStyle', 'fillRoundedRect', 'clear']) {
+  for (const method of ['setOrigin', 'setInteractive', 'setStrokeStyle', 'setFillStyle', 'setRadius', 'setAlpha', 'setColor', 'setDepth', 'fillStyle', 'fillRoundedRect', 'fillCircle', 'lineStyle', 'beginPath', 'moveTo', 'lineTo', 'strokePath', 'clear']) {
     o[method] = () => { assert.equal(o.active, true, `${method} after object.destroy()`); return o; };
   }
   o.setText = (text) => { assert.equal(o.active, true); o.text = text; return o; };
@@ -19,7 +19,7 @@ function fixture(knobs = {}, onEnd) {
     scale: { width: 720, height: 1280 },
     add: { circle: (x, y) => object(x, y), text: (x, y) => object(x, y), graphics: () => object() },
     input: Object.assign(new EventEmitter(), { keyboard: new EventEmitter() }),
-    events: new EventEmitter(), cameras: { main: { shake() {} } },
+    events: new EventEmitter(), cameras: { main: { shake() {}, flash() {} } },
     time: { now: 0, delayedCall(ms, callback) { const timer = { ms, callback, removed: false, remove() { this.removed = true; } }; timers.push(timer); return timer; } }
   };
   const adapter = new DodgeCounterBossAdapter({ Phaser: {}, random: () => 0.5,
@@ -46,6 +46,24 @@ test('payload duration is honored and timeout is a single failure, not a win', (
   f.step(5000);
   assert.equal(f.results.length, 1);
 });
+test('attack contact and counter emit stagger/hurt presentation instead of silent circles', () => {
+  const f = fixture();
+  assert.equal(f.adapter.getTestState().playerFigure, 'fighter');
+  assert.equal(f.adapter.getTestState().bossFigure, 'brute');
+  f.adapter.movePlayer(f.adapter.state.attackZone ? 0 : 360, 900);
+  f.step(1);
+  f.adapter.beginAttack();
+  const zone = f.adapter.state.attackZone;
+  f.adapter.movePlayer(zone.x, zone.y);
+  f.step(f.adapter.config.warningSec * 1000 + 20);
+  f.step(20);
+  assert.equal(f.adapter.state.lastFeedback, 'player_hurt');
+  f.adapter.movePlayer(20, 1160);
+  for (let i = 0; i < 80 && f.adapter.state.phase !== 'counter'; i++) f.step(20);
+  f.adapter.tryCounter();
+  assert.equal(f.adapter.state.lastFeedback, 'boss_stagger');
+});
+
 test('one opening accepts only one counter across pointer and semantic input', () => {
   const f = fixture();
   f.counterWindow();
