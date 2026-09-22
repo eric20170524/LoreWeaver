@@ -510,28 +510,45 @@ def _assert_runtime_safe(ws: Path, force: bool) -> dict[str, Any] | None:
     return provenance
 
 
+def _is_sprite_gen_provenance(provenance: dict[str, Any] | None) -> bool:
+    provenance = provenance or {}
+    return (
+        provenance.get("provider") == "sprite-gen"
+        or str(provenance.get("schemaVersion") or "").startswith("loreweaver.sprite-gen")
+    )
+
+
 def _promoted_asset_ids(ws: Path, runtime_provenance: dict[str, Any] | None = None) -> list[str]:
     ids: set[str] = set()
-    root = ws / "assets" / "imagegen" / "sprite-gen"
-    if root.is_dir():
-        for entry in root.iterdir():
-            prov = entry / "loreweaver" / "provenance.json"
-            if not prov.is_file():
-                continue
-            try:
-                data = read_json(prov)
-            except BridgeError:
-                continue
-            if data.get("promoted") is True:
-                value = data.get("assetId") or data.get("characterId") or entry.name
-                ids.add(slug(str(value)))
+
+    # Candidate-side promoted flags are trustworthy only while the active runtime
+    # is absent or is itself owned by this publisher. A forced takeover of a
+    # foreign runtime must not resurrect stale sprite-gen candidates that happened
+    # to remain marked promoted from an older bundle.
+    trust_candidate_flags = runtime_provenance is None or _is_sprite_gen_provenance(runtime_provenance)
+    if trust_candidate_flags:
+        root = ws / "assets" / "imagegen" / "sprite-gen"
+        if root.is_dir():
+            for entry in root.iterdir():
+                prov = entry / "loreweaver" / "provenance.json"
+                if not prov.is_file():
+                    continue
+                try:
+                    data = read_json(prov)
+                except BridgeError:
+                    continue
+                if data.get("promoted") is True:
+                    value = data.get("assetId") or data.get("characterId") or entry.name
+                    ids.add(slug(str(value)))
+
     provenance = runtime_provenance or {}
-    for item in provenance.get("assets") or []:
-        if isinstance(item, dict) and (item.get("assetId") or item.get("characterId")):
-            ids.add(slug(str(item.get("assetId") or item.get("characterId"))))
-    legacy_id = provenance.get("assetId") or provenance.get("characterId")
-    if legacy_id:
-        ids.add(slug(str(legacy_id)))
+    if _is_sprite_gen_provenance(provenance):
+        for item in provenance.get("assets") or []:
+            if isinstance(item, dict) and (item.get("assetId") or item.get("characterId")):
+                ids.add(slug(str(item.get("assetId") or item.get("characterId"))))
+        legacy_id = provenance.get("assetId") or provenance.get("characterId")
+        if legacy_id:
+            ids.add(slug(str(legacy_id)))
     return sorted(ids)
 
 
