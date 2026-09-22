@@ -1458,10 +1458,22 @@ async def api_refine_workspace(workspace_id: str, payload: FeedbackRequest, db: 
     db.add(user_chat)
     db.commit()
 
-    # Direct agent invocation
+    # Direct agent invocation. Scope, when present, is enforced after the model returns.
     reply_text = f"已根据「{payload.message}」完成微调。请在筹备意见中核对，满意后点「确认部门」。"
+    scoped_message = payload.message
+    refine_scope = None
+    refine_job = None
+    if payload.scope is not None:
+        from .department_scope import ScopeError, clamp_manifest, job_for, parse_scope, scope_instruction
+
+        try:
+            refine_scope = parse_scope(payload.scope, current_gdd, allow_all=False)
+            refine_job = job_for(dept_id, refine_scope, load_department_registry())
+        except ScopeError as exc:
+            _scope_error(exc)
+        scoped_message = scope_instruction(dept_id, refine_job, refine_scope) + "\n\n" + payload.message
     try:
-        new_gdd = await WorldBuilderAgent.adjust_gdd(current_gdd, payload.message, payload.agent_role)
+        new_gdd = await WorldBuilderAgent.adjust_gdd(current_gdd, scoped_message, payload.agent_role)
     except Exception as exc:
         reply_text = f"微调服务报错: {str(exc)}"
         agent_chat = DepartmentChatMessage(
@@ -1477,6 +1489,14 @@ async def api_refine_workspace(workspace_id: str, payload: FeedbackRequest, db: 
         db.commit()
         raise HTTPException(status_code=500, detail=str(exc))
     
+    if refine_scope is not None:
+        from .department_scope import clamp_manifest
+
+        clamped = clamp_manifest(current_gdd, new_gdd, refine_scope, refine_job or "catalog")
+        if json.dumps(clamped, ensure_ascii=False, sort_keys=True) != json.dumps(new_gdd, ensure_ascii=False, sort_keys=True):
+            reply_text += " 已按当前范围收回范围外改动。"
+        new_gdd = clamped
+
     # Save optimized manifest
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(new_gdd, f, ensure_ascii=False, indent=2)
@@ -1848,7 +1868,7 @@ def departments_dir(ws_id: str) -> str:
     return path
 
 
-def default_department_state(unit_id: str = "campaign_12", stage_id: str = "production_prep") -> dict:
+def default_department_state(unit_id: str = "", stage_id: str = "production_prep") -> dict:
     registry = load_department_registry()
     departments = {}
     for dept in registry.get("departments", []):
@@ -1864,10 +1884,8 @@ def default_department_state(unit_id: str = "campaign_12", stage_id: str = "prod
             "confirmedAt": None,
         }
     required = [d["id"] for d in registry.get("departments", []) if d["id"] != "director"]
-    return {
+    payload = {
         "schemaVersion": "loreweaver.department-state.v1",
-        "unitId": unit_id,
-        "unitType": "campaign",
         "stageId": stage_id,
         "departments": departments,
         "requiredDepartmentIds": required,
@@ -1875,20 +1893,19 @@ def default_department_state(unit_id: str = "campaign_12", stage_id: str = "prod
         "requiredCount": len(required),
         "updatedAt": utc_now_string(),
     }
+    if unit_id:
+        payload["unitId"] = unit_id
+    return payload
 
 
 def recompute_department_counts(state: dict) -> dict:
-    required = state.get("requiredDepartmentIds") or [
-        d_id for d_id in state.get("departments", {}).keys() if d_id != "director"
-    ]
-    confirmed = 0
-    for d_id in required:
-        dept = state.get("departments", {}).get(d_id) or {}
-        if dept.get("status") == "confirmed":
-            confirmed += 1
-    state["requiredDepartmentIds"] = required
-    state["requiredCount"] = len(required)
-    state["confirmedCount"] = confirmed
+    from .department_scope import normalize_department_state
+
+    try:
+        registry = load_department_registry()
+    except Exception:
+        registry = {"departments": []}
+    state = normalize_department_state(state, registry)
     state["updatedAt"] = utc_now_string()
     return state
 
@@ -1900,8 +1917,11 @@ def load_department_state(ws_id: str) -> dict:
         save_department_state(ws_id, state)
         return state
     with open(path, "r", encoding="utf-8") as f:
-        state = json.load(f)
-    return recompute_department_counts(state)
+        raw = json.load(f)
+    state = recompute_department_counts(raw)
+    if raw.get("schemaVersion") != state.get("schemaVersion") or "scopes" not in raw:
+        return save_department_state(ws_id, state)
+    return state
 
 
 def save_department_state(ws_id: str, state: dict) -> dict:
@@ -1924,22 +1944,60 @@ def list_handoffs(ws_id: str) -> list:
     return items
 
 
+def _department_maps(state: dict) -> list:
+    maps = []
+    scopes = state.get("scopes") if isinstance(state.get("scopes"), dict) else {}
+    trunk = ((scopes.get("trunk") or {}).get("departments") or {})
+    if isinstance(trunk, dict) and trunk:
+        maps.append(trunk)
+    for bucket in (scopes.get("nodes") or {}).values():
+        departments = (bucket or {}).get("departments") or {}
+        if isinstance(departments, dict) and departments and departments not in maps:
+            maps.append(departments)
+    flat = state.get("departments") or {}
+    if isinstance(flat, dict) and flat and all(flat is not item for item in maps):
+        maps.append(flat)
+    return maps
+
+
 def refresh_open_handoff_counts(ws_id: str, state: dict) -> dict:
     handoffs = list_handoffs(ws_id)
-    counts = {d_id: 0 for d_id in state.get("departments", {})}
+    counts: dict = {}
     for ho in handoffs:
         if ho.get("status") != "open":
             continue
         to_id = ho.get("to")
-        if to_id in counts:
-            counts[to_id] += 1
-        from_id = ho.get("from")
-        # also surface on from for visibility
-        if from_id in counts and from_id != to_id:
-            pass
-    for d_id, dept in state.get("departments", {}).items():
-        dept["openHandoffCount"] = counts.get(d_id, 0)
+        if to_id:
+            counts[to_id] = counts.get(to_id, 0) + 1
+    for departments in _department_maps(state):
+        for d_id, dept in departments.items():
+            if isinstance(dept, dict):
+                dept["openHandoffCount"] = counts.get(d_id, 0)
     return state
+
+
+def prepare_department_state(ws_id: str):
+    """Load v2 state and ensure a bucket exists for every manifest node id."""
+    from .department_scope import ensure_node_buckets, node_ids_of, normalize_department_state
+
+    state = load_department_state(ws_id)
+    gdd = {}
+    try:
+        gdd = load_assembled_manifest(ws_id) or {}
+    except Exception:
+        gdd = {}
+    registry = load_department_registry()
+    try:
+        ids = node_ids_of(gdd)
+    except Exception:
+        ids = []
+    ensure_node_buckets(state, registry, ids)
+    state = normalize_department_state(state, registry)
+    return state, gdd
+
+
+def _scope_error(exc) -> None:
+    raise HTTPException(status_code=400, detail={"code": getattr(exc, "code", "scope_invalid"), "message": str(exc)})
 
 
 @app.get("/api/llm/status")
@@ -1994,15 +2052,20 @@ def api_get_department_chat(ws_id: str, dept_id: str, db: Session = Depends(get_
 def api_get_departments(ws_id: str):
 
     resolve_existing_ws_path(ws_id)
-    state = load_department_state(ws_id)
+    state, gdd = prepare_department_state(ws_id)
     state = refresh_open_handoff_counts(ws_id, state)
-    save_department_state(ws_id, state)
+    state = save_department_state(ws_id, state)
+    node_index = []
+    for node in (gdd or {}).get("nodes") or []:
+        if isinstance(node, dict):
+            node_index.append({"id": node.get("id"), "title": node.get("title")})
     return {
         "success": True,
         "data": {
             "registry": load_department_registry(),
             "state": state,
             "handoffs": list_handoffs(ws_id),
+            "nodeIndex": node_index,
         },
     }
 
@@ -2011,10 +2074,34 @@ def api_get_departments(ws_id: str):
 def api_put_departments(ws_id: str, payload: dict):
     resolve_existing_ws_path(ws_id)
     state = payload.get("state") or payload
-    if not isinstance(state, dict) or "departments" not in state:
+    if not isinstance(state, dict) or ("departments" not in state and "scopes" not in state):
         raise HTTPException(status_code=400, detail="Invalid department state payload")
     saved = save_department_state(ws_id, state)
     return {"success": True, "data": saved}
+
+
+def _bind_request_scope(state: dict, gdd: dict, payload: dict, *, allow_all: bool = False):
+    """Parse scope, point activeScope at the viewed bucket, and return the Scope."""
+    from .department_scope import Scope, ScopeError, normalize_department_state, parse_scope, set_active_scope
+
+    try:
+        scope = parse_scope(payload.get("scope"), gdd, allow_all=allow_all)
+    except ScopeError as exc:
+        _scope_error(exc)
+        raise
+    active = payload.get("activeScope")
+    if isinstance(active, dict) and active.get("kind") in ("trunk", "nodes"):
+        try:
+            view = parse_scope(active, gdd, allow_all=False)
+        except ScopeError as exc:
+            _scope_error(exc)
+            raise
+        set_active_scope(state, view)
+    elif scope.kind == "nodes" and len(scope.node_ids) > 1:
+        set_active_scope(state, Scope("nodes", [scope.node_ids[0]]))
+    elif scope.kind != "all":
+        set_active_scope(state, scope)
+    return scope, normalize_department_state(state, load_department_registry())
 
 
 @app.post("/api/workspaces/{ws_id}/departments/{dept_id}/confirm")
@@ -2022,16 +2109,28 @@ async def api_confirm_department(ws_id: str, dept_id: str, payload: dict = None)
     resolve_existing_ws_path(ws_id)
     payload = payload or {}
     from .department_agents import mark_downstream_stale, run_auto_prep_pipeline, topological_departments
+    from .department_scope import ScopeError, direct_downstream_ids, job_for
+
     registry = load_department_registry()
-    state = load_department_state(ws_id)
-    dept = state.get("departments", {}).get(dept_id)
+    state, gdd = prepare_department_state(ws_id)
+    try:
+        scope, state = _bind_request_scope(state, gdd, payload, allow_all=False)
+        job_for(dept_id, scope, registry)
+    except ScopeError as exc:
+        _scope_error(exc)
+    if scope.kind == "nodes" and len(scope.node_ids) != 1:
+        raise HTTPException(status_code=400, detail={"code": "confirm_one_node", "message": "confirm one node at a time"})
+    from .department_scope import get_runtime, put_runtime
+
+    dept = get_runtime(state, scope, dept_id)
     if not dept:
         raise HTTPException(status_code=404, detail=f"Unknown department: {dept_id}")
-    # hard block confirm if blocked
     if dept.get("status") == "blocked" and not payload.get("force"):
         raise HTTPException(status_code=409, detail=f"Department {dept_id} is blocked")
     if payload.get("prepNotes") is not None:
         dept["prepNotes"] = str(payload.get("prepNotes") or "")
+    if payload.get("brief") is not None:
+        dept["brief"] = str(payload.get("brief") or "")
     if payload.get("qaScore") is not None:
         try:
             dept["qaScore"] = int(payload.get("qaScore"))
@@ -2042,45 +2141,46 @@ async def api_confirm_department(ws_id: str, dept_id: str, payload: dict = None)
     dept["confirmedAt"] = utc_now_string()
     dept["updatedAt"] = dept["confirmedAt"]
     dept.pop("staleReason", None)
-    state["departments"][dept_id] = dept
-    # Phase D: cascade stale to downstream
-    stale_ids = mark_downstream_stale(state, registry, dept_id, reason="upstream_confirmed")
+    put_runtime(state, scope, registry, dept_id, dept)
+    stale_ids = mark_downstream_stale(state, registry, dept_id, reason="upstream_confirmed", scope=scope)
 
     reprep_log = []
     reprep_patches = []
     patches_saved = False
-    # Default: auto re-prep stale downstream so they get fresh drafts
-    reprep = payload.get("reprepDownstream", True)
+    reprep = bool(payload.get("reprepDownstream", False))
     if reprep and stale_ids:
-        # preserve topo order among stale set
         ordered = [d["id"] for d in topological_departments(registry.get("departments") or [])]
-        only = [d for d in ordered if d in set(stale_ids)]
-        gdd = {}
-        try:
-            gdd = load_assembled_manifest(ws_id)
-        except Exception:
-            pass
-        state, reprep_log, _hos, new_gdd, applied = await run_auto_prep_pipeline(
-            registry=registry,
-            state=state,
-            gdd=gdd or {},
-            reports_dir=REPORTS_DIR,
-            force=True,
-            only=only,
-            apply_patches=bool(payload.get("applyPatches", True)),
-        )
-        reprep_patches = applied
-        if applied and new_gdd:
-            try:
-                save_split_manifest(ws_id, new_gdd)
-                patches_saved = True
-            except Exception:
+        direct = set(direct_downstream_ids(registry, dept_id))
+        prefix = "trunk" if scope.kind == "trunk" else f"node:{scope.node_ids[0]}"
+        stale_same_scope = set()
+        for label in stale_ids:
+            parts = str(label).split(":")
+            if ":".join(parts[:-1]) == prefix and parts[-1] in direct:
+                stale_same_scope.add(parts[-1])
+        only = [d for d in ordered if d in stale_same_scope]
+        if only:
+            state, reprep_log, _hos, new_gdd, applied = await run_auto_prep_pipeline(
+                registry=registry,
+                state=state,
+                gdd=gdd or {},
+                reports_dir=REPORTS_DIR,
+                force=True,
+                only=only,
+                apply_patches=bool(payload.get("applyPatches", True)),
+                scope=scope,
+            )
+            reprep_patches = applied
+            if applied and new_gdd:
                 try:
-                    with open(os.path.join(get_ws_path(ws_id), "manifest.json"), "w", encoding="utf-8") as f:
-                        json.dump(new_gdd, f, ensure_ascii=False, indent=2)
+                    save_split_manifest(ws_id, new_gdd)
                     patches_saved = True
                 except Exception:
-                    pass
+                    try:
+                        with open(os.path.join(get_ws_path(ws_id), "manifest.json"), "w", encoding="utf-8") as f:
+                            json.dump(new_gdd, f, ensure_ascii=False, indent=2)
+                        patches_saved = True
+                    except Exception:
+                        pass
 
     state = refresh_open_handoff_counts(ws_id, state)
     saved = save_department_state(ws_id, state)
@@ -2097,18 +2197,25 @@ async def api_confirm_department(ws_id: str, dept_id: str, payload: dict = None)
 @app.post("/api/workspaces/{ws_id}/departments/{dept_id}/status")
 def api_set_department_status(ws_id: str, dept_id: str, payload: dict):
     resolve_existing_ws_path(ws_id)
-    state = load_department_state(ws_id)
-    dept = state.get("departments", {}).get(dept_id)
+    payload = payload or {}
+    from .department_agents import mark_downstream_stale
+    from .department_scope import ScopeError, get_runtime, job_for, put_runtime
+
+    registry = load_department_registry()
+    state, gdd = prepare_department_state(ws_id)
+    try:
+        scope, state = _bind_request_scope(state, gdd, payload, allow_all=False)
+        job_for(dept_id, scope, registry)
+    except ScopeError as exc:
+        _scope_error(exc)
+    dept = get_runtime(state, scope, dept_id)
     if not dept:
         raise HTTPException(status_code=404, detail=f"Unknown department: {dept_id}")
     status = payload.get("status")
-    allowed = {"idle", "drafting", "ready_for_review", "confirmed", "blocked", "stale"}
+    allowed = {"idle", "drafting", "ready_for_review", "confirmed", "blocked", "stale", "deferred"}
     if status not in allowed:
         raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
-    from .department_agents import mark_downstream_stale
-    registry = load_department_registry()
     stale_ids = []
-    # demote confirmed without version bump when stale/blocked
     if status == "confirmed" and dept.get("status") != "confirmed":
         dept["version"] = int(dept.get("version") or 0) + 1
         dept["confirmedAt"] = utc_now_string()
@@ -2122,9 +2229,9 @@ def api_set_department_status(ws_id: str, dept_id: str, payload: dict):
         except (TypeError, ValueError):
             pass
     dept["updatedAt"] = utc_now_string()
-    state["departments"][dept_id] = dept
+    put_runtime(state, scope, registry, dept_id, dept)
     if status == "confirmed":
-        stale_ids = mark_downstream_stale(state, registry, dept_id, reason="upstream_confirmed")
+        stale_ids = mark_downstream_stale(state, registry, dept_id, reason="upstream_confirmed", scope=scope)
     saved = save_department_state(ws_id, state)
     return {"success": True, "data": saved, "staleDownstream": stale_ids}
 
@@ -2138,6 +2245,8 @@ def api_list_handoffs(ws_id: str):
 @app.post("/api/workspaces/{ws_id}/departments/handoffs")
 def api_create_handoff(ws_id: str, payload: dict):
     resolve_existing_ws_path(ws_id)
+    from .department_scope import unit_id_from_scope_dict
+
     registry = load_department_registry()
     ids = {d["id"] for d in registry.get("departments", [])}
     from_id = payload.get("from")
@@ -2152,7 +2261,9 @@ def api_create_handoff(ws_id: str, payload: dict):
         "id": ho_id,
         "from": from_id,
         "to": to_id,
-        "unitId": payload.get("unitId") or load_department_state(ws_id).get("unitId"),
+        "unitId": payload.get("unitId") or unit_id_from_scope_dict(
+            payload.get("scope") if isinstance(payload.get("scope"), dict) else load_department_state(ws_id).get("activeScope")
+        ),
         "type": ho_type,
         "summary": str(payload.get("summary") or "").strip() or "(no summary)",
         "payloadRef": payload.get("payloadRef") or "",
@@ -2201,25 +2312,22 @@ async def api_auto_prep_departments(ws_id: str, payload: dict = None):
     payload = payload or {}
     from .department_agents import run_auto_prep_pipeline
 
+    from .department_scope import ScopeError
+
     registry = load_department_registry()
-    state = load_department_state(ws_id)
-    if payload.get("unitId"):
-        state["unitId"] = str(payload["unitId"])
+    state, gdd = prepare_department_state(ws_id)
     if payload.get("stageId"):
         state["stageId"] = str(payload["stageId"])
-
-    # Load GDD / manifest if present
-    gdd = {}
-    try:
-        gdd = load_assembled_manifest(ws_id)
-    except Exception:
-        manifest_path = os.path.join(get_ws_path(ws_id), "manifest.json")
-        if os.path.isfile(manifest_path):
-            try:
-                with open(manifest_path, "r", encoding="utf-8") as f:
-                    gdd = json.load(f)
-            except Exception:
-                gdd = {}
+    if isinstance(payload.get("activeScope"), dict):
+        try:
+            _, state = _bind_request_scope(
+                state,
+                gdd,
+                {"scope": payload.get("activeScope"), "activeScope": payload.get("activeScope")},
+                allow_all=False,
+            )
+        except ScopeError as exc:
+            _scope_error(exc)
 
     only = payload.get("only")
     if isinstance(only, str):
@@ -2227,15 +2335,20 @@ async def api_auto_prep_departments(ws_id: str, payload: dict = None):
     force = bool(payload.get("force"))
 
     apply_patches = payload.get("applyPatches", True)
-    state, run_log, suggested, new_gdd, applied_patches = await run_auto_prep_pipeline(
-        registry=registry,
-        state=state,
-        gdd=gdd or {},
-        reports_dir=REPORTS_DIR,
-        force=force,
-        only=only,
-        apply_patches=bool(apply_patches),
-    )
+    try:
+        state, run_log, suggested, new_gdd, applied_patches = await run_auto_prep_pipeline(
+            registry=registry,
+            state=state,
+            gdd=gdd or {},
+            reports_dir=REPORTS_DIR,
+            force=force,
+            only=only,
+            apply_patches=bool(apply_patches),
+            scope=payload.get("scope"),
+            brief=str(payload.get("brief") or ""),
+        )
+    except ScopeError as exc:
+        _scope_error(exc)
 
     # Persist controlled GDD patches
     patches_saved = False
@@ -2268,7 +2381,7 @@ async def api_auto_prep_departments(ws_id: str, payload: dict = None):
             "id": ho_id,
             "from": ho["from"],
             "to": ho["to"],
-            "unitId": state.get("unitId"),
+            "unitId": ho.get("unitId") or "trunk",
             "type": ho.get("type") or "request",
             "summary": ho.get("summary") or "",
             "payloadRef": "",
@@ -2325,7 +2438,7 @@ async def api_auto_prep_departments(ws_id: str, payload: dict = None):
         saved = save_department_state(ws_id, saved)
 
     from .department_agents import evaluate_advance_gate, collect_report_signals
-    gate = evaluate_advance_gate(saved, registry, collect_report_signals(REPORTS_DIR))
+    gate = evaluate_advance_gate(saved, registry, collect_report_signals(REPORTS_DIR), gdd=new_gdd or gdd)
 
     # Persist run log
     log_path = os.path.join(departments_dir(ws_id), "qa", "auto_prep_latest.json")
@@ -2362,29 +2475,36 @@ async def api_auto_prep_departments(ws_id: str, payload: dict = None):
 
 @app.post("/api/workspaces/{ws_id}/departments/{dept_id}/run-prep")
 async def api_run_single_department_prep(ws_id: str, dept_id: str, payload: dict = None):
-    """Run prep for one department (still no auto-confirm)."""
+    """Run prep for one department inside an explicit trunk or node scope."""
     resolve_existing_ws_path(ws_id)
     payload = payload or {}
     from .department_agents import run_auto_prep_pipeline
+    from .department_scope import ScopeError, job_for
+
     registry = load_department_registry()
     meta = next((d for d in registry.get("departments", []) if d["id"] == dept_id), None)
     if not meta:
         raise HTTPException(status_code=404, detail=f"Unknown department: {dept_id}")
-    state = load_department_state(ws_id)
-    gdd = {}
+    state, gdd = prepare_department_state(ws_id)
     try:
-        gdd = load_assembled_manifest(ws_id)
-    except Exception:
-        pass
-    state, run_log, suggested, new_gdd, applied_patches = await run_auto_prep_pipeline(
-        registry=registry,
-        state=state,
-        gdd=gdd or {},
-        reports_dir=REPORTS_DIR,
-        force=bool(payload.get("force", True)),
-        only=[dept_id] if dept_id != "director" else None,
-        apply_patches=bool(payload.get("applyPatches", True)),
-    )
+        scope, state = _bind_request_scope(state, gdd, payload, allow_all=False)
+        job_for(dept_id, scope, registry)
+    except ScopeError as exc:
+        _scope_error(exc)
+    try:
+        state, run_log, suggested, new_gdd, applied_patches = await run_auto_prep_pipeline(
+            registry=registry,
+            state=state,
+            gdd=gdd or {},
+            reports_dir=REPORTS_DIR,
+            force=bool(payload.get("force", False)),
+            only=[dept_id],
+            apply_patches=bool(payload.get("applyPatches", True)),
+            scope=scope,
+            brief=str(payload.get("brief") or ""),
+        )
+    except ScopeError as exc:
+        _scope_error(exc)
     patches_saved = False
     if applied_patches and new_gdd:
         try:
@@ -2423,8 +2543,8 @@ def api_run_node_smoke(ws_id: str, payload: dict = None):
     )
     from .department_agents import evaluate_advance_gate, collect_report_signals
     registry = load_department_registry()
-    state = load_department_state(ws_id)
-    gate = evaluate_advance_gate(state, registry, collect_report_signals(REPORTS_DIR))
+    state, gdd = prepare_department_state(ws_id)
+    gate = evaluate_advance_gate(state, registry, collect_report_signals(REPORTS_DIR), gdd=gdd)
     return {"success": True, "data": {"report": report, "gate": gate}}
 
 
@@ -2438,15 +2558,10 @@ def api_department_gate(ws_id: str, run_smoke: bool = Query(False)):
         run_node_smoke(ws_id)
     from .department_agents import evaluate_all_stage_gates, collect_report_signals
     registry = load_department_registry()
-    state = load_department_state(ws_id)
+    state, gdd = prepare_department_state(ws_id)
     rejects = [h for h in list_handoffs(ws_id) if h.get("status") == "open" and h.get("type") == "reject"]
     reject_ids = [h.get("id") for h in rejects if h.get("id")]
     signals = collect_report_signals(REPORTS_DIR)
-    gdd = None
-    try:
-        gdd = load_assembled_manifest(ws_id)
-    except Exception:
-        gdd = None
     gate = evaluate_all_stage_gates(
         state,
         registry,
@@ -2478,7 +2593,7 @@ def api_advance_department_stage(ws_id: str, payload: dict = None):
         stage_index,
     )
     registry = load_department_registry()
-    state = load_department_state(ws_id)
+    state, gdd = prepare_department_state(ws_id)
     current = normalize_stage_id(state.get("stageId"))
     target = normalize_stage_id(payload.get("stageId") or next_stage_id(current) or current)
 

@@ -20,6 +20,10 @@ export interface AgentChatPanelProps {
   departmentTitle?: string;
   /** Compact layout for department detail tab */
   embedded?: boolean;
+  /** Trunk or node scope enforced by the refine endpoint */
+  scope?: { kind: "trunk" | "nodes" | "all"; nodeIds?: number[] };
+  /** Department cannot write this scope */
+  scopeLocked?: boolean;
 }
 
 interface ChatMessage {
@@ -62,7 +66,9 @@ export function AgentChatPanel({
   agentRole,
   departmentId,
   departmentTitle,
-  embedded = true
+  embedded = true,
+  scope,
+  scopeLocked = false
 }: AgentChatPanelProps) {
   const zh = locale === "zh";
   const [message, setMessage] = useState("");
@@ -140,7 +146,7 @@ export function AgentChatPanel({
   }, [agentRole, targetDept, workspaceId, greeting, zh]);
 
   const handleSend = async () => {
-    if (!message.trim() || isSending || !workspaceId) return;
+    if (!message.trim() || isSending || !workspaceId || scopeLocked) return;
 
     clearHintTimer();
     setShowDoubleEnterHint(false);
@@ -175,7 +181,8 @@ export function AgentChatPanel({
           body: JSON.stringify({
             message: userMsgText,
             agent_role: agentRole,
-            department_id: targetDept
+            department_id: targetDept,
+            scope
           })
         });
       } else {
@@ -185,7 +192,8 @@ export function AgentChatPanel({
           body: JSON.stringify({
             message: userMsgText,
             agent_role: agentRole,
-            department_id: targetDept
+            department_id: targetDept,
+            scope
           })
         });
       }
@@ -325,6 +333,20 @@ export function AgentChatPanel({
       </div>
 
       <div className="flex flex-col gap-1.5 p-2.5 border-t border-slate-200 dark:border-slate-800">
+        {scopeLocked && (
+          <p className="text-[10px] text-amber-600 dark:text-amber-400 px-1">
+            {zh
+              ? "当前范围与本部门的可写层不一致。切到主干或对应关卡后再发送。"
+              : "This department cannot write the current scope."}
+          </p>
+        )}
+        {!scopeLocked && scope && (
+          <p className="text-[10px] text-slate-500 px-1 font-mono">
+            {scope.kind === "nodes"
+              ? `scope node:${(scope.nodeIds || []).join(",")}`
+              : "scope trunk"}
+          </p>
+        )}
         {showDoubleEnterHint && (
           <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-medium px-1 flex items-center gap-1 animate-pulse">
             <span>⚡ {zh ? "再按一次 Enter 发送神识" : "Press Enter again to send"}</span>
@@ -341,13 +363,13 @@ export function AgentChatPanel({
                 ? `向「${departmentTitle || roleLabel}」发送微调意见 (双击 Enter 发送)…`
                 : `Message ${departmentTitle || roleLabel} (Double Enter to send)…`
             }
-            disabled={isSending}
+            disabled={isSending || scopeLocked}
             className="flex-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
           />
           <button
             type="button"
             onClick={handleSend}
-            disabled={isSending || !message.trim()}
+            disabled={isSending || scopeLocked || !message.trim()}
             className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold disabled:opacity-40"
           >
             <Send className="w-3.5 h-3.5" />

@@ -25,6 +25,9 @@ import {
   runAutoPrep,
   runSingleDepartmentPrep,
   setDepartmentStatus,
+  departmentCanRun,
+  departmentRuntime,
+  PrepScope,
   statusLabel,
   statusTone,
   AutoPrepResult,
@@ -75,6 +78,12 @@ export function DepartmentPrepPanel({
   const [lastPatches, setLastPatches] = useState<AutoPrepResult["patchesApplied"]>([]);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"idle" | "refresh" | "auto" | "dept" | "other">("idle");
+  const [scopeKind, setScopeKind] = useState<"trunk" | "nodes">("trunk");
+  const [viewNodeId, setViewNodeId] = useState<number | null>(null);
+  const [allNodes, setAllNodes] = useState(false);
+  const [briefDraft, setBriefDraft] = useState("");
+  const [reprepDownstream, setReprepDownstream] = useState(false);
+  const [forceRun, setForceRun] = useState(false);
 
   // New handoff form
   const [hoTo, setHoTo] = useState("art");
@@ -112,18 +121,39 @@ export function DepartmentPrepPanel({
 
   const metaList: DepartmentMeta[] = desk?.registry.departments || [];
   const state = desk?.state;
+  const nodeIndex = desk?.nodeIndex || [];
+  const primaryNodeId =
+    viewNodeId ??
+    (nodeIndex.length && nodeIndex[0].id != null ? Number(nodeIndex[0].id) : null);
+  const viewScope: PrepScope =
+    scopeKind === "nodes" && primaryNodeId != null
+      ? { kind: "nodes", nodeIds: [primaryNodeId] }
+      : { kind: "trunk" };
+  const runNodeIds =
+    scopeKind === "nodes" && allNodes
+      ? nodeIndex.map((node) => Number(node.id)).filter((id) => !Number.isNaN(id))
+      : viewScope.nodeIds || [];
+  const runScope: PrepScope =
+    scopeKind === "trunk" ? { kind: "trunk" } : { kind: "nodes", nodeIds: runNodeIds };
+  const scopeMode: "trunk" | "nodes" = viewScope.kind === "nodes" ? "nodes" : "trunk";
   const selectedMeta = metaList.find((d) => d.id === selectedId) || metaList[0];
   const selectedRuntime: DepartmentRuntimeState | undefined =
-    selectedMeta && state?.departments?.[selectedMeta.id];
+    selectedMeta && departmentRuntime(state, selectedMeta.id, viewScope);
+  const viewKey = viewScope.kind === "trunk" ? "trunk" : String(viewScope.nodeIds?.[0] ?? "");
 
   useEffect(() => {
     if (selectedRuntime) {
       setNotesDraft(selectedRuntime.prepNotes || "");
+      setBriefDraft(selectedRuntime.brief || "");
       setQaDraft(
         selectedRuntime.qaScore == null ? "" : String(selectedRuntime.qaScore)
       );
+    } else {
+      setNotesDraft("");
+      setBriefDraft("");
+      setQaDraft("");
     }
-  }, [selectedId, selectedRuntime?.version, selectedRuntime?.prepNotes, selectedRuntime?.qaScore]);
+  }, [selectedId, viewKey, selectedRuntime?.version, selectedRuntime?.prepNotes, selectedRuntime?.brief, selectedRuntime?.qaScore]);
 
   const handoffsForSelected: DepartmentHandoff[] = useMemo(() => {
     if (!desk || !selectedMeta) return [];
@@ -156,13 +186,16 @@ export function DepartmentPrepPanel({
       const score = qaDraft === "" ? undefined : Number(qaDraft);
       const result = await confirmDepartment(workspaceId, selectedMeta.id, {
         prepNotes: notesDraft,
+        brief: briefDraft,
         qaScore: Number.isFinite(score as number) ? (score as number) : undefined,
-        reprepDownstream: true
+        scope: viewScope,
+        activeScope: viewScope,
+        reprepDownstream
       });
       setDesk((prev) => (prev ? { ...prev, state: result.state } : prev));
       if (result.reprepLog?.length) setLastRunLog(result.reprepLog);
       if (result.reprepPatches?.length) setLastPatches(result.reprepPatches);
-      const ver = result.state.departments[selectedMeta.id]?.version;
+      const ver = departmentRuntime(result.state, selectedMeta.id, viewScope)?.version;
       const stale = result.staleDownstream || [];
       const reprepped = (result.reprepLog || []).filter((x) => !x.skipped).map((x) => x.id);
       addLog(
@@ -188,7 +221,9 @@ export function DepartmentPrepPanel({
       const next = await setDepartmentStatus(workspaceId, selectedMeta.id, {
         status: "ready_for_review",
         prepNotes: notesDraft,
-        qaScore: Number.isFinite(score) ? score : 80
+        qaScore: Number.isFinite(score) ? score : 80,
+        scope: viewScope,
+        activeScope: viewScope
       });
       setDesk((prev) => (prev ? { ...prev, state: next } : prev));
       addLog(zh ? `📋 ${selectedMeta.title} → 待确认` : `${selectedMeta.id} ready for review`);
@@ -207,13 +242,17 @@ export function DepartmentPrepPanel({
     setError(null);
     setStatusMsg(
       zh
-        ? "自动筹备进行中：按拓扑逐个调用 LLM（约 10 个部门，可能需要 1–3 分钟），请勿关闭页面…"
-        : "Auto-prep running: calling LLM per department (may take 1–3 min)…"
+        ? "自动筹备进行中：先主干，再按关卡逐个调用（可能需要几分钟），请勿关闭页面…"
+        : "Auto-prep running: trunk first, then each node…"
     );
     try {
       addLog(zh ? "🎬 导演组开始拓扑调度各部门 Agent…" : "Director scheduling departments…");
       // force:true so re-running is not a silent no-op / stale procedural pass
-      const data = await runAutoPrep(workspaceId, { force: true });
+      const data = await runAutoPrep(workspaceId, {
+        force: forceRun,
+        scope: { kind: "all" },
+        activeScope: viewScope
+      });
       setDesk((prev) => (prev ? { ...prev, state: data.state } : prev));
       setLastRunLog(data.runLog || []);
       setLastPatches(data.patchesApplied || []);
@@ -256,7 +295,22 @@ export function DepartmentPrepPanel({
     setStatusMsg(zh ? `正在调度【${selectedMeta.title}】…` : `Running ${selectedMeta.id}…`);
     try {
       addLog(zh ? `▶ 调度部门 ${selectedMeta.title}…` : `Running ${selectedMeta.id}…`);
-      const data = await runSingleDepartmentPrep(workspaceId, selectedMeta.id, { force: true });
+      if (scopeKind === "nodes" && runNodeIds.length === 0) {
+        throw new Error(zh ? "请先选择关卡" : "Select a node first");
+      }
+      if (!departmentCanRun(selectedMeta, scopeMode)) {
+        throw new Error(
+          zh
+            ? `【${selectedMeta.title}】不能在${scopeMode === "trunk" ? "主干" : "关卡"}上调度`
+            : `${selectedMeta.id} cannot run on this scope`
+        );
+      }
+      const data = await runSingleDepartmentPrep(workspaceId, selectedMeta.id, {
+        force: forceRun,
+        scope: runScope,
+        activeScope: viewScope,
+        brief: briefDraft
+      });
       setDesk((prev) => (prev ? { ...prev, state: data.state } : prev));
       setLastRunLog(data.runLog || []);
       setLastPatches(data.patchesApplied || []);
@@ -285,7 +339,8 @@ export function DepartmentPrepPanel({
         from: selectedMeta.id,
         to: hoTo,
         summary: hoSummary.trim(),
-        type: "request"
+        type: "request",
+        scope: viewScope
       });
       setHoSummary("");
       addLog(zh ? `📨 交接已创建：${selectedMeta.id} → ${hoTo}` : `Handoff ${selectedMeta.id} → ${hoTo}`);
@@ -309,8 +364,26 @@ export function DepartmentPrepPanel({
     }
   };
 
-  const confirmed = state?.confirmedCount ?? 0;
-  const required = state?.requiredCount ?? 0;
+  const scopeDepartments = metaList.filter(
+    (meta) => meta.id !== "director" && departmentCanRun(meta, scopeMode)
+  );
+  const confirmed = scopeDepartments.filter(
+    (meta) => departmentRuntime(state, meta.id, viewScope)?.status === "confirmed"
+  ).length;
+  const required = scopeDepartments.length;
+  const scopeLabel =
+    scopeMode === "trunk"
+      ? zh
+        ? "主干"
+        : "Trunk"
+      : allNodes
+        ? zh
+          ? `全关 × ${runNodeIds.length}`
+          : `All nodes × ${runNodeIds.length}`
+        : `Node ${primaryNodeId ?? "—"}`;
+  const canRunSelected = !!selectedMeta && departmentCanRun(selectedMeta, scopeMode) && (
+    scopeMode === "trunk" || runNodeIds.length > 0
+  );
   const stageId = normalizeStageId(state?.stageId || gate?.stageId || "production_prep");
   const nextStageId = gate?.nextStageId ?? null;
   const nextTransition =
@@ -418,7 +491,7 @@ export function DepartmentPrepPanel({
             {zh ? "制作筹备 · 部门 Agent 台" : "Production Prep Desk"}
           </h2>
           <p className="text-[11px] text-slate-500 mt-0.5 font-mono">
-            unit: {state?.unitId || "—"} · {zh ? "已确认" : "confirmed"}{" "}
+            {scopeLabel} · {zh ? "已确认" : "confirmed"}{" "}
             <span className="text-emerald-500 font-bold">
               {confirmed}/{required}
             </span>
@@ -458,6 +531,58 @@ export function DepartmentPrepPanel({
                 : "Auto Prep"}
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            setScopeKind("trunk");
+            setAllNodes(false);
+          }}
+          className={`px-2.5 py-1 rounded-full border text-[11px] font-mono ${
+            scopeKind === "trunk"
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              : "border-slate-200 dark:border-slate-800 text-slate-500"
+          }`}
+        >
+          {zh ? "主干" : "Trunk"}
+        </button>
+        {nodeIndex.map((node) => {
+          const id = Number(node.id);
+          const active = scopeKind === "nodes" && primaryNodeId === id;
+          return (
+            <button
+              key={String(node.id)}
+              type="button"
+              onClick={() => {
+                setScopeKind("nodes");
+                setViewNodeId(id);
+              }}
+              className={`px-2.5 py-1 rounded-full border text-[11px] font-mono max-w-[16rem] truncate ${
+                active
+                  ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                  : "border-slate-200 dark:border-slate-800 text-slate-500"
+              }`}
+              title={node.title || ""}
+            >
+              {node.id}
+              {node.title ? ` · ${node.title}` : ""}
+            </button>
+          );
+        })}
+        {scopeKind === "nodes" && nodeIndex.length > 1 && (
+          <label className="ml-1 flex items-center gap-1.5 text-[11px] text-slate-500">
+            <input
+              type="checkbox"
+              checked={allNodes}
+              onChange={(event) => setAllNodes(event.target.checked)}
+            />
+            {zh
+              ? `全关（本次调度 × ${nodeIndex.length}，确认仍是当前关）`
+              : `All nodes (run × ${nodeIndex.length}; confirm stays on the selected node)`}
+          </label>
+        )}
       </div>
 
       {/* Multi-stage advance buttons (同级: 资产确认 / 节拍板 / 运行导出) */}
@@ -664,6 +789,7 @@ export function DepartmentPrepPanel({
                 title={entry.reason || entry.risks?.join(", ") || entry.source}
               >
                 {entry.id}
+                {entry.nodeId != null ? `@${entry.nodeId}` : entry.scopeKind === "trunk" ? "@trunk" : ""}
                 {entry.skipped ? " skip" : ` ${entry.source || "ok"}`}
                 {entry.qaScore != null ? ` ${entry.qaScore}` : ""}
                 {entry.patchesApplied ? ` p${entry.patchesApplied}` : ""}
@@ -693,7 +819,7 @@ export function DepartmentPrepPanel({
             </span>
           </div>
           {metaList.map((m) => {
-            const rt = state?.departments?.[m.id];
+            const rt = departmentRuntime(state, m.id, viewScope);
             const st = (rt?.status || "idle") as any;
             const active = selectedId === m.id;
             return (
@@ -790,12 +916,19 @@ export function DepartmentPrepPanel({
                   <div className="flex flex-wrap gap-2 justify-end">
                     <button
                       type="button"
-                      disabled={busy}
+                      disabled={busy || !canRunSelected}
                       onClick={onRunThisDept}
+                      title={
+                        canRunSelected
+                          ? scopeLabel
+                          : zh
+                            ? "这个部门不在当前范围"
+                            : "This department does not run on the current scope"
+                      }
                       className="px-3 py-1.5 text-xs rounded-lg border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-40 flex items-center gap-1"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
-                      {zh ? "调度本部门 Agent" : "Run this agent"}
+                      {zh ? `调度本部门 · ${scopeLabel}` : `Run · ${scopeLabel}`}
                     </button>
                     <button
                       type="button"
@@ -814,7 +947,54 @@ export function DepartmentPrepPanel({
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       {zh ? "确认部门" : "Confirm"}
                     </button>
+                    {scopeMode === "nodes" && canRunSelected && selectedMeta?.id !== "director" && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          if (!selectedMeta || busy) return;
+                          setBusy(true);
+                          try {
+                            const next = await setDepartmentStatus(workspaceId, selectedMeta.id, {
+                              status: "deferred",
+                              prepNotes: notesDraft,
+                              scope: viewScope,
+                              activeScope: viewScope
+                            });
+                            setDesk((prev) => (prev ? { ...prev, state: next } : prev));
+                            addLog(
+                              zh
+                                ? `${selectedMeta.title} · Node ${primaryNodeId} 标为延后`
+                                : `${selectedMeta.id} deferred on node ${primaryNodeId}`
+                            );
+                          } catch (e: any) {
+                            setError(e?.message || String(e));
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40"
+                      >
+                        {zh ? "标记延后" : "Defer"}
+                      </button>
+                    )}
                   </div>
+                  <label className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={forceRun}
+                      onChange={(event) => setForceRun(event.target.checked)}
+                    />
+                    {zh ? "包含已确认" : "Include confirmed"}
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={reprepDownstream}
+                      onChange={(event) => setReprepDownstream(event.target.checked)}
+                    />
+                    {zh ? "确认后重跑本范围直接下游" : "Re-prep direct downstream in this scope"}
+                  </label>
                 </div>
               </div>
 
@@ -856,6 +1036,21 @@ export function DepartmentPrepPanel({
 
               {detailTab === "prepNotes" && (
                 <div className="flex flex-col gap-2 flex-1">
+                  <label className="flex flex-col gap-1 text-[11px] text-slate-500">
+                    {zh ? "本次约束（随调度发送，不覆盖筹备意见）" : "Constraint for this run"}
+                    <input
+                      value={briefDraft}
+                      onChange={(event) => setBriefDraft(event.target.value)}
+                      className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950/50 px-3 py-1.5 text-slate-800 dark:text-slate-100"
+                      placeholder={zh ? "例如：只补 Node 3 的胜利台词" : "Optional constraint"}
+                    />
+                  </label>
+                  {scopeMode === "nodes" && state?.legacyCampaignNotes?.[selectedMeta?.id || ""]?.prepNotes && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 leading-relaxed">
+                      {zh ? "旧战役级意见已归档，不作为本关确认：" : "Archived campaign note:"}{" "}
+                      {String(state.legacyCampaignNotes[selectedMeta?.id || ""].prepNotes).slice(0, 280)}
+                    </p>
+                  )}
                   <textarea
                     value={notesDraft}
                     onChange={(e) => setNotesDraft(e.target.value)}
@@ -888,6 +1083,8 @@ export function DepartmentPrepPanel({
                         selectedMeta.legacyAgentIds![0]
                       }
                       departmentTitle={titleOf(selectedMeta)}
+                      scope={viewScope}
+                      scopeLocked={!departmentCanRun(selectedMeta, scopeMode)}
                       jobId={jobId}
                       status={jobStatus}
                       onRefreshJob={onRefreshJob || (() => undefined)}

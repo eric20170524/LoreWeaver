@@ -27,6 +27,7 @@
   "departments": [
     {
       "id": "director",
+      "scopeLayer": "director",
       "title": "导演组",
       "titleEn": "Director / Orchestrator",
       "avatar": "🎬",
@@ -48,6 +49,7 @@
     },
     {
       "id": "world",
+      "scopeLayer": "trunk",
       "title": "世界观组",
       "titleEn": "World",
       "avatar": "🧬",
@@ -81,6 +83,7 @@
     },
     {
       "id": "narrative",
+      "scopeLayer": "node",
       "title": "叙事组",
       "titleEn": "Narrative",
       "avatar": "📜",
@@ -114,6 +117,7 @@
     },
     {
       "id": "gameplay",
+      "scopeLayer": "node",
       "title": "玩法组",
       "titleEn": "Gameplay",
       "avatar": "🃏",
@@ -150,6 +154,7 @@
     },
     {
       "id": "ability",
+      "scopeLayer": "mixed",
       "title": "能力组",
       "titleEn": "Ability Runtime",
       "avatar": "✨",
@@ -185,6 +190,7 @@
     },
     {
       "id": "architecture",
+      "scopeLayer": "trunk",
       "title": "架构组",
       "titleEn": "Architecture",
       "avatar": "🛠️",
@@ -220,6 +226,7 @@
     },
     {
       "id": "art",
+      "scopeLayer": "mixed",
       "title": "美术组",
       "titleEn": "Art",
       "avatar": "🎨",
@@ -254,6 +261,7 @@
     },
     {
       "id": "audio",
+      "scopeLayer": "mixed",
       "title": "音频组",
       "titleEn": "Audio",
       "avatar": "🔊",
@@ -288,6 +296,7 @@
     },
     {
       "id": "code",
+      "scopeLayer": "node",
       "title": "代码组",
       "titleEn": "Code Foundry",
       "avatar": "⚙️",
@@ -325,6 +334,7 @@
     },
     {
       "id": "qa",
+      "scopeLayer": "mixed",
       "title": "质检组",
       "titleEn": "QA / Auditor",
       "avatar": "👁️",
@@ -355,6 +365,7 @@
     },
     {
       "id": "compliance",
+      "scopeLayer": "trunk",
       "title": "合规组",
       "titleEn": "Compliance",
       "avatar": "⚖️",
@@ -410,6 +421,11 @@
     "card",
     "export"
   ],
+  "dispatch": {
+    "defaultScope": "trunk",
+    "runnableKinds": ["trunk", "nodes"],
+    "reservedKinds": ["card", "export"]
+  },
   "autoPrepPolicy": {
     "defaultStopAt": "ready_for_review",
     "requireHumanConfirm": true,

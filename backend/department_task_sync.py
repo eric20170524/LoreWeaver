@@ -72,12 +72,35 @@ def _department_ids_for_role(registry: dict[str, Any], role: str) -> list[str]:
     return result
 
 
+def _runtime_for_sync(state: dict[str, Any], department_id: str) -> dict[str, Any]:
+    """Trunk departments read the trunk bucket. Node departments accept any confirmed node."""
+    projected = (state.get("departments") or {}).get(department_id) or {}
+    if state.get("schemaVersion") != "loreweaver.department-state.v2":
+        return projected if isinstance(projected, dict) else {}
+    from backend.department_scope import layer_of
+
+    layer = layer_of({"id": department_id})
+    scopes = state.get("scopes") if isinstance(state.get("scopes"), dict) else {}
+    trunk = ((scopes.get("trunk") or {}).get("departments") or {})
+    trunk_rec = trunk.get(department_id) if isinstance(trunk, dict) else None
+    if layer in ("trunk", "director"):
+        return trunk_rec or (projected if isinstance(projected, dict) else {})
+    if isinstance(projected, dict) and projected.get("status") == "confirmed":
+        return projected
+    for bucket in (scopes.get("nodes") or {}).values():
+        rec = ((bucket or {}).get("departments") or {}).get(department_id) or {}
+        if isinstance(rec, dict) and rec.get("status") == "confirmed":
+            return rec
+    if layer == "mixed" and isinstance(trunk_rec, dict):
+        return trunk_rec
+    return projected if isinstance(projected, dict) else {}
+
+
 def _confirmed_snapshot(state: dict[str, Any], department_ids: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
-    departments = state.get("departments") or {}
     snapshots: list[dict[str, Any]] = []
     missing: list[str] = []
     for department_id in department_ids:
-        current = departments.get(department_id) or {}
+        current = _runtime_for_sync(state, department_id)
         if current.get("status") != "confirmed":
             missing.append(department_id)
             continue
