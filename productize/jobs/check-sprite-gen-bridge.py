@@ -81,6 +81,47 @@ def main() -> int:
             (192, 64),
         )
 
+        layers_dir = hero / "layers"
+        layers_dir.mkdir(parents=True)
+        Image.new("RGBA", (128, 64), (0, 0, 0, 0)).save(layers_dir / "armed_walk.png")
+        (layers_dir / "armed_walk.manifest.json").write_text(json.dumps({
+            "sprite_sheet_alpha": "armed_walk.png",
+            "degraded_static_fallback": False,
+            "animation": {"rows": {"armed_walk": {"fps": 10, "loop": True}}},
+            "frame_layout": {
+                "sheetWidth": 128, "sheetHeight": 64,
+                "cellWidth": 64, "cellHeight": 64,
+                "rows": {"armed_walk": [
+                    {"x": 0, "y": 0, "w": 64, "h": 64},
+                    {"x": 64, "y": 0, "w": 64, "h": 64},
+                ]},
+            },
+        }, indent=2), encoding="utf-8")
+
+        video_set = ws / "assets/imagegen/sprite-gen/hero-video/video-set"
+        video_set.mkdir(parents=True)
+        video_items = []
+        for state, frames, delay_ms, loop, kind in (
+            ("walk", 12, 41.67, True, "periodic"),
+            ("attack", 9, 41.67, False, "one-shot"),
+        ):
+            item_name = f"side-{state}"
+            loop_dir = video_set / item_name / "loop"
+            loop_dir.mkdir(parents=True)
+            Image.new("RGBA", (frames * 32, 48), (0, 0, 0, 0)).save(loop_dir / f"{item_name}.strip.png")
+            (loop_dir / f"{item_name}.strip.json").write_text(json.dumps({
+                "frames": frames, "w": 32, "h": 48,
+                "delay_ms": delay_ms, "loop": loop, "kind": kind,
+            }, indent=2), encoding="utf-8")
+            video_items.append({
+                "item": item_name, "direction": "side", "state": state, "ok": True,
+            })
+        (video_set / "set.report.json").write_text(json.dumps({
+            "kind": "sprite-gen-video-set-report",
+            "failed": [],
+            "items": video_items,
+        }, indent=2), encoding="utf-8")
+
         result = module.adopt(ws, hero, "hero", "player")
         assert result["status"] == "candidate_ready"
         candidate = ws / result["candidateDir"]
@@ -120,6 +161,28 @@ def main() -> int:
         assert len(provenance["assets"]) == 2
         assert {item["assetKind"] for item in provenance["assets"]} == {"character", "effect"}
 
+        layer = module.adopt_layer(ws, hero, "armed_walk", "hero-armed", "player_armed")
+        assert layer["assetKind"] == "layer"
+        promoted_layer = module.promote(ws, "hero-armed", False)
+        assert promoted_layer["assetCount"] == 3
+        runtime = json.loads((ws / "assets/imagegen/manifest.json").read_text(encoding="utf-8"))
+        assert runtime["clipSets"]["player_armed"]["armed_walk"]["fps"] == 10
+
+        video = module.adopt_video_set(ws, video_set, "hero-video", "player", direction="side", states=["walk", "attack"])
+        assert video["assetKind"] == "video-loop"
+        video_manifest = json.loads((ws / video["candidateDir"] / "manifest.json").read_text(encoding="utf-8"))
+        assert len(video_manifest["clipSets"]["player"]["walk"]["keys"]) == 12
+        assert video_manifest["clipSets"]["player"]["attack"]["loop"] is False
+        assert video_manifest["clipSets"]["player"]["attack"]["kind"] == "one-shot"
+
+        promoted_video = module.promote(ws, "hero-video", False)
+        assert "hero" in promoted_video["replacedAssets"]
+        runtime = json.loads((ws / "assets/imagegen/manifest.json").read_text(encoding="utf-8"))
+        assert len(runtime["clipSets"]["player"]["walk"]["keys"]) == 12
+        assert runtime["clipSets"]["player"]["attack"]["loop"] is False
+        assert "player_armed" in runtime["clipSets"]
+        assert "vfx_void_slash" in runtime["clipSets"]
+
         (ws / "assets/imagegen/atlas.png").write_bytes(b"externally-modified")
         try:
             module.promote(ws, "hero", False)
@@ -132,6 +195,8 @@ def main() -> int:
     for endpoint in (
         "/imagegen/sprite-gen/status",
         "/workspaces/{ws_id}/imagegen/sprite-gen/generate",
+        "/workspaces/{ws_id}/imagegen/sprite-gen/compose-layer",
+        "/workspaces/{ws_id}/imagegen/sprite-gen/video-set",
         "/workspaces/{ws_id}/imagegen/sprite-gen/adopt",
         "/workspaces/{ws_id}/imagegen/sprite-gen/promote",
     ):
@@ -142,6 +207,9 @@ def main() -> int:
     bridge_text = (ROOT / "minigame_master" / "capabilities" / "imagegen" / "sprite_gen_bridge.py").read_text(encoding="utf-8")
     assert "--subject" in bridge_text
     assert "EFFECT_STATES" in bridge_text
+    assert "compose-layer" in bridge_text
+    assert "video-set" in bridge_text
+    assert "layer-contract-json" in bridge_text
     assert "multi-candidate-bundle" in bridge_text
 
     assert module.VERSION == "2.5.3"
@@ -153,7 +221,7 @@ def main() -> int:
         "status": "passed",
         "check": "sprite-gen-bridge",
         "version": module.VERSION,
-        "capabilities": ["character", "effect", "multi-candidate-bundle"],
+        "capabilities": ["character", "effect", "layer", "video-loop", "multi-candidate-bundle"],
     }))
     return 0
 
