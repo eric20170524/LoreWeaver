@@ -40,6 +40,36 @@ class VFX {
     }
 
     /**
+     * 使用 RuntimeArtBinder 播放 sprite-gen 特效；缺少贴图时返回 null，
+     * 由调用方继续使用现有程序化 VFX fallback。
+     *
+     * @param {Phaser.Scene} scene
+     * @param {object} runtimeArt RuntimeArtBinder.createContext() 返回值
+     * @param {string} effectId 例如 "void_slash" / "vfx_void_slash"
+     * @param {number} x
+     * @param {number} y
+     * @param {object} config clip / depth / scale / displaySize
+     */
+    static spriteClip(scene, runtimeArt, effectId, x, y, config = {}) {
+        if (!runtimeArt || !effectId) return null;
+        const clip = config.clip || 'loop';
+        let sprite = null;
+        if (typeof runtimeArt.createEffect === 'function') {
+            sprite = runtimeArt.createEffect(effectId, { ...config, x, y, clip });
+        } else if (typeof runtimeArt.createSprite === 'function') {
+            const role = String(effectId).startsWith('vfx_') ? String(effectId) : `vfx_${effectId}`;
+            sprite = runtimeArt.createSprite(role, { ...config, x, y, clip, critical: false });
+        }
+        if (!sprite || sprite.getData?.('artSource') === 'primitive' || sprite.getData?.('artSource') === 'fallback') {
+            sprite?.destroy?.();
+            return null;
+        }
+        if (config.depth != null) sprite.setDepth?.(config.depth);
+        if (config.scale != null) sprite.setScale?.(config.scale);
+        return sprite;
+    }
+
+    /**
      * 相机震屏特效
      * @param {Phaser.Scene} scene 
      * @param {string} intensity 'light' | 'medium' | 'heavy'
