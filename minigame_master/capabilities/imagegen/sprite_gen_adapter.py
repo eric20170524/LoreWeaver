@@ -75,7 +75,7 @@ def convert(
     subject: str = "character",
 ) -> dict[str, Any]:
     prefix = slug(prefix)
-    subject = "effect" if subject == "effect" else "character"
+    subject = subject if subject in {"effect", "layer", "video-loop"} else "character"
     layout = source.get("frame_layout") or {}
     rows = layout.get("rows")
     if not isinstance(rows, dict) or not rows:
@@ -206,6 +206,251 @@ def adopt(ws: Path, source_run: Path, asset_id: str, prefix: str) -> dict[str, A
         "semanticPrefix": slug(prefix),
         "frameCount": len(manifest["frames"]),
         "clips": sorted(manifest["clips"]),
+    }
+
+
+
+def _write_candidate(
+    ws: Path,
+    *,
+    asset_id: str,
+    prefix: str,
+    asset_kind: str,
+    source_manifest: Path,
+    source_atlas: Path,
+    source_run: Path,
+    source: dict[str, Any],
+    provenance_extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    out = candidate_dir(ws, asset_id)
+    out.mkdir(parents=True, exist_ok=True)
+    out_atlas, out_manifest, out_prov = out / "atlas.png", out / "manifest.json", out / "provenance.json"
+    shutil.copy2(source_atlas, out_atlas)
+    manifest = convert(
+        source,
+        prefix,
+        rel(ws, out_atlas),
+        rel(ws, out_prov),
+        "sprite_gen_candidate",
+        subject=asset_kind,
+    )
+    provenance = {
+        "schemaVersion": "loreweaver.sprite-gen-provenance.v2",
+        "provider": "sprite-gen",
+        "sourceRepository": UPSTREAM,
+        "sourceCommit": PIN,
+        "sourceVersion": VERSION,
+        "sourceLicense": "Apache-2.0",
+        "sourceRun": rel(ws, source_run),
+        "sourceManifest": rel(ws, source_manifest),
+        "sourceAtlas": rel(ws, source_atlas),
+        "sourceAtlasSha256": digest(source_atlas),
+        "assetId": slug(asset_id),
+        "characterId": slug(asset_id),
+        "assetKind": asset_kind,
+        "semanticPrefix": slug(prefix),
+        "adoptedAt": datetime.now(timezone.utc).isoformat(),
+        "promoted": False,
+    }
+    if provenance_extra:
+        provenance.update(provenance_extra)
+    write_json(out_manifest, manifest)
+    (out / "manifest.js").write_text("export default " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
+    write_json(out_prov, provenance)
+    return {
+        "status": "candidate_ready",
+        "candidateDir": rel(ws, out),
+        "assetId": slug(asset_id),
+        "assetKind": asset_kind,
+        "semanticPrefix": slug(prefix),
+        "frameCount": len(manifest["frames"]),
+        "clips": sorted(manifest["clips"]),
+    }
+
+
+def adopt_layer(
+    ws: Path,
+    source_run: Path,
+    layer_name: str,
+    asset_id: str,
+    prefix: str,
+) -> dict[str, Any]:
+    name = slug(layer_name)
+    layers_dir = source_run / "layers"
+    source_manifest = layers_dir / f"{name}.manifest.json"
+    if not source_manifest.is_file():
+        raise BridgeError(f"layer_manifest_missing:{name}")
+    source = read_json(source_manifest)
+    source_atlas = (layers_dir / str(source.get("sprite_sheet_alpha") or source.get("game_input") or f"{name}.png")).resolve()
+    try:
+        source_atlas.relative_to(layers_dir.resolve())
+    except ValueError as exc:
+        raise BridgeError(f"layer_atlas_outside_run:{name}") from exc
+    if not source_atlas.is_file():
+        raise BridgeError(f"layer_atlas_missing:{name}")
+    return _write_candidate(
+        ws,
+        asset_id=asset_id,
+        prefix=prefix,
+        asset_kind="layer",
+        source_manifest=source_manifest,
+        source_atlas=source_atlas,
+        source_run=source_run,
+        source=source,
+        provenance_extra={"sourceKind": "layer", "layerName": name},
+    )
+
+
+def adopt_video_set(
+    ws: Path,
+    set_dir: Path,
+    asset_id: str,
+    prefix: str,
+    *,
+    direction: str = "side",
+    states: list[str] | None = None,
+) -> dict[str, Any]:
+    report_path = set_dir / "set.report.json"
+    report = read_json(report_path)
+    failed = report.get("failed") or []
+    if failed:
+        raise BridgeError(f"video_set_has_failures:{','.join(str(x) for x in failed)}")
+    items = report.get("items")
+    if not isinstance(items, list) or not items:
+        raise BridgeError("video_set_items_missing")
+
+    wanted = {slug(state) for state in states} if states else None
+    rows: dict[str, list[dict[str, int]]] = {}
+    timings: dict[str, dict[str, Any]] = {}
+    strips: list[tuple[str, Path, dict[str, Any], Image.Image]] = []
+    for item in items:
+        if not isinstance(item, dict) or not item.get("ok"):
+            continue
+        if str(item.get("direction")) != direction:
+            continue
+        state = slug(str(item.get("state") or ""))
+        if wanted is not None and state not in wanted:
+            continue
+        item_name = str(item.get("item") or f"{direction}-{state}")
+        item_dir = (set_dir / item_name).resolve()
+        try:
+            item_dir.relative_to(set_dir.resolve())
+        except ValueError as exc:
+            raise BridgeError(f"video_item_outside_set:{item_name}") from exc
+        loop_dir = item_dir / "loop"
+        meta_path = loop_dir / f"{item_name}.strip.json"
+        strip_path = loop_dir / f"{item_name}.strip.png"
+        meta = read_json(meta_path)
+        try:
+            frames = int(meta["frames"])
+            width = int(meta["w"])
+            height = int(meta["h"])
+            delay_ms = float(meta["delay_ms"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise BridgeError(f"video_strip_meta_invalid:{item_name}") from exc
+        if frames <= 0 or width <= 0 or height <= 0 or delay_ms <= 0:
+            raise BridgeError(f"video_strip_meta_invalid:{item_name}")
+        try:
+            image = Image.open(strip_path).convert("RGBA")
+        except OSError as exc:
+            raise BridgeError(f"video_strip_invalid:{item_name}") from exc
+        if image.width != frames * width or image.height != height:
+            raise BridgeError(f"video_strip_geometry_mismatch:{item_name}")
+        strips.append((state, strip_path, meta, image))
+
+    if not strips:
+        raise BridgeError(f"video_set_no_states:{direction}")
+
+    atlas_width = max(image.width for _, _, _, image in strips)
+    atlas_height = sum(image.height for _, _, _, image in strips) + BUNDLE_PADDING * (len(strips) - 1)
+    atlas = Image.new("RGBA", (atlas_width, atlas_height), (0, 0, 0, 0))
+    y = 0
+    state_sources = []
+    for state, strip_path, meta, image in sorted(strips, key=lambda row: row[0]):
+        atlas.alpha_composite(image, (0, y))
+        frame_w, frame_h = int(meta["w"]), int(meta["h"])
+        rows[state] = [
+            {"x": i * frame_w, "y": y, "w": frame_w, "h": frame_h}
+            for i in range(int(meta["frames"]))
+        ]
+        timings[state] = {
+            "fps": round(1000.0 / float(meta["delay_ms"]), 4),
+            "loop": bool(meta.get("loop", True)),
+            "kind": str(meta.get("kind") or "periodic"),
+        }
+        state_sources.append({
+            "state": state,
+            "strip": rel(ws, strip_path),
+            "stripSha256": digest(strip_path),
+            "frames": int(meta["frames"]),
+            "delayMs": float(meta["delay_ms"]),
+            "loop": bool(meta.get("loop", True)),
+            "kind": str(meta.get("kind") or "periodic"),
+        })
+        y += image.height + BUNDLE_PADDING
+
+    out = candidate_dir(ws, asset_id)
+    out.mkdir(parents=True, exist_ok=True)
+    out_atlas = out / "atlas.png"
+    atlas.save(out_atlas)
+    synthetic = {
+        "sprite_sheet_alpha": "atlas.png",
+        "degraded_static_fallback": False,
+        "animation": {"rows": timings},
+        "frame_layout": {
+            "sheetWidth": atlas.width,
+            "sheetHeight": atlas.height,
+            "cellWidth": max(int(meta["w"]) for _, _, meta, _ in strips),
+            "cellHeight": max(int(meta["h"]) for _, _, meta, _ in strips),
+            "rows": rows,
+        },
+    }
+    out_manifest, out_prov = out / "manifest.json", out / "provenance.json"
+    manifest = convert(
+        synthetic,
+        prefix,
+        rel(ws, out_atlas),
+        rel(ws, out_prov),
+        "sprite_gen_candidate",
+        subject="video-loop",
+    )
+    # Preserve video-loop kind alongside the normalized runtime fields.
+    for state, timing in timings.items():
+        manifest["clips"][state]["kind"] = timing["kind"]
+        manifest["clipSets"][slug(prefix)][state]["kind"] = timing["kind"]
+    provenance = {
+        "schemaVersion": "loreweaver.sprite-gen-provenance.v2",
+        "provider": "sprite-gen",
+        "sourceRepository": UPSTREAM,
+        "sourceCommit": PIN,
+        "sourceVersion": VERSION,
+        "sourceLicense": "Apache-2.0",
+        "sourceRun": rel(ws, set_dir),
+        "sourceManifest": rel(ws, report_path),
+        "sourceAtlas": rel(ws, out_atlas),
+        "sourceAtlasSha256": digest(out_atlas),
+        "sourceKind": "video-set",
+        "assetId": slug(asset_id),
+        "characterId": slug(asset_id),
+        "assetKind": "video-loop",
+        "semanticPrefix": slug(prefix),
+        "direction": direction,
+        "states": state_sources,
+        "adoptedAt": datetime.now(timezone.utc).isoformat(),
+        "promoted": False,
+    }
+    write_json(out_manifest, manifest)
+    (out / "manifest.js").write_text("export default " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
+    write_json(out_prov, provenance)
+    return {
+        "status": "candidate_ready",
+        "candidateDir": rel(ws, out),
+        "assetId": slug(asset_id),
+        "assetKind": "video-loop",
+        "semanticPrefix": slug(prefix),
+        "frameCount": len(manifest["frames"]),
+        "clips": sorted(manifest["clips"]),
+        "direction": direction,
     }
 
 
@@ -400,6 +645,21 @@ def promote(ws: Path, asset_id: str, force: bool) -> dict[str, Any]:
     selected = set(_promoted_asset_ids(ws, runtime_provenance))
     selected.add(current["assetId"])
 
+    # One semantic prefix has exactly one active producer. Promoting a video-loop
+    # player over a component-row player replaces that prefix instead of making
+    # RuntimeArtBinder choose between two competing clip sets.
+    replaced: list[dict[str, Any]] = []
+    for existing_id in list(selected):
+        if existing_id == current["assetId"]:
+            continue
+        try:
+            existing = _candidate(ws, existing_id)
+        except BridgeError:
+            continue
+        if existing["prefix"] == current["prefix"]:
+            selected.discard(existing_id)
+            replaced.append(existing)
+
     bundle, manifest, provenance = _pack_candidates(ws, sorted(selected))
     runtime = ws / "assets" / "imagegen"
     runtime.mkdir(parents=True, exist_ok=True)
@@ -420,20 +680,31 @@ def promote(ws: Path, asset_id: str, force: bool) -> dict[str, Any]:
     tmp_manifest_js.replace(runtime / "manifest.js")
     tmp_provenance.replace(runtime / "provenance.json")
 
+    now = datetime.now(timezone.utc).isoformat()
     candidate_provenance = current["provenance"]
     candidate_provenance.update({
         "promoted": True,
-        "promotedAt": datetime.now(timezone.utc).isoformat(),
+        "promotedAt": now,
         "runtimeAtlasSha256": provenance["runtimeAtlasSha256"],
     })
     write_json(current["provenancePath"], candidate_provenance)
+    for old in replaced:
+        old_provenance = old["provenance"]
+        old_provenance.update({
+            "promoted": False,
+            "replacedAt": now,
+            "replacedBy": current["assetId"],
+        })
+        write_json(old["provenancePath"], old_provenance)
 
     return {
         "status": "promoted",
         "assetId": current["assetId"],
         "assetCount": len(provenance["assets"]),
         "semanticPrefixes": manifest["semanticPrefixes"],
+        "replacedAssets": [item["assetId"] for item in replaced],
         "atlas": "assets/imagegen/atlas.png",
         "manifest": "assets/imagegen/manifest.json",
         "frameCount": len(manifest.get("frames") or {}),
     }
+
