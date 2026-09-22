@@ -172,6 +172,9 @@ def main() -> int:
         assert video["assetKind"] == "video-loop"
         video_manifest = json.loads((ws / video["candidateDir"] / "manifest.json").read_text(encoding="utf-8"))
         assert len(video_manifest["clipSets"]["player"]["walk"]["keys"]) == 12
+        video_fps = video_manifest["clipSets"]["player"]["walk"]["fps"]
+        assert 23.9 < video_fps < 24.1
+        assert video_fps != 23
         assert video_manifest["clipSets"]["player"]["attack"]["loop"] is False
         assert video_manifest["clipSets"]["player"]["attack"]["kind"] == "one-shot"
 
@@ -190,6 +193,17 @@ def main() -> int:
             assert str(exc) == "runtime_art_modified_use_force"
         else:
             raise AssertionError("promotion ignored an externally modified runtime atlas")
+
+        # Explicit force takeover of a foreign runtime starts from the selected
+        # candidate only; stale sprite-gen promoted flags must not be resurrected.
+        (ws / "assets/imagegen/provenance.json").write_text(json.dumps({
+            "schemaVersion": "foreign.runtime.v1",
+            "provider": "other-art-pipeline",
+            "characterId": "ghost",
+        }), encoding="utf-8")
+        forced = module.promote(ws, "hero", True)
+        assert forced["assetCount"] == 1
+        assert forced["semanticPrefixes"] == ["player"]
 
     route_text = (ROOT / "backend" / "sprite_gen_routes.py").read_text(encoding="utf-8")
     for endpoint in (
