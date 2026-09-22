@@ -105,9 +105,16 @@ def convert(
             keys.append(key)
         timing = timings.get(raw_state, {}) if isinstance(timings, dict) else {}
         timing = timing if isinstance(timing, dict) else {}
+        raw_fps = timing.get("fps") or 8
+        try:
+            fps = float(raw_fps)
+        except (TypeError, ValueError) as exc:
+            raise BridgeError(f"state_fps_invalid:{state}") from exc
+        if fps <= 0:
+            raise BridgeError(f"state_fps_invalid:{state}")
         clips[state] = {
             "keys": keys,
-            "fps": int(timing.get("fps") or 8),
+            "fps": int(fps) if fps.is_integer() else round(fps, 4),
             "loop": bool(timing.get("loop", True)),
         }
     anchor = idle or first
