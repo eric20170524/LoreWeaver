@@ -776,6 +776,30 @@ def pack_grid(count: int, cell_w: int, cell_h: int, columns: int = PACK_COLUMNS,
     return columns, rows, width, height
 
 
+def _scaled_frame(box: dict[str, Any], scale: float, origin_x: int, origin_y: int) -> dict[str, int]:
+    return {
+        "x": int(round(float(box["x"]) * scale)) + origin_x,
+        "y": int(round(float(box["y"]) * scale)) + origin_y,
+        "w": max(1, int(round(float(box["w"]) * scale))),
+        "h": max(1, int(round(float(box["h"]) * scale))),
+    }
+
+
+def _fit_cell(cell_w: int, cell_h: int, columns: int, rows: int, max_edge: int) -> tuple[float, int, int]:
+    """Uniform scale that keeps a cols×rows grid inside max_edge. 1.0 when it already fits."""
+    raw_w, raw_h = cell_w * columns, cell_h * rows
+    if raw_w <= max_edge and raw_h <= max_edge:
+        return 1.0, cell_w, cell_h
+    scale = min(max_edge / raw_w, max_edge / raw_h)
+    fitted_w = max(1, int(cell_w * scale))
+    fitted_h = max(1, int(cell_h * scale))
+    while fitted_w * columns > max_edge and fitted_w > 1:
+        fitted_w -= 1
+    while fitted_h * rows > max_edge and fitted_h > 1:
+        fitted_h -= 1
+    return scale, fitted_w, fitted_h
+
+
 def pack_candidates(
     ws: Path,
     characters: list[str],
@@ -783,6 +807,7 @@ def pack_candidates(
     columns: int = PACK_COLUMNS,
     max_edge: int = MAX_ATLAS_EDGE,
     force: bool = False,
+    fit_max_edge: bool = False,
 ) -> dict[str, Any]:
     """Merge loreweaver candidate sheets into the runtime atlas.
 
@@ -801,20 +826,43 @@ def pack_candidates(
             raise BridgeError(f"candidate_missing:{name}")
         sources.append((name, atlas, read_json(manifest_path)))
     images = [Image.open(atlas).convert("RGBA") for _, atlas, _ in sources]
-    cell_w = max(image.size[0] for image in images)
-    cell_h = max(image.size[1] for image in images)
-    columns, rows, width, height = pack_grid(len(images), cell_w, cell_h, columns, max_edge)
+    native_w = max(image.size[0] for image in images)
+    native_h = max(image.size[1] for image in images)
+    columns = max(1, int(columns or PACK_COLUMNS))
+    rows = (len(images) + columns - 1) // columns
+    raw_w, raw_h = native_w * columns, native_h * rows
+    if raw_w > max_edge or raw_h > max_edge:
+        if not fit_max_edge:
+            raise BridgeError(f"atlas_exceeds_webgl_max_edge:{raw_w}x{raw_h}>{max_edge}")
+        scale, cell_w, cell_h = _fit_cell(native_w, native_h, columns, rows, max_edge)
+        scale = min(cell_w / native_w, cell_h / native_h)
+    else:
+        scale, cell_w, cell_h = 1.0, native_w, native_h
+    width, height = cell_w * columns, cell_h * rows
     combined = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     frames: dict[str, Any] = {}
     clips: dict[str, Any] = {}
+    clip_sets: dict[str, Any] = {}
     player_prefix = None
     for index, (image, (name, _, manifest)) in enumerate(zip(images, sources)):
         origin_x, origin_y = (index % columns) * cell_w, (index // columns) * cell_h
-        combined.paste(image, (origin_x, origin_y))
+        placed = image
+        if scale < 1:
+            placed = image.resize(
+                (max(1, int(round(image.width * scale))), max(1, int(round(image.height * scale)))),
+                Image.Resampling.LANCZOS,
+            )
+        combined.paste(placed, (origin_x, origin_y))
         for key, entry in (manifest.get("frames") or {}).items():
             box = dict((entry or {}).get("frame") or {})
-            frames[key] = {"frame": {"x": int(box["x"]) + origin_x, "y": int(box["y"]) + origin_y, "w": int(box["w"]), "h": int(box["h"])}}
-        if manifest.get("semanticPrefix") == "player" or name == "player":
+            frames[key] = {"frame": _scaled_frame(box, scale, origin_x, origin_y)}
+        prefix = manifest.get("semanticPrefix")
+        source_sets = manifest.get("clipSets") if isinstance(manifest.get("clipSets"), dict) else {}
+        if prefix and isinstance(source_sets.get(prefix), dict):
+            clip_sets[prefix] = source_sets[prefix]
+        elif prefix and isinstance(manifest.get("clips"), dict):
+            clip_sets[prefix] = manifest["clips"]
+        if prefix == "player" or name == "player":
             clips = dict(manifest.get("clips") or {})
             player_prefix = "player"
     for src_prefix, destinations in (aliases or {}).items():
@@ -837,6 +885,7 @@ def pack_candidates(
         "frameSize": sources[0][2].get("frameSize") or {"w": cell_w, "h": cell_h},
         "semanticPrefix": player_prefix or sources[0][2].get("semanticPrefix"),
         "clips": clips,
+        "clipSets": clip_sets,
         "characters": names,
         "frames": frames,
     }
@@ -849,11 +898,26 @@ def pack_candidates(
         "characters": names,
         "aliases": aliases or {},
         "atlasLayout": {"cols": columns, "rows": rows, "cell": {"w": cell_w, "h": cell_h}, "maxEdge": max_edge},
-        "postprocess": ["grid_pack_max_edge_4096"],
+        "postprocess": ["grid_pack_max_edge_4096", *(["fit_max_edge"] if scale < 1 else [])],
         "promoted": True,
         "promotedAt": datetime.now(timezone.utc).isoformat(),
         "runtimeAtlasSha256": digest(target),
     }
+    previous_manifest = runtime / "manifest.json"
+    if previous_manifest.is_file():
+        try:
+            previous = read_json(previous_manifest)
+        except (OSError, json.JSONDecodeError, BridgeError):
+            previous = {}
+        if isinstance(previous, dict):
+            kept = {
+                key: value for key, value in (previous.get("frames") or {}).items()
+                if isinstance(value, dict) and value.get("atlas") == "environment" and key not in frames
+            }
+            if kept:
+                manifest["frames"].update(kept)
+            if isinstance(previous.get("environmentAtlas"), dict):
+                manifest["environmentAtlas"] = previous["environmentAtlas"]
     (runtime / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (runtime / "manifest.js").write_text("export default " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
     (runtime / "provenance.json").write_text(json.dumps(provenance, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -956,15 +1020,25 @@ def append_effects(
     total_h = sum(image.height for _, image in opened)
     max_w = max(image.width for _, image in opened)
     cell = _unused_pack_cell(provenance, base_atlas.size)
-    if cell and max_w <= cell["w"] and total_h <= cell["h"]:
+    effect_scale = 1.0
+    if cell:
+        # Leave a few pixels so per-strip rounding cannot walk out of the cell.
+        budget_w = max(1, cell["w"] - 2)
+        budget_h = max(1, cell["h"] - 4)
+        effect_scale = min(1.0, budget_w / max_w, budget_h / total_h)
+        while effect_scale < 1 and (
+            int(round(max_w * effect_scale)) > cell["w"] or int(round(total_h * effect_scale)) > cell["h"]
+        ):
+            effect_scale *= 0.99
+        if effect_scale <= 0:
+            raise BridgeError(f"effects_do_not_fit:{max_w}x{total_h}:cell={cell['w']}x{cell['h']}")
         origin_x, origin_y = cell["x"], cell["y"]
         canvas = base_atlas.copy()
     else:
         new_w = max(base_atlas.width, max_w)
         new_h = base_atlas.height + total_h
         if new_w > max_edge or new_h > max_edge:
-            have = f"{cell['w']}x{cell['h']}" if cell else "none"
-            raise BridgeError(f"effects_do_not_fit:{max_w}x{total_h}:cell={have}")
+            raise BridgeError(f"effects_do_not_fit:{max_w}x{total_h}:cell=none")
         origin_x, origin_y = 0, base_atlas.height
         canvas = Image.new("RGBA", (new_w, new_h), (0, 0, 0, 0))
         canvas.paste(base_atlas, (0, 0))
@@ -974,6 +1048,11 @@ def append_effects(
     placements: list[dict[str, Any]] = []
     cursor_y = origin_y
     for item, image in opened:
+        if effect_scale < 1:
+            image = image.resize(
+                (max(1, int(round(image.width * effect_scale))), max(1, int(round(image.height * effect_scale)))),
+                Image.Resampling.LANCZOS,
+            )
         if not _rect_is_clear(canvas, origin_x, cursor_y, image.width, image.height):
             raise BridgeError(f"effect_destination_not_empty:{item['assetId']}")
         # The cell is empty, so copy source pixels. Using the RGBA image as a
@@ -993,14 +1072,7 @@ def append_effects(
             box = dict((value or {}).get("frame") or {})
             if not {"x", "y", "w", "h"}.issubset(box):
                 raise BridgeError(f"bad_candidate_frame:{item['assetId']}:{key}")
-            frames[key] = {
-                "frame": {
-                    "x": int(box["x"]) + origin_x,
-                    "y": int(box["y"]) + cursor_y,
-                    "w": int(box["w"]),
-                    "h": int(box["h"]),
-                }
-            }
+            frames[key] = {"frame": _scaled_frame(box, effect_scale, origin_x, cursor_y)}
         placements.append({
             "assetId": item["assetId"],
             "semanticPrefix": prefix,

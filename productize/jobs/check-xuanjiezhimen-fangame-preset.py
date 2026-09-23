@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from backend.department_agents import build_controlled_patches  # noqa: E402
 from backend.theme_presets import get_procedural_preset  # noqa: E402
 
 PRESET_PATH = ROOT / "data" / "presets" / "xuanjiezhimen_fangame_preset.json"
@@ -18,6 +19,13 @@ PRESET_PATH = ROOT / "data" / "presets" / "xuanjiezhimen_fangame_preset.json"
 # compares the preset to this committed contract fixture instead.
 CONTRACT_PATH = ROOT / "productize" / "fixtures" / "xuanjie-shimu-contract.json"
 MELEE_TARGETS = {"weapon_stance_cycle.meleeDamage", "weapon_stance_cycle.meleeRadius"}
+RHYTHM_CARDS = {
+    2: "dodge_counter_boss",
+    4: "side_scrolling_brawler",
+    5: "shooter_duel",
+    7: "rhythm_timing",
+    10: "dodge_counter_boss",
+}
 
 
 def require(condition: bool, message: str) -> None:
@@ -143,6 +151,45 @@ def main() -> None:
             gate = next(item for item in node["gameplay"]["modifiers"] if item.get("id") == "overdrive_transformation")
             require(gate.get("knobs", {}).get("requiresAbility") == "white_ape_overdrive", f"{label} node {node_id} overdrive gate")
     require(melee_effects(preset) == melee_effects(contract), "black_blade_flame melee effects diverged")
+
+    for label, doc in (("preset", preset), ("contract", contract)):
+        for node in doc["nodes"]:
+            expected = RHYTHM_CARDS.get(node["id"])
+            if expected is None:
+                continue
+            gameplay = node.get("gameplay") or {}
+            require(gameplay.get("cardId") == expected, f"{label} node {node['id']} rhythm card drifted")
+            require(
+                (gameplay.get("knobs") or {}).get("allowExperimentalCard") is True,
+                f"{label} node {node['id']} must opt into its non-production card",
+            )
+
+    for node_id, expected in RHYTHM_CARDS.items():
+        index = next(i for i, node in enumerate(preset["nodes"]) if node["id"] == node_id)
+        patches = build_controlled_patches(
+            "gameplay",
+            preset,
+            job="binding",
+            node_indexes={index},
+        )
+        rewrites = [item for item in patches if str(item.get("path", "")).endswith(".cardId")]
+        require(not rewrites, f"gameplay binding rewrote node {node_id}: {rewrites}")
+        require(preset["nodes"][index]["gameplay"]["cardId"] == expected, f"node {node_id} card changed during patch build")
+
+    stripped = json.loads(json.dumps(preset))
+    bare = next(node for node in stripped["nodes"] if node["id"] == 2)
+    del bare["gameplay"]["knobs"]["allowExperimentalCard"]
+    bare_index = next(i for i, node in enumerate(stripped["nodes"]) if node["id"] == 2)
+    bare_patches = build_controlled_patches(
+        "gameplay",
+        stripped,
+        job="binding",
+        node_indexes={bare_index},
+    )
+    require(
+        any(item.get("value") == "survivor_horde" and str(item.get("path", "")).endswith(".cardId") for item in bare_patches),
+        "without allowExperimentalCard, node 2 must be rerouted to survivor_horde",
+    )
 
     print("PASS xuanjiezhimen fangame preset contract")
 

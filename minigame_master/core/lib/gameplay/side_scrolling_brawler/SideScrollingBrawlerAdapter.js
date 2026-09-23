@@ -1,6 +1,7 @@
 import GameplayAdapter from '../GameplayAdapter.js';
 import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
+import VFX from '../../juice/VFX.js';
 
 const DEFAULT_WAVES = Object.freeze([
     {
@@ -92,6 +93,8 @@ function normalizeWaves(list) {
         lockX: Number(w.lockX ?? w.triggerX ?? (450 + i * 500)),
         cameraMax: Number(w.cameraMax ?? (w.lockX || 0) + 300),
         bossIntro: Boolean(w.bossIntro),
+        hint: w.hint || '',
+        theme: w.theme && typeof w.theme === 'object' ? { ...w.theme } : null,
         enemies: (w.enemies || []).map((e) => ({ ...e }))
     }));
 }
@@ -104,6 +107,7 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
         this.modifiers = Array.isArray(context.modifiers) ? context.modifiers : [];
         this.Phaser = context.Phaser || (typeof globalThis !== 'undefined' ? globalThis.Phaser : null);
         this.keys = null;
+        this.touchInput = { left: false, right: false };
         this.player = null;
         this.enemies = [];
         this.worldGfx = null;
@@ -226,6 +230,8 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             this.worldGfx?.destroy();
             Object.values(this.ui).forEach((n) => n?.destroy?.());
             this.keys = null;
+            this.touchInput.left = false;
+            this.touchInput.right = false;
         });
 
         this.publishTestState();
@@ -274,10 +280,29 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
     }
 
     drawStage() {
-        const g = this.scene.add.graphics();
-        // Ground belt
-        g.fillStyle(0x0b1220, 1);
-        g.fillRect(0, this.lane.top, this.world.width, this.lane.bottom - this.lane.top);
+        const g = this.scene.add.graphics().setDepth(-10);
+        const beltH = this.lane.bottom - this.lane.top;
+        const themed = this.config.waveList.some((wave) => wave.theme);
+        if (!themed) {
+            g.fillStyle(0x0b1220, 1);
+            g.fillRect(0, this.lane.top, this.world.width, beltH);
+        } else {
+            let x = 0;
+            this.config.waveList.forEach((wave) => {
+                const end = Math.max(Number(wave.cameraMax || 0), x + 40);
+                const sky = Number(wave.theme?.sky ?? 0x070b14);
+                const ground = Number(wave.theme?.ground ?? 0x0b1220);
+                g.fillStyle(sky, 0.22);
+                g.fillRect(x, 0, end - x, this.lane.top);
+                g.fillStyle(ground, 0.42);
+                g.fillRect(x, this.lane.top, end - x, beltH);
+                x = end;
+            });
+            if (x < this.world.width) {
+                g.fillStyle(0x0b1220, 1);
+                g.fillRect(x, this.lane.top, this.world.width - x, beltH);
+            }
+        }
         g.lineStyle(2, 0x334155, 0.7);
         g.lineBetween(0, this.lane.top, this.world.width, this.lane.top);
         g.lineBetween(0, this.lane.bottom, this.world.width, this.lane.bottom);
@@ -326,9 +351,8 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
 
     setupInput() {
         const keyboard = this.scene.input.keyboard;
-        if (!keyboard) return;
         // Primary player: WASD + J/K/Space. Arrow keys reserved for local co-op P2.
-        this.keys = keyboard.addKeys({
+        this.keys = keyboard?.addKeys({
             left: 'A',
             right: 'D',
             up: 'W',
@@ -339,24 +363,53 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             continue: 'C'
         });
 
-        // Pointer tap = attack for mobile
-        this.scene.input.on('pointerdown', (pointer) => {
-            if (!this.isRunning()) return;
-            if (pointer.y > this.scene.scale.height * 0.75) {
-                this.tryAttack(false);
+        if (this.scene.scale.width < 600) {
+            this.createTouchControls();
+        } else {
+            this.scene.input.on('pointerdown', (pointer) => {
+                if (this.isRunning() && pointer.y > this.scene.scale.height * 0.75) this.tryAttack(false);
+            });
+        }
+    }
+
+    createTouchControls() {
+        const scene = this.scene;
+        const { width, height } = scene.scale;
+        const y = height - 112;
+        const button = (x, label, action, release) => {
+            const control = scene.add.text(x, y, label, {
+                fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold',
+                color: '#f8fafc', backgroundColor: '#1e293b',
+                padding: { x: 19, y: 15 }
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0.9)
+                .setInteractive({ useHandCursor: true });
+            control.on('pointerdown', action);
+            if (release) {
+                control.on('pointerup', release);
+                control.on('pointerout', release);
             }
+            return control;
+        };
+        this.ui.touchLeft = button(72, '◀', () => { this.touchInput.left = true; }, () => { this.touchInput.left = false; });
+        this.ui.touchRight = button(158, '▶', () => { this.touchInput.right = true; }, () => { this.touchInput.right = false; });
+        this.ui.touchAttack = button(width - 78, '斩', () => {
+            if (this.isRunning()) this.tryAttack(false);
+        });
+        scene.input.on('pointerup', () => {
+            this.touchInput.left = false;
+            this.touchInput.right = false;
         });
     }
 
     drawHud() {
-        this.ui.hp = this.scene.add.text(16, 56, '', {
+        this.ui.hp = this.scene.add.text(16, 170, '', {
             fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
+            fontSize: '18px',
             color: '#e2e8f0'
         }).setScrollFactor(0).setDepth(100);
-        this.ui.wave = this.scene.add.text(16, 76, '', {
+        this.ui.wave = this.scene.add.text(16, 190, '', {
             fontFamily: 'Inter, sans-serif',
-            fontSize: '13px',
+            fontSize: '16px',
             color: '#94a3b8'
         }).setScrollFactor(0).setDepth(100);
         this.ui.banner = this.scene.add.text(this.scene.scale.width / 2, 100, '', {
@@ -413,6 +466,7 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
 
         this.handleMovement(delta);
         this.handleCombatInput(time);
+        this.syncAtlasActors();
         this.updateEnemies(delta);
         this.checkWaveTriggers();
         this.modifiers.forEach((mod) => mod.update?.(this.modifierContext, time, delta));
@@ -426,16 +480,16 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
     }
 
     handleMovement(delta) {
-        if (!this.keys) return;
+        if (!this.keys && !this.touchInput.left && !this.touchInput.right) return;
         const speed = this.config.player.speed;
         const yScale = this.lane.ySpeedScale;
         let vx = 0;
         let vy = 0;
 
-        const left = Boolean(this.keys.left?.isDown);
-        const right = Boolean(this.keys.right?.isDown);
-        const up = Boolean(this.keys.up?.isDown);
-        const down = Boolean(this.keys.down?.isDown);
+        const left = Boolean(this.keys?.left?.isDown || this.touchInput.left);
+        const right = Boolean(this.keys?.right?.isDown || this.touchInput.right);
+        const up = Boolean(this.keys?.up?.isDown);
+        const down = Boolean(this.keys?.down?.isDown);
 
         if (left) vx -= 1;
         if (right) vx += 1;
@@ -453,6 +507,7 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             vy /= len;
         }
         if (vx !== 0) this.state.facing = vx > 0 ? 1 : -1;
+        this.state.moving = vx !== 0 || vy !== 0;
 
         const dt = delta / 1000;
         let nextX = this.player.x + vx * speed * dt;
@@ -514,6 +569,8 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             damage *= combo.damageMult;
             this.showBanner(combo.label, combo.color || '#fbbf24');
         }
+        this.spawnAttackVfx(combo, heavy);
+        this.state.attackAnimUntil = time + (heavy ? 240 : 160);
 
         const cooldown = this.config.player.attackCooldownMs * (heavy ? 1.5 : 1);
         this.state.attackReadyAt = time + cooldown;
@@ -574,6 +631,38 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
         return null;
     }
 
+    spawnAttackVfx(combo, heavy) {
+        if (!this.player || !this.scene) return;
+        const element = combo?.element;
+        const effectId = element === 'wind' ? 'wind_slash' : element === 'fire' ? 'fire_slash' : 'black_blade';
+        const slash = VFX.spriteClip(
+            this.scene,
+            this.runtimeArt,
+            effectId,
+            this.player.x + this.state.facing * 36,
+            this.player.y,
+            { clip: 'impact', depth: 12 }
+        );
+        if (!slash) return;
+        const size = heavy ? 150 : 112;
+        slash.setDisplaySize?.(size, size);
+        slash.setFlipX?.(this.state.facing < 0);
+    }
+
+    syncAtlasActors() {
+        const now = this.scene?.time?.now || 0;
+        if (this.player?.getData?.('artSource') === 'atlas') {
+            this.player.setFlipX?.(this.state.facing < 0);
+            const clip = now < (this.state.attackAnimUntil || 0) ? 'attack' : (this.state.moving ? 'walk' : 'idle');
+            if (this.player.getData('artClip') !== clip) {
+                this.runtimeArt?.playClip?.(this.player, 'player', clip, {
+                    repeat: clip === 'attack' ? 0 : -1,
+                    frameRate: clip === 'walk' ? 8 : 6
+                });
+            }
+        }
+    }
+
     checkWaveTriggers() {
         if (this.state.locked) return;
         if (this.state.waveIndex >= this.config.waveList.length) {
@@ -629,6 +718,8 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             sprite = this.scene.add.sprite(x, y, artKey);
             sprite.setDisplaySize(radius * 2.8, radius * 2.8);
             sprite.setData('artSource', 'atlas');
+            sprite.setData('enemyId', enemyId);
+            this.runtimeArt?.playClip?.(sprite, 'enemy', 'walk', { enemyId, repeat: -1, frameRate: 8 });
         } else {
             sprite = this.scene.add.circle(x, y, radius, spec.isBoss ? 0xef4444 : 0x94a3b8, 1);
             sprite.setData?.('artSource', 'primitive');
@@ -656,6 +747,7 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             if (!enemy.alive || !this.player) return;
             const dx = this.player.x - enemy.sprite.x;
             const dy = this.player.y - enemy.sprite.y;
+            if (enemy.sprite.getData?.('artSource') === 'atlas') enemy.sprite.setFlipX?.(dx < 0);
             const dist = Math.hypot(dx, dy) || 1;
             if (dist > enemy.radius + this.config.player.radius) {
                 enemy.sprite.x += (dx / dist) * enemy.speed * dt;
@@ -718,12 +810,14 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
     }
 
     applyCameraLock(bounds) {
-        this.cameraLock = bounds;
+        const viewW = Number(this.scene.scale?.width || 0);
+        const left = Number(bounds.left || 0);
+        const right = Math.max(Number(bounds.right || left), left + viewW);
+        this.cameraLock = { ...bounds, left, right };
         const cam = this.scene.cameras.main;
         cam.stopFollow();
-        cam.setScroll(bounds.scrollX ?? bounds.left, 0);
-        // Soft clamp via update movement; also set bounds tightly
-        cam.setBounds(bounds.left, 0, Math.max(100, bounds.right - bounds.left), this.world.height);
+        cam.setScroll(bounds.scrollX ?? left, 0);
+        cam.setBounds(left, 0, Math.max(viewW, right - left), this.world.height);
     }
 
     clearCameraLock() {
@@ -816,6 +910,8 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             timerSec: this.state.timerSec,
             maxCombo: this.state.maxCombo,
             routeEventsCleared: this.state.routeEventsCleared.slice(),
+            waveNames: this.config.waveList.map((wave) => wave.name),
+            waveThemes: this.config.waveList.map((wave) => wave.theme?.sky ?? null),
             lastResult: this.result
         };
     }

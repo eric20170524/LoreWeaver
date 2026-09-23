@@ -94,7 +94,7 @@ export function startLoreWeaverRuntime(
       normalizePlayerState(host.initialPlayerState),
       (state) => host.saveState(normalizePlayerState(state)),
       host.logger || (() => undefined),
-      { workspaceId: host.workspaceId || null }
+      { workspaceId: host.workspaceId || null, hostKind: host.hostKind }
     );
     update({ lifecycle: "running", assetStatus: "loading" });
     const assetStatusTimer = typeof window !== "undefined"

@@ -1,6 +1,7 @@
 import GameplayAdapter from '../GameplayAdapter.js';
 import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
+import VFX from '../../juice/VFX.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     id: 'dodge_counter_boss',
@@ -202,6 +203,20 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.telegraph.setStrokeStyle(3, 0xfbbf24, 0.9);
         this.telegraph.setFillStyle(0xfbbf24, 0.15);
         this.telegraph.setAlpha(1);
+        this.warningMark?.destroy?.();
+        this.warningMark = VFX.spriteClip(this.scene, this.runtimeArt, 'hazard_mark', zone.x, zone.y, {
+            clip: 'loop', depth: 4, destroyOnComplete: false
+        });
+        this.warningMark?.setDisplaySize?.(zone.r * 2.4, zone.r * 2.4);
+    }
+
+    spawnCombatVfx(effectId, x, y, clip, size, lifeMs) {
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        const sprite = VFX.spriteClip(this.scene, this.runtimeArt, effectId, x, y, { clip, depth: 12 });
+        sprite?.setDisplaySize?.(size, size);
+        if (sprite && lifeMs) {
+            this.lifecycle?.trackTimer?.(this.scene.time.delayedCall(lifeMs, () => sprite.destroy?.()));
+        }
     }
 
     tryCounter() {
@@ -220,6 +235,8 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.bossHitFlash = 0.22;
         this.state.lastFeedback = 'boss_stagger';
         this.drawSlash(this.player?.x, this.player?.y, this.boss?.x, this.boss?.y, 0xfbbf24);
+        this.spawnCombatVfx('black_blade', this.player?.x, this.player?.y, 'impact', 120);
+        this.spawnCombatVfx('white_ape', this.boss?.x, this.boss?.y, 'loop', 180, 520);
         if (this.state.gauge >= this.config.breakGaugeMax || this.state.bossHp <= 0) {
             this.finish(true, NODE_RESULT_REASONS.BOSS_DEFEATED);
             return true; // finish destroys UI; never refresh it afterwards.
@@ -252,6 +269,9 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             if (this.state.phaseLeft <= 0) this.beginAttack();
         } else if (this.state.phase === 'warning') {
             this.telegraph.setAlpha(0.5 + Math.sin(this.scene.time.now / 50) * 0.3);
+            if (this.warningMark?.active && this.state.attackZone) {
+                this.warningMark.setPosition?.(this.state.attackZone.x, this.state.attackZone.y);
+            }
             if (this.state.phaseLeft <= 0) {
                 this.state.phase = 'active';
                 this.state.phaseLeft = this.config.activeSec;
@@ -281,6 +301,8 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
                 this.state.phase = 'counter';
                 this.state.phaseLeft = this.config.counterWindowSec;
                 this.telegraph.setAlpha(0);
+                this.warningMark?.destroy?.();
+                this.warningMark = null;
                 this.boss.setStrokeStyle(4, 0xfbbf24, 1);
                 this.ui.hint?.setText('反击窗口！点击 Boss 或按空格').setColor('#fbbf24');
             }

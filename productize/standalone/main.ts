@@ -132,6 +132,9 @@ function boot() {
         }
       }
     });
+    runtime.game.sound.mute = muted;
+    runtime.game.registry.set("audioMuted", muted);
+    runtime.game.registry.get("audioResolver")?.setMuted(muted);
     window.setTimeout(() => {
       const artStatus = (window as any).__LOREWEAVER_ART_PIPELINE__?.status || "unknown";
       shell.dataset.assetStatus = artStatus;
@@ -154,7 +157,11 @@ pauseButton.addEventListener("click", () => {
 muteButton.addEventListener("click", () => {
   muted = !muted;
   synth.setMute(muted);
-  if (runtime) runtime.game.sound.mute = muted;
+  if (runtime) {
+    runtime.game.sound.mute = muted;
+    runtime.game.registry.set("audioMuted", muted);
+    runtime.game.registry.get("audioResolver")?.setMuted(muted);
+  }
   muteButton.textContent = muted ? "取消静音" : "静音";
 });
 

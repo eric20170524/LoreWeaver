@@ -37,7 +37,11 @@ export class CultivationUIPlugin implements UIPlugin {
       fontSize: '15px', color: '#cbd5e1', backgroundColor: '#334155', padding: { x: 8, y: 5 }
     }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
     sound.on('pointerdown', () => {
-      sound.setText(synth.toggleMute() ? '静音' : '音效');
+      const muted = synth.toggleMute();
+      scene.game.registry.set('audioMuted', muted);
+      scene.game.registry.get('audioResolver')?.setMuted(muted);
+      scene.game.sound.mute = muted;
+      sound.setText(muted ? '静音' : '音效');
       context.onLog('已切换游戏音效');
     });
     scene.events.once('shutdown', () => this.destroy());
@@ -56,7 +60,7 @@ export class CultivationUIPlugin implements UIPlugin {
     const view = cultivationView(spec);
     const color = Phaser.Display.Color.HexStringToColor(view.color).color;
     const cx = width / 2;
-    const cy = height - 260;
+    const cy = height - 210;
     const aura = scene.add.circle(cx, cy, 64, color, 0.2).setStrokeStyle(2, color, 0.8);
     const practice = scene.add.text(cx, cy, view.practice, {
       fontSize: '20px', color: '#ffffff', align: 'center', fontStyle: 'bold'

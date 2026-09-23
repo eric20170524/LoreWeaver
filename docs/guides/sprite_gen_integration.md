@@ -276,7 +276,7 @@ WebGL commonly caps a single texture at 4096px. Stacking 1280px character sheets
   --force
 ```
 
-`pack` refuses any result whose width or height exceeds 4096. If a runtime atlas already exists, pass `--force`.
+`pack` refuses any result whose width or height exceeds 4096. Pass `--fit-max-edge` to scale the whole grid down until it fits, which keeps one empty cell for `append-effects` when you use three columns (eight character sheets plus the effect cell). If a runtime atlas already exists, pass `--force`.
 
 Alias spawn ids that the adapter actually creates (`arena_elite_1`, `arena_boss_2`, `elite_brute`) onto catalog prefixes. RuntimeArtBinder looks up `enemy_<spawnId>_*`, not the design catalog id.
 

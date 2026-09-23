@@ -89,6 +89,7 @@
         "cardId": "dodge_counter_boss",
         "modifiers": [],
         "knobs": {
+          "allowExperimentalCard": true,
           "playerHp": 120,
           "bossHp": 360,
           "breakGaugeMax": 100
@@ -202,8 +203,37 @@
           }
         ],
         "knobs": {
-          "stageLengthPx": 2600,
-          "playersMax": 1
+          "allowExperimentalCard": true,
+          "stageLengthPx": 3600,
+          "playersMax": 1,
+          "orientation": "landscape",
+          "waveList": [
+            {
+              "id": "forge_gate",
+              "name": "锻口试刃",
+              "triggerX": 280,
+              "lockX": 360,
+              "cameraMax": 1320,
+              "theme": { "sky": 2760984, "ground": 4863012 }
+            },
+            {
+              "id": "wind_gallery",
+              "name": "风口回廊",
+              "triggerX": 1400,
+              "lockX": 1480,
+              "cameraMax": 2440,
+              "theme": { "sky": 1454136, "ground": 1985076 }
+            },
+            {
+              "id": "flame_edge",
+              "name": "烈炎开锋",
+              "triggerX": 2520,
+              "lockX": 2600,
+              "cameraMax": 3560,
+              "bossIntro": true,
+              "theme": { "sky": 3807766, "ground": 5909020 }
+            }
+          ]
         },
         "patchLevel": "L2"
       },
@@ -218,6 +248,7 @@
         "cardId": "shooter_duel",
         "modifiers": [],
         "knobs": {
+          "allowExperimentalCard": true,
           "playerHp": 120,
           "bossHp": 420,
           "timeLimitSec": 75
@@ -290,6 +321,7 @@
         "cardId": "rhythm_timing",
         "modifiers": [],
         "knobs": {
+          "allowExperimentalCard": true,
           "beatIntervalMs": 1350,
           "perfectWindowMs": 95,
           "goodWindowMs": 190,
@@ -417,6 +449,7 @@
         "cardId": "dodge_counter_boss",
         "modifiers": [],
         "knobs": {
+          "allowExperimentalCard": true,
           "playerHp": 150,
           "bossHp": 620,
           "breakGaugeMax": 120

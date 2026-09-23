@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "loreweaver.environment-atlas-provenance.v1",
+  "generator": "OpenAI built-in image_gen",
+  "generatedDate": "2026-09-23",
+  "promptSet": "assets/imagegen/environments/PROMPTS.md",
+  "sourceFrameSize": {
+    "w": 512,
+    "h": 910
+  },
+  "sourceFramesSha256": {
+    "env_bg_desert": "00d095e6e55d105d403fa1e7a71ee4c70ba204ecf58659654a81b4d534e4aca3",
+    "env_bg_cliff": "797148c09d296dc5d690ad54b0988c3f8f56bd0afa508bba9c8678587cca0946",
+    "env_bg_arena": "be32c0a0b6495ecae7534cf47bc0ef3f498975bce34fe32012b89fa828ec0e05",
+    "env_bg_tide": "893a17bd1518c0cb51f8e4d31fe4e82ac8dfa2962b8caf2ff44dc33596be8204",
+    "env_bg_city": "41a209ccb359b1b5a81434ee0b7c1717263b5cbfe944cb2c4d816e1e98e12698",
+    "env_bg_poison": "76ef640932c66e881da26191a1da7c446d74fe059411f6b8fede05fbdb7402d6",
+    "env_bg_tournament": "f43b5cf746e305287e751c05cf8cff67b0ed8914edc32a57f6664c87616f4b45",
+    "env_bg_ruins": "500681f416c743aa13ea2491e777421b1edd0461f59aa657ac5afb5f3738c79d",
+    "env_bg_escort": "5c8e6f2c7da5ce589ec3995090f89d6a4b6e91626bf3167781e329b7023403ea",
+    "env_bg_wall": "4cc932325ecf51a76b5c81e8c336c91e45dd16e1f6d39cee803d8049846e6d92",
+    "env_bg_void": "5fc90f834d726a9b6d6d2b072d42007a298119423cbb8ada63657bb7537fa21a",
+    "env_bg_finale": "4053b895bfaebcc7aa89dce863d8dd0a5b9782749a988aea8eaa488e097b62e1"
+  },
+  "atlasSha256": "363335cdb9d0d0cda3cbf95f2b102d9bc0f9fa42fb5333a7d1c0d9b604f090dd",
+  "atlasLayout": {
+    "cols": 3,
+    "rows": 4,
+    "maxEdge": 4096
+  }
+}

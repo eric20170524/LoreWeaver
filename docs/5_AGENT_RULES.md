@@ -29,4 +29,6 @@
 - `weapon_stance_cycle` 默认定时是给既有夹具用的；石牧身份必须在 preset knobs 里写 `controlMode: "manual"`。
 - 多个 modifier 包装 `handleSemanticInput` / `damagePlayer` 时，uninstall 必须倒序，否则会把已拆掉的包装装回去。
 - 角色 sprite：Imagine 定妆 → sprite-gen `--face-plus-x` → **pack** 多角色，禁止第二次 `promote`。图集任一边 > 4096 会在 WebGL 上丢掉后半人物。spawn id 必须 alias 到 `enemy_<id>_*`。`pack` 会重写 `character-pack` 快照；半透明特效贴到空白格时直接拷贝像素。细则见 `docs/guides/sprite_gen_integration.md`。
-- 石牧契约检查读 `productize/fixtures/xuanjie-shimu-contract.json`，不读 gitignore 里的 `data/workspaces/`。本机 workspace manifest 没有 `nodes`。
+- 石牧契约检查读 `productize/fixtures/xuanjie-shimu-contract.json`，不读 gitignore 里的 `data/workspaces/`。本机 workspace manifest 没有 `nodes`；组装后的节点在 `loreweaver/nodes/`。
+- 对石牧工作区跑部门玩法组之前，节点 2、4、5、7、10 必须已有 `allowExperimentalCard: true`。筹备不得改写已有 `cardId`、modifier、首通奖励和已经写上的战斗数值。部门状态停在 `ready_for_review`，不自动确认。
+- 运行就绪门禁没有阻断项才前进，不用 `force`。构建门报告缺失是警告，禁止补一份假通过。风格板和 VLM 取证没有做成就保持交接开放。

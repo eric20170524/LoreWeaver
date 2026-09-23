@@ -91,9 +91,9 @@ export default class RunGrowthMilestonesModifier extends GameplayModifier {
         }
 
         const height = scene.scale?.height || 720;
-        this.hud = scene.add?.text?.(32, height - 72, '', {
+        this.hud = scene.add?.text?.(32, height - 102, '', {
             fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '18px',
+            fontSize: '20px',
             color: '#fbbf24'
         }) || null;
         if (this.hud) {

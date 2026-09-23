@@ -2,6 +2,7 @@ import GameplayAdapter from '../GameplayAdapter.js';
 import RhythmTimingRound from './RhythmTimingRound.js';
 import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
+import VFX from '../../juice/VFX.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     id: 'rhythm_timing',
@@ -151,6 +152,10 @@ export default class TapReactionAdapter extends GameplayAdapter {
         }
         this.lifecycle = new SceneLifecycle(scene);
         this.lifecycle.start();
+        this.runtimeArt = this.payload?.runtimeArt || this.payload?.art
+            || scene.game?.registry?.get?.('runtimeArtBinder')?.createContext?.(scene)
+            || scene.game?.registry?.get?.('runtimeArt')
+            || null;
 
         const width = scene.scale.width;
         const height = scene.scale.height;
@@ -196,8 +201,12 @@ export default class TapReactionAdapter extends GameplayAdapter {
             title: text(210, this.t('rhythm.title', '节奏共鸣')),
             instructions: text(260, '外圈收拢到白色圆环时，点击中心或按空格', '16px'),
             target: scene.add.circle(x, y, 64, 0x0f172a, 0.9).setStrokeStyle(3, 0xf8fafc, 0.95),
-            approach: scene.add.circle(x, y, 150, 0x67e8d6, 0).setStrokeStyle(4, 0x67e8d6, 0.9),
-            pad: scene.add.circle(x, y, 92, 0x67e8d6, 0.01).setInteractive({ useHandCursor: true }),
+            approach: scene.add.circle(x, y, 150, 0xdbeafe, 0).setStrokeStyle(4, 0xdbeafe, 0.9),
+            moon: VFX.spriteClip(scene, this.runtimeArt, 'moon_pulse', x, y, {
+                clip: 'loop', depth: 4, destroyOnComplete: false
+            }),
+            player: this.mountRhythmPlayer(x, y + 295),
+            pad: scene.add.circle(x, y, 92, 0xdbeafe, 0.01).setInteractive({ useHandCursor: true }),
             feedback: text(y + 170, '准备', '28px'),
             combo: text(y + 222, '', '18px'),
             counts: text(height - 140, '', '16px')
@@ -240,12 +249,34 @@ export default class TapReactionAdapter extends GameplayAdapter {
         return true;
     }
 
+    mountRhythmPlayer(x, y) {
+        try {
+            const sprite = this.runtimeArt?.createSprite?.('player', {
+                x, y, displaySize: 120, depth: 6, clip: 'idle', frameRate: 4, repeat: -1
+            });
+            if (sprite?.getData?.('artSource') !== 'atlas') {
+                sprite?.destroy?.();
+                return null;
+            }
+            return sprite;
+        } catch {
+            return null;
+        }
+    }
+
     renderRhythmSurface() {
         if (!this.rhythmUI || !this.isRunning()) return;
         const s = this.rhythmRound.snapshot();
         const c = this.rhythmRound.config;
-        this.rhythmUI.approach.setRadius(64 + Math.max(0, Math.min(1, -s.offsetMs / c.beatIntervalMs)) * 100);
+        const approachRadius = 64 + Math.max(0, Math.min(1, -s.offsetMs / c.beatIntervalMs)) * 100;
+        this.rhythmUI.approach.setRadius(approachRadius);
         this.rhythmUI.approach.setAlpha(s.resolved ? 0.12 : 0.95);
+        if (this.rhythmUI.moon?.active) {
+            this.rhythmUI.moon.setDisplaySize?.(approachRadius * 2, approachRadius * 2);
+            // The inherited pulse atlas is green; keep it subtle against the moonlit node art.
+            this.rhythmUI.moon.setAlpha?.(s.resolved ? 0.08 : 0.18);
+        }
+
         this.rhythmUI.target.setStrokeStyle(3, Math.abs(s.offsetMs) <= c.perfectWindowMs && !s.resolved ? 0xfbbf24 : 0xf8fafc, 1);
         const last = s.lastJudgment;
         const fresh = last && s.elapsedMs - last.atMs < 650;

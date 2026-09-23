@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(__filename);
 const loreRoot = path.resolve(scriptDir, "../../..");
-const repoRoot = path.resolve(loreRoot, "..");
+const repoRoot = fs.existsSync(path.join(loreRoot, "minigame_master"))
+  ? loreRoot
+  : path.resolve(loreRoot, "..");
 const reportsDir = path.join(loreRoot, "minigame_master", "capabilities", "reports");
 
 function runStep(step) {
@@ -59,21 +61,17 @@ const steps = [
   {
     name: "survivor_horde_runtime_e2e",
     cwd: repoRoot,
-    cmd: "python3",
+    cmd: "node",
     args: [
-      "LoreWeaver/minigame_master/capabilities/verification/run_e2e_test.py",
-      "--game",
-      "survivor_horde"
+      path.join(loreRoot, "productize/jobs/run-survivor-e2e.mjs")
     ]
   },
   {
-    name: "loreweaver_runtime_e2e",
+    name: "xuanjie_workbench_runtime_e2e",
     cwd: repoRoot,
-    cmd: "python3",
+    cmd: "node",
     args: [
-      "LoreWeaver/minigame_master/capabilities/verification/run_e2e_test.py",
-      "--game",
-      "loreweaver"
+      path.join(loreRoot, "productize/jobs/run-xuanjie-local-play-e2e.mjs")
     ]
   },
   {

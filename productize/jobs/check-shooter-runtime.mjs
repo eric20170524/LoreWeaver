@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
 import {EventEmitter} from 'node:events';
 import Adapter from '../../minigame_master/core/lib/gameplay/shooter_duel/ShooterDuelAdapter.js';
@@ -11,3 +12,44 @@ test('boss damage cannot trigger a host score goal before the boss dies',()=>{co
 test('stationary player dies from real projectiles and short timer fails',()=>{const f=fixture({playerHp:1});for(let i=0;i<1200&&!f.results.length;i++)f.step(10);assert.equal(f.results[0].reason,'hp_zero');const g=fixture({timeLimitSec:3});for(let i=0;i<310&&!g.results.length;i++)g.step(10);assert.equal(g.results[0].reason,'timer_expired');assert.equal(g.results[0].success,false);});
 test('retreat releases listeners, projectiles and display references',()=>{const f=fixture();f.a.tryFire();f.a.enemyFire();let other=0;f.scene.input.on('pointerdown',()=>other++);f.a.retreat();assert.equal(f.scene.input.listenerCount('pointerdown'),1);f.scene.input.emit('pointerdown');assert.equal(other,1);assert.equal(f.a.player,null);assert.equal(f.a.boss,null);assert.deepEqual(f.a.ui,{});assert.ok(f.m.timers.every(t=>t.removed));});
 test('invalid parameters normalize and disabled controls are respected',()=>{const f=fixture({bossHp:NaN,playerFireCooldownMs:0,timeLimitSec:Infinity,allowPause:false,allowQuit:false});assert.equal(f.a.state.bossHp,300);assert.ok(f.a.config.playerFireCooldownMs>=80);assert.equal(f.a.config.timeLimitSec,60);f.a.pause();f.a.retreat();assert.equal(f.a.status,'running');f.a.destroy();});
+test('shi mu node 5 keeps its 75 second duel and the three endings',()=>{
+  const preset=JSON.parse(fs.readFileSync(new URL('../../data/presets/xuanjiezhimen_fangame_preset.json',import.meta.url),'utf8'));
+  const node=preset.nodes.find(item=>item.id===5);
+  const knobs=node.gameplay.knobs;
+  assert.equal(node.gameplay.cardId,'shooter_duel');
+  assert.equal(knobs.timeLimitSec,75);
+  assert.equal(knobs.playerHp,120);
+  assert.equal(knobs.bossHp,420);
+  const held=fixture(knobs);
+  assert.equal(held.a.config.timeLimitSec,75);
+  assert.equal(held.a.config.playerHp,120);
+  assert.equal(held.a.state.bossHp,420);
+  held.a.bossVx=0;
+  for(let i=0;i<80&&!held.results.length;i++){
+    held.scene.time.now += held.a.config.playerFireCooldownMs + 1;
+    held.a.player.x=40;
+    held.a.boss.x=680;
+    held.a.tryFire();
+    const bullet=held.a.bullets.at(-1);
+    if(bullet){bullet.x=held.a.boss.x;bullet.y=held.a.boss.y;}
+    held.step(16);
+  }
+  assert.equal(held.results[0].reason,'boss_defeated');
+  assert.equal(held.results[0].success,true);
+  const dead=fixture({...knobs,playerHp:1});
+  assert.equal(dead.a.config.timeLimitSec,75);
+  for(let i=0;i<1200&&!dead.results.length;i++)dead.step(10);
+  assert.equal(dead.results[0].reason,'hp_zero');
+  assert.equal(dead.results[0].success,false);
+  const timed=fixture(knobs);
+  for(let i=0;i<7600&&!timed.results.length;i++){
+    timed.a.player.x=40;
+    timed.a.boss.x=680;
+    for(const bullet of timed.a.enemyBullets) bullet.destroy?.();
+    timed.a.enemyBullets=[];
+    timed.step(10);
+  }
+  assert.equal(timed.results[0].reason,'timer_expired');
+  assert.equal(timed.results[0].success,false);
+  assert.equal(timed.a.config.timeLimitSec,75);
+});

@@ -49,6 +49,7 @@ export default class HazardTelegraphModifier extends GameplayModifier {
         if (!context.adapter.isRunning()) return;
 
         const point = this.pickPoint(context);
+        const line = this.config.shape === 'line';
         const diameter = Math.round(this.config.radius * 2.4);
         let warning = VFX.spriteClip(context.scene, context.adapter?.runtimeArt, 'hazard_mark', point.x, point.y, {
             clip: 'loop',
@@ -56,7 +57,10 @@ export default class HazardTelegraphModifier extends GameplayModifier {
             destroyOnComplete: false
         });
         if (warning) {
-            warning.setDisplaySize?.(diameter, diameter);
+            warning.setDisplaySize?.(
+                line ? Math.round(this.config.radius * 5) : diameter,
+                line ? Math.round(this.config.radius * 0.7) : diameter
+            );
         } else {
             warning = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.warningColor, this.config.alpha);
             warning.setStrokeStyle?.(2, this.config.warningColor, 0.8);
@@ -87,7 +91,21 @@ export default class HazardTelegraphModifier extends GameplayModifier {
     strike(context, point) {
         if (!context.adapter.isRunning()) return;
 
-        const strike = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.strikeColor, this.config.alpha * 1.6);
+        const line = this.config.shape === 'line';
+        let strike = VFX.spriteClip(context.scene, context.adapter?.runtimeArt, 'hazard_mark', point.x, point.y, {
+            clip: 'loop',
+            depth: 5,
+            destroyOnComplete: false
+        });
+        if (strike) {
+            strike.setDisplaySize?.(
+                line ? Math.round(this.config.radius * 5) : Math.round(this.config.radius * 2.2),
+                line ? Math.round(this.config.radius * 0.55) : Math.round(this.config.radius * 2.2)
+            );
+            strike.setAlpha?.(0.95);
+        } else {
+            strike = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.strikeColor, this.config.alpha * 1.6);
+        }
         this.activeObjects.add(strike);
 
         if (distance(point, context.player) <= this.config.radius + context.config.player.radius) {

@@ -27,7 +27,9 @@ export default class ArenaWaveBossModifier extends GameplayModifier {
         this.wave = 0;
         this.waiting = false;
         this.hud = context.scene.add.text(12, 160, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#f472b6'
+            fontFamily: 'Inter, sans-serif', fontSize: '18px', fontStyle: 'bold',
+            color: '#fce7f3', backgroundColor: 'rgba(15, 23, 42, 0.84)',
+            padding: { x: 8, y: 5 }
         });
 
         // Disable timer win; win by clearing all waves

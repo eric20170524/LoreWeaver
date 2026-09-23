@@ -297,6 +297,7 @@ def build_parser() -> argparse.ArgumentParser:
     pack_parser.add_argument("--alias", action="append", default=[], help="srcPrefix=dstPrefix,dstPrefix2 (repeatable)")
     pack_parser.add_argument("--columns", type=int, default=2)
     pack_parser.add_argument("--max-edge", type=int, default=4096)
+    pack_parser.add_argument("--fit-max-edge", action="store_true", help="uniformly scale the grid so width and height stay within --max-edge")
     pack_parser.add_argument("--force", action="store_true")
 
     effects_parser = sub.add_parser("append-effects")
@@ -332,7 +333,10 @@ def main() -> int:
             result = adopt(ws, within(ws, args.run_dir), args.asset_id, args.semantic_prefix)
         elif args.cmd == "pack":
             characters = [item.strip() for item in args.characters.split(",") if item.strip()]
-            result = pack_candidates(ws_path(args.workspace), characters, parse_aliases(args.alias), args.columns, args.max_edge, args.force)
+            result = pack_candidates(
+                ws_path(args.workspace), characters, parse_aliases(args.alias),
+                args.columns, args.max_edge, args.force, args.fit_max_edge,
+            )
         elif args.cmd == "append-effects":
             effects = [item.strip() for item in args.effects.split(",") if item.strip()]
             result = append_effects(ws_path(args.workspace), effects, args.max_edge, args.force)

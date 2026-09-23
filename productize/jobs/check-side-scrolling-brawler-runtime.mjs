@@ -142,6 +142,30 @@ test('single-life HP zero settles exactly one failure with no rewards', () => {
   assert.equal(results.length, 1);
 });
 
+test('locked screen spans one landscape viewport and keeps each wave theme', () => {
+  const { adapter, mock } = fixture({
+    stageLengthPx: 3600,
+    waveList: [
+      { id: 'forge_gate', name: '锻口试刃', triggerX: 280, lockX: 360, cameraMax: 1320, theme: { sky: 2760984, ground: 4863012 }, enemies: [{ hp: 30, x: 620, y: 0 }] },
+      { id: 'wind_gallery', name: '风口回廊', triggerX: 1400, lockX: 1480, cameraMax: 2440, theme: { sky: 1454136, ground: 1985076 }, enemies: [{ hp: 30, x: 1760, y: 0 }] },
+      { id: 'flame_edge', name: '烈炎开锋', triggerX: 2520, lockX: 2600, cameraMax: 3560, bossIntro: true, theme: { sky: 3807766, ground: 5909020 }, enemies: [{ id: 'human_genius', hp: 40, x: 3120, y: 0, isBoss: true }] }
+    ]
+  });
+  mock.scene.scale.width = 960;
+  let bounds = null;
+  mock.scene.cameras.main.setBounds = (x, y, w, h) => {
+    bounds = { x, y, w, h };
+    return mock.scene.cameras.main;
+  };
+  adapter.player.x = 280;
+  adapter.checkWaveTriggers();
+  assert.equal(adapter.getTestState().locked, true);
+  assert.deepEqual(adapter.getTestState().waveNames, ['锻口试刃', '风口回廊', '烈炎开锋']);
+  assert.deepEqual(adapter.getTestState().waveThemes, [2760984, 1454136, 3807766]);
+  assert.ok(bounds.w >= 960, `locked view should cover the landscape width, got ${bounds.w}`);
+  adapter.destroy();
+});
+
 test('destroy clears active touch ownership without emitting a result', () => {
   const { adapter, mock, results } = fixture();
   const y = adapter.player.y;

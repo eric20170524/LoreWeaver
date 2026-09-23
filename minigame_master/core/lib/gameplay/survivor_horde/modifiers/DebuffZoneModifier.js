@@ -1,4 +1,5 @@
 import GameplayModifier from '../../GameplayModifier.js';
+import VFX from '../../../juice/VFX.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     zoneRadius: 100,
@@ -26,14 +27,21 @@ export default class DebuffZoneModifier extends GameplayModifier {
 
         const w = context.adapter.world.width;
         const h = context.adapter.world.height;
-        this.zone = context.scene.add.circle(
-            w * 0.5,
-            h * 0.5,
-            this.config.zoneRadius,
-            this.config.color,
-            this.config.alpha
-        );
-        this.zone.setStrokeStyle?.(2, this.config.color, 0.7);
+        const x = w * 0.5;
+        const y = h * 0.5;
+        const diameter = this.config.zoneRadius * 2;
+        const mist = VFX.spriteClip(context.scene, context.adapter?.runtimeArt, 'poison_mire', x, y, {
+            clip: 'loop',
+            depth: 3,
+            destroyOnComplete: false
+        });
+        if (mist) {
+            mist.setDisplaySize?.(diameter, diameter);
+            this.zone = mist;
+        } else {
+            this.zone = context.scene.add.circle(x, y, this.config.zoneRadius, this.config.color, this.config.alpha);
+            this.zone.setStrokeStyle?.(2, this.config.color, 0.7);
+        }
 
         this.moveTimer = context.scene.time.addEvent({
             delay: this.config.moveIntervalMs,
@@ -58,12 +66,14 @@ export default class DebuffZoneModifier extends GameplayModifier {
             if (this.config.silenceWeapon) {
                 context.config.weapon.fireIntervalMs = Math.max(this._baseFire * 3, 4000);
             }
-            this.zone.setFillStyle(this.config.color, this.config.alpha * 1.6);
+            this.zone.setFillStyle?.(this.config.color, this.config.alpha * 1.6);
+            this.zone.setAlpha?.(0.95);
         } else if (!inside && this._silenced) {
             this._silenced = false;
             context.config.player.speed = this._baseSpeed;
             context.config.weapon.fireIntervalMs = this._baseFire;
-            this.zone.setFillStyle(this.config.color, this.config.alpha);
+            this.zone.setFillStyle?.(this.config.color, this.config.alpha);
+            this.zone.setAlpha?.(0.72);
         }
     }
 

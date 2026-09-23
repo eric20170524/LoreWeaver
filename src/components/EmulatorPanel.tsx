@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { AlertTriangle, RotateCcw, Compass, Eye } from "lucide-react";
 import { GameSpec, PlayerState } from "../types";
@@ -33,7 +33,17 @@ export function EmulatorPanel({
   themeMode,
   layout = "embedded"
 }: EmulatorPanelProps) {
-  const emulatorFrameMaxWidth = layout === "window"
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
+  useEffect(() => {
+    const onOrientation = (event: Event) => {
+      setOrientation((event as CustomEvent).detail === "landscape" ? "landscape" : "portrait");
+    };
+    window.addEventListener("loreweaver:orientation", onOrientation);
+    return () => window.removeEventListener("loreweaver:orientation", onOrientation);
+  }, []);
+  const emulatorFrameMaxWidth = orientation === "landscape"
+    ? "min(960px, 92vw)"
+    : layout === "window"
     ? `min(${currentEmuWidth}px, 92vw)`
     : `min(${currentEmuWidth}px, 82vw, calc((100vh - 280px) * 9 / 16))`;
   const emulatorControlsMaxWidth = `min(max(${currentEmuWidth}px, 360px), 92vw)`;
@@ -87,7 +97,9 @@ export function EmulatorPanel({
 
             <div
               style={{ maxWidth: emulatorFrameMaxWidth }}
-              className="relative flex aspect-[9/16] w-full flex-col overflow-hidden rounded-[40px] border border-slate-300 bg-slate-200 p-2.5 shadow-2xl ring-[14px] ring-slate-300/90 transition-transform duration-300 hover:scale-[1.01] dark:border-slate-800/80 dark:bg-slate-950 dark:ring-slate-900/90"
+              data-testid="emulator-frame"
+              data-orientation={orientation}
+              className={`relative flex w-full flex-col overflow-hidden rounded-[40px] border border-slate-300 bg-slate-200 p-2.5 shadow-2xl ring-[14px] ring-slate-300/90 transition-transform duration-300 hover:scale-[1.01] dark:border-slate-800/80 dark:bg-slate-950 dark:ring-slate-900/90 ${orientation === "landscape" ? "aspect-video" : "aspect-[9/16]"}`}
             >
               <div className="absolute left-1/2 top-2.5 z-40 flex h-5.5 w-28 -translate-x-1/2 items-center justify-center rounded-full border border-slate-300 bg-white shadow-inner dark:border-slate-900 dark:bg-slate-950">
                 <div className="h-1 w-8 rounded-full bg-slate-600 dark:bg-slate-800" />

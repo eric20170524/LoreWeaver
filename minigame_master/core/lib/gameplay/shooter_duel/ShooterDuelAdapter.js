@@ -1,6 +1,7 @@
 import GameplayAdapter from '../GameplayAdapter.js';
 import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
+import VFX from '../../juice/VFX.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     id: 'shooter_duel',
@@ -144,20 +145,37 @@ export default class ShooterDuelAdapter extends GameplayAdapter {
         const now = this.scene.time.now;
         if (now < this.state.fireReadyAt) return;
         this.state.fireReadyAt = now + this.config.playerFireCooldownMs;
-        const b = this.scene.add.circle(this.player.x, this.player.y - 18, 5, 0xfbbf24, 1);
-        b.vy = -this.config.bulletSpeed;
-        this.bullets.push(b);
+        this.bullets.push(this.spawnBolt(this.player.x, this.player.y - 18, 0, -this.config.bulletSpeed, 'purple_bolt', 28));
     }
 
     enemyFire() {
         if (!this.isRunning() || !this.boss) return;
-        const b = this.scene.add.circle(this.boss.x, this.boss.y + 30, 7, 0xf43f5e, 1);
         const dx = this.player.x - this.boss.x;
         const dy = this.player.y - this.boss.y;
         const len = Math.hypot(dx, dy) || 1;
-        b.vx = (dx / len) * this.config.enemyBulletSpeed;
-        b.vy = (dy / len) * this.config.enemyBulletSpeed;
-        this.enemyBullets.push(b);
+        const speed = this.config.enemyBulletSpeed;
+        this.enemyBullets.push(this.spawnBolt(
+            this.boss.x, this.boss.y + 30, (dx / len) * speed, (dy / len) * speed, 'crimson_bolt', 36
+        ));
+    }
+
+    spawnBolt(x, y, vx, vy, effectId, size) {
+        const bolt = VFX.spriteClip(this.scene, this.runtimeArt, effectId, x, y, {
+            clip: 'loop', depth: 12, destroyOnComplete: false
+        });
+        if (bolt) {
+            bolt.setDisplaySize?.(size, Math.round(size * 0.45));
+            bolt.setRotation?.(Math.atan2(vy, vx));
+            bolt.vx = vx;
+            bolt.vy = vy;
+            return bolt;
+        }
+        const radius = effectId === 'crimson_bolt' ? 7 : 5;
+        const color = effectId === 'crimson_bolt' ? 0xf43f5e : 0xfbbf24;
+        const fallback = this.scene.add.circle(x, y, radius, color, 1);
+        fallback.vx = vx;
+        fallback.vy = vy;
+        return fallback;
     }
 
     update(_time, delta) {
@@ -183,7 +201,11 @@ export default class ShooterDuelAdapter extends GameplayAdapter {
         if (this.boss.x < 50 || this.boss.x > width - 50) this.bossVx *= -1;
         this.boss.x = Math.max(50, Math.min(width - 50, this.boss.x));
 
+        if (this.player?.getData?.('artSource') === 'atlas' && vx !== 0) {
+            this.player.setFlipX?.(vx < 0);
+        }
         this.bullets = this.bullets.filter((b) => {
+            b.x += (b.vx || 0) * dt;
             b.y += b.vy * dt;
             if (Math.hypot(b.x - this.boss.x, b.y - this.boss.y) < 40) {
                 this.state.bossHp = Math.max(0, this.state.bossHp - this.config.playerBulletDamage);

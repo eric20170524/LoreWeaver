@@ -120,6 +120,7 @@ export default class RuntimeArtBinder {
     constructor(options = {}) {
         this.statusKey = options.statusKey || DEFAULT_GLOBAL_STATUS_KEY;
         this.atlasTextureKey = options.atlasTextureKey || 'lw_imagegen_combat_atlas';
+        this.environmentAtlasTextureKey = options.environmentAtlasTextureKey || 'lw_imagegen_environment_atlas';
         this.manifestCacheKey = options.manifestCacheKey || 'lw_imagegen_manifest';
         this.scene = null;
         this.manifest = null;
@@ -454,6 +455,14 @@ export default class RuntimeArtBinder {
         });
         scene.load.json(this.manifestCacheKey, paths.manifestPath);
         scene.load.image(this.atlasTextureKey, paths.atlasPath);
+        if (paths.environmentAtlasPath) {
+            scene.load.once(`filecomplete-json-${this.manifestCacheKey}`, () => {
+                const manifest = scene.cache?.json?.get?.(this.manifestCacheKey);
+                if (manifest?.environmentAtlas?.image) {
+                    scene.load.image(this.environmentAtlasTextureKey, paths.environmentAtlasPath);
+                }
+            });
+        }
         return this;
     }
 
@@ -543,8 +552,11 @@ export default class RuntimeArtBinder {
 
     copyFrame(scene, frameKey, textureKey, frameSpec) {
         const frame = frameSpec?.frame;
-        if (!frame || !scene.textures.exists(this.atlasTextureKey)) return false;
-        const atlasTexture = scene.textures.get(this.atlasTextureKey);
+        const atlasKey = frameSpec?.atlas === 'environment'
+            ? this.environmentAtlasTextureKey
+            : this.atlasTextureKey;
+        if (!frame || !scene.textures.exists(atlasKey)) return false;
+        const atlasTexture = scene.textures.get(atlasKey);
         const sourceImage = atlasTexture.getSourceImage?.();
         if (!sourceImage) return false;
 
@@ -847,7 +859,7 @@ export default class RuntimeArtBinder {
             const bg = scene.add.image(width / 2, height / 2, bgTex);
             const scale = Math.max(width / Math.max(bg.width, 1), height / Math.max(bg.height, 1));
             bg.setScale(scale * 1.05);
-            bg.setAlpha(options.alpha ?? 0.55);
+            bg.setAlpha(options.alpha ?? 0.78);
             container.add(bg);
         } else {
             const g = scene.add.graphics();

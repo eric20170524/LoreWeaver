@@ -196,11 +196,11 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         const height = scene.scale?.height || 1280;
         this._toggleButton = scene.add.text(width - 24, height * 0.58, this.toggleButtonLabel(), {
             fontFamily: 'Inter, sans-serif',
-            fontSize: '16px',
+            fontSize: '20px',
             fontStyle: 'bold',
             color: '#fff7ed',
             backgroundColor: 'rgba(15, 23, 42, 0.82)',
-            padding: { x: 10, y: 8 },
+            padding: { x: 14, y: 10 },
             align: 'right'
         });
         this._toggleButton.setOrigin?.(1, 0.5);
@@ -220,7 +220,7 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
     toggleButtonLabel() {
         const stance = this._stance === 'ranged' ? this.config.rangedLabel : this.config.meleeLabel;
         const hint = this.config.toggleHint ? `\n${this.config.toggleHint}` : '';
-        return `${stance}${hint}`;
+        return `${stance} · 点按${hint}`;
     }
 
     refreshToggleButton() {

@@ -54,6 +54,9 @@ export class DefaultUIPlugin implements UIPlugin {
 
     soundText.on("pointerdown", () => {
       const nextMute = synth.toggleMute();
+      scene.game.registry.set("audioMuted", nextMute);
+      scene.game.registry.get("audioResolver")?.setMuted(nextMute);
+      scene.game.sound.mute = nextMute;
       soundText.setText(nextMute ? "🔇 静音" : "🔊 音效");
       soundText.setColor(nextMute ? "#ef4444" : spec.themeColor);
       synth.playClick();

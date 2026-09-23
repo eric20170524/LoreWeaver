@@ -304,6 +304,19 @@ def main() -> int:
         assert runtime["frames"]["enemy_arena_elite_1"]["frame"]["x"] == 64
         assert runtime["atlasSize"]["w"] <= module.MAX_ATLAS_EDGE
         assert runtime["atlasSize"]["h"] <= module.MAX_ATLAS_EDGE
+        assert runtime["clipSets"]["player"]["idle"]["keys"] == ["player_idle_0"]
+        assert runtime["clipSets"]["enemy_bandit_cultivator"]["idle"]["loop"] is True
+
+        fitted = module.pack_candidates(
+            ws, ["hero", "bandit", "hero"],
+            columns=2, max_edge=100, force=True, fit_max_edge=True,
+        )
+        assert fitted["atlasSize"]["w"] <= 100
+        assert fitted["atlasSize"]["h"] <= 100
+        fitted_prov = json.loads((ws / "assets/imagegen/provenance.json").read_text(encoding="utf-8"))
+        assert "fit_max_edge" in fitted_prov["postprocess"]
+        assert fitted_prov["atlasLayout"]["cols"] == 2
+        assert fitted_prov["atlasLayout"]["rows"] == 2
 
         # Packed character atlas: effects occupy the unused cell and must not move characters.
         clear = Image.new("RGBA", (128, 64), (0, 0, 0, 0))
@@ -352,6 +365,26 @@ def main() -> int:
         assert appended_manifest["frames"]["vfx_void_slash_impact_0"]["frame"]["x"] == 64
         assert appended_manifest["clipSets"]["vfx_void_slash"]["impact"]["loop"] is False
         assert json.loads((fx / "provenance.json").read_text(encoding="utf-8"))["promoted"] is False
+
+        wide = ws / "assets/imagegen/sprite-gen/wide_glow/loreweaver"
+        wide.mkdir(parents=True, exist_ok=True)
+        Image.new("RGBA", (90, 40), (255, 128, 0, 128)).save(wide / "atlas.png")
+        (wide / "manifest.json").write_text(json.dumps({
+            "assetKind": "effect",
+            "semanticPrefix": "vfx_wide_glow",
+            "clips": {"loop": {"keys": ["vfx_wide_glow_loop_0"], "fps": 12, "loop": True}},
+            "clipSets": {"vfx_wide_glow": {"loop": {"keys": ["vfx_wide_glow_loop_0"], "fps": 12, "loop": True}}},
+            "frames": {"vfx_wide_glow_loop_0": {"frame": {"x": 0, "y": 0, "w": 90, "h": 40}}},
+        }), encoding="utf-8")
+        (wide / "provenance.json").write_text(json.dumps({
+            "assetId": "wide_glow", "assetKind": "effect", "semanticPrefix": "vfx_wide_glow", "promoted": False,
+        }), encoding="utf-8")
+        scaled = module.append_effects(ws, ["wide_glow"], force=True)
+        assert scaled["atlasSize"] == {"w": 128, "h": 64}
+        scaled_manifest = json.loads((ws / "assets/imagegen/manifest.json").read_text(encoding="utf-8"))
+        wide_frame = scaled_manifest["frames"]["vfx_wide_glow_loop_0"]["frame"]
+        assert wide_frame["w"] <= 64 and wide_frame["h"] <= 64
+        assert wide_frame["x"] == 64
 
     check_repack_snapshot_and_straight_alpha()
 

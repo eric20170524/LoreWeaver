@@ -961,14 +961,15 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         sprite.setOrigin?.(0.5, 0.5);
         // Keep full frame visible: size from texture aspect, not a crop.
         const radius = this.config.player.radius || 14;
-        const display = radius * 4;
+        const visualScale = 1.6;
+        const display = radius * 4 * visualScale;
         sprite.setDisplaySize(display, display);
         sprite.setDepth(2);
         // Body size/offset in source texture pixels (atlas cells are 64x64; procedural fallback 80x80)
         const srcW = sprite.frame?.width || sprite.width || 64;
         const srcH = sprite.frame?.height || sprite.height || 64;
-        const bodyW = Math.max(12, srcW * 0.45);
-        const bodyH = Math.max(16, srcH * 0.55);
+        const bodyW = Math.max(12 / visualScale, srcW * 0.45 / visualScale);
+        const bodyH = Math.max(16 / visualScale, srcH * 0.55 / visualScale);
         sprite.body?.setSize?.(bodyW, bodyH);
         sprite.body?.setOffset?.((srcW - bodyW) / 2, (srcH - bodyH) / 2 + srcH * 0.08);
         this.renderPlayerAura(0, sprite);
@@ -988,9 +989,9 @@ export default class SurvivorHordeAdapter extends GameplayAdapter {
         const spin = time / 900;
 
         this.playerAura.clear();
-        this.playerAura.lineStyle(2, aura, 0.32);
+        this.playerAura.lineStyle(2.5, aura, 0.55);
         this.playerAura.strokeCircle(target.x, target.y, radius + pulse);
-        this.playerAura.lineStyle(1.5, glow, 0.45);
+        this.playerAura.lineStyle(1.5, glow, 0.65);
         this.playerAura.strokeCircle(target.x, target.y, radius * 0.72 - pulse * 0.25);
         this.playerAura.lineStyle(1, main, 0.42);
 

@@ -17,7 +17,7 @@ const reports = path.join(root, 'workflow/reports');
 fs.mkdirSync(reports, { recursive: true });
 const output = path.join(reports, 'xuanjie_local_play_browser.json');
 const report = { status: 'failed', synthetic: true, releaseEligible: false,
-  scope: 'RuntimeKernel + cultivation UI + authored node 2 direct-entry regression', assertions: [], errors: [] };
+  scope: 'RuntimeKernel + cultivation UI + 12 authored nodes direct-entry success and defeat regression', assertions: [], errors: [] };
 let browser, server, page;
 try {
   await build({
@@ -70,6 +70,7 @@ try {
     await page.evaluate((id) => {
       const h = window.harness;
       const node = h.spec.nodes.find(item => item.id === id);
+      h.previousAdapter = h.game.scene.keys.LevelActiveScene?.adapter || null;
       if (h.game.scene.isActive('MainScene')) h.game.scene.stop('MainScene');
       const host = h.game.scene.isActive('LevelActiveScene')
         ? h.game.scene.keys.LevelActiveScene
@@ -80,7 +81,8 @@ try {
       const adapter = window.harness.game.scene.keys.LevelActiveScene?.adapter;
       const state = adapter?.getTestState?.() || {};
       const card = adapter?.config?.id || state.adapterId || state.configId;
-      return adapter?.status === 'running' && card === expected;
+      return adapter && adapter !== window.harness.previousAdapter
+        && adapter.status === 'running' && card === expected;
     };
     for (let i = 0; i < 12; i++) {
       if (await page.evaluate(isReady, adapterId)) break;
@@ -246,6 +248,49 @@ try {
     assert.equal(result?.success, true, `${settled.card} must emit a success NodeResult (${result?.reason || settled.status})`);
     return result;
   };
+
+  const failureCards = {
+    1: 'survivor_horde', 2: 'dodge_counter_boss', 3: 'survivor_horde',
+    4: 'side_scrolling_brawler', 5: 'shooter_duel', 6: 'survivor_horde',
+    7: 'rhythm_timing', 8: 'survivor_horde', 9: 'survivor_horde',
+    10: 'dodge_counter_boss', 11: 'survivor_horde', 12: 'survivor_horde'
+  };
+  const beforeFailures = await readProgress();
+  report.failureMatrix = [];
+  for (const [id, card] of Object.entries(failureCards)) {
+    await startAuthoredNode(Number(id), card);
+    const outcome = await page.evaluate(() => {
+      const adapter = window.harness.game.scene.keys.LevelActiveScene.adapter;
+      const kind = adapter.config?.id;
+      if (kind === 'survivor_horde') {
+        adapter.damagePlayer(adapter.state.hp + 100000);
+      } else if (kind === 'dodge_counter_boss') {
+        adapter.state.elapsedSeconds = adapter.config.durationSec;
+        adapter.update(adapter.scene.time.now, 16);
+      } else if (kind === 'side_scrolling_brawler') {
+        adapter.state.lives = 0;
+        adapter.state.credits = 0;
+        adapter.damagePlayer(adapter.state.hp + 100000);
+      } else if (kind === 'shooter_duel') {
+        adapter.state.elapsed = adapter.config.timeLimitSec;
+        adapter.update(adapter.scene.time.now, 16);
+      } else if (kind === 'rhythm_timing') {
+        adapter.rhythmRound.advance(adapter.rhythmRound.config.durationSec * 1000);
+        adapter.syncRhythmState();
+        adapter.finishRhythmIfNeeded();
+      }
+      return { cardId: kind, status: adapter.status, result: adapter.result };
+    });
+    assert.equal(outcome.cardId, card, `node ${id} failure uses authored card`);
+    assert.equal(outcome.result?.success, false, `node ${id} emits failure NodeResult`);
+    assert.notEqual(outcome.result?.reason, 'retreated', `node ${id} is a defeat, not retreat`);
+    report.failureMatrix.push({ nodeId: Number(id), cardId: card, reason: outcome.result.reason });
+    const progress = await readProgress();
+    assert.deepEqual(progress, beforeFailures, `node ${id} defeat cannot unlock or clear`);
+  }
+  report.assertions.push('nodes 1-12 each emit a failure NodeResult without unlocks or clears');
+
+  await startAuthoredNode(1, 'survivor_horde');
 
   const node1Result = await clearRunningNode();
   assert.equal(node1Result.reason, 'timer_expired');

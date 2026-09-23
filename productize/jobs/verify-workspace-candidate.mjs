@@ -14,6 +14,13 @@ const LORE_ROOT = path.resolve(__dirname, "../..");
 const WORKSPACES_ROOT = path.join(LORE_ROOT, "data/workspaces");
 const args = process.argv.slice(2);
 const valueArg = (name) => args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
+const requireSynthAudio = args.includes("--require-synth-audio");
+const captureAllStages = args.includes("--capture-all-stages");
+const reuseVerifiedArtifact = args.includes("--reuse-verified-artifact");
+const viewportArg = valueArg("--viewport") || "720x1280";
+if (!/^\d{3,4}x\d{3,4}$/.test(viewportArg)) fail("invalid_viewport");
+const [viewportWidth, viewportHeight] = viewportArg.split("x").map(Number);
+const screenshotTag = viewportArg === "720x1280" ? "" : `_${viewportArg}`;
 
 function fail(reason, extra = {}, code = 2) {
   console.log(JSON.stringify({ status: "failed", reason, ...extra }, null, 2));
@@ -122,24 +129,34 @@ async function main() {
   fs.mkdirSync(reportsDir, { recursive: true });
   const genericPath = path.join(reportsDir, "standalone_browser_report.json");
   const previousBrowserReport = readJsonSafe(genericPath);
-  const canonicalScreenshotPath = path.join(reportsDir, "candidate_final_stage.png");
+  if (reuseVerifiedArtifact && (viewportArg === "720x1280" || previousBrowserReport?.status !== "passed")) {
+    fail("reuse_requires_verified_primary_candidate_and_supplemental_viewport");
+  }
+  const canonicalScreenshotPath = path.join(reportsDir, `candidate_final_stage${screenshotTag}.png`);
   const attemptScreenshotPath = path.join(reportsDir, `.candidate_final_stage_attempt_${process.pid}_${Date.now()}.png`);
   const attemptReportPath = path.join(reportsDir, "candidate_verification_attempt_latest.json");
 
-  const tsxBin = path.join(LORE_ROOT, "node_modules/.bin/tsx");
-  const compile = spawnSync(tsxBin, [
-    path.join(LORE_ROOT, "productize/release-compiler.mjs"),
-    `--workspace=data/workspaces/${workspaceId}`,
-    "--mode=candidate"
-  ], { cwd: LORE_ROOT, encoding: "utf8", env: process.env, timeout: 180000 });
-  if (compile.status !== 0) {
-    fail("candidate_compile_failed", {
-      stdout: (compile.stdout || "").slice(-4000),
-      stderr: (compile.stderr || "").slice(-4000)
-    });
+  let exporterResult;
+  if (reuseVerifiedArtifact) {
+    const artifact = String(previousBrowserReport.artifact || "");
+    if (!artifact.endsWith(".zip")) fail("verified_primary_artifact_missing");
+    exporterResult = { artifact, stage: path.resolve(LORE_ROOT, artifact.slice(0, -4)), sha256: previousBrowserReport.artifactSha256 };
+  } else {
+    const tsxBin = path.join(LORE_ROOT, "node_modules/.bin/tsx");
+    const compile = spawnSync(tsxBin, [
+      path.join(LORE_ROOT, "productize/release-compiler.mjs"),
+      `--workspace=data/workspaces/${workspaceId}`,
+      "--mode=candidate"
+    ], { cwd: LORE_ROOT, encoding: "utf8", env: process.env, timeout: 180000 });
+    if (compile.status !== 0) {
+      fail("candidate_compile_failed", {
+        stdout: (compile.stdout || "").slice(-4000),
+        stderr: (compile.stderr || "").slice(-4000)
+      });
+    }
+    const compilerResult = parseLastJson(compile.stdout);
+    exporterResult = parseLastJson(compilerResult?.exporterOutput);
   }
-  const compilerResult = parseLastJson(compile.stdout);
-  const exporterResult = parseLastJson(compilerResult?.exporterOutput);
   if (!exporterResult?.stage || !exporterResult?.artifact) {
     fail("candidate_compiler_missing_stage_or_artifact", { compilerResult });
   }
@@ -158,6 +175,11 @@ async function main() {
   if (exporterResult.sha256 && exporterResult.sha256 !== artifactSha256) {
     fail("candidate_artifact_sha_mismatch", { exporter: exporterResult.sha256, actual: artifactSha256 });
   }
+  if (reuseVerifiedArtifact && (
+    previousBrowserReport.payloadHash !== payloadIdentity.payloadHash
+    || previousBrowserReport.specHash !== releaseManifest.specHash
+    || previousBrowserReport.runtimeVersion !== releaseManifest.runtimeVersion
+  )) fail("verified_primary_payload_identity_mismatch");
 
   let playwright;
   try {
@@ -177,7 +199,7 @@ async function main() {
 
   try {
     browser = await playwright.chromium.launch({ headless: true });
-    const page = await browser.newPage({ viewport: { width: 720, height: 1280 } });
+    const page = await browser.newPage({ viewport: { width: viewportWidth, height: viewportHeight } });
     page.on("console", (msg) => {
       if (msg.type() === "error" && !msg.text().includes("favicon")) errors.console.push(msg.text());
     });
@@ -193,18 +215,21 @@ async function main() {
     await page.waitForFunction(() => Array.isArray(window.__LOREWEAVER_EMBEDDED_SPEC__?.nodes), null, { timeout: 10000 });
     await page.waitForTimeout(800);
 
-    resolvedContract = await page.evaluate(() =>
-      (window.__LOREWEAVER_EMBEDDED_SPEC__?.nodes || []).map((node) => ({
+    resolvedContract = await page.evaluate(() => {
+      const spec = window.__LOREWEAVER_EMBEDDED_SPEC__ || {};
+      return (spec.nodes || []).map((node) => ({
         id: node.id,
         title: node.title,
         introType: typeof node.intro,
         tauntsIsArray: Array.isArray(node.taunts),
         cardId: node.gameplay?.cardId || null,
+        bgmKey: node.gameplay?.knobs?.bgmKey || null,
+        synthHz: (spec.audioCueCatalog || []).find((cue) => cue.id === node.gameplay?.knobs?.bgmKey)?.synth?.frequencies?.[0] ?? null,
         modifierIds: (node.gameplay?.modifiers || [])
           .map((modifier) => typeof modifier === "string" ? modifier : modifier?.id)
           .filter(Boolean)
-      }))
-    );
+      }));
+    });
     if (!resolvedContract.length || resolvedContract.some((node) => !node.tauntsIsArray || node.introType !== "string" || !node.cardId)) {
       throw new Error(`resolved_runtime_node_contract_invalid:${JSON.stringify(resolvedContract)}`);
     }
@@ -423,6 +448,7 @@ async function main() {
           modifierIds: (scene?.node?.gameplay?.modifiers || []).map((m) => typeof m === "string" ? m : m?.id).filter(Boolean),
           status: hooks.status || scene?.adapter?.status || null,
           adapterId: hooks.adapterId || null,
+          audio: scene?.audioResolver?.getReport?.() || null,
           runtimeContract: {
             introType: typeof scene?.node?.intro,
             tauntsIsArray: Array.isArray(scene?.node?.taunts)
@@ -433,6 +459,14 @@ async function main() {
       const modsMatch = expected.modifierIds.every((id) => observed.modifierIds.includes(id));
       const contractValid = observed.runtimeContract.introType === "string" && observed.runtimeContract.tauntsIsArray;
       const runtimeRunning = observed.status === "running";
+      const audioCueValid = !requireSynthAudio || (
+        expected.bgmKey
+        && Number.isFinite(Number(expected.synthHz))
+        && observed.audio?.currentBgm === expected.bgmKey
+        && observed.audio?.synthBed === true
+        && observed.audio?.audioUnlocked === true
+        && Number(observed.audio?.synthHz) === Number(expected.synthHz)
+      );
       const observationValid = Boolean(
         observed.observation
         && observed.observation.schemaVersion === "loreweaver.runtime-observation.v1"
@@ -454,28 +488,87 @@ async function main() {
         && modsMatch
         && contractValid
         && runtimeRunning
+        && audioCueValid
         && observationValid
         && exactFrameValid;
+      let muteControlValid = true;
+      let pauseControlValid = true;
+      if (requireSynthAudio && index === 0) {
+        await page.locator("#mute-button").click();
+        const mutedReport = await page.evaluate(() => window.__LOREWEAVER_GAME__?.registry?.get("audioResolver")?.getReport?.());
+        await page.locator("#mute-button").click();
+        const unmutedReport = await page.evaluate(() => window.__LOREWEAVER_GAME__?.registry?.get("audioResolver")?.getReport?.());
+        muteControlValid = mutedReport?.isMuted === true && unmutedReport?.isMuted === false;
+        await page.locator("#pause-button").click();
+        await page.waitForFunction(() => window.__LOREWEAVER_GAME__?.scene?.isPaused?.("LevelActiveScene") === true, null, { timeout: 2000 });
+        const paused = await page.evaluate(() => window.__LOREWEAVER_GAME__?.scene?.isPaused?.("LevelActiveScene"));
+        await page.locator("#pause-button").click();
+        await page.waitForFunction(() => window.__LOREWEAVER_GAME__?.scene?.isActive?.("LevelActiveScene") === true, null, { timeout: 2000 });
+        const resumed = await page.evaluate(() => window.__LOREWEAVER_GAME__?.scene?.isActive?.("LevelActiveScene"));
+        pauseControlValid = paused === true && resumed === true;
+      }
+      let touchControlValid = true;
+      if (viewportWidth < 500 && expected.cardId === "side_scrolling_brawler") {
+        const touchTarget = await page.evaluate(() => {
+          const game = window.__LOREWEAVER_GAME__;
+          const scene = game?.scene?.keys?.LevelActiveScene;
+          const control = scene?.adapter?.ui?.touchRight;
+          const rect = game?.canvas?.getBoundingClientRect?.();
+          if (!control || !rect || !scene?.adapter?.player) return null;
+          return {
+            x: rect.left + control.x * rect.width / scene.scale.width,
+            y: rect.top + control.y * rect.height / scene.scale.height,
+            playerX: scene.adapter.player.x
+          };
+        });
+        if (touchTarget) {
+          await page.mouse.move(touchTarget.x, touchTarget.y);
+          await page.mouse.down();
+          await page.waitForTimeout(350);
+          await page.mouse.up();
+          const movedX = await page.evaluate(() => window.__LOREWEAVER_GAME__?.scene?.keys?.LevelActiveScene?.adapter?.player?.x);
+          touchControlValid = Number(movedX) > touchTarget.playerX + 5;
+        } else touchControlValid = false;
+      }
+      const stageScreenshot = captureAllStages
+        ? path.join(reportsDir, `candidate_stage_${String(index + 1).padStart(2, "0")}${screenshotTag}.png`)
+        : null;
+      if (stageScreenshot) await page.screenshot({ path: stageScreenshot, fullPage: true });
       stageResults.push({
         stage: index + 1,
         nodeId: expected.id,
         cardId: expected.cardId,
-        passed: stagePassed,
+        ...(stageScreenshot ? { screenshot: repoRelative(stageScreenshot), screenshotSha256: sha256File(stageScreenshot) } : {}),
+        passed: stagePassed && muteControlValid && pauseControlValid && touchControlValid,
         expectedModifiers: expected.modifierIds,
-        assertions: { modsMatch, contractValid, runtimeRunning, observationValid, exactFrameValid },
+        assertions: { modsMatch, contractValid, runtimeRunning, audioCueValid, observationValid, exactFrameValid, muteControlValid, pauseControlValid, touchControlValid },
         exactFrameProbe,
         observed
       });
-      if (!stagePassed) throw new Error(`stage_${index + 1}_failed:${JSON.stringify(stageResults.at(-1))}`);
+      if (!stageResults.at(-1).passed) throw new Error(`stage_${index + 1}_failed:${JSON.stringify(stageResults.at(-1))}`);
 
       if (index === resolvedContract.length - 1) await page.screenshot({ path: attemptScreenshotPath, fullPage: true });
 
-      await page.evaluate(() => {
+      const retreatProbe = await page.evaluate(() => {
+        const game = window.__LOREWEAVER_GAME__;
         const scene = window.__LOREWEAVER_GAME__?.scene?.keys?.LevelActiveScene;
-        if (typeof scene?.safeRetreat === "function") scene.safeRetreat();
-        else window.__LOREWEAVER_GAME__?.scene?.start?.("MainScene");
+        const before = [...(game?.registry?.get("playerState")?.completedNodeIds || [])].sort();
+        const outcome = scene?.adapter?.retreat?.() || null;
+        if (!outcome && typeof scene?.safeRetreat === "function") scene.safeRetreat();
+        return { before, outcome };
       });
       await page.waitForTimeout(350);
+      const afterRetreat = await page.evaluate(() => ({
+        activeMain: window.__LOREWEAVER_GAME__?.scene?.isActive?.("MainScene") === true,
+        completed: [...(window.__LOREWEAVER_GAME__?.registry?.get("playerState")?.completedNodeIds || [])].sort()
+      }));
+      const retreatValid = retreatProbe.outcome?.success === false
+        && retreatProbe.outcome?.reason === "retreated"
+        && afterRetreat.activeMain
+        && JSON.stringify(retreatProbe.before) === JSON.stringify(afterRetreat.completed);
+      stageResults.at(-1).assertions.retreatValid = retreatValid;
+      stageResults.at(-1).passed = stageResults.at(-1).passed && retreatValid;
+      if (!retreatValid) throw new Error(`stage_${index + 1}_retreat_failed:${JSON.stringify({ retreatProbe, afterRetreat })}`);
     }
   } catch (error) {
     errors.page.push(error?.message || String(error));
@@ -509,6 +602,7 @@ async function main() {
     status: passed ? "passed" : "failed",
     createdAt: new Date().toISOString(),
     workspaceId,
+    viewport: viewportArg,
     releaseEligible: passed,
     evidenceMeaning: "exact Candidate executable payload passed static-host browser validation; runtime state, trace, and required survivor exact-frame probe are captured from the same RuntimeObservation session after bounded Phaser TimeStep stabilization while screenshot remains host-owned",
     specHash: releaseManifest.specHash,
@@ -566,6 +660,28 @@ async function main() {
   // has succeeded. A failed re-verification never overwrites the previous anchor.
   fs.renameSync(attemptScreenshotPath, canonicalScreenshotPath);
   const nextGenericReport = { ...common, cardId: cardIds.length === 1 ? cardIds[0] : null };
+  if (reuseVerifiedArtifact) {
+    const supplementalPath = path.join(reportsDir, `standalone_browser_report_${viewportArg}.json`);
+    writeJson(supplementalPath, nextGenericReport);
+    fs.rmSync(attemptReportPath, { force: true });
+    console.log(JSON.stringify({
+      status: "passed",
+      workspaceId,
+      artifact: repoRelative(artifactPath),
+      artifactSha256,
+      payloadHash: payloadIdentity.payloadHash,
+      screenshot: common.screenshot,
+      screenshotSha256: common.screenshotSha256,
+      zeroApiRequests: common.zeroApiRequests,
+      runtimeObservationSessions: observationSessions,
+      cardIds,
+      stageResults,
+      report: repoRelative(supplementalPath),
+      downloadReady: true,
+      supplementalViewport: viewportArg
+    }, null, 2));
+    return;
+  }
   writeJson(genericPath, nextGenericReport);
   for (const cardId of cardIds) {
     writeJson(path.join(reportsDir, `standalone_browser_report_${cardId}.json`), { ...common, cardId });

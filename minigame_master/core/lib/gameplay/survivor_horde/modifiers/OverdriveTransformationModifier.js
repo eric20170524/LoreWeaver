@@ -1,4 +1,5 @@
 import GameplayModifier from '../../GameplayModifier.js';
+import VFX from '../../../juice/VFX.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     durationSec: 6,
@@ -164,9 +165,21 @@ export default class OverdriveTransformationModifier extends GameplayModifier {
     mountAura(context) {
         const scene = context.scene;
         const player = context.player || context.adapter?.player;
-        if (!scene?.add?.circle || !player) return;
-        this._aura = scene.add.circle(player.x, player.y, 46, Number(this.config.auraColor), 0.22);
-        this._aura.setDepth?.(6);
+        if (!player) return;
+        const aura = VFX.spriteClip(scene, context.adapter?.runtimeArt, 'white_ape', player.x, player.y, {
+            clip: 'loop',
+            depth: 6,
+            destroyOnComplete: false
+        });
+        if (aura) {
+            aura.setDisplaySize?.(168, 168);
+            this._aura = aura;
+        } else if (scene?.add?.circle) {
+            this._aura = scene.add.circle(player.x, player.y, 46, Number(this.config.auraColor), 0.22);
+            this._aura.setDepth?.(6);
+        } else {
+            return;
+        }
         context.lifecycle?.addCleanup?.(() => {
             this._aura?.destroy?.();
             this._aura = null;

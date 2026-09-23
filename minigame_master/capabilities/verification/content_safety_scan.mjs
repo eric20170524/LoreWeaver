@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
+const scriptDir = path.dirname(__filename);
 const loreRoot = path.resolve(scriptDir, "../../..");
 const repoRoot = path.resolve(loreRoot, "..");
 const reportsDir = path.join(loreRoot, "minigame_master", "capabilities", "reports");

@@ -65,6 +65,7 @@ const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
 type ImageGenAssetPaths = {
   manifestPath: string;
   atlasPath: string;
+  environmentAtlasPath?: string;
   provenancePath: string;
   sourceImagePath: string;
   transparentSourceImagePath: string;
@@ -73,6 +74,7 @@ type ImageGenAssetPaths = {
 
 type PhaserGameOptions = {
   workspaceId?: string | null;
+  hostKind?: "ide" | "standalone" | "test";
 };
 
 function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths | null {
@@ -80,6 +82,7 @@ function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths 
     return {
       manifestPath: "assets/imagegen/manifest.json",
       atlasPath: "assets/imagegen/atlas.png",
+      environmentAtlasPath: "assets/imagegen/environment-atlas.png",
       provenancePath: "assets/imagegen/provenance.json",
       sourceImagePath: "assets/imagegen/source/generated-sprite-atlas-20260628.png",
       transparentSourceImagePath: "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
@@ -92,6 +95,7 @@ function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths 
   return {
     manifestPath: `${workspacePrefix}/assets/imagegen/manifest.json`,
     atlasPath: `${workspacePrefix}/assets/imagegen/atlas.png`,
+    environmentAtlasPath: `${workspacePrefix}/assets/imagegen/environment-atlas.png`,
     provenancePath: `${workspacePrefix}/assets/imagegen/provenance.json`,
     sourceImagePath: `${workspacePrefix}/assets/imagegen/source/generated-sprite-atlas-20260628.png`,
     transparentSourceImagePath: `${workspacePrefix}/assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png`,
@@ -364,9 +368,15 @@ export function initializePhaserGame(
           const mechLabels: { [key: string]: string } = {
             tap_reaction: "⚡ 快速聚灵 (TAP)",
             collect_dodge: "🍃 虚空飞渡 (DODGE)",
-            memory_sequence: "🔮 心魂律动 (MEMORY)"
+            memory_sequence: "🔮 心魂律动 (MEMORY)",
+            survivor_horde: "割草守线",
+            dodge_counter_boss: "闪避反击",
+            side_scrolling_brawler: "横版清场",
+            shooter_duel: "远程对决",
+            rhythm_timing: "节奏参悟"
           };
-          const rawMech = mechLabels[node.mechanics] || node.mechanics.toUpperCase();
+          const cardId = node.gameplay?.cardId || node.mechanics;
+          const rawMech = mechLabels[cardId] || mechLabels[node.mechanics] || String(cardId || node.mechanics || "").slice(0, 12);
           const tag = this.add.text(42, dy + 82, `玩法: ${rawMech}`, {
             fontFamily: "JetBrains Mono, monospace",
             fontSize: "15px",
@@ -473,6 +483,7 @@ export function initializePhaserGame(
     private iframeListener: ((ev: MessageEvent) => void) | null = null;
     private iframeContainer: any = null;
     private audioResolver: any = null;
+    private savedGameSize: { width: number; height: number } | null = null;
 
     // Tap Reaction lists
     private spawnTimer!: Phaser.Time.TimerEvent;
@@ -660,6 +671,9 @@ export function initializePhaserGame(
           this.adapter = new SurvivorHordeAdapter({
             testHooks: this.testHooks,
             modifiers: modifiersList,
+            onRuntimeEvent: (event: any) => {
+              this.handleSurvivorRuntimeEvent(event);
+            },
             onPresentationEvent: (event: any) => {
               this.handleSurvivorPresentationEvent(event);
             },
@@ -846,17 +860,35 @@ export function initializePhaserGame(
     }
 
     create() {
+      if (this.node.gameplay?.cardId === "side_scrolling_brawler") {
+        this.enterLandscapePlay();
+      }
       const { width, height } = this.scale;
       const col = Phaser.Display.Color.HexStringToColor(spec.themeColor).color;
 
       // Dark background with cosmic borders
-      const bg = this.add.graphics();
+      const bg = this.add.graphics().setDepth(-100);
       bg.fillGradientStyle(0x020617, 0x020617, 0x070b14, 0x070b14, 1);
       bg.fillRect(0, 0, width, height);
 
       // Arena borders matching custom color spec
-      bg.lineStyle(1.5, col, 0.4);
-      bg.strokeRect(12, 12, width - 24, height - 24);
+      const border = this.add.graphics().setDepth(100);
+      border.lineStyle(1.5, col, 0.4);
+      border.strokeRect(12, 12, width - 24, height - 24);
+
+      // The survivor adapter owns its scrolling arena background. Other cards
+      // use the same semantic environment atlas beneath their gameplay UI.
+      if (this.node.gameplay?.cardId !== "survivor_horde") {
+        const artBinder = this.game.registry.get("runtimeArtBinder") as RuntimeArtBinder | null;
+        const envKey = this.node.gameplay?.knobs?.envKey;
+        artBinder?.createContext(this).createBackground({
+          width,
+          height,
+          nodeId: this.node.id,
+          prefer: envKey ? [envKey] : null,
+          depth: -20
+        });
+      }
 
       // Level general Header
       this.drawLevelHeader(width, height, col);
@@ -866,9 +898,18 @@ export function initializePhaserGame(
       if (!this.audioResolver) {
         this.audioResolver = new AudioAssetResolver({ synthFallback: true });
       }
+      this.audioResolver.setMuted(synth.getMuteState() || this.game.registry.get("audioMuted") === true);
+      this.game.registry.set("audioResolver", this.audioResolver);
+      for (const item of Array.isArray(spec.audioCueCatalog) ? spec.audioCueCatalog : []) {
+        if (item?.id && item?.synth) this.audioResolver.registerSynthCue(item.id, item.synth);
+      }
       const bgmKey = typeof knobs.bgmKey === "string" && knobs.bgmKey ? knobs.bgmKey : "bgm_default";
+      const cue = (Array.isArray(spec.audioCueCatalog) ? spec.audioCueCatalog : []).find((item) => item?.id === bgmKey);
+      const synthHz = Number(cue?.synth?.frequencies?.[0]);
       onLog(`🎵 节点 BGM 合同: ${bgmKey}${knobs.bossBgmKey ? ` · boss=${knobs.bossBgmKey}` : ""}`);
-      this.audioResolver.playBgm(bgmKey);
+      this.audioResolver.playBgm(bgmKey, 1000, Number.isFinite(synthHz) ? synthHz : null);
+      this.input.once("pointerdown", () => { void this.audioResolver?.unlock(); });
+      this.input.keyboard?.once("keydown", () => { void this.audioResolver?.unlock(); });
 
       // Show level introductory overlay, and launch game only when skipped/completed
       this.showLevelIntro(() => {
@@ -919,7 +960,7 @@ export function initializePhaserGame(
           fontStyle: "bold",
           color: "#ffffff",
           backgroundColor: "rgba(239, 68, 68, 0.75)",
-          padding: { x: 10, y: 6 }
+          padding: { x: 12, y: 22 }
         })
         .setInteractive({ useHandCursor: true })
         .setDepth(100000)
@@ -1019,22 +1060,28 @@ export function initializePhaserGame(
         fontFamily: "Inter, sans-serif",
         fontSize: "24px",
         fontStyle: "bold",
-        color: spec.themeColor,
+        color: "#fca5a5",
+        backgroundColor: "rgba(3, 7, 18, 0.78)",
+        padding: { x: 14, y: 7 },
         letterSpacing: 1
       } as any).setOrigin(0.5);
 
       // Lives and Target score indicators
-      this.scoreHUD = this.add.text(32, height - 42, this.node.goalValue > 0 ? `目标进度：0 / ${this.node.goalValue}` : '当前得分：0', {
+      this.scoreHUD = this.add.text(32, height - 60, this.node.goalValue > 0 ? `目标进度：0 / ${this.node.goalValue}` : '当前得分：0', {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "20px",
-        color: "#ffffff"
+        fontSize: "22px",
+        color: "#ffffff",
+        backgroundColor: "rgba(3, 7, 18, 0.78)",
+        padding: { x: 7, y: 3 }
       });
 
-      this.livesHUD = this.add.text(width - 150, height - 42, `生命精力：${this.livesCount}`, {
+      this.livesHUD = this.add.text(width - 32, height - 60, `生命精力：${this.livesCount}`, {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "20px",
-        color: "#10b981"
-      });
+        fontSize: "22px",
+        color: "#6ee7b7",
+        backgroundColor: "rgba(3, 7, 18, 0.78)",
+        padding: { x: 7, y: 3 }
+      }).setOrigin(1, 0);
     }
 
     private tickLevelTimer() {
@@ -1434,11 +1481,17 @@ export function initializePhaserGame(
     }
 
     private handleAdapterEnd(result: any) {
+      const audioKnobs = (this.node.gameplay?.knobs || {}) as Record<string, any>;
       if (result.success) {
         // Stop combat BGM, play fanfare
         synth.stopBossTheme();
         synth.stopBgm();
-        synth.playVictoryFanfare();
+        if (this.audioResolver) {
+          this.audioResolver.stopAll();
+          this.audioResolver.playSfx(audioKnobs.sfxVictory || "victory_sting");
+        } else {
+          synth.playVictoryFanfare();
+        }
         onLog(`🎉 关卡胜利！已成功通过节点 [${this.node.id}: ${this.node.title}]！`);
 
         const pState = { ...this.game.registry.get("playerState") } as PlayerState;
@@ -1481,10 +1534,19 @@ export function initializePhaserGame(
       } else {
         synth.stopBossTheme();
         synth.stopBgm();
+        this.audioResolver?.stopAll();
         if (result.reason === "retreated") {
           this.safeRetreat();
         } else {
-          synth.playDamage();
+          const reason = String(result.reason || "");
+          const specificCue = /time|expired|timeout/i.test(reason)
+            ? "defeat_timeout"
+            : /hp|death|dead|defeat|player/i.test(reason)
+              ? "defeat_death"
+              : null;
+          const hasSpecificCue = specificCue && (spec.audioCueCatalog || []).some((item) => item?.id === specificCue);
+          if (this.audioResolver) this.audioResolver.playSfx(hasSpecificCue ? specificCue : (audioKnobs.sfxDefeat || "defeat_sting"));
+          else synth.playDamage();
           onLog(`❌ 关卡失败: 已从节点中震退，原因: [${result.reason || "未知"}]。`);
           this.cameras.main.shake(250, 0.015);
           this.showDefeatOverlay(result.reason || "能量耗尽，挑战失败");
@@ -1577,6 +1639,7 @@ export function initializePhaserGame(
         });
       };
       skipZone.on("pointerdown", () => {
+        void this.audioResolver?.unlock();
         synth.playClick();
         closeIntro();
       });
@@ -1605,8 +1668,21 @@ export function initializePhaserGame(
       }
     }
 
+    private handleSurvivorRuntimeEvent(event: any) {
+      if (event?.type !== "weapon-stance-attack") return;
+      this.audioResolver?.playSfx(event.stance === "ranged" ? "sfx_bow_release" : "sfx_blade_sweep");
+    }
+
     private handleSurvivorPresentationEvent(event: any) {
-      if (!event || event.accepted !== true) return;
+      if (!event || event.accepted === false) return;
+
+      if (event.kind === "weapon-stance") {
+        this.audioResolver?.playSfx(event.stance === "ranged" ? "sfx_stance_ranged" : "sfx_stance_melee");
+      } else if (event.kind === "overdrive" && event.active === true) {
+        this.audioResolver?.playSfx("sfx_overdrive");
+      } else if (event.kind === "run-growth-milestone") {
+        this.audioResolver?.playSfx("sfx_growth");
+      }
 
       if (event.action === "treasure_opened") synth.playLoot();
       else if (event.action === "channel_interrupted" || event.action === "guards_alerted") synth.playDamage();
@@ -1620,8 +1696,13 @@ export function initializePhaserGame(
         this.cameras.main.flash(120, 245, 158, 11);
       }
 
-      if (typeof event.callout !== "string" || !event.callout.trim()) return;
-      const callout = this.add.text(x, y - 54, event.callout, {
+      const calloutText = event.callout || (
+        event.kind === "run-growth-milestone" ? event.feedback
+          : event.kind === "overdrive" && event.active ? event.label
+            : event.kind === "weapon-stance" && event.swapBurst ? event.label : ""
+      );
+      if (typeof calloutText !== "string" || !calloutText.trim()) return;
+      const callout = this.add.text(x, y - 54, calloutText, {
         fontFamily: "Inter, sans-serif",
         fontSize: "17px",
         fontStyle: "bold",
@@ -2013,7 +2094,45 @@ export function initializePhaserGame(
       this.scene.start("MainScene");
     }
 
+    private publishOrientation(orientation: "landscape" | "portrait") {
+      if (typeof window === "undefined") return;
+      window.dispatchEvent(new CustomEvent("loreweaver:orientation", { detail: orientation }));
+      const lockable = window.screen?.orientation as (ScreenOrientation & {
+        lock?: (orientation: string) => Promise<void>;
+        unlock?: () => void;
+      }) | undefined;
+      if (orientation === "landscape") {
+        lockable?.lock?.("landscape")?.catch(() => {});
+      } else {
+        lockable?.unlock?.();
+      }
+    }
+
+    private enterLandscapePlay() {
+      // A portrait standalone phone cannot reliably lock browser orientation.
+      // Keep the belt-scroll card at the playable portrait size in that case.
+      if (options.hostKind === "standalone" && parentEl.clientWidth < 500) {
+        this.publishOrientation("portrait");
+        return;
+      }
+      const scale = this.scale;
+      if (scale.width < scale.height) {
+        this.savedGameSize = { width: scale.width, height: scale.height };
+        scale.setGameSize(960, 540);
+      }
+      this.publishOrientation("landscape");
+    }
+
+    private leaveLandscapePlay() {
+      if (this.savedGameSize) {
+        this.scale.setGameSize(this.savedGameSize.width, this.savedGameSize.height);
+        this.savedGameSize = null;
+      }
+      this.publishOrientation("portrait");
+    }
+
     shutdown() {
+      this.leaveLandscapePlay();
       // Kill all active tweens to prevent callbacks on destroyed objects
       try {
         this.tweens?.killAll();
@@ -2084,11 +2203,17 @@ export function initializePhaserGame(
   }
 
   // Phaser instance instantiation bootstrap
+  const narrowStandalone = options.hostKind === "standalone"
+    && parentEl.clientWidth > 0 && parentEl.clientWidth < 500 && parentEl.clientHeight > 0;
+  const gameWidth = narrowStandalone ? 540 : 720;
+  const gameHeight = narrowStandalone
+    ? Math.max(900, Math.min(1500, Math.round(gameWidth * parentEl.clientHeight / parentEl.clientWidth)))
+    : 1280;
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.WEBGL,
     parent: parentEl,
-    width: 720,
-    height: 1280,
+    width: gameWidth,
+    height: gameHeight,
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH

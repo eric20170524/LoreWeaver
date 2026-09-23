@@ -1,6 +1,62 @@
 {
   "title": "玄界之门·石牧武途（同人原型）",
   "themeColor": "#b83a2d",
+  "pipeline_dna": {
+    "visual_style": {
+      "silhouette_language": "夜色血火的武道求生。人物和敌人轮廓要能在敌潮里分清黑刀近战与紫钢弓拉扯。",
+      "palette_direction": [
+        "#b83a2d",
+        "#1c1917",
+        "#7c3aed",
+        "#e5e7eb"
+      ],
+      "camera_and_composition": "俯视角手机竖屏。主色保持 #b83a2d，辅色只外挂陨铁冷黑、紫钢冷光和月华银白。",
+      "sprite_strategy": "hybrid"
+    },
+    "audio_style": {
+      "bgm_mood": "拳风短促、黑刀烈炎、紫钢弓弦、月华长音、白猿异血心跳。不改已有战斗数值。",
+      "sfx_language": "刀鸣、弓弦、预警和破势用短音；胜利和失败用现有 sting。",
+      "voice_direction": "关卡嘲讽保持现有短句，不摘录同人原著文句。",
+      "audio_strategy": "hybrid"
+    },
+    "ability_fantasy": {
+      "naming_style": "能力名只出现在预设和目录，core modifier 继续用通用 id。",
+      "vfx_shape_language": [
+        "blade_arc",
+        "arrow_streak",
+        "hazard_telegraph",
+        "overdrive_burst"
+      ],
+      "callout_style": "visual_text",
+      "enemy_move_language": [
+        "melee windup",
+        "ranged shot",
+        "boss phase"
+      ]
+    },
+    "asset_policy": {
+      "art_source": "imagegen_atlas",
+      "audio_source": "synth",
+      "requires_credits": true,
+      "public_export_cleanup": [
+        "同人原型不公开摘录原著文案"
+      ]
+    },
+    "verification_seed": {
+      "must_observe": [
+        "黑刀与紫钢弓能区分",
+        "节点 2、4、5、7、10 保持原卡"
+      ],
+      "asset_gate_mode": "warn",
+      "realm_mood": {
+        "1-2": "武徒试锋",
+        "3-5": "后天兵刃",
+        "6-7": "先天门槛",
+        "8-10": "地阶压力与白猿初醒",
+        "11-12": "天位与圣阶终试"
+      }
+    }
+  },
   "economy": {
     "currencyName": "真气",
     "resources": [
@@ -521,6 +577,294 @@
       },
       "mixRole": "combat_secondary",
       "description": "短促弓弦与飞矢反馈。"
+    },
+    {
+      "id": "node1_battle",
+      "runtimeSkillId": "node1_battle",
+      "synth": {
+        "frequencies": [
+          98
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "丰城夜市，低而近的底噪。"
+    },
+    {
+      "id": "node2_treasure",
+      "runtimeSkillId": "node2_treasure",
+      "synth": {
+        "frequencies": [
+          110
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "四馆鼓点。"
+    },
+    {
+      "id": "node3_rival",
+      "runtimeSkillId": "node3_rival",
+      "synth": {
+        "frequencies": [
+          82
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "破庙低频。"
+    },
+    {
+      "id": "node4_tide",
+      "runtimeSkillId": "node4_tide",
+      "synth": {
+        "frequencies": [
+          124
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "烈炎开锋。"
+    },
+    {
+      "id": "node5_defense",
+      "runtimeSkillId": "node5_defense",
+      "synth": {
+        "frequencies": [
+          146
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "紫钢弓远射。"
+    },
+    {
+      "id": "node6_poison",
+      "runtimeSkillId": "node6_poison",
+      "synth": {
+        "frequencies": [
+          90
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "宗门围杀。"
+    },
+    {
+      "id": "node7_tournament",
+      "runtimeSkillId": "node7_tournament",
+      "synth": {
+        "frequencies": [
+          174
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "月下参悟。"
+    },
+    {
+      "id": "node8_ruins",
+      "runtimeSkillId": "node8_ruins",
+      "synth": {
+        "frequencies": [
+          104
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "黑魔门外。"
+    },
+    {
+      "id": "node9_escort",
+      "runtimeSkillId": "node9_escort",
+      "synth": {
+        "frequencies": [
+          118
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "蛮族守线。"
+    },
+    {
+      "id": "node10_siege",
+      "runtimeSkillId": "node10_siege",
+      "synth": {
+        "frequencies": [
+          132
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "白猿初醒。"
+    },
+    {
+      "id": "node11_gauntlet",
+      "runtimeSkillId": "node11_gauntlet",
+      "synth": {
+        "frequencies": [
+          78
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "白猿血战。"
+    },
+    {
+      "id": "node12_finale",
+      "runtimeSkillId": "node12_finale",
+      "synth": {
+        "frequencies": [
+          156
+        ],
+        "wave": "triangle",
+        "durationMs": 4000,
+        "volume": 0.08
+      },
+      "mixRole": "bgm",
+      "description": "玄界门前。"
+    },
+    {
+      "id": "victory_sting",
+      "runtimeSkillId": "victory_sting",
+      "synth": {
+        "frequencies": [
+          523
+        ],
+        "wave": "sine",
+        "durationMs": 280,
+        "volume": 0.16
+      },
+      "mixRole": "sting",
+      "description": "通关短音。"
+    },
+    {
+      "id": "defeat_sting",
+      "runtimeSkillId": "defeat_sting",
+      "synth": {
+        "frequencies": [
+          196
+        ],
+        "wave": "square",
+        "durationMs": 280,
+        "volume": 0.12
+      },
+      "mixRole": "sting",
+      "description": "败北短音。"
+    },
+    {
+      "id": "sfx_stance_melee",
+      "runtimeSkillId": "toggle_stance",
+      "synth": {
+        "frequencies": [
+          260,
+          130
+        ],
+        "wave": "sawtooth",
+        "durationMs": 130,
+        "volume": 0.12
+      },
+      "mixRole": "combat_transition",
+      "description": "切到黑刀的短促铁风。"
+    },
+    {
+      "id": "sfx_stance_ranged",
+      "runtimeSkillId": "toggle_stance",
+      "synth": {
+        "frequencies": [
+          520,
+          390
+        ],
+        "wave": "triangle",
+        "durationMs": 110,
+        "volume": 0.11
+      },
+      "mixRole": "combat_transition",
+      "description": "切到紫钢弓的弦响。"
+    },
+    {
+      "id": "sfx_overdrive",
+      "runtimeSkillId": "overdrive_transformation",
+      "synth": {
+        "frequencies": [
+          82,
+          164,
+          82
+        ],
+        "wave": "sawtooth",
+        "durationMs": 180,
+        "volume": 0.1
+      },
+      "mixRole": "ability",
+      "description": "爆发开始时的低频异血心跳。"
+    },
+    {
+      "id": "sfx_growth",
+      "runtimeSkillId": "run_growth_milestones",
+      "synth": {
+        "frequencies": [
+          440,
+          660,
+          880
+        ],
+        "wave": "sine",
+        "durationMs": 160,
+        "volume": 0.1
+      },
+      "mixRole": "progression",
+      "description": "局内成长达成的短音。"
+    },
+    {
+      "id": "defeat_timeout",
+      "runtimeSkillId": "defeat_timeout",
+      "synth": {
+        "frequencies": [
+          220,
+          174
+        ],
+        "wave": "triangle",
+        "durationMs": 250,
+        "volume": 0.11
+      },
+      "mixRole": "sting",
+      "description": "计时失败；与阵亡短音区分。"
+    },
+    {
+      "id": "defeat_death",
+      "runtimeSkillId": "defeat_death",
+      "synth": {
+        "frequencies": [
+          180,
+          85
+        ],
+        "wave": "sawtooth",
+        "durationMs": 250,
+        "volume": 0.12
+      },
+      "mixRole": "sting",
+      "description": "气血归零时的下行短音。"
     }
   ],
   "nodes": [
@@ -646,6 +990,7 @@
         "cardId": "dodge_counter_boss",
         "modifiers": [],
         "knobs": {
+          "allowExperimentalCard": true,
           "playerHp": 120,
           "bossHp": 360,
           "breakGaugeMax": 100
@@ -800,8 +1145,55 @@
           }
         ],
         "knobs": {
-          "stageLengthPx": 2600,
-          "playersMax": 1
+          "allowExperimentalCard": true,
+          "stageLengthPx": 3600,
+          "playersMax": 1,
+          "orientation": "landscape",
+          "waveList": [
+            {
+              "id": "forge_gate",
+              "name": "锻口试刃",
+              "hint": "出炉第一屏，先清开挡路的试刃者",
+              "triggerX": 280,
+              "lockX": 360,
+              "cameraMax": 1320,
+              "theme": { "sky": 2760984, "ground": 4863012 },
+              "enemies": [
+                { "id": "bandit_cultivator", "hp": 30, "speed": 55, "damage": 8, "x": 620, "y": 0 },
+                { "id": "bandit_cultivator", "hp": 30, "speed": 50, "damage": 8, "x": 760, "y": 18 },
+                { "id": "bandit_cultivator", "hp": 40, "speed": 45, "damage": 10, "x": 900, "y": -12 }
+              ]
+            },
+            {
+              "id": "wind_gallery",
+              "name": "风口回廊",
+              "hint": "风势把人往两侧推，换线再进",
+              "triggerX": 1400,
+              "lockX": 1480,
+              "cameraMax": 2440,
+              "theme": { "sky": 1454136, "ground": 1985076 },
+              "enemies": [
+                { "id": "bandit_cultivator", "hp": 45, "speed": 60, "damage": 10, "x": 1760, "y": -16 },
+                { "id": "human_genius", "hp": 45, "speed": 58, "damage": 10, "x": 1900, "y": 12 },
+                { "id": "bandit_cultivator", "hp": 50, "speed": 52, "damage": 12, "x": 2060, "y": 0 },
+                { "id": "human_genius", "hp": 55, "speed": 48, "damage": 12, "x": 2200, "y": 8 }
+              ]
+            },
+            {
+              "id": "flame_edge",
+              "name": "烈炎开锋",
+              "hint": "炉心只留一条路，黑刀贴身杀穿",
+              "triggerX": 2520,
+              "lockX": 2600,
+              "cameraMax": 3560,
+              "bossIntro": true,
+              "theme": { "sky": 3807766, "ground": 5909020 },
+              "enemies": [
+                { "id": "bandit_cultivator", "hp": 40, "speed": 56, "damage": 10, "x": 2860, "y": 16 },
+                { "id": "human_genius", "hp": 220, "speed": 40, "damage": 16, "x": 3120, "y": 0, "isBoss": true, "radius": 28 }
+              ]
+            }
+          ]
         },
         "patchLevel": "L2"
       },
@@ -837,6 +1229,7 @@
         "cardId": "shooter_duel",
         "modifiers": [],
         "knobs": {
+          "allowExperimentalCard": true,
           "playerHp": 120,
           "bossHp": 420,
           "timeLimitSec": 75
@@ -951,6 +1344,7 @@
         "cardId": "rhythm_timing",
         "modifiers": [],
         "knobs": {
+          "allowExperimentalCard": true,
           "beatIntervalMs": 1350,
           "perfectWindowMs": 95,
           "goodWindowMs": 190,
@@ -1144,6 +1538,7 @@
         "cardId": "dodge_counter_boss",
         "modifiers": [],
         "knobs": {
+          "allowExperimentalCard": true,
           "playerHp": 150,
           "bossHp": 620,
           "breakGaugeMax": 120
