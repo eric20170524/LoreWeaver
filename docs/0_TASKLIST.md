@@ -186,7 +186,7 @@
 
 - [x] **Task 18.1:** 构建并浏览器实测离线 standalone 候选包，记录包身份、页面错误、资源请求与回归结果。
 - [x] **Task 18.2:** 完整验证至少两遍，更新本文档的逐关结论与残余风险。
-- **AC:** 候选版产物可复现、可启动，release compiler 返回 candidate_built；公开说明准确标识其候选状态。certified release 所需真人/实体设备/VLM 精确包证据继续单列，不伪造。
+- **AC:** 候选版产物可复现、可启动，release decision 为 `candidate_allowed` 且 ZIP 成功构建；公开说明准确标识其候选状态。certified release 所需真人/实体设备/VLM 精确包证据继续单列，不伪造。
   - **Decision & Audit (最终回归):** Build gate 六项全通过（TypeScript、生产构建、幸存者 demo 构建/浏览器、工作台 12 关合成端到端、内容扫描）；旧的 `run_e2e_test.py --game loreweaver` 测根页面过时，门禁已改用当前工作台的真实运行时回归。合成端到端完成多次；最后一轮增加 12 关失败矩阵，`errors=[]`。离线 ZIP 的相同 SHA 在 720×1280 与 390×844 分别通过 12/12 实际静态宿主运行、无 `/api`、无 console/page/request error；手机触控和 12 关撤退均有报告。导出物标记为 `UNVERIFIED_CANDIDATE`，release decision 为 `candidate_allowed/runtime_supported`；它不是 certified release。需要真人试玩和实体设备证据时另走认证门禁。
 
 #### 12 关功能与候选包核对表
