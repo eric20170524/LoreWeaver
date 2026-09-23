@@ -150,7 +150,7 @@ function hostSuccess(node: any): any {
 test('first-clear reward apply folds black_blade_flame into the next stance melee stat', () => {
   const specs = [
     loadSpec('data/presets/xuanjiezhimen_fangame_preset.json'),
-    loadSpec('data/workspaces/xuanjie-shimu-local/manifest.json')
+    loadSpec('productize/fixtures/xuanjie-shimu-contract.json')
   ];
   for (const spec of specs) {
     const node3 = spec.nodes.find((node: any) => node.id === 3);

@@ -18,7 +18,7 @@
 - 修炼交易与首通折算：`src/game/ui/cultivationModel.ts`、`src/utils/RewardApplier.ts`
 - 宿主入局：`src/game/GameRunner.ts`
 - 存档：`src/runtime/playerState.ts`、`src/store.tsx`
-- 石牧内容：`data/presets/xuanjiezhimen_fangame_preset.json`
+- 石牧内容：`data/presets/xuanjiezhimen_fangame_preset.json`。契约对照夹具：`productize/fixtures/xuanjie-shimu-contract.json`（不读 gitignore 的 workspace manifest）。
 
 ## 4. 自测与验证命令
 

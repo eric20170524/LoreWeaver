@@ -28,4 +28,5 @@
 - survivor 物理组在 shutdown 时 `children` 可能已空，cleanup 必须容错，否则 console.error 会打爆 Playwright pageerror 断言。
 - `weapon_stance_cycle` 默认定时是给既有夹具用的；石牧身份必须在 preset knobs 里写 `controlMode: "manual"`。
 - 多个 modifier 包装 `handleSemanticInput` / `damagePlayer` 时，uninstall 必须倒序，否则会把已拆掉的包装装回去。
-- 角色 sprite：Imagine 定妆 → sprite-gen `--face-plus-x` → **pack** 多角色，禁止第二次 `promote`。图集任一边 > 4096 会在 WebGL 上丢掉后半人物。spawn id 必须 alias 到 `enemy_<id>_*`。细则见 `docs/guides/sprite_gen_integration.md`。
+- 角色 sprite：Imagine 定妆 → sprite-gen `--face-plus-x` → **pack** 多角色，禁止第二次 `promote`。图集任一边 > 4096 会在 WebGL 上丢掉后半人物。spawn id 必须 alias 到 `enemy_<id>_*`。`pack` 会重写 `character-pack` 快照；半透明特效贴到空白格时直接拷贝像素。细则见 `docs/guides/sprite_gen_integration.md`。
+- 石牧契约检查读 `productize/fixtures/xuanjie-shimu-contract.json`，不读 gitignore 里的 `data/workspaces/`。本机 workspace manifest 没有 `nodes`。

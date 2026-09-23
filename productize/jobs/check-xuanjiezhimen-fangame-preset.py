@@ -14,7 +14,9 @@ if str(ROOT) not in sys.path:
 from backend.theme_presets import get_procedural_preset  # noqa: E402
 
 PRESET_PATH = ROOT / "data" / "presets" / "xuanjiezhimen_fangame_preset.json"
-WORKSPACE_PATH = ROOT / "data" / "workspaces" / "xuanjie-shimu-local" / "manifest.json"
+# data/workspaces/ is gitignored. The local manifest also has no nodes, so CI
+# compares the preset to this committed contract fixture instead.
+CONTRACT_PATH = ROOT / "productize" / "fixtures" / "xuanjie-shimu-contract.json"
 MELEE_TARGETS = {"weapon_stance_cycle.meleeDamage", "weapon_stance_cycle.meleeRadius"}
 
 
@@ -45,8 +47,8 @@ def melee_effects(doc: dict) -> list:
 
 def main() -> None:
     preset = json.loads(PRESET_PATH.read_text(encoding="utf-8"))
-    require(WORKSPACE_PATH.is_file(), "workspace manifest missing")
-    workspace = json.loads(WORKSPACE_PATH.read_text(encoding="utf-8"))
+    require(CONTRACT_PATH.is_file(), "contract fixture missing")
+    contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 
     require(preset.get("title") == "玄界之门·石牧武途（同人原型）", "unexpected title")
     require(len(preset.get("nodes", [])) == 12, "fangame route must keep the 12-node shell")
@@ -112,15 +114,15 @@ def main() -> None:
         loaded = get_procedural_preset(alias)
         require(loaded.get("title") == preset.get("title"), f"preset alias failed: {alias}")
 
-    require(workspace.get("title") == preset.get("title"), "workspace title drifted from the preset seed")
+    require(contract.get("title") == preset.get("title"), "contract fixture title drifted from the preset seed")
     preset_slice = slice_signature(preset)
-    workspace_slice = slice_signature(workspace)
-    require(preset_slice == workspace_slice, "nodes 1-12 card ids, modifier ids, or rewards diverged")
+    contract_slice = slice_signature(contract)
+    require(preset_slice == contract_slice, "nodes 1-12 card ids, modifier ids, or rewards diverged")
     require(set(preset_slice) == set(range(1, 13)), "campaign must contain nodes 1-12")
     require(preset_slice[3]["rewards"] == ["black_blade_flame"], "node 3 reward must be black_blade_flame")
     require(preset_slice[6]["rewards"] == ["swallow_moon"], "node 6 reward must be swallow_moon")
     require(preset_slice[10]["rewards"] == ["white_ape_overdrive"], "node 10 reward must be white_ape_overdrive")
-    for label, doc in (("preset", preset), ("workspace", workspace)):
+    for label, doc in (("preset", preset), ("contract", contract)):
         for node in doc["nodes"]:
             stance = next((item for item in node["gameplay"].get("modifiers") or [] if item.get("id") == "weapon_stance_cycle"), None)
             if stance:
@@ -140,7 +142,7 @@ def main() -> None:
             node = next(item for item in doc["nodes"] if item["id"] == node_id)
             gate = next(item for item in node["gameplay"]["modifiers"] if item.get("id") == "overdrive_transformation")
             require(gate.get("knobs", {}).get("requiresAbility") == "white_ape_overdrive", f"{label} node {node_id} overdrive gate")
-    require(melee_effects(preset) == melee_effects(workspace), "black_blade_flame melee effects diverged")
+    require(melee_effects(preset) == melee_effects(contract), "black_blade_flame melee effects diverged")
 
     print("PASS xuanjiezhimen fangame preset contract")
 

@@ -256,7 +256,7 @@ Sprite-gen rows often face left. Survivor and dodge-counter flip with `setFlipX(
 
 `promote` republishes every currently promoted candidate (characters, effects, layers, video loops) into one runtime bundle. `pack` is the separate multi-character publisher for full character sheets that must stay inside one WebGL texture and carry spawn-id aliases. A packed atlas does not list those characters as promoted candidates. Calling `promote` for one new effect would replace the character pack.
 
-Paste effect candidates into the unused grid cell instead. The command keeps character frames in place, writes their `clipSets`, and leaves the effect candidates unpromoted:
+Paste effect candidates into the unused grid cell instead. The command keeps character frames in place, writes their `clipSets`, and leaves the effect candidates unpromoted. It always pastes onto `assets/imagegen/character-pack/`, and `pack` rewrites that snapshot from the atlas it just published. Packing a second character and appending again therefore keeps the new character's pixels and frame indexes. Effect pixels are copied onto the empty cell, so a source alpha of 128 stays 128.
 
 ```bash
 .venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py append-effects \

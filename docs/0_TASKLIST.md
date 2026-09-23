@@ -20,6 +20,8 @@
 - `weapon_stance_cycle` 默认定时轮换是为兼容既有 survivor 单测；石牧 preset 必须显式 `controlMode: "manual"`。
 - `GameRunner.setupFirstNodeGrowthLoop` 一旦存在，通用 modifier 只能打补丁禁用它。删除宿主特例，让 modifier 自己挂 `run_growth_milestones`。
 - 主界面每秒把 `this.state` 写回 registry。若 MainScene 没停干净，后写的通关列表会被旧的 `[1,2]` 盖掉。进关卡必须 `scene.stop('MainScene')`，写档时合并已通关 id。
+- `data/workspaces/` 被 gitignore。契约检查不能读 `xuanjie-shimu-local/manifest.json`（本机这份没有 nodes）。对照物是 `productize/fixtures/xuanjie-shimu-contract.json`。
+- `append-effects` 只在快照不存在时复制角色底图。再次 `pack` 必须覆盖 `character-pack`，否则下一次追加会把新角色画回旧图集。空白格粘贴不要把 RGBA 当遮罩，否则 alpha 128 会变成 64。
 
 ## 🐛 遗留问题与技术债 (Icebox)
 
@@ -78,5 +80,7 @@
 - [x] **Task 5.4:** 近战一扫多目标、远程开火有伤害、Node 3 危险在预警结束后才扣血，且宿主仍是 `survivor_horde`。
 - [x] **Task 5.5:** 本地试玩从预设启动节点 1–12，成功 `NodeResult` 写入 `completedNodeIds`；Node 3 撤退不给 `black_blade_flame`。
 - [x] **Task 5.6:** `WorldBuilderAgent.generate_gdd` 有 `XAI_API_KEY` / `GROK_API_KEY` 时走 grok；没有密钥时返回程序预设，且 `OLLAMA_API_BASE` 不改道。不得覆盖石牧预设。
+- [x] **Task 5.7:** 契约检查改读受版本控制的夹具；`pack` 刷新 character-pack 快照；半透明特效按源像素粘贴。
 - **AC:** `check-cultivation-model.ts`、`check-survivor-combat-runtime.mjs`、`check-xuanjiezhimen-fangame-preset.py`、`check-weapon-stance-cycle.mjs`、`run-xuanjie-local-play-e2e.mjs`、`tsc --noEmit` 通过。Icebox D 保持未勾。
   - **Decision & Audit:** 烈炎改 `weapon_stance_cycle.meleeDamage`（×1.25），吞月改远程倍率（×1.2），白猿改爆发伤害/时长和生命。单测 `check-cultivation-model.ts`、`check-survivor-combat-runtime.mjs`、`check-weapon-stance-cycle.mjs`、`check-xuanjiezhimen-fangame-preset.py` 通过。E2E 连续两遍 `status=passed`、`errors=[]`，存档含节点 1–12；Node 3 撤退不给 `black_blade_flame`，通关后下一场 Node 1 近战高于 5.75。主界面挂机计时器曾把通关列表盖回 `[1,2]`，现进入关卡会停掉 MainScene，存档合并已通关 id。Grok 实调 provider=`grok`，标题 `Clockwork Harbor Ascension`，12 个节点；无密钥两次回退都是程序预设，provider 不是 grok，也不是 ollama。`tsc --noEmit` 通过。预设没写的战斗旋钮按 modifier 默认值再乘能力，不写成 0：Node 8 远程倍率是默认 1×1.2，Node 3 爆发伤害是默认 1.55×1.2。Icebox D 仍未做。
+  - **Decision & Audit (5.7):** 预设与养成检查改为读 `productize/fixtures/xuanjie-shimu-contract.json`，不再读 gitignore 的 `xuanjie-shimu-local/manifest.json`。`pack_candidates` 在写出运行时图集后覆盖 `character-pack`。空白格 `paste` 不再把 RGBA 图本身当遮罩。`check-xuanjiezhimen-fangame-preset.py`、`check-cultivation-model.ts`、`check-sprite-gen-bridge.py` 通过。浏览器 E2E 仍受沙盒禁止监听本地端口限制，本项没有界面改动。

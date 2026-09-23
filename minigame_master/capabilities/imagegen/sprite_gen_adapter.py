@@ -857,6 +857,9 @@ def pack_candidates(
     (runtime / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (runtime / "manifest.js").write_text("export default " + json.dumps(manifest, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
     (runtime / "provenance.json").write_text(json.dumps(provenance, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # append-effects keeps pasting from this snapshot. A later pack must replace
+    # it, or the next paste restores the previous character's pixels and frames.
+    _sync_character_pack_snapshot(runtime)
     return {
         "status": "packed",
         "atlas": "assets/imagegen/atlas.png",
@@ -864,6 +867,18 @@ def pack_candidates(
         "frameCount": len(frames),
         "characters": names,
     }
+
+
+def _character_pack_snapshot(runtime: Path) -> Path:
+    return runtime / "character-pack"
+
+
+def _sync_character_pack_snapshot(runtime: Path) -> None:
+    """Replace the append-effects base with the character atlas just packed."""
+    snapshot = _character_pack_snapshot(runtime)
+    snapshot.mkdir(parents=True, exist_ok=True)
+    for filename in ("atlas.png", "manifest.json", "provenance.json"):
+        shutil.copy2(runtime / filename, snapshot / filename)
 
 
 def _unused_pack_cell(provenance: dict[str, Any], atlas_size: tuple[int, int]) -> dict[str, int] | None:
@@ -906,14 +921,15 @@ def append_effects(
     grid cell when one exists. Candidates are left unpromoted: `promote` only
     republishes candidates flagged promoted, and would otherwise replace this pack.
     Re-running starts from the character-pack snapshot, so a second paste does not
-    stack effects on top of the previous ones.
+    stack effects on top of the previous ones. `pack` rewrites that snapshot;
+    otherwise the next paste would restore the previous character.
     """
     names = [slug(item) for item in effect_ids if str(item).strip()]
     if not names:
         raise BridgeError("effects_required")
     _assert_runtime_safe(ws, force)
     runtime = ws / "assets" / "imagegen"
-    snapshot = runtime / "character-pack"
+    snapshot = _character_pack_snapshot(runtime)
     if not (snapshot / "atlas.png").is_file():
         current_prov = _runtime_provenance(ws) or {}
         if current_prov.get("effects"):
@@ -960,7 +976,9 @@ def append_effects(
     for item, image in opened:
         if not _rect_is_clear(canvas, origin_x, cursor_y, image.width, image.height):
             raise BridgeError(f"effect_destination_not_empty:{item['assetId']}")
-        canvas.paste(image, (origin_x, cursor_y), image)
+        # The cell is empty, so copy source pixels. Using the RGBA image as a
+        # mask multiplies alpha twice (128 -> 64) and halves the color channels.
+        canvas.paste(image, (origin_x, cursor_y))
         prefix = item["prefix"]
         if prefix in clip_sets:
             raise BridgeError(f"duplicate_semantic_prefix:{prefix}")

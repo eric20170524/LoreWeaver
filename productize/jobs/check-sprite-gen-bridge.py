@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -39,6 +40,69 @@ def make_run(ws: Path, asset_id: str, subject: str, rows: dict, timings: dict, s
         },
     }, indent=2), encoding="utf-8")
     return run
+
+
+def write_pack_character(ws: Path, name: str, prefix: str, color: tuple[int, int, int, int]) -> None:
+    cand = ws / "assets/imagegen/sprite-gen" / name / "loreweaver"
+    cand.mkdir(parents=True, exist_ok=True)
+    Image.new("RGBA", (64, 64), color).save(cand / "atlas.png")
+    (cand / "manifest.json").write_text(json.dumps({
+        "semanticPrefix": prefix,
+        "clips": {"idle": {"keys": [f"{prefix}_idle_0"], "fps": 4, "loop": True}},
+        "frameSize": {"w": 64, "h": 64},
+        "frames": {
+            prefix: {"frame": {"x": 0, "y": 0, "w": 64, "h": 64}},
+            f"{prefix}_idle_0": {"frame": {"x": 0, "y": 0, "w": 64, "h": 64}},
+        },
+    }), encoding="utf-8")
+    (cand / "provenance.json").write_text("{}", encoding="utf-8")
+
+
+def write_effect(ws: Path, name: str, prefix: str, color: tuple[int, int, int, int]) -> None:
+    fx = ws / "assets/imagegen/sprite-gen" / name / "loreweaver"
+    fx.mkdir(parents=True, exist_ok=True)
+    Image.new("RGBA", (32, 16), color).save(fx / "atlas.png")
+    (fx / "manifest.json").write_text(json.dumps({
+        "assetKind": "effect",
+        "semanticPrefix": prefix,
+        "clips": {"impact": {"keys": [f"{prefix}_impact_0"], "fps": 15, "loop": False}},
+        "clipSets": {prefix: {"impact": {"keys": [f"{prefix}_impact_0"], "fps": 15, "loop": False}}},
+        "frames": {f"{prefix}_impact_0": {"frame": {"x": 0, "y": 0, "w": 32, "h": 16}}},
+    }), encoding="utf-8")
+    (fx / "provenance.json").write_text(json.dumps({
+        "assetId": name,
+        "assetKind": "effect",
+        "semanticPrefix": prefix,
+        "promoted": False,
+    }), encoding="utf-8")
+
+
+def check_repack_snapshot_and_straight_alpha() -> None:
+    """Pack A, append, pack B, append again. B must survive, and alpha 128 stays 128."""
+    with tempfile.TemporaryDirectory(prefix="lw-sprite-gen-repack-") as tmp:
+        ws = Path(tmp) / "workspace"
+        write_pack_character(ws, "hero", "player", (255, 0, 0, 255))
+        write_pack_character(ws, "bandit", "enemy_bandit_cultivator", (0, 0, 255, 255))
+        write_effect(ws, "soft_glow", "vfx_soft_glow", (200, 80, 40, 128))
+        module.pack_candidates(ws, ["hero"], columns=2, max_edge=4096, force=True)
+        module.append_effects(ws, ["soft_glow"], force=True)
+        first = Image.open(ws / "assets/imagegen/atlas.png").convert("RGBA")
+        assert first.getpixel((0, 0)) == (255, 0, 0, 255)
+        assert first.getpixel((64, 0)) == (200, 80, 40, 128)
+        module.pack_candidates(ws, ["bandit"], columns=2, max_edge=4096, force=True)
+        snap = Image.open(ws / "assets/imagegen/character-pack/atlas.png").convert("RGBA")
+        assert snap.getpixel((0, 0)) == (0, 0, 255, 255)
+        snap_manifest = json.loads((ws / "assets/imagegen/character-pack/manifest.json").read_text(encoding="utf-8"))
+        assert "player" not in snap_manifest["frames"]
+        assert snap_manifest["frames"]["enemy_bandit_cultivator"]["frame"]["x"] == 0
+        module.append_effects(ws, ["soft_glow"], force=True)
+        atlas = Image.open(ws / "assets/imagegen/atlas.png").convert("RGBA")
+        assert atlas.getpixel((0, 0)) == (0, 0, 255, 255)
+        assert atlas.getpixel((64, 0)) == (200, 80, 40, 128)
+        runtime = json.loads((ws / "assets/imagegen/manifest.json").read_text(encoding="utf-8"))
+        assert "player" not in runtime["frames"]
+        assert runtime["frames"]["enemy_bandit_cultivator"]["frame"] == {"x": 0, "y": 0, "w": 64, "h": 64}
+        assert runtime["frames"]["vfx_soft_glow_impact_0"]["frame"]["x"] == 64
 
 
 def main() -> int:
@@ -257,6 +321,11 @@ def main() -> int:
             "atlasLayout": {"cols": 2, "rows": 1, "cell": {"w": 64, "h": 64}},
             "runtimeAtlasSha256": "ignored-by-force",
         }), encoding="utf-8")
+        # pack now records a character snapshot. This case hand-builds the runtime
+        # atlas, so drop that snapshot and let append copy the prepared sheet.
+        hand_snapshot = ws / "assets/imagegen/character-pack"
+        if hand_snapshot.exists():
+            shutil.rmtree(hand_snapshot)
         fx = ws / "assets/imagegen/sprite-gen/void_slash/loreweaver"
         fx.mkdir(parents=True, exist_ok=True)
         Image.new("RGBA", (32, 16), (0, 255, 255, 255)).save(fx / "atlas.png")
@@ -283,6 +352,8 @@ def main() -> int:
         assert appended_manifest["frames"]["vfx_void_slash_impact_0"]["frame"]["x"] == 64
         assert appended_manifest["clipSets"]["vfx_void_slash"]["impact"]["loop"] is False
         assert json.loads((fx / "provenance.json").read_text(encoding="utf-8"))["promoted"] is False
+
+    check_repack_snapshot_and_straight_alpha()
 
     route_text = (ROOT / "backend" / "sprite_gen_routes.py").read_text(encoding="utf-8")
     for endpoint in (
