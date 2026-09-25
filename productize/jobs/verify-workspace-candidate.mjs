@@ -14,11 +14,13 @@ const LORE_ROOT = path.resolve(__dirname, "../..");
 const WORKSPACES_ROOT = path.join(LORE_ROOT, "data/workspaces");
 const args = process.argv.slice(2);
 const valueArg = (name) => args.find((arg) => arg.startsWith(`${name}=`))?.slice(name.length + 1);
-const requireSynthAudio = args.includes("--require-synth-audio");
+const requireAudio = args.includes("--require-audio") || args.includes("--require-synth-audio");
 const captureAllStages = args.includes("--capture-all-stages");
 const reuseVerifiedArtifact = args.includes("--reuse-verified-artifact");
+const reverifyPrimary = args.includes("--reverify-primary");
 const viewportArg = valueArg("--viewport") || "720x1280";
 if (!/^\d{3,4}x\d{3,4}$/.test(viewportArg)) fail("invalid_viewport");
+if (reverifyPrimary && (!reuseVerifiedArtifact || viewportArg !== "720x1280")) fail("reverify_primary_requires_reuse_and_primary_viewport");
 const [viewportWidth, viewportHeight] = viewportArg.split("x").map(Number);
 const screenshotTag = viewportArg === "720x1280" ? "" : `_${viewportArg}`;
 
@@ -129,7 +131,7 @@ async function main() {
   fs.mkdirSync(reportsDir, { recursive: true });
   const genericPath = path.join(reportsDir, "standalone_browser_report.json");
   const previousBrowserReport = readJsonSafe(genericPath);
-  if (reuseVerifiedArtifact && (viewportArg === "720x1280" || previousBrowserReport?.status !== "passed")) {
+  if (reuseVerifiedArtifact && ((viewportArg === "720x1280" && !reverifyPrimary) || previousBrowserReport?.status !== "passed")) {
     fail("reuse_requires_verified_primary_candidate_and_supplemental_viewport");
   }
   const canonicalScreenshotPath = path.join(reportsDir, `candidate_final_stage${screenshotTag}.png`);
@@ -192,23 +194,39 @@ async function main() {
   const server = await startStaticServer(stage, port);
   const baseUrl = `http://127.0.0.1:${port}/`;
   const errors = { console: [], page: [], requests: [] };
+  const cancelledAudioRequests = [];
   const apiRequests = [];
   const stageResults = [];
+  const attemptStageScreenshots = [];
   let resolvedContract = [];
   let browser = null;
 
   try {
-    browser = await playwright.chromium.launch({ headless: true });
-    const page = await browser.newPage({ viewport: { width: viewportWidth, height: viewportHeight } });
+    browser = await playwright.chromium.launch({
+      headless: true,
+      ...(process.env.LW_CHROMIUM_PATH ? {
+        executablePath: process.env.LW_CHROMIUM_PATH,
+        args: ["--enable-unsafe-swiftshader", "--use-angle=swiftshader"]
+      } : {})
+    });
+    const page = await browser.newPage({
+      viewport: { width: viewportWidth, height: viewportHeight },
+      hasTouch: viewportWidth < 500
+    });
     page.on("console", (msg) => {
       if (msg.type() === "error" && !msg.text().includes("favicon")) errors.console.push(msg.text());
     });
-    page.on("pageerror", (error) => errors.page.push(error.message || String(error)));
+    page.on("pageerror", (error) => errors.page.push(error.stack || error.message || String(error)));
     page.on("request", (request) => {
       const url = request.url();
       if (/\/api(?:\/|$|\?)/.test(url)) apiRequests.push(url);
     });
-    page.on("requestfailed", (request) => errors.requests.push(`${request.method()} ${request.url()} :: ${request.failure()?.errorText || "failed"}`));
+    page.on("requestfailed", (request) => {
+      const failure = `${request.method()} ${request.url()} :: ${request.failure()?.errorText || "failed"}`;
+      if (/\.mp3(?:\?|$)/.test(request.url()) && request.failure()?.errorText === "net::ERR_ABORTED") {
+        cancelledAudioRequests.push(failure);
+      } else errors.requests.push(failure);
+    });
 
     await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForFunction(() => window.__LOREWEAVER_GAME__ != null, null, { timeout: 30000 });
@@ -225,6 +243,7 @@ async function main() {
         cardId: node.gameplay?.cardId || null,
         bgmKey: node.gameplay?.knobs?.bgmKey || null,
         synthHz: (spec.audioCueCatalog || []).find((cue) => cue.id === node.gameplay?.knobs?.bgmKey)?.synth?.frequencies?.[0] ?? null,
+        audioAssetPath: (spec.audioCueCatalog || []).find((cue) => cue.id === node.gameplay?.knobs?.bgmKey)?.assetPath ?? null,
         modifierIds: (node.gameplay?.modifiers || [])
           .map((modifier) => typeof modifier === "string" ? modifier : modifier?.id)
           .filter(Boolean)
@@ -236,6 +255,11 @@ async function main() {
 
     for (let index = 0; index < resolvedContract.length; index += 1) {
       const expected = resolvedContract[index];
+      const rotatedForLandscape = expected.cardId === "side_scrolling_brawler" && viewportWidth < viewportHeight;
+      if (rotatedForLandscape) {
+        await page.setViewportSize({ width: viewportHeight, height: viewportWidth });
+        await page.waitForTimeout(100);
+      }
       await page.evaluate((runtimeNodeId) => {
         const game = window.__LOREWEAVER_GAME__;
         const spec = window.__LOREWEAVER_EMBEDDED_SPEC__;
@@ -260,6 +284,16 @@ async function main() {
         const canvas = await page.locator("canvas").boundingBox().catch(() => null);
         if (canvas) await page.mouse.click(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
         await page.waitForTimeout(400);
+      }
+      if (requireAudio && expected.audioAssetPath) {
+        await page.waitForFunction((bgmKey) => {
+          const report = window.__LOREWEAVER_GAME__?.scene?.keys?.LevelActiveScene?.audioResolver?.getReport?.();
+          return report?.currentBgm === bgmKey
+            && report?.bgmSource === "asset"
+            && report?.bgmPlaying === true
+            && Number(report?.bgmReadyState) >= 2
+            && report?.audioUnlocked === true;
+        }, expected.bgmKey, { timeout: 10000 });
       }
 
       const exactFrameRequired = expected.cardId === "survivor_horde";
@@ -459,13 +493,18 @@ async function main() {
       const modsMatch = expected.modifierIds.every((id) => observed.modifierIds.includes(id));
       const contractValid = observed.runtimeContract.introType === "string" && observed.runtimeContract.tauntsIsArray;
       const runtimeRunning = observed.status === "running";
-      const audioCueValid = !requireSynthAudio || (
+      const audioCueValid = !requireAudio || (
         expected.bgmKey
         && Number.isFinite(Number(expected.synthHz))
         && observed.audio?.currentBgm === expected.bgmKey
-        && observed.audio?.synthBed === true
         && observed.audio?.audioUnlocked === true
         && Number(observed.audio?.synthHz) === Number(expected.synthHz)
+        && (expected.audioAssetPath
+          ? observed.audio?.bgmSource === "asset"
+            && observed.audio?.bgmPlaying === true
+            && Number(observed.audio?.bgmReadyState) >= 2
+            && observed.audio?.bgmPending === false
+          : observed.audio?.synthBed === true)
       );
       const observationValid = Boolean(
         observed.observation
@@ -493,19 +532,33 @@ async function main() {
         && exactFrameValid;
       let muteControlValid = true;
       let pauseControlValid = true;
-      if (requireSynthAudio && index === 0) {
+      if (requireAudio && index === 0) {
         await page.locator("#mute-button").click();
         const mutedReport = await page.evaluate(() => window.__LOREWEAVER_GAME__?.registry?.get("audioResolver")?.getReport?.());
         await page.locator("#mute-button").click();
         const unmutedReport = await page.evaluate(() => window.__LOREWEAVER_GAME__?.registry?.get("audioResolver")?.getReport?.());
-        muteControlValid = mutedReport?.isMuted === true && unmutedReport?.isMuted === false;
+        muteControlValid = mutedReport?.isMuted === true
+          && unmutedReport?.isMuted === false
+          && (!expected.audioAssetPath || (mutedReport?.bgmVolume === 0 && unmutedReport?.bgmVolume > 0));
         await page.locator("#pause-button").click();
         await page.waitForFunction(() => window.__LOREWEAVER_GAME__?.scene?.isPaused?.("LevelActiveScene") === true, null, { timeout: 2000 });
         const paused = await page.evaluate(() => window.__LOREWEAVER_GAME__?.scene?.isPaused?.("LevelActiveScene"));
+        const pausedAudio = await page.evaluate(() => window.__LOREWEAVER_GAME__?.registry?.get("audioResolver")?.getReport?.());
         await page.locator("#pause-button").click();
         await page.waitForFunction(() => window.__LOREWEAVER_GAME__?.scene?.isActive?.("LevelActiveScene") === true, null, { timeout: 2000 });
         const resumed = await page.evaluate(() => window.__LOREWEAVER_GAME__?.scene?.isActive?.("LevelActiveScene"));
-        pauseControlValid = paused === true && resumed === true;
+        if (expected.audioAssetPath) {
+          await page.waitForFunction(() => {
+            const audio = window.__LOREWEAVER_GAME__?.registry?.get("audioResolver")?.getReport?.();
+            return audio?.isPaused === false && audio?.bgmPlaying === true;
+          }, null, { timeout: 3000 });
+        }
+        const resumedAudio = await page.evaluate(() => window.__LOREWEAVER_GAME__?.registry?.get("audioResolver")?.getReport?.());
+        pauseControlValid = paused === true && resumed === true
+          && (!expected.audioAssetPath || (
+            pausedAudio?.isPaused === true && pausedAudio?.bgmPlaying === false
+            && resumedAudio?.isPaused === false && resumedAudio?.bgmPlaying === true
+          ));
       }
       let touchControlValid = true;
       if (viewportWidth < 500 && expected.cardId === "side_scrolling_brawler") {
@@ -533,12 +586,22 @@ async function main() {
       const stageScreenshot = captureAllStages
         ? path.join(reportsDir, `candidate_stage_${String(index + 1).padStart(2, "0")}${screenshotTag}.png`)
         : null;
-      if (stageScreenshot) await page.screenshot({ path: stageScreenshot, fullPage: true });
+      const stageScreenshotAttempt = stageScreenshot
+        ? path.join(reportsDir, `.candidate_stage_${String(index + 1).padStart(2, "0")}${screenshotTag}_attempt_${process.pid}_${Date.now()}.png`)
+        : null;
+      if (stageScreenshotAttempt) {
+        // Phaser may have created the first wave after the last presented frame.
+        // Capture the rendered encounter rather than an empty pre-render canvas.
+        await page.waitForTimeout(250);
+        await page.screenshot({ path: stageScreenshotAttempt, fullPage: true });
+        attemptStageScreenshots.push({ attempt: stageScreenshotAttempt, canonical: stageScreenshot });
+      }
       stageResults.push({
         stage: index + 1,
         nodeId: expected.id,
         cardId: expected.cardId,
-        ...(stageScreenshot ? { screenshot: repoRelative(stageScreenshot), screenshotSha256: sha256File(stageScreenshot) } : {}),
+        viewport: rotatedForLandscape ? `${viewportHeight}x${viewportWidth}` : viewportArg,
+        ...(stageScreenshotAttempt ? { screenshot: repoRelative(stageScreenshot), screenshotSha256: sha256File(stageScreenshotAttempt) } : {}),
         passed: stagePassed && muteControlValid && pauseControlValid && touchControlValid,
         expectedModifiers: expected.modifierIds,
         assertions: { modsMatch, contractValid, runtimeRunning, audioCueValid, observationValid, exactFrameValid, muteControlValid, pauseControlValid, touchControlValid },
@@ -569,6 +632,10 @@ async function main() {
       stageResults.at(-1).assertions.retreatValid = retreatValid;
       stageResults.at(-1).passed = stageResults.at(-1).passed && retreatValid;
       if (!retreatValid) throw new Error(`stage_${index + 1}_retreat_failed:${JSON.stringify({ retreatProbe, afterRetreat })}`);
+      if (rotatedForLandscape) {
+        await page.setViewportSize({ width: viewportWidth, height: viewportHeight });
+        await page.waitForTimeout(100);
+      }
     }
   } catch (error) {
     errors.page.push(error?.message || String(error));
@@ -627,6 +694,7 @@ async function main() {
     screenshot: repoRelative(canonicalScreenshotPath),
     screenshotSha256,
     errors,
+    cancelledAudioRequests,
     apiRequests,
     artifact: repoRelative(artifactPath),
     artifactSha256,
@@ -636,6 +704,7 @@ async function main() {
 
   if (!passed) {
     fs.rmSync(attemptScreenshotPath, { force: true });
+    for (const item of attemptStageScreenshots) fs.rmSync(item.attempt, { force: true });
     const attempt = {
       ...common,
       screenshot: null,
@@ -658,11 +727,17 @@ async function main() {
 
   // Commit the new verified Browser anchor only after the entire runtime validation
   // has succeeded. A failed re-verification never overwrites the previous anchor.
+  for (const item of attemptStageScreenshots) fs.renameSync(item.attempt, item.canonical);
   fs.renameSync(attemptScreenshotPath, canonicalScreenshotPath);
   const nextGenericReport = { ...common, cardId: cardIds.length === 1 ? cardIds[0] : null };
   if (reuseVerifiedArtifact) {
-    const supplementalPath = path.join(reportsDir, `standalone_browser_report_${viewportArg}.json`);
-    writeJson(supplementalPath, nextGenericReport);
+    const reportPath = reverifyPrimary ? genericPath : path.join(reportsDir, `standalone_browser_report_${viewportArg}.json`);
+    writeJson(reportPath, nextGenericReport);
+    if (reverifyPrimary) {
+      for (const cardId of cardIds) {
+        writeJson(path.join(reportsDir, `standalone_browser_report_${cardId}.json`), { ...common, cardId });
+      }
+    }
     fs.rmSync(attemptReportPath, { force: true });
     console.log(JSON.stringify({
       status: "passed",
@@ -676,9 +751,9 @@ async function main() {
       runtimeObservationSessions: observationSessions,
       cardIds,
       stageResults,
-      report: repoRelative(supplementalPath),
+      report: repoRelative(reportPath),
       downloadReady: true,
-      supplementalViewport: viewportArg
+      ...(reverifyPrimary ? { reverifiedPrimary: true } : { supplementalViewport: viewportArg })
     }, null, 2));
     return;
   }

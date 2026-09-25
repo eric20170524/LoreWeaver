@@ -91,10 +91,15 @@ export default class RunGrowthMilestonesModifier extends GameplayModifier {
         }
 
         const height = scene.scale?.height || 720;
-        this.hud = scene.add?.text?.(32, height - 102, '', {
+        const width = scene.scale?.width || 720;
+        this.hud = scene.add?.text?.(32, height - 145, '', {
             fontFamily: 'JetBrains Mono, monospace',
-            fontSize: '20px',
-            color: '#fbbf24'
+            fontSize: '22px',
+            color: '#fde68a',
+            backgroundColor: 'rgba(3, 7, 18, 0.82)',
+            padding: { x: 7, y: 3 },
+            wordWrap: { width: Math.max(180, width - 64), useAdvancedWrap: true },
+            lineSpacing: 3
         }) || null;
         if (this.hud) {
             this.hud.setDepth?.(20);

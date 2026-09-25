@@ -107,7 +107,7 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
         this.modifiers = Array.isArray(context.modifiers) ? context.modifiers : [];
         this.Phaser = context.Phaser || (typeof globalThis !== 'undefined' ? globalThis.Phaser : null);
         this.keys = null;
-        this.touchInput = { left: false, right: false };
+        this.touchInput = { left: false, right: false, up: false, down: false };
         this.player = null;
         this.enemies = [];
         this.worldGfx = null;
@@ -232,6 +232,8 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             this.keys = null;
             this.touchInput.left = false;
             this.touchInput.right = false;
+            this.touchInput.up = false;
+            this.touchInput.down = false;
         });
 
         this.publishTestState();
@@ -290,12 +292,10 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             let x = 0;
             this.config.waveList.forEach((wave) => {
                 const end = Math.max(Number(wave.cameraMax || 0), x + 40);
-                const sky = Number(wave.theme?.sky ?? 0x070b14);
                 const ground = Number(wave.theme?.ground ?? 0x0b1220);
-                g.fillStyle(sky, 0.22);
-                g.fillRect(x, 0, end - x, this.lane.top);
-                g.fillStyle(ground, 0.42);
-                g.fillRect(x, this.lane.top, end - x, beltH);
+                g.lineStyle(4, ground, 0.9);
+                g.lineBetween(x, this.lane.top, end, this.lane.top);
+                g.lineBetween(x, this.lane.bottom, end, this.lane.bottom);
                 x = end;
             });
             if (x < this.world.width) {
@@ -313,8 +313,11 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             g.lineBetween(wave.triggerX, this.lane.top, wave.triggerX, this.lane.bottom);
             this.scene.add.text(wave.triggerX + 6, this.lane.top + 8, `${i + 1}.${wave.name}`, {
                 fontFamily: 'Inter, sans-serif',
-                fontSize: '12px',
-                color: '#fbbf24'
+                fontSize: '24px',
+                fontStyle: 'bold',
+                color: '#fde68a',
+                backgroundColor: 'rgba(3, 7, 18, 0.82)',
+                padding: { x: 6, y: 3 }
             });
         });
 
@@ -363,7 +366,7 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             continue: 'C'
         });
 
-        if (this.scene.scale.width < 600) {
+        if (this.scene.scale.width < 600 || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)) {
             this.createTouchControls();
         } else {
             this.scene.input.on('pointerdown', (pointer) => {
@@ -375,48 +378,57 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
     createTouchControls() {
         const scene = this.scene;
         const { width, height } = scene.scale;
-        const y = height - 112;
-        const button = (x, label, action, release) => {
+        const button = (x, y, label, action, release) => {
             const control = scene.add.text(x, y, label, {
-                fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold',
-                color: '#f8fafc', backgroundColor: '#1e293b',
-                padding: { x: 19, y: 15 }
-            }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0.9)
+                fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold',
+                color: '#fde68a', backgroundColor: '#0b1220',
+                padding: { x: 16, y: 13 }
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0.82)
                 .setInteractive({ useHandCursor: true });
-            control.on('pointerdown', action);
+            control.on('pointerdown', (_pointer, _localX, _localY, event) => {
+                event?.stopPropagation?.();
+                action();
+            });
             if (release) {
                 control.on('pointerup', release);
                 control.on('pointerout', release);
             }
             return control;
         };
-        this.ui.touchLeft = button(72, '◀', () => { this.touchInput.left = true; }, () => { this.touchInput.left = false; });
-        this.ui.touchRight = button(158, '▶', () => { this.touchInput.right = true; }, () => { this.touchInput.right = false; });
-        this.ui.touchAttack = button(width - 78, '斩', () => {
+        this.ui.touchUp = button(width - 330, height - 152, '▲', () => { this.touchInput.up = true; }, () => { this.touchInput.up = false; });
+        this.ui.touchDown = button(width - 330, height - 55, '▼', () => { this.touchInput.down = true; }, () => { this.touchInput.down = false; });
+        this.ui.touchLeft = button(width - 415, height - 104, '◀', () => { this.touchInput.left = true; }, () => { this.touchInput.left = false; });
+        this.ui.touchRight = button(width - 245, height - 104, '▶', () => { this.touchInput.right = true; }, () => { this.touchInput.right = false; });
+        this.ui.touchAttack = button(width - 145, height - 104, '斩', () => {
             if (this.isRunning()) this.tryAttack(false);
         });
-        scene.input.on('pointerup', () => {
-            this.touchInput.left = false;
-            this.touchInput.right = false;
+        this.ui.touchHeavy = button(width - 65, height - 154, '重', () => {
+            if (this.isRunning()) this.tryAttack(true);
         });
     }
 
     drawHud() {
         this.ui.hp = this.scene.add.text(16, 170, '', {
             fontFamily: 'Inter, sans-serif',
-            fontSize: '18px',
-            color: '#e2e8f0'
-        }).setScrollFactor(0).setDepth(100);
-        this.ui.wave = this.scene.add.text(16, 190, '', {
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '16px',
-            color: '#94a3b8'
-        }).setScrollFactor(0).setDepth(100);
-        this.ui.banner = this.scene.add.text(this.scene.scale.width / 2, 100, '', {
-            fontFamily: 'Inter, sans-serif',
             fontSize: '20px',
+            color: '#f8fafc',
+            backgroundColor: 'rgba(3, 7, 18, 0.82)',
+            padding: { x: 7, y: 3 }
+        }).setScrollFactor(0).setDepth(100);
+        this.ui.wave = this.scene.add.text(16, 210, '', {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '18px',
+            color: '#e2e8f0',
+            backgroundColor: 'rgba(3, 7, 18, 0.82)',
+            padding: { x: 7, y: 3 }
+        }).setScrollFactor(0).setDepth(100);
+        this.ui.banner = this.scene.add.text(this.scene.scale.width - 210, 115, '', {
+            fontFamily: 'Inter, sans-serif',
+            fontSize: '22px',
             fontStyle: 'bold',
-            color: '#f8fafc'
+            color: '#f8fafc',
+            backgroundColor: 'rgba(3, 7, 18, 0.82)',
+            padding: { x: 8, y: 4 }
         }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setAlpha(0);
         this.refreshHud();
     }
@@ -480,7 +492,7 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
     }
 
     handleMovement(delta) {
-        if (!this.keys && !this.touchInput.left && !this.touchInput.right) return;
+        if (!this.keys && !this.touchInput.left && !this.touchInput.right && !this.touchInput.up && !this.touchInput.down) return;
         const speed = this.config.player.speed;
         const yScale = this.lane.ySpeedScale;
         let vx = 0;
@@ -488,8 +500,8 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
 
         const left = Boolean(this.keys?.left?.isDown || this.touchInput.left);
         const right = Boolean(this.keys?.right?.isDown || this.touchInput.right);
-        const up = Boolean(this.keys?.up?.isDown);
-        const down = Boolean(this.keys?.down?.isDown);
+        const up = Boolean(this.keys?.up?.isDown || this.touchInput.up);
+        const down = Boolean(this.keys?.down?.isDown || this.touchInput.down);
 
         if (left) vx -= 1;
         if (right) vx += 1;
@@ -570,6 +582,11 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
             this.showBanner(combo.label, combo.color || '#fbbf24');
         }
         this.spawnAttackVfx(combo, heavy);
+        if (this.config.layerBlackBladeAudio && (combo?.element === 'fire' || combo?.element === 'wind')) {
+            this.context.onAudioCue?.('sfx_black_blade');
+        }
+        this.context.onAudioCue?.(combo?.element === 'fire' ? 'sfx_fire_slash'
+            : combo?.element === 'wind' ? 'sfx_wind_slash' : 'sfx_black_blade');
         this.state.attackAnimUntil = time + (heavy ? 240 : 160);
 
         const cooldown = this.config.player.attackCooldownMs * (heavy ? 1.5 : 1);
@@ -716,7 +733,10 @@ export default class SideScrollingBrawlerAdapter extends GameplayAdapter {
         let sprite;
         if (artKey && this.scene.textures.exists(artKey)) {
             sprite = this.scene.add.sprite(x, y, artKey);
-            sprite.setDisplaySize(radius * 2.8, radius * 2.8);
+            const visualScale = Number(spec.isBoss
+                ? this.config.bossVisualScale ?? 2.8
+                : this.config.enemyVisualScale ?? 2.8);
+            sprite.setDisplaySize(radius * visualScale, radius * visualScale);
             sprite.setData('artSource', 'atlas');
             sprite.setData('enemyId', enemyId);
             this.runtimeArt?.playClip?.(sprite, 'enemy', 'walk', { enemyId, repeat: -1, frameRate: 8 });

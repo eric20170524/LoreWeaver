@@ -96,6 +96,80 @@ html, body, #standalone-shell {
   cursor: pointer;
 }
 
+#notice-button[hidden] { display: none !important; }
+
+#notice-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  z-index: 30;
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: min(80vh, 38rem);
+  overflow: auto;
+  padding: 1.3rem;
+  border: 1px solid rgba(226, 232, 240, 0.42);
+  border-radius: 0.8rem;
+  color: #f8fafc;
+  background: #111827;
+  line-height: 1.6;
+}
+
+#notice-dialog::backdrop { background: rgba(2, 6, 23, 0.84); }
+#notice-dialog h2 { margin: 0 0 0.6rem; font-size: 1.2rem; }
+#notice-dialog p { margin: 0 0 0.75rem; }
+#notice-dialog a { color: #c4b5fd; }
+#notice-close-button {
+  display: block;
+  margin-top: 1rem;
+  min-height: 2.6rem;
+  padding: 0.4rem 1rem;
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  border-radius: 0.5rem;
+  color: #f8fafc;
+  background: #334155;
+  cursor: pointer;
+}
+
+#rotate-prompt[hidden] { display: none !important; }
+
+#rotate-prompt {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: rgba(2, 6, 23, 0.97);
+  color: #f8fafc;
+  font-size: clamp(1.2rem, 5vw, 2rem);
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (orientation: landscape) {
+  #standalone-shell.landscape-stage {
+    grid-template-columns: minmax(0, 1fr) 8rem;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  #standalone-shell.landscape-stage #game-container {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  #standalone-shell.landscape-stage #host-controls {
+    grid-column: 2;
+    grid-row: 1;
+    width: 8rem;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    border-top: 0;
+    border-left: 1px solid rgba(148, 163, 184, 0.4);
+  }
+
+  #standalone-shell.landscape-stage #host-controls button { width: 100%; }
+}
+
 @media (max-width: 800px) and (orientation: portrait) {
   #host-controls {
     display: grid;

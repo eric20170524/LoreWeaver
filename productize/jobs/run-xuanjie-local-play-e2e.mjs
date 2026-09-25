@@ -44,7 +44,13 @@ try {
     res.end(fs.readFileSync(path.join(temp, name)));
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({
+    headless: true,
+    ...(process.env.LW_CHROMIUM_PATH ? {
+      executablePath: process.env.LW_CHROMIUM_PATH,
+      args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader']
+    } : {})
+  });
   page = await browser.newPage({ viewport: { width: 760, height: 1320 } });
   page.on('pageerror', error => report.errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error' && !message.text().includes('404')) report.errors.push(message.text()); });
@@ -166,11 +172,21 @@ try {
       const card = adapter.config?.id;
       const limit = 8000;
       if (card === 'survivor_horde') {
-        const cap = Math.ceil(Number(adapter.config.duration) || 30) + 3;
-        let ticks = 0;
-        while (adapter.status === 'running' && ticks < cap) {
-          adapter.onSecondTick();
-          ticks += 1;
+        const arena = adapter.modifiers.find(item => item.id === 'arena_wave_boss');
+        if (arena) {
+          const context = adapter.createRuntimeContext();
+          while (adapter.status === 'running' && arena.wave <= arena.config.totalWaves) {
+            adapter.groups.enemies.getChildren().forEach(enemy => enemy.destroy());
+            arena.update(context);
+            arena.startNextWave(context);
+          }
+        } else {
+          const cap = Math.ceil(Number(adapter.config.duration) || 30) + 3;
+          let ticks = 0;
+          while (adapter.status === 'running' && ticks < cap) {
+            adapter.onSecondTick();
+            ticks += 1;
+          }
         }
       } else if (card === 'dodge_counter_boss') {
         let steps = 0;
@@ -293,11 +309,11 @@ try {
   await startAuthoredNode(1, 'survivor_horde');
 
   const node1Result = await clearRunningNode();
-  assert.equal(node1Result.reason, 'timer_expired');
+  assert.equal(node1Result.reason, 'objective_met');
   const afterNode1 = await readProgress();
   assert.ok(afterNode1.completed.includes(1));
   assert.equal(afterNode1.abilities.includes('black_blade_flame'), false);
-  report.assertions.push('node 1 survival writes completion without the node 3 unlock');
+  report.assertions.push('node 1 wave clearance writes completion without the node 3 unlock');
 
   await startAuthoredNode(2, 'dodge_counter_boss');
   const nodeState = await page.evaluate(() => {

@@ -13,11 +13,49 @@ const muteButton = document.querySelector<HTMLButtonElement>("#mute-button")!;
 const retryButton = document.querySelector<HTMLButtonElement>("#retry-button")!;
 const fullscreenButton = document.querySelector<HTMLButtonElement>("#fullscreen-button")!;
 const resetSaveButton = document.querySelector<HTMLButtonElement>("#reset-save-button")!;
+const noticeButton = document.querySelector<HTMLButtonElement>("#notice-button")!;
+const noticeDialog = document.querySelector<HTMLDialogElement>("#notice-dialog")!;
+const noticeCloseButton = document.querySelector<HTMLButtonElement>("#notice-close-button")!;
 const testStateOutput = document.querySelector<HTMLOutputElement>("#runtime-test-state")!;
 
 let runtime: LoreWeaverRuntimeHandle | null = null;
 let paused = false;
 let muted = false;
+let landscapeStage = false;
+let orientationPaused = false;
+let noticeOpen = false;
+let noticePausedLevel = false;
+const rotatePrompt = document.createElement("div");
+rotatePrompt.id = "rotate-prompt";
+rotatePrompt.setAttribute("role", "status");
+rotatePrompt.setAttribute("aria-live", "polite");
+rotatePrompt.textContent = "请将设备旋转至横屏，继续节点 4 闯关";
+rotatePrompt.hidden = true;
+shell.appendChild(rotatePrompt);
+
+function syncStageOrientation() {
+  shell.classList.toggle("landscape-stage", landscapeStage);
+  const needsRotation = landscapeStage && window.innerHeight > window.innerWidth;
+  rotatePrompt.hidden = !needsRotation;
+  const game = runtime?.game;
+  const scene = game?.scene?.keys?.LevelActiveScene;
+  if (needsRotation && game?.scene?.isActive("LevelActiveScene")) {
+    game.scene.pause("LevelActiveScene");
+    orientationPaused = true;
+  } else if (!needsRotation && orientationPaused) {
+    if (!paused && !noticeOpen && game?.scene?.isPaused("LevelActiveScene")) game.scene.resume("LevelActiveScene");
+    orientationPaused = false;
+  }
+  game?.registry.get("audioResolver")?.setPaused(needsRotation || paused || noticeOpen);
+}
+
+window.addEventListener("loreweaver:orientation", (event) => {
+  landscapeStage = (event as CustomEvent<string>).detail === "landscape";
+  syncStageOrientation();
+  window.setTimeout(syncStageOrientation, 0);
+});
+window.addEventListener("resize", syncStageOrientation);
+window.addEventListener("orientationchange", syncStageOrientation);
 
 function installLoopbackE2EControls() {
   const loopback = ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
@@ -57,6 +95,7 @@ function installLoopbackE2EControls() {
 }
 
 window.setInterval(() => {
+  if (landscapeStage) syncStageOrientation();
   const hooks = (window as any).__LOREWEAVER_TEST_HOOKS__ || null;
   testStateOutput.textContent = JSON.stringify({
     runtimeVersion: shell.dataset.runtimeVersion || null,
@@ -78,6 +117,26 @@ function readResolvedSpec(): ResolvedRuntimeSpec {
 }
 
 const resolvedSpec = readResolvedSpec();
+
+noticeButton.addEventListener("click", () => {
+  noticeOpen = true;
+  const game = runtime?.game;
+  noticePausedLevel = Boolean(game?.scene?.isActive("LevelActiveScene"));
+  if (noticePausedLevel) game?.scene.pause("LevelActiveScene");
+  syncStageOrientation();
+  noticeDialog.showModal();
+});
+noticeCloseButton.addEventListener("click", () => noticeDialog.close());
+noticeDialog.addEventListener("close", () => {
+  noticeOpen = false;
+  const game = runtime?.game;
+  if (noticePausedLevel && !paused && !orientationPaused && game?.scene?.isPaused("LevelActiveScene")) {
+    game.scene.resume("LevelActiveScene");
+  }
+  noticePausedLevel = false;
+  syncStageOrientation();
+});
+
 const storageKey = `loreweaver_standalone_player_state:v1:${resolvedSpec.specHash}`;
 
 function loadState() {
@@ -103,6 +162,9 @@ function setError(error: unknown) {
 function boot() {
   runtime?.destroy();
   runtime = null;
+  landscapeStage = false;
+  orientationPaused = false;
+  syncStageOrientation();
   container.replaceChildren();
   errorBox.hidden = true;
   status.hidden = false;
@@ -135,6 +197,7 @@ function boot() {
     runtime.game.sound.mute = muted;
     runtime.game.registry.set("audioMuted", muted);
     runtime.game.registry.get("audioResolver")?.setMuted(muted);
+    syncStageOrientation();
     window.setTimeout(() => {
       const artStatus = (window as any).__LOREWEAVER_ART_PIPELINE__?.status || "unknown";
       shell.dataset.assetStatus = artStatus;
@@ -149,9 +212,10 @@ pauseButton.addEventListener("click", () => {
   paused = !paused;
   for (const scene of runtime.game.scene.scenes) {
     if (paused && scene.scene.isActive()) scene.scene.pause();
-    else if (!paused && scene.scene.isPaused()) scene.scene.resume();
+    else if (!paused && !noticeOpen && !orientationPaused && scene.scene.isPaused()) scene.scene.resume();
   }
   pauseButton.textContent = paused ? "继续" : "暂停";
+  syncStageOrientation();
 });
 
 muteButton.addEventListener("click", () => {

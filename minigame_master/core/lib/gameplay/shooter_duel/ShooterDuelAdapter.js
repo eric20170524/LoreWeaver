@@ -78,28 +78,33 @@ export default class ShooterDuelAdapter extends GameplayAdapter {
             fontFamily: 'Inter, sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
         this.ui.status = scene.add.text(width / 2, 234, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '22px', color: '#94a3b8'
+            fontFamily: 'Inter, sans-serif', fontSize: '22px', color: '#e2e8f0',
+            backgroundColor: 'rgba(3, 7, 18, 0.82)', padding: { x: 10, y: 5 }
         }).setOrigin(0.5);
-        this.ui.hint = scene.add.text(width / 2, height - 95, 'A/D 移动 · 按住 J 射击 · 按住拖动移动并射击', {
-            fontFamily: 'Inter, sans-serif', fontSize: '20px', color: '#64748b'
+        this.ui.hint = scene.add.text(width / 2, height - 130, 'A/D 移动 · 按住 J 射击 · 按住拖动移动并射击', {
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', color: '#e2e8f0',
+            backgroundColor: 'rgba(3, 7, 18, 0.82)', padding: { x: 10, y: 5 },
+            wordWrap: { width: width - 64, useAdvancedWrap: true }, align: 'center'
         }).setOrigin(0.5);
 
         this.runtimeArt = this.payload?.runtimeArt || this.payload?.art
             || scene.game?.registry?.get?.('runtimeArtBinder')?.createContext?.(scene)
             || scene.game?.registry?.get?.('runtimeArt')
             || null;
-        const playerKey = this.runtimeArt?.resolve?.('player');
-        if (playerKey && scene.textures.exists(playerKey)) {
-            this.player = scene.add.sprite(width / 2, height - 165, playerKey).setDisplaySize(48, 48);
+        const playerArt = this.resolveActor('player_bow', 'player');
+        if (playerArt) {
+            this.player = scene.add.sprite(width / 2, height - 220, playerArt.key).setDisplaySize(168, 168);
             this.player.setData('artSource', 'atlas');
+            this.player.setData('artRole', playerArt.role);
+            if (playerArt.role === 'player_bow') this.runtimeArt?.playClip?.(this.player, 'player_bow', 'idle');
         } else {
-            this.player = scene.add.circle(width / 2, height - 165, 16, 0x66fcf1, 1);
+            this.player = scene.add.circle(width / 2, height - 200, 16, 0x66fcf1, 1);
         }
         const bossId = this.config.bossId || 'boss';
         const bossKey = this.runtimeArt?.resolve?.('enemy', { enemyId: bossId })
             || this.runtimeArt?.enemyKey?.(bossId);
         if (bossKey && scene.textures.exists(bossKey)) {
-            this.boss = scene.add.sprite(width / 2, 340, bossKey).setDisplaySize(72, 72);
+            this.boss = scene.add.sprite(width / 2, 340, bossKey).setDisplaySize(192, 192);
             this.boss.setData('artSource', 'atlas');
         } else {
             this.boss = scene.add.circle(width / 2, 340, 36, 0xef4444, 1);
@@ -129,6 +134,8 @@ export default class ShooterDuelAdapter extends GameplayAdapter {
             this.enemyBullets = [];
             this.hitTimer?.remove(false);
             this.hitTimer = null;
+            this.attackReturn?.remove?.(false);
+            this.attackReturn = null;
             this.player = null;
             this.boss = null;
             this.ui = {};
@@ -145,7 +152,41 @@ export default class ShooterDuelAdapter extends GameplayAdapter {
         const now = this.scene.time.now;
         if (now < this.state.fireReadyAt) return;
         this.state.fireReadyAt = now + this.config.playerFireCooldownMs;
-        this.bullets.push(this.spawnBolt(this.player.x, this.player.y - 18, 0, -this.config.bulletSpeed, 'purple_bolt', 28));
+        this.bullets.push(this.spawnBolt(this.player.x, this.player.y - 18, 0, -this.config.bulletSpeed, 'purple_bolt', 48));
+        this.context.onAudioCue?.('sfx_bow_release');
+        this.playBowRelease();
+    }
+
+    resolveActor(role, fallbackRole = null) {
+        const art = this.runtimeArt;
+        const scene = this.scene;
+        if (!art?.resolve || !scene?.textures?.exists) return null;
+        const pick = (name, clip) => {
+            const key = clip ? art.resolve(name, { clip }) : art.resolve(name);
+            return key && scene.textures.exists(key) ? key : null;
+        };
+        const primary = pick(role, 'idle') || pick(role, null);
+        if (primary) return { key: primary, role };
+        if (!fallbackRole) return null;
+        const fallback = pick(fallbackRole, 'idle') || pick(fallbackRole, null);
+        return fallback ? { key: fallback, role: fallbackRole } : null;
+    }
+
+    playBowRelease() {
+        const sprite = this.player;
+        if (!sprite || sprite.getData?.('artRole') !== 'player_bow' || !this.runtimeArt?.playClip) return;
+        const animKey = this.runtimeArt.playClip(sprite, 'player_bow', 'attack');
+        if (!animKey) return;
+        const back = () => {
+            if (this.player !== sprite || !this.isRunning()) return;
+            this.runtimeArt?.playClip?.(sprite, 'player_bow', 'idle');
+        };
+        if (sprite.once && this.scene?.anims?.exists?.(animKey)) {
+            sprite.once(`animationcomplete-${animKey}`, back);
+            return;
+        }
+        this.attackReturn?.remove?.(false);
+        this.attackReturn = this.scene?.time?.delayedCall?.(180, back) || null;
     }
 
     enemyFire() {

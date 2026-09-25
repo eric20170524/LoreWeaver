@@ -1,0 +1,263 @@
+{
+  "schemaVersion": "loreweaver.procedural-audio.v1",
+  "source": "scripts/build_fangame_audio.py; original deterministic oscillators and seeded noise",
+  "license": "Original composition and synthesis for this project; no third-party samples",
+  "sampleRate": 24000,
+  "codec": "MP3",
+  "items": [
+    {
+      "id": "node1_battle",
+      "path": "assets/audio/procedural/bgm/node1_battle.mp3",
+      "bpm": 108,
+      "style": "battle",
+      "motifFamilies": [
+        "fist_wind",
+        "black_blade",
+        "purple_bow"
+      ],
+      "ambienceFamily": null,
+      "sha256": "f7ae5c372b282b9c6774a3b3782d40a5f675aa19ae9640972fd1a69621383fe0"
+    },
+    {
+      "id": "node2_treasure",
+      "path": "assets/audio/procedural/bgm/node2_treasure.mp3",
+      "bpm": 94,
+      "style": "duel",
+      "motifFamilies": [
+        "fist_wind",
+        "black_blade"
+      ],
+      "ambienceFamily": null,
+      "sha256": "876ba90a6a7dce0f292c7df1439163254e9bfddcf873904873d7fd030ca2ace7"
+    },
+    {
+      "id": "node3_rival",
+      "path": "assets/audio/procedural/bgm/node3_rival.mp3",
+      "bpm": 102,
+      "style": "rival",
+      "motifFamilies": [
+        "black_blade",
+        "purple_bow"
+      ],
+      "ambienceFamily": "corpse_tide",
+      "sha256": "1292ca10ed648b31543436c1090780b86283ce2c1203976684899b59f90d34e3"
+    },
+    {
+      "id": "node4_tide",
+      "path": "assets/audio/procedural/bgm/node4_tide.mp3",
+      "bpm": 116,
+      "style": "windfire",
+      "motifFamilies": [
+        "black_blade",
+        "fist_wind"
+      ],
+      "ambienceFamily": null,
+      "sha256": "3d4eb180ec003587074f75a4e1e3a0f8401f7413fbf577fdd88255ae35fd1307"
+    },
+    {
+      "id": "node5_defense",
+      "path": "assets/audio/procedural/bgm/node5_defense.mp3",
+      "bpm": 100,
+      "style": "bow",
+      "motifFamilies": [
+        "purple_bow"
+      ],
+      "ambienceFamily": null,
+      "sha256": "1bd0b2929d31dc4cea6ab2dad71f5caa9748789ab7431addf43ad6e4197c958b"
+    },
+    {
+      "id": "node6_poison",
+      "path": "assets/audio/procedural/bgm/node6_poison.mp3",
+      "bpm": 122,
+      "style": "siege",
+      "motifFamilies": [
+        "fist_wind",
+        "black_blade"
+      ],
+      "ambienceFamily": "encirclement",
+      "sha256": "a067162f9b2f92b2083294da3554e9a5be1eb007f60527a16a5af6a0edd16a5a"
+    },
+    {
+      "id": "node7_tournament",
+      "path": "assets/audio/procedural/bgm/node7_tournament.mp3",
+      "bpm": 78,
+      "style": "moon",
+      "motifFamilies": [
+        "moon_silver"
+      ],
+      "ambienceFamily": null,
+      "sha256": "bd3cb586073ded2c97d40ad8c6530caa0bf9708ce1f7cfe026a42dfef39a6a2f"
+    },
+    {
+      "id": "node8_ruins",
+      "path": "assets/audio/procedural/bgm/node8_ruins.mp3",
+      "bpm": 104,
+      "style": "ruins",
+      "motifFamilies": [
+        "black_blade",
+        "moon_silver"
+      ],
+      "ambienceFamily": "encirclement",
+      "sha256": "3ea15e268b5683e3475a78c4fffaa1b9abce722fe2935ab30dbdb604f60e89c6"
+    },
+    {
+      "id": "node9_escort",
+      "path": "assets/audio/procedural/bgm/node9_escort.mp3",
+      "bpm": 124,
+      "style": "horn",
+      "motifFamilies": [
+        "fist_wind",
+        "black_blade"
+      ],
+      "ambienceFamily": "tribal_front",
+      "sha256": "3b5141ae7a677fae1c5c159bdab12c65f9724848b53382e4a990806d739eb801"
+    },
+    {
+      "id": "node10_siege",
+      "path": "assets/audio/procedural/bgm/node10_siege.mp3",
+      "bpm": 88,
+      "style": "heartbeat",
+      "motifFamilies": [
+        "blood_pulse"
+      ],
+      "ambienceFamily": null,
+      "sha256": "c1ce8fd04960e9c3061aef81cf1734349692c1c277e01ebeda76f01dabe9dfb1"
+    },
+    {
+      "id": "node11_gauntlet",
+      "path": "assets/audio/procedural/bgm/node11_gauntlet.mp3",
+      "bpm": 128,
+      "style": "blood",
+      "motifFamilies": [
+        "blood_pulse",
+        "black_blade"
+      ],
+      "ambienceFamily": "corpse_tide",
+      "sha256": "2ff9e59e83efee1640bee47fb6b67f7b2f91ea1483d8ab515889dfbbbd2091cb"
+    },
+    {
+      "id": "node12_finale",
+      "path": "assets/audio/procedural/bgm/node12_finale.mp3",
+      "bpm": 126,
+      "style": "finale",
+      "motifFamilies": [
+        "black_blade",
+        "purple_bow",
+        "moon_silver",
+        "blood_pulse"
+      ],
+      "ambienceFamily": null,
+      "sha256": "3b024496a7839571e8f066a0d90d04b7dfff768f98c2dca253c45e4219130f0f"
+    },
+    {
+      "id": "sfx_blade_sweep",
+      "path": "assets/audio/procedural/sfx/sfx_blade_sweep.mp3",
+      "sha256": "1c1027aa8b19336b6e63dbb871c71e043e349e06edf92130c7f52615f727b03b"
+    },
+    {
+      "id": "sfx_bow_release",
+      "path": "assets/audio/procedural/sfx/sfx_bow_release.mp3",
+      "sha256": "6bb182d405e665c6fb9b7cd7eaa91b5db2f19b8f7218cbc0ee7be05746b9b3ff"
+    },
+    {
+      "id": "victory_sting",
+      "path": "assets/audio/procedural/sfx/victory_sting.mp3",
+      "sha256": "ec5ba430ff0856254fa205d26c5a18eb7d0814ec44cb275c0990d11c7e439500"
+    },
+    {
+      "id": "defeat_sting",
+      "path": "assets/audio/procedural/sfx/defeat_sting.mp3",
+      "sha256": "e015d521bcf3b692f68f6f5f82e6f042fd8ca4d606ea5b56eccebdb24b719431"
+    },
+    {
+      "id": "sfx_stance_melee",
+      "path": "assets/audio/procedural/sfx/sfx_stance_melee.mp3",
+      "sha256": "ee87a85d282d5b9f8e6d3747bc7ff24c83168f1b66ba046fcbb7cebdd33ba6aa"
+    },
+    {
+      "id": "sfx_stance_ranged",
+      "path": "assets/audio/procedural/sfx/sfx_stance_ranged.mp3",
+      "sha256": "7535fe339d7584b58574027882795fe26928e2fb12fe913b494187e03112c107"
+    },
+    {
+      "id": "sfx_overdrive",
+      "path": "assets/audio/procedural/sfx/sfx_overdrive.mp3",
+      "sha256": "4b3a1ab6d98818688cd29a12245f80faef5a54191bd03d2fbdf682e4e96b50e9"
+    },
+    {
+      "id": "sfx_growth",
+      "path": "assets/audio/procedural/sfx/sfx_growth.mp3",
+      "sha256": "8b73b1f0579ff2e68102569746b6002b1b5ed7b36010c1b5a9d9975912a72026"
+    },
+    {
+      "id": "defeat_timeout",
+      "path": "assets/audio/procedural/sfx/defeat_timeout.mp3",
+      "sha256": "5f3924e8b5783c3d4b132e55b8579272255a81805982edea10ea43e4a74c7237"
+    },
+    {
+      "id": "defeat_death",
+      "path": "assets/audio/procedural/sfx/defeat_death.mp3",
+      "sha256": "d60342f1e74b264c24e0e65b4e92dc0a1c8258a8e2a0ae2858c90e1da5275404"
+    },
+    {
+      "id": "sfx_black_blade",
+      "path": "assets/audio/procedural/sfx/sfx_black_blade.mp3",
+      "sha256": "80533ff87e4001f092beba201c4153067b4ea510fed0deaae01d389206b65257"
+    },
+    {
+      "id": "sfx_fire_slash",
+      "path": "assets/audio/procedural/sfx/sfx_fire_slash.mp3",
+      "sha256": "2b39f14b3d87143099b7c8824799e16923a928b7b6dab01180bfcfaf9a053419"
+    },
+    {
+      "id": "sfx_wind_slash",
+      "path": "assets/audio/procedural/sfx/sfx_wind_slash.mp3",
+      "sha256": "c0ae0d6a2a286817498169267c70c12744d63bc4a0a3aadfe2e3c8270ed6b7ef"
+    },
+    {
+      "id": "sfx_awakening_heartbeat",
+      "path": "assets/audio/procedural/sfx/sfx_awakening_heartbeat.mp3",
+      "sha256": "690639ff5277e374054708f91100f85833bc7a81e4b54b4e04fec2abfb0ad6b0"
+    },
+    {
+      "id": "sfx_arena_drum_warning",
+      "path": "assets/audio/procedural/sfx/sfx_arena_drum_warning.mp3",
+      "sha256": "003c76963954404ca76b0fa8e39d1b7889a4ae809eb4e9be627e1bd8462dcc5d"
+    },
+    {
+      "id": "sfx_arena_counter_open",
+      "path": "assets/audio/procedural/sfx/sfx_arena_counter_open.mp3",
+      "sha256": "870cc63ced0980322ad1980b144ed605f37e9d21333e51c6c9dd33c040ea0687"
+    },
+    {
+      "id": "sfx_blood_heartbeat_window",
+      "path": "assets/audio/procedural/sfx/sfx_blood_heartbeat_window.mp3",
+      "sha256": "86b063c6024485ba584e96cad6aaef61b66467ae88c5d9c8f56da687fbd132db"
+    },
+    {
+      "id": "sfx_war_horn",
+      "path": "assets/audio/procedural/sfx/sfx_war_horn.mp3",
+      "sha256": "d7b418408c8abd2fc70941728f1057076b541cdd66adb429346f5a636c6d1a71"
+    },
+    {
+      "id": "sfx_wall_breach",
+      "path": "assets/audio/procedural/sfx/sfx_wall_breach.mp3",
+      "sha256": "fe25bb5aeae7794ab671846b665391bcdf87802bc2a3a58318956ca930de4510"
+    },
+    {
+      "id": "sfx_latent_heartbeat_window",
+      "path": "assets/audio/procedural/sfx/sfx_latent_heartbeat_window.mp3",
+      "sha256": "d3f3704f7e58a8306d8d6c09db9e02a47ec3c2b63b8c2d7fabc44afbd2d8b28c"
+    },
+    {
+      "id": "sfx_wave_clear",
+      "path": "assets/audio/procedural/sfx/sfx_wave_clear.mp3",
+      "sha256": "71e61f0267261a0d3c3c8bcf0c2e853fa9fc8d3e0b8e91ac99b6f96cf761dd35"
+    },
+    {
+      "id": "sfx_horde_drum",
+      "path": "assets/audio/procedural/sfx/sfx_horde_drum.mp3",
+      "sha256": "a6a999f8aec0751d19c01a93260b72d75e292f153ccf488e4fe5b7f6e10b05ba"
+    }
+  ]
+}

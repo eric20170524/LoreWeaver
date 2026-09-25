@@ -42,6 +42,8 @@ export interface DepartmentRuntimeState {
   brief?: string;
   artifacts: string[];
   openHandoffCount: number;
+  source?: "llm" | "procedural_fallback" | "orchestrator" | string;
+  provider?: string | null;
   updatedAt?: string | null;
   confirmedAt?: string | null;
 }
@@ -73,12 +75,14 @@ export interface DepartmentHandoff {
   summary: string;
   payloadRef?: string;
   needs?: string[];
+  acceptanceCriteria?: string[];
   blockers?: string[];
   patchLevelMax?: string;
   createdAt: string;
   status: "open" | "resolved" | "wontfix";
   resolvedAt?: string;
   resolveNote?: string;
+  evidenceRefs?: Array<{ path: string; sha256: string }>;
 }
 
 export interface DepartmentRegistry {
@@ -189,7 +193,6 @@ export async function confirmDepartment(
   deptId: string,
   body: {
     prepNotes?: string;
-    qaScore?: number;
     brief?: string;
     scope?: PrepScope;
     activeScope?: PrepScope;
@@ -272,7 +275,7 @@ export async function advanceDepartmentStage(
 export async function setDepartmentStatus(
   workspaceId: string,
   deptId: string,
-  body: { status: DepartmentStatus; prepNotes?: string; qaScore?: number; scope?: PrepScope; activeScope?: PrepScope }
+  body: { status: DepartmentStatus; prepNotes?: string; scope?: PrepScope; activeScope?: PrepScope }
 ): Promise<DepartmentDeskState> {
   const res = await fetch(
     `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/departments/${encodeURIComponent(deptId)}/status`,
@@ -307,7 +310,7 @@ export async function createHandoff(
 export async function resolveHandoff(
   workspaceId: string,
   handoffId: string,
-  body: { status?: string; note?: string } = {}
+  body: { status: "resolved" | "wontfix"; note: string; evidenceRefs?: Array<{ path: string; sha256?: string }> }
 ): Promise<DepartmentHandoff> {
   const res = await fetch(
     `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/departments/handoffs/${encodeURIComponent(handoffId)}/resolve`,
@@ -351,6 +354,7 @@ export interface AdvanceGate {
   confirmedCount?: number;
   requiredCount?: number;
   qaScore?: number | null;
+  reportProvenance?: Array<{ file: string; createdAt?: string | null; artifactSha256?: string | null }>;
   nextStageId?: string | null;
   minQa?: number;
   openRejects?: number;

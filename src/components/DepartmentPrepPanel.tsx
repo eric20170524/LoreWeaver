@@ -69,7 +69,6 @@ export function DepartmentPrepPanel({
   const [selectedId, setSelectedId] = useState<string>("director");
   const [detailTab, setDetailTab] = useState<DetailTab>("prepNotes");
   const [notesDraft, setNotesDraft] = useState("");
-  const [qaDraft, setQaDraft] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +87,11 @@ export function DepartmentPrepPanel({
   // New handoff form
   const [hoTo, setHoTo] = useState("art");
   const [hoSummary, setHoSummary] = useState("");
+  const [hoCriteria, setHoCriteria] = useState("");
+  const [resolutionDrafts, setResolutionDrafts] = useState<Record<string, { note: string; path: string }>>({});
+  const [releaseDecision, setReleaseDecision] = useState<{
+    status?: string; releaseCertified?: boolean; blockers?: string[]; artifactSha256?: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     if (!workspaceId) return;
@@ -103,6 +107,20 @@ export function DepartmentPrepPanel({
         setGate(await fetchAdvanceGate(workspaceId));
       } catch {
         setGate(null);
+      }
+      try {
+        const releaseResponse = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/release-status`);
+        if (!releaseResponse.ok) throw new Error(`release status HTTP ${releaseResponse.status}`);
+        const releasePayload = await releaseResponse.json();
+        const decision = releasePayload?.decision;
+        setReleaseDecision(decision ? {
+          status: decision.status || releasePayload.status,
+          releaseCertified: decision.releaseCertified === true,
+          blockers: decision.blockers || [],
+          artifactSha256: decision.identity?.artifactSha256
+        } : null);
+      } catch {
+        setReleaseDecision(null);
       }
       setStatusMsg(zh ? "已刷新部门状态" : "Desk refreshed");
       onDeskChanged?.();
@@ -145,26 +163,24 @@ export function DepartmentPrepPanel({
     if (selectedRuntime) {
       setNotesDraft(selectedRuntime.prepNotes || "");
       setBriefDraft(selectedRuntime.brief || "");
-      setQaDraft(
-        selectedRuntime.qaScore == null ? "" : String(selectedRuntime.qaScore)
-      );
     } else {
       setNotesDraft("");
       setBriefDraft("");
-      setQaDraft("");
     }
-  }, [selectedId, viewKey, selectedRuntime?.version, selectedRuntime?.prepNotes, selectedRuntime?.brief, selectedRuntime?.qaScore]);
+  }, [selectedId, viewKey, selectedRuntime?.version, selectedRuntime?.prepNotes, selectedRuntime?.brief]);
+
+  const viewUnitId = viewScope.kind === "trunk" ? "trunk" : `node:${viewScope.nodeIds?.[0]}`;
 
   const handoffsForSelected: DepartmentHandoff[] = useMemo(() => {
     if (!desk || !selectedMeta) return [];
     return (desk.handoffs || []).filter(
-      (h) => h.to === selectedMeta.id || h.from === selectedMeta.id
+      (h) => h.unitId === viewUnitId && (h.to === selectedMeta.id || h.from === selectedMeta.id)
     );
-  }, [desk, selectedMeta]);
+  }, [desk, selectedMeta, viewUnitId]);
 
   const openHandoffs = useMemo(
-    () => (desk?.handoffs || []).filter((h) => h.status === "open"),
-    [desk]
+    () => (desk?.handoffs || []).filter((h) => h.status === "open" && h.unitId === viewUnitId),
+    [desk, viewUnitId]
   );
 
   const stages = desk?.registry.stages || [];
@@ -183,11 +199,9 @@ export function DepartmentPrepPanel({
     if (!selectedMeta || busy) return;
     setBusy(true);
     try {
-      const score = qaDraft === "" ? undefined : Number(qaDraft);
       const result = await confirmDepartment(workspaceId, selectedMeta.id, {
         prepNotes: notesDraft,
         brief: briefDraft,
-        qaScore: Number.isFinite(score as number) ? (score as number) : undefined,
         scope: viewScope,
         activeScope: viewScope,
         reprepDownstream
@@ -217,11 +231,9 @@ export function DepartmentPrepPanel({
     if (!selectedMeta || busy) return;
     setBusy(true);
     try {
-      const score = qaDraft === "" ? 80 : Number(qaDraft);
       const next = await setDepartmentStatus(workspaceId, selectedMeta.id, {
         status: "ready_for_review",
         prepNotes: notesDraft,
-        qaScore: Number.isFinite(score) ? score : 80,
         scope: viewScope,
         activeScope: viewScope
       });
@@ -332,17 +344,19 @@ export function DepartmentPrepPanel({
   };
 
   const onCreateHandoff = async () => {
-    if (!selectedMeta || !hoSummary.trim() || busy) return;
+    if (!selectedMeta || !hoSummary.trim() || !hoCriteria.trim() || busy) return;
     setBusy(true);
     try {
       await createHandoff(workspaceId, {
         from: selectedMeta.id,
         to: hoTo,
         summary: hoSummary.trim(),
+        acceptanceCriteria: hoCriteria.split("\n").map((item) => item.trim()).filter(Boolean),
         type: "request",
         scope: viewScope
       });
       setHoSummary("");
+      setHoCriteria("");
       addLog(zh ? `📨 交接已创建：${selectedMeta.id} → ${hoTo}` : `Handoff ${selectedMeta.id} → ${hoTo}`);
       await load();
     } catch (e: any) {
@@ -352,10 +366,20 @@ export function DepartmentPrepPanel({
     }
   };
 
-  const onResolve = async (id: string) => {
+  const onResolve = async (handoff: DepartmentHandoff, status: "resolved" | "wontfix") => {
+    const draft = resolutionDrafts[handoff.id] || { note: "", path: "" };
     setBusy(true);
     try {
-      await resolveHandoff(workspaceId, id, { status: "resolved" });
+      await resolveHandoff(workspaceId, handoff.id, {
+        status,
+        note: draft.note.trim(),
+        evidenceRefs: status === "resolved" ? [{ path: draft.path.trim() }] : []
+      });
+      setResolutionDrafts((current) => {
+        const next = { ...current };
+        delete next[handoff.id];
+        return next;
+      });
       await load();
     } catch (e: any) {
       setError(e?.message || String(e));
@@ -376,11 +400,7 @@ export function DepartmentPrepPanel({
       ? zh
         ? "主干"
         : "Trunk"
-      : allNodes
-        ? zh
-          ? `全关 × ${runNodeIds.length}`
-          : `All nodes × ${runNodeIds.length}`
-        : `Node ${primaryNodeId ?? "—"}`;
+      : `Node ${primaryNodeId ?? "—"}${allNodes ? (zh ? ` · 调度全关 × ${runNodeIds.length}` : ` · dispatch all × ${runNodeIds.length}`) : ""}`;
   const canRunSelected = !!selectedMeta && departmentCanRun(selectedMeta, scopeMode) && (
     scopeMode === "trunk" || runNodeIds.length > 0
   );
@@ -394,33 +414,6 @@ export function DepartmentPrepPanel({
   );
 
   const openRejectHandoffs = openHandoffs.filter((h) => h.type === "reject");
-
-  const onResolveAllRejects = async () => {
-    if (!workspaceId || !openRejectHandoffs.length) return;
-    setBusy(true);
-    setBusyAction("other");
-    try {
-      for (const h of openRejectHandoffs) {
-        await resolveHandoff(workspaceId, h.id, {
-          status: "resolved",
-          note: zh
-            ? "人工确认：reject 已登记为后续优化，不阻断后续阶段"
-            : "Acknowledged: reject deferred; does not block later stages"
-        });
-      }
-      addLog(
-        zh
-          ? `✅ 已关闭 ${openRejectHandoffs.length} 条 REJECT 交接`
-          : `✅ Resolved ${openRejectHandoffs.length} reject handoff(s)`
-      );
-      await load();
-    } catch (e: any) {
-      setError(e?.message || String(e));
-    } finally {
-      setBusy(false);
-      setBusyAction("idle");
-    }
-  };
 
   const onAdvanceStage = async (target: "asset_confirm" | "runtime_stage") => {
     if (busy || !workspaceId) return;
@@ -646,14 +639,51 @@ export function DepartmentPrepPanel({
         <div className="text-xs text-emerald-850 dark:text-emerald-250 bg-emerald-500/15 border border-emerald-500/30 rounded-xl px-4 py-3 flex flex-col gap-1.5 shadow-sm">
           <div className="font-bold flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
             <span>🎉</span>
-            {zh ? "恭喜！『运行与导出』阶段门禁已通过" : "Congratulations! 'Runtime & Export' Gate Passed"}
+            {zh ? "制作筹备已进入运行阶段" : "Production prep reached runtime stage"}
           </div>
           <div className="opacity-90 leading-relaxed font-sans">
             {zh
-              ? "当前版本已成功通过全部测试。请点击页面右上角顶栏的【 📥 导出 】(Export) 按钮，即可打包下载独立的本地单页 H5 游戏 ZIP 包！"
-              : "The current version has successfully passed all tests. Please click the [ 📥 Export ] button in the top-right header to package and download your standalone H5 game ZIP!"}
+              ? "此阶段表示筹备门禁通过；候选包与正式发布验收请看下方独立发布决策。"
+              : "This is a prep gate. Candidate and certified release evidence are evaluated separately below."}
           </div>
         </div>
+      )}
+
+      <div className="text-xs rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-900 dark:text-amber-200">
+        {releaseDecision ? (
+          <>
+            <strong>{zh ? "当前包发布决策" : "Current candidate decision"}: {releaseDecision.status || "unknown"}</strong>
+            <span className="block mt-1 font-mono text-[10px] break-all">SHA-256 {releaseDecision.artifactSha256 || "—"}</span>
+            <span className="block mt-1">
+              {releaseDecision.releaseCertified
+                ? (zh ? "已取得正式发布证据。" : "Certified release evidence is complete.")
+                : (zh ? `未认证；仍有 ${releaseDecision.blockers?.length || 0} 项发布阻断。` : `Not certified; ${releaseDecision.blockers?.length || 0} release blockers remain.`)}
+            </span>
+            {!!releaseDecision.blockers?.length && (
+              <details className="mt-1">
+                <summary className="cursor-pointer">{zh ? "查看发布阻断项" : "Show release blockers"}</summary>
+                <ul className="mt-1 max-h-40 overflow-y-auto space-y-0.5 font-mono text-[10px] break-all">
+                  {releaseDecision.blockers.map((blocker, index) => <li key={`${blocker}-${index}`}>{blocker}</li>)}
+                </ul>
+              </details>
+            )}
+          </>
+        ) : (zh ? "当前包发布决策未取得；筹备分数不能代替发布验收。" : "Candidate decision unavailable; prep scores are not release evidence.")}
+      </div>
+      {!!gate?.reportProvenance?.length && (
+        <details className="text-[11px] text-slate-500 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2">
+          <summary className="cursor-pointer">{zh ? "筹备分所用报告与候选包匹配情况" : "Prep report sources and candidate match"}</summary>
+          <ul className="mt-2 space-y-1 font-mono">
+            {gate.reportProvenance.map((report) => {
+              const match = !!releaseDecision?.artifactSha256 && report.artifactSha256 === releaseDecision.artifactSha256;
+              return <li key={report.file} className="break-all">
+                {report.file} · {report.createdAt || (zh ? "时间未知" : "undated")} · {match
+                  ? (zh ? "匹配当前包" : "matches candidate")
+                  : (zh ? "未绑定当前包，仅供筹备参考" : "not bound to candidate; prep only")}
+              </li>;
+            })}
+          </ul>
+        </details>
       )}
 
       {statusMsg && !error && (
@@ -697,7 +727,7 @@ export function DepartmentPrepPanel({
                   : `next → ${nextStageId} ${gate.allowed ? "OPEN" : "BLOCKED"}`
                 : stageId}
           </strong>
-          {gate.qaScore != null && ` · QA ${gate.qaScore}`}
+          {gate.qaScore != null && ` · ${zh ? "筹备分" : "Prep score"} ${gate.qaScore}`}
           {nextBlocked && gate.blockers?.length ? (
             <span className="block mt-1 opacity-90">
               blockers: {gate.blockers.slice(0, 6).join(" · ")}
@@ -753,17 +783,9 @@ export function DepartmentPrepPanel({
             <div className="mt-2 flex flex-wrap items-center gap-2 not-italic font-sans">
               <span className="text-amber-700 dark:text-amber-300">
                 {zh
-                  ? `${openRejectHandoffs.length} 条开放 REJECT（仅阻断「进入资产确认」）`
-                  : `${openRejectHandoffs.length} open REJECT (blocks asset_confirm only)`}
+                  ? `${openRejectHandoffs.length} 条本范围开放 REJECT；需逐项提供修复证据。`
+                  : `${openRejectHandoffs.length} open REJECT in this scope; resolve each with evidence.`}
               </span>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onResolveAllRejects}
-                className="px-2 py-0.5 rounded border border-amber-500/40 text-amber-800 dark:text-amber-200 text-[10px] font-bold hover:bg-amber-500/10 disabled:opacity-50"
-              >
-                {zh ? "确认并关闭 REJECT" : "Resolve REJECT(s)"}
-              </button>
             </div>
           )}
         </div>
@@ -791,7 +813,7 @@ export function DepartmentPrepPanel({
                 {entry.id}
                 {entry.nodeId != null ? `@${entry.nodeId}` : entry.scopeKind === "trunk" ? "@trunk" : ""}
                 {entry.skipped ? " skip" : ` ${entry.source || "ok"}`}
-                {entry.qaScore != null ? ` ${entry.qaScore}` : ""}
+                {entry.qaScore != null ? ` ${zh ? "筹备分" : "Prep"} ${entry.qaScore}` : ""}
                 {entry.patchesApplied ? ` p${entry.patchesApplied}` : ""}
               </span>
             ))}
@@ -847,7 +869,9 @@ export function DepartmentPrepPanel({
                     </span>
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5 flex gap-2 font-mono">
-                    {rt?.qaScore != null && <span>QA {rt.qaScore}</span>}
+                    {rt?.qaScore != null && <span>{zh ? "筹备分" : "Prep"} {rt.qaScore}</span>}
+                    {rt?.source === "procedural_fallback" && <span className="text-amber-600">{zh ? "程序草案" : "fallback draft"}</span>}
+                    {rt?.source === "llm" && <span>{zh ? "模型草案" : "LLM draft"}</span>}
                     {(rt?.openHandoffCount || 0) > 0 && (
                       <span className="text-amber-500">
                         {zh ? "交接" : "HO"} {rt?.openHandoffCount}
@@ -1109,17 +1133,7 @@ export function DepartmentPrepPanel({
 
               {detailTab === "qaReport" && (
                 <div className="flex flex-col gap-3">
-                  <label className="text-xs text-slate-500 flex items-center gap-2">
-                    {zh ? "质检分数 (0–100)" : "QA score (0–100)"}
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={qaDraft}
-                      onChange={(e) => setQaDraft(e.target.value)}
-                      className="w-20 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent text-sm font-mono"
-                    />
-                  </label>
+                  <p className="text-xs text-slate-500">{zh ? "筹备分（只读，非当前候选包发布分）：" : "Prep score (read-only, not candidate release evidence): "}{selectedRuntime.qaScore ?? "—"}</p>
                   <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1 font-mono bg-slate-50 dark:bg-slate-950/40 rounded-lg p-3 border border-slate-200 dark:border-slate-800">
                     <div>
                       {zh ? "依赖" : "dependsOn"}:{" "}
@@ -1135,10 +1149,11 @@ export function DepartmentPrepPanel({
                     <div>
                       {zh ? "确认时间" : "confirmed"}: {selectedRuntime.confirmedAt || "—"}
                     </div>
+                    <div>{zh ? "草案来源" : "draft source"}: {selectedRuntime.source || "—"}{selectedRuntime.provider ? ` · ${selectedRuntime.provider}` : ""}</div>
                     <div className="pt-2 text-slate-500">
                       {zh
-                        ? "完整 gate 报告仍来自 workflow/reports；此处为部门台分数占位，后续可绑定 e2e/art coverage。"
-                        : "Full gates stay in workflow/reports; score here is a desk placeholder."}
+                        ? "发布证据以当前候选包 SHA 和独立发布决策为准；旧的全局 latest 报告不自动转为当前包通过。"
+                        : "Release evidence follows the exact candidate SHA and independent decision; global latest reports do not carry over."}
                     </div>
                   </div>
                 </div>
@@ -1172,9 +1187,16 @@ export function DepartmentPrepPanel({
                       placeholder={zh ? "交接摘要，例如：Node4 需要 laser 预警圈美术" : "Summary…"}
                       className="w-full text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1.5"
                     />
+                    <textarea
+                      value={hoCriteria}
+                      onChange={(e) => setHoCriteria(e.target.value)}
+                      rows={2}
+                      placeholder={zh ? "验收条件（每行一项；例如：当前包节点 4 横屏截图经独立视觉审计）" : "Acceptance criteria, one per line"}
+                      className="w-full text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1.5"
+                    />
                     <button
                       type="button"
-                      disabled={busy || !hoSummary.trim()}
+                      disabled={busy || !hoSummary.trim() || !hoCriteria.trim()}
                       onClick={onCreateHandoff}
                       className="self-start px-3 py-1.5 text-xs rounded-lg bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold disabled:opacity-40"
                     >
@@ -1208,18 +1230,37 @@ export function DepartmentPrepPanel({
                           </span>
                         </div>
                         <p className="text-slate-700 dark:text-slate-300">{h.summary}</p>
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                          <span>{h.createdAt}</span>
-                          {h.status === "open" && (
-                            <button
-                              type="button"
-                              className="text-emerald-600 dark:text-emerald-400 hover:underline"
-                              onClick={() => onResolve(h.id)}
-                            >
-                              {zh ? "标记已解决" : "Resolve"}
-                            </button>
-                          )}
-                        </div>
+                        <p className="text-[10px] text-slate-500">{zh ? "验收条件" : "Acceptance"}: {(h.acceptanceCriteria || h.needs || [h.summary]).join("；")}</p>
+                        <span className="text-[10px] text-slate-500 font-mono">{h.unitId || "trunk"} · {h.createdAt}</span>
+                        {h.status === "open" ? (
+                          <div className="flex flex-col gap-1.5 mt-1">
+                            <input
+                              value={resolutionDrafts[h.id]?.path || ""}
+                              onChange={(e) => setResolutionDrafts((current) => ({ ...current, [h.id]: { note: current[h.id]?.note || "", path: e.target.value } }))}
+                              placeholder={zh ? "仓库内证据文件路径（解决时必填，服务端核验 SHA）" : "Repository evidence file path (required to resolve)"}
+                              className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-[11px]"
+                            />
+                            <textarea
+                              value={resolutionDrafts[h.id]?.note || ""}
+                              onChange={(e) => setResolutionDrafts((current) => ({ ...current, [h.id]: { note: e.target.value, path: current[h.id]?.path || "" } }))}
+                              rows={2}
+                              placeholder={zh ? "核对结果与当前包身份；无法完成时写明原因" : "Verification result or reason for not doing it"}
+                              className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-[11px]"
+                            />
+                            <div className="flex gap-2">
+                              <button type="button" disabled={busy || !resolutionDrafts[h.id]?.note?.trim() || !resolutionDrafts[h.id]?.path?.trim()}
+                                className="text-emerald-600 dark:text-emerald-400 hover:underline disabled:opacity-40"
+                                onClick={() => onResolve(h, "resolved")}>{zh ? "核验证据并解决" : "Verify evidence and resolve"}</button>
+                              {h.type !== "reject" && (
+                                <button type="button" disabled={busy || !resolutionDrafts[h.id]?.note?.trim()}
+                                  className="text-amber-700 dark:text-amber-400 hover:underline disabled:opacity-40"
+                                  onClick={() => onResolve(h, "wontfix")}>{zh ? "说明原因并放弃" : "Explain and decline"}</button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-slate-500">{h.resolveNote || "—"}{h.evidenceRefs?.length ? ` · ${h.evidenceRefs.map((ref) => `${ref.path}#${ref.sha256.slice(0, 12)}`).join(", ")}` : ""}</p>
+                        )}
                       </div>
                     ))}
                   </div>

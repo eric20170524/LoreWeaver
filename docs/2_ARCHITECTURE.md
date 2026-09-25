@@ -14,9 +14,9 @@
 - **部门绑定：** 玩法组只补缺。石牧节点 2、4、5、7、10 在 `gameplay.knobs.allowExperimentalCard` 写 `true`。没有这个开关时，筹备会把 `dodge_counter_boss`、`side_scrolling_brawler`、`shooter_duel`、`rhythm_timing` 换成 `survivor_horde`。已有 `cardId`、modifier、首通奖励和战斗数值保持原值。
 - **缺文件的 BGM：** `playBgm` 找不到文件时，若 `audioCueCatalog` 里有同 id 的合成频率，背景用该频率。没有这条时仍用 60Hz。换关要停掉上一关的底噪再起新的。不把缺失的 `build_gate` 报告写成通过。
 - **候选包资源：** 角色 atlas 与环境 atlas 分开加载。后者由 `scripts/build_environment_atlas.py` 从 12 张原创场景图生成，宽高均不超过 4096；`RuntimeArtBinder` 按 frame 所属 atlas 取图。独立包 manifest 与图片共同打包，缺帧仍按既有 art telemetry 报告。
-- **候选包音频与静音：** 关卡手势先解锁 WebAudio 合成器，再启动对应的合成底噪；语义事件播放目录 cue。独立包的静音控制、主界面静音控制与 `AudioAssetResolver` 同步，切关后保持静音。浏览器验收用实际 `audioUnlocked`、`synthHz` 与 cue 注册状态，不以目录存在代替播放证据。
+- **候选包音频与静音：** 关卡手势解锁音频后优先播放 `audioCueCatalog` 的文件 BGM/音效；文件缺失或播放失败时回退既有 WebAudio 合成 cue。独立包和主界面静音控制与 `AudioAssetResolver` 同步，切关后保持静音。浏览器验收检查实际 `bgmSource=asset`、播放/就绪、语义事件文件请求以及静音、暂停、撤退，不以目录存在代替播放证据。
 - **手机布局：** 独立包在窄于 500 CSS 像素的容器使用 540 逻辑宽度，并按容器宽高比计算逻辑高度；桌面仍用 720×1280。宿主操作栏占画布外一行，避免挡住 Phaser 底部 HUD。
-- **横版关方向：** `side_scrolling_brawler` 开局调用 `scale.setGameSize(960, 540)`，并派发 `loreweaver:orientation` 为 `landscape`。离开关卡或重整前先恢复进入前的尺寸，再派发 `portrait`。波次画面只读 `waveList[].theme`，不在适配器里写关卡专名。
+- **横版关方向：** `side_scrolling_brawler` 开局调用 `scale.setGameSize(960, 540)`，并派发 `loreweaver:orientation` 为 `landscape`。standalone 宿主在竖握时显示旋转提示并暂停 `LevelActiveScene`，横握后恢复；横屏时画布与宿主按钮采用左右两列，粗指针设备显示上/下/左/右/轻击/重击六键。离开关卡或重整前恢复进入前的尺寸，再派发 `portrait`。波次画面只读 `waveList[].theme`，不在适配器里写关卡专名。
 
 ## 3. 目录
 

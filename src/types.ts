@@ -122,6 +122,7 @@ export interface SkillEffectSpec {
 export interface AudioCueSpec {
   id: string;
   runtimeSkillId: string;
+  assetPath?: string;
   synth: {
     frequencies: number[];
     wave: "sine" | "square" | "sawtooth" | "triangle" | string;

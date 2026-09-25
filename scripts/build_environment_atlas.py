@@ -15,6 +15,12 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 FRAMES_DIR = ROOT / "assets/imagegen/environments/frames"
 ATLAS_PATH = ROOT / "assets/imagegen/environments/environment-atlas.png"
+LANDSCAPE_DIR = ROOT / "assets/imagegen/environments/landscape"
+LANDSCAPE_KEYS = (
+    "node4_forge_gate.png",
+    "node4_wind_gallery.png",
+    "node4_flame_edge.png",
+)
 FRAME_SIZE = (512, 910)
 COLS = 3
 ENV_KEYS = (
@@ -78,6 +84,22 @@ def pack(workspace: Path) -> dict:
     )
     shutil.copy2(provenance_path, target_dir / "environment-provenance.json")
 
+    landscape_provenance_path = LANDSCAPE_DIR / "provenance.json"
+    landscape_provenance = json.loads(landscape_provenance_path.read_text(encoding="utf-8"))
+    landscape_target = target_dir / "landscape"
+    landscape_target.mkdir(parents=True, exist_ok=True)
+    for name in LANDSCAPE_KEYS:
+        source = LANDSCAPE_DIR / name
+        with Image.open(source) as image:
+            if image.size != (1672, 941):
+                raise ValueError(f"{source} must be 1672x941, got {image.size}")
+        actual_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+        if actual_sha != landscape_provenance["sha256"].get(name):
+            raise ValueError(f"landscape source hash mismatch: {source}")
+        shutil.copy2(source, landscape_target / name)
+    shutil.copy2(LANDSCAPE_DIR / "PROMPTS.md", landscape_target / "PROMPTS.md")
+    shutil.copy2(landscape_provenance_path, landscape_target / "provenance.json")
+
     manifest_path = target_dir / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     frames = manifest.setdefault("frames", {})
@@ -100,6 +122,7 @@ def pack(workspace: Path) -> dict:
         "atlas": str(target_dir / "environment-atlas.png"),
         "atlasSize": atlas_size,
         "frames": list(env_frames),
+        "landscapeFrames": list(LANDSCAPE_KEYS),
     }
 
 

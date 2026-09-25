@@ -12,6 +12,11 @@ const DEFAULT_CONFIG = Object.freeze({
     requiresPassive: null,
     requiresAbility: null,
     auraColor: 0xf5e6b8,
+    auraEffect: 'white_ape',
+    auraDisplaySize: 168,
+    auraAlpha: 1,
+    auraTint: null,
+    auraPulseHz: 0,
     label: 'OVERDRIVE'
 });
 
@@ -166,13 +171,18 @@ export default class OverdriveTransformationModifier extends GameplayModifier {
         const scene = context.scene;
         const player = context.player || context.adapter?.player;
         if (!player) return;
-        const aura = VFX.spriteClip(scene, context.adapter?.runtimeArt, 'white_ape', player.x, player.y, {
+        const aura = VFX.spriteClip(scene, context.adapter?.runtimeArt, this.config.auraEffect, player.x, player.y, {
             clip: 'loop',
             depth: 6,
             destroyOnComplete: false
         });
         if (aura) {
-            aura.setDisplaySize?.(168, 168);
+            const size = clampPositive(this.config.auraDisplaySize, DEFAULT_CONFIG.auraDisplaySize);
+            aura.setDisplaySize?.(size, size);
+            aura.setAlpha?.(Number(this.config.auraAlpha));
+            if (this.config.auraTint != null && Number.isFinite(Number(this.config.auraTint))) {
+                aura.setTint?.(Number(this.config.auraTint));
+            }
             this._aura = aura;
         } else if (scene?.add?.circle) {
             this._aura = scene.add.circle(player.x, player.y, 46, Number(this.config.auraColor), 0.22);
@@ -201,6 +211,11 @@ export default class OverdriveTransformationModifier extends GameplayModifier {
         if (this._aura && context.player) {
             this._aura.x = context.player.x;
             this._aura.y = context.player.y;
+            const pulseHz = Number(this.config.auraPulseHz);
+            if (this._active && Number.isFinite(pulseHz) && pulseHz > 0) {
+                const baseAlpha = Number(this.config.auraAlpha);
+                this._aura.setAlpha?.(baseAlpha * (0.68 + 0.32 * Math.sin(elapsed * pulseHz * Math.PI * 2)));
+            }
         }
     }
 

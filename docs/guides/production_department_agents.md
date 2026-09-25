@@ -88,7 +88,7 @@ confirmed → stale（上游变更导致失效）
 | `status` | 上表状态 |
 | `version` | 部门产出版本（V1…Vn），确认时 +1 |
 | `prepNotes` | 筹备意见（人对 Agent 或 Agent 自述方案） |
-| `qaScore` | 0–100，来自本部门自检或 qa 部门回写 |
+| `qaScore` | 0–100 的筹备分，只读；记录草案/自检成熟度，不代表当前候选包的发布验收 |
 | `handoffs` | 交接与问题列表（见 §5） |
 | `artifacts` | 本部门写下的路径列表 |
 | `dependsOn` | 上游部门 id[] |
@@ -112,10 +112,13 @@ confirmed → stale（上游变更导致失效）
   "summary": "Node4 需要 laser_warning 预警圈 + 阵眼 core_eye 贴图",
   "payloadRef": "nodes[3].gameplay",
   "needs": ["art:env_bg_tide", "art:core_eye", "vfx:laser_telegraph"],
+  "acceptanceCriteria": ["实战画面中能看到预警圈和阵眼", "列出对应资源及复测报告"],
   "blockers": [],
   "patchLevelMax": "L2",
   "createdAt": "ISO-8601",
-  "status": "open | resolved | wontfix"
+  "status": "open | resolved | wontfix",
+  "evidenceRefs": [{ "path": "docs/fangame/evidence/node4_visual.json", "sha256": "<文件真实 SHA-256>" }],
+  "resolveNote": "逐项说明如何满足验收条件"
 }
 ```
 
@@ -124,8 +127,12 @@ confirmed → stale（上游变更导致失效）
 1. **下游只读上游已 confirmed 的产物**（或明确标记的 draft 预览）。  
 2. **上游变更 → 下游 `stale`**，必须重新确认。  
 3. **跨部门改别人的产物** → 只能开 handoff `request`，由拥有方 patch。  
-4. **质检组** 可对任何部门写 `qaScore` 与 `handoffs[].type=reject`。  
+4. **质检组** 可以建立 `reject` 交接；筹备分由 Agent/报告产生，确认和状态接口不能手填覆盖。
 5. **合规组** 在 export 前拥有一票否决（`blocked`）。
+
+交接创建时填写明确的 `acceptanceCriteria`；旧数据没有该字段时，以原 `summary` 作为最低限度的验收提示。交接列表和开放数量按 `(unitId, departmentId)` 统计；“全部关卡”用于调度，详情仍显示选中关卡的交接。`resolved` 必须有逐项说明及仓库内证据文件，后端校验文件存在并记录/核对 SHA-256；`wontfix` 必须说明原因，`reject` 不能在部门台以 `wontfix` 绕过。没有证据的旧关闭记录保留原貌，另写更正记录，不静默改写历史。
+
+部门台并列显示独立的当前候选包发布决策、SHA-256、阻断项，以及筹备报告的生成时间和是否绑定当前包。未绑定当前包的 `*_latest.json` 只供筹备参考，不能作为当前 ZIP 的发布证据。个人非商业《玄界之门》石牧同人原型按非官方、免费、素材来源和具体传播平台风险审查；不要求商业授权材料，也不据“非商业”推定公开传播许可。
 
 这与现有 `ManifestPatch` / revision 体系兼容：handoff 可挂 `proposedPatch` 或 `revisionId`。
 
@@ -154,7 +161,7 @@ confirmed → stale（上游变更导致失效）
 | 导演 | `director` | 只写本 scope 汇总，不改 manifest | 同左 |
 | 世界观 | `trunk` | `title` `themeColor` `economy` `progressionSystems` `pipeline_dna` | 不可调度 |
 | 架构 | `trunk` | shell、registry、Runtime Feature Pack 清单 | 不可调度 |
-| 合规 | `trunk` | 内容安全、导出清单、去题材化 | 不可调度。关卡正文只作扫描证据 |
+| 合规 | `trunk` | 内容安全、导出清单、同人声明与传播风险 | 不可调度。关卡正文只作扫描证据 |
 | 叙事 | `node` | 不可调度。提示词只放全关 `{id, title}` 索引 | `title` `intro` `taunts` `planning.notes` |
 | 玩法 | `node` | 不可调度 | `gameplay` 与 `mechanics` |
 | 代码 | `node` | 不可调度。shell 接线走 L3 交接 | `knobs.runtimeCardId`。`shellRetreat` 仅在该关尚无此键时补一次 |

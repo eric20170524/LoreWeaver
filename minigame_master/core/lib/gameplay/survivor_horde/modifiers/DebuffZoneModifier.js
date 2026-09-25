@@ -32,11 +32,12 @@ export default class DebuffZoneModifier extends GameplayModifier {
         const diameter = this.config.zoneRadius * 2;
         const mist = VFX.spriteClip(context.scene, context.adapter?.runtimeArt, 'poison_mire', x, y, {
             clip: 'loop',
-            depth: 3,
+            depth: 1,
             destroyOnComplete: false
         });
         if (mist) {
             mist.setDisplaySize?.(diameter, diameter);
+            mist.setAlpha?.(Math.min(0.4, this.config.alpha * 1.2));
             this.zone = mist;
         } else {
             this.zone = context.scene.add.circle(x, y, this.config.zoneRadius, this.config.color, this.config.alpha);
@@ -67,13 +68,13 @@ export default class DebuffZoneModifier extends GameplayModifier {
                 context.config.weapon.fireIntervalMs = Math.max(this._baseFire * 3, 4000);
             }
             this.zone.setFillStyle?.(this.config.color, this.config.alpha * 1.6);
-            this.zone.setAlpha?.(0.95);
+            this.zone.setAlpha?.(Math.min(0.52, this.config.alpha * 1.6));
         } else if (!inside && this._silenced) {
             this._silenced = false;
             context.config.player.speed = this._baseSpeed;
             context.config.weapon.fireIntervalMs = this._baseFire;
             this.zone.setFillStyle?.(this.config.color, this.config.alpha);
-            this.zone.setAlpha?.(0.72);
+            this.zone.setAlpha?.(Math.min(0.4, this.config.alpha * 1.2));
         }
     }
 

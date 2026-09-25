@@ -6,7 +6,10 @@ const DEFAULT_CONFIG = Object.freeze({
     interWaveDelayMs: 3000,
     bossHpBase: 40,
     bossHpScale: 0.8,
-    clearSpawnDuringWave: true
+    clearSpawnDuringWave: true,
+    arenaSpawnRadiusRatio: 0.36,
+    waveStartAudioCue: null,
+    waveClearAudioCue: null
 });
 
 /**
@@ -32,9 +35,9 @@ export default class ArenaWaveBossModifier extends GameplayModifier {
             padding: { x: 8, y: 5 }
         });
 
-        // Disable timer win; win by clearing all waves
-        this._duration = context.config.duration;
-        context.config.duration = 99999;
+        // Wave clearance is the only win condition; the authored clock is a loss limit.
+        this._arenaWaveTimeoutIsFailure = context.config.arenaWaveTimeoutIsFailure;
+        context.config.arenaWaveTimeoutIsFailure = true;
 
         this._originalSpawnWave = context.adapter.spawnWave.bind(context.adapter);
         context.adapter.spawnWave = () => {
@@ -53,9 +56,15 @@ export default class ArenaWaveBossModifier extends GameplayModifier {
             return;
         }
         const hp = Math.floor(this.config.bossHpBase * (this.wave * this.config.bossHpScale));
-        // spawn pack
-        for (let i = 0; i < 2 + this.wave; i += 1) {
-            context.adapter.spawnEnemy({
+        // Arena waves suppress the regular spawn timer. Apply the existing
+        // horde density to each finite pack so the two modifiers still compose.
+        const horde = context.adapter.modifiers.find((modifier) => modifier.id === 'horde_intensity' && modifier.installed);
+        const hordeMultiplier = Math.max(1, Math.floor(Number(horde?.config.spawnMultiplier) || 1));
+        const eliteCount = (2 + this.wave) * hordeMultiplier;
+        const packCount = eliteCount + 1;
+        const phase = context.adapter.random() * Math.PI * 2;
+        for (let i = 0; i < eliteCount; i += 1) {
+            const enemy = context.adapter.spawnEnemy({
                 id: `arena_elite_${this.wave}`,
                 hp: 6 + this.wave * 2,
                 speed: 70 + this.wave * 4,
@@ -64,8 +73,9 @@ export default class ArenaWaveBossModifier extends GameplayModifier {
                 color: 0xe879f9,
                 reward: { score: 4 }
             });
+            this.placeInArena(context, enemy, i, packCount, phase);
         }
-        context.adapter.spawnEnemy({
+        const boss = context.adapter.spawnEnemy({
             id: `arena_boss_${this.wave}`,
             hp,
             speed: 40,
@@ -74,7 +84,30 @@ export default class ArenaWaveBossModifier extends GameplayModifier {
             color: 0xdb2777,
             reward: { score: 20 }
         });
+        this.placeInArena(context, boss, eliteCount, packCount, phase);
+        if (this.config.waveStartAudioCue) {
+            context.helpers.emitPresentation({
+                kind: 'arena-wave-started',
+                wave: this.wave,
+                totalWaves: this.config.totalWaves,
+                packCount,
+                audioCue: this.config.waveStartAudioCue
+            });
+        }
         this.refreshHud();
+    }
+
+    placeInArena(context, enemy, ordinal, count, phase) {
+        if (!enemy) return;
+        const { width, height } = context.adapter.world;
+        const margin = 32;
+        const radius = Math.min(width, height)
+            * Math.max(0.1, Math.min(0.45, Number(this.config.arenaSpawnRadiusRatio) || 0.36));
+        const angle = phase + ordinal * Math.PI * 2 / count;
+        const x = Math.max(margin, Math.min(width - margin, width / 2 + Math.cos(angle) * radius));
+        const y = Math.max(margin, Math.min(height - margin, height / 2 + Math.sin(angle) * radius));
+        enemy.setPosition?.(x, y);
+        enemy.body?.reset?.(x, y);
     }
 
     update(context) {
@@ -83,6 +116,14 @@ export default class ArenaWaveBossModifier extends GameplayModifier {
         if (enemies.length === 0) {
             this.waiting = true;
             this.refreshHud('波次间歇…');
+            if (this.config.waveClearAudioCue) {
+                context.helpers.emitPresentation({
+                    kind: 'arena-wave-cleared',
+                    wave: this.wave,
+                    totalWaves: this.config.totalWaves,
+                    audioCue: this.config.waveClearAudioCue
+                });
+            }
             context.lifecycle.trackTimer(context.scene.time.delayedCall(this.config.interWaveDelayMs, () => {
                 this.startNextWave(context);
             }));
@@ -100,8 +141,8 @@ export default class ArenaWaveBossModifier extends GameplayModifier {
         if (this._originalSpawnWave && context?.adapter) {
             context.adapter.spawnWave = this._originalSpawnWave;
         }
-        if (context?.config && this._duration != null) {
-            context.config.duration = this._duration;
+        if (context?.config) {
+            context.config.arenaWaveTimeoutIsFailure = this._arenaWaveTimeoutIsFailure;
         }
         this.hud?.destroy?.();
         this.hud = null;

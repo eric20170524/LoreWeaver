@@ -380,7 +380,7 @@
       "owns": [
         "content safety scan",
         "export checklist",
-        "de-theme review"
+        "fan-work disclosure and platform-specific distribution risk review"
       ],
       "defaultPatchLevels": [
         "L0",
@@ -392,7 +392,7 @@
         "audio",
         "qa"
       ],
-      "systemPromptRole": "Block public export on copyright/sensitive content; own export sign-off.",
+      "systemPromptRole": "Review source records, non-official and non-commercial disclosures, content safety, and platform-specific distribution risk. Do not require commercial IP authorization materials for a personal fan prototype; do not imply public distribution rights are granted.",
       "uiTabs": [
         "prepNotes",
         "qaReport",

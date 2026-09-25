@@ -18,7 +18,15 @@
         <button id="retry-button" type="button">重试</button>
         <button id="fullscreen-button" type="button">全屏</button>
         <button id="reset-save-button" type="button">重置存档</button>
+        <button id="notice-button" type="button" hidden>同人说明</button>
       </nav>
+      <dialog id="notice-dialog" aria-labelledby="notice-title">
+        <h2 id="notice-title">个人非商业同人原型</h2>
+        <p>本游戏是《玄界之门》石牧的非官方、免费同人创作，与原作及动画权利方没有合作或隶属关系，也不宣称获得官方授权。</p>
+        <p>原作名称、人物及世界观归相应权利人所有。素材来源及分享前须核对的事项见包内说明。</p>
+        <a href="./FAN_NOTICE.md" target="_blank" rel="noopener">阅读完整同人说明</a>
+        <button id="notice-close-button" type="button">返回游戏</button>
+      </dialog>
       <output id="runtime-test-state" hidden aria-hidden="true"></output>
     </main>
     <script id="loreweaver-runtime-spec" type="application/json">__LOREWEAVER_RUNTIME_SPEC_JSON__</script>

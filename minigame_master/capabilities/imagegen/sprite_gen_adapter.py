@@ -862,6 +862,11 @@ def pack_candidates(
             clip_sets[prefix] = source_sets[prefix]
         elif prefix and isinstance(manifest.get("clips"), dict):
             clip_sets[prefix] = manifest["clips"]
+        # A sheet can carry a second actor in spare cells, such as the ranged pose
+        # beside the sword clips. Those clip sets must survive the next pack.
+        for extra_prefix, extra_clips in source_sets.items():
+            if extra_prefix not in clip_sets and isinstance(extra_clips, dict):
+                clip_sets[extra_prefix] = extra_clips
         if prefix == "player" or name == "player":
             clips = dict(manifest.get("clips") or {})
             player_prefix = "player"

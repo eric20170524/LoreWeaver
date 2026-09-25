@@ -5,9 +5,13 @@ const DEFAULT_CONFIG = Object.freeze({
     wallHp: 100,
     wallXRatio: 0.12,
     breachDamage: 5,
+    laneWidthRatio: 0.68,
     color: 0x38bdf8,
     ballistaCooldownMs: 2500,
-    ballistaDamage: 8
+    ballistaDamage: 8,
+    startAudioCue: null,
+    breachAudioCue: null,
+    breachAudioCooldownMs: 700
 });
 
 export default class DefendLineModifier extends GameplayModifier {
@@ -18,6 +22,9 @@ export default class DefendLineModifier extends GameplayModifier {
         this.hud = null;
         this.ballistaTimer = null;
         this.breached = new WeakSet();
+        this.lastBreachAudioAt = -Infinity;
+        this.previousSpawnEnemy = null;
+        this.previousTargetSelector = null;
     }
 
     install(context) {
@@ -27,6 +34,27 @@ export default class DefendLineModifier extends GameplayModifier {
         const h = context.adapter.world.height;
 
         this.wallX = x;
+        // A defense lane must receive attackers from the field side. The
+        // survivor card's ordinary circular spawn can place an enemy behind
+        // this wall, causing an unavoidable breach on its first update.
+        this.previousSpawnEnemy = context.adapter.spawnEnemy.bind(context.adapter);
+        context.adapter.spawnEnemy = (patch = {}) => {
+            const enemy = this.previousSpawnEnemy(patch);
+            if (!enemy) return enemy;
+            const radius = Number(enemy.getData?.('radius')) || 10;
+            const spawnX = context.adapter.world.width + radius + 24;
+            const laneWidth = Math.max(0.05, Math.min(0.9, Number(this.config.laneWidthRatio) || 0.68));
+            const laneY = h * (0.5 + (context.adapter.random() - 0.5) * laneWidth);
+            enemy.setPosition?.(spawnX, laneY);
+            enemy.body?.reset?.(spawnX, laneY);
+            enemy.setData?.('defendLaneY', laneY);
+            return enemy;
+        };
+        this.previousTargetSelector = context.adapter.enemyTargetSelector;
+        context.adapter.setEnemyTargetSelector((enemy) => ({
+            x: this.wallX,
+            y: Number(enemy.getData?.('defendLaneY')) || enemy.y
+        }));
         const art = context.adapter.runtimeArt;
         const wallKey = art?.propKey?.('wall_segment')
             || art?.resolve?.('wall')
@@ -54,7 +82,9 @@ export default class DefendLineModifier extends GameplayModifier {
             || (context.scene.textures.exists('ballista_bolt') ? 'ballista_bolt' : null);
 
         this.hud = context.scene.add.text(12, 120, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#38bdf8'
+            fontFamily: 'Inter, sans-serif', fontSize: '18px', fontStyle: 'bold',
+            color: '#93e5ff', backgroundColor: 'rgba(3, 7, 18, 0.82)',
+            padding: { x: 7, y: 3 }
         });
 
         this.ballistaTimer = context.scene.time.addEvent({
@@ -64,6 +94,9 @@ export default class DefendLineModifier extends GameplayModifier {
         });
         context.lifecycle.trackTimer(this.ballistaTimer);
         this.refreshHud();
+        if (this.config.startAudioCue) {
+            context.helpers.emitPresentation({ kind: 'defend-line-start', audioCue: this.config.startAudioCue });
+        }
     }
 
     fireBallista(context) {
@@ -108,6 +141,11 @@ export default class DefendLineModifier extends GameplayModifier {
                 enemy.destroy();
                 this.wallHp = Math.max(0, this.wallHp - this.config.breachDamage);
                 this.refreshHud();
+                const now = Number(context.scene.time?.now) || 0;
+                if (this.config.breachAudioCue && now - this.lastBreachAudioAt >= this.config.breachAudioCooldownMs) {
+                    this.lastBreachAudioAt = now;
+                    context.helpers.emitPresentation({ kind: 'defend-line-breach', audioCue: this.config.breachAudioCue });
+                }
                 if (this.wallHp <= 0) {
                     context.helpers.end(false, NODE_RESULT_REASONS.CONDITION_FAILED);
                 }
@@ -119,8 +157,14 @@ export default class DefendLineModifier extends GameplayModifier {
         this.hud?.setText(`城防 ${Math.ceil(this.wallHp)}/${this.config.wallHp}`);
     }
 
-    uninstall() {
-        super.uninstall();
+    uninstall(context) {
+        super.uninstall(context);
+        if (context?.adapter) {
+            if (this.previousSpawnEnemy) context.adapter.spawnEnemy = this.previousSpawnEnemy;
+            context.adapter.setEnemyTargetSelector(this.previousTargetSelector);
+        }
+        this.previousSpawnEnemy = null;
+        this.previousTargetSelector = null;
         this.ballistaTimer?.remove?.(false);
         this.ballistaTimer = null;
         this.wallParts?.forEach((p) => p.destroy?.());

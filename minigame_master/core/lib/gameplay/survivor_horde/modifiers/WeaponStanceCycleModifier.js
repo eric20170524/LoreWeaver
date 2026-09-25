@@ -10,9 +10,12 @@ const DEFAULT_CONFIG = Object.freeze({
     meleeRadius: 92,
     meleeDamage: 4,
     meleeMaxTargets: 12,
-    meleeColor: 0xff6b35,
+    meleeColor: 0x596c7b,
+    meleeEffectTintFill: 0x596c7b,
+    meleeEffectAlpha: 0.55,
     rangedBurstCount: 2,
     rangedDamageMultiplier: 1,
+    rangedPlayerArtRole: null,
     announceStance: true,
     meleeLabel: 'MELEE',
     rangedLabel: 'RANGED',
@@ -194,7 +197,7 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         if (!scene?.add?.text) return;
         const width = scene.scale?.width || 720;
         const height = scene.scale?.height || 1280;
-        this._toggleButton = scene.add.text(width - 24, height * 0.58, this.toggleButtonLabel(), {
+        this._toggleButton = scene.add.text(width - 70, height * 0.58, this.toggleButtonLabel(), {
             fontFamily: 'Inter, sans-serif',
             fontSize: '20px',
             fontStyle: 'bold',
@@ -258,6 +261,12 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
         if (this._lastStance === stance) return;
         const previous = this._lastStance;
         this._lastStance = stance;
+        if (this.config.rangedPlayerArtRole && context?.adapter?.player) {
+            const adapter = context.adapter;
+            adapter.playerArtRole = stance === 'ranged' ? this.config.rangedPlayerArtRole : 'player';
+            adapter.playerClip = 'idle';
+            adapter.playPlayerClip?.('idle', { repeat: -1, frameRate: 4 });
+        }
         if (previous && this.isManual() && this.config.swapBurst !== false) {
             this.beginSwapBurst(context?.adapter, stance);
         }
@@ -312,17 +321,25 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             .sort((a, b) => a.distance - b.distance)
             .slice(0, maxTargets);
 
-        adapter.runtimeArt?.playClip?.(player, 'player', 'attack', { repeat: 0, frameRate: 12 });
+        adapter.playPlayerClip?.('attack', { repeat: 0, frameRate: 12 });
 
         const color = Number(this.config.meleeColor ?? DEFAULT_CONFIG.meleeColor);
         const slashSprite = VFX.spriteClip(scene, adapter.runtimeArt, 'black_blade', player.x, player.y, {
             clip: 'impact',
-            depth: 12
+            depth: 1.5
         });
         if (slashSprite) {
             const diameter = Math.max(48, radius * 2.2);
             slashSprite.setDisplaySize?.(diameter, diameter);
             slashSprite.setFlipX?.(Boolean(player.flipX));
+            if (this.config.meleeEffectTintFill != null && Number.isFinite(Number(this.config.meleeEffectTintFill))) {
+                // Phaser 4 TintModes.FILL = 1; preserve atlas alpha while replacing fire-orange pixels.
+                slashSprite.setTint?.(Number(this.config.meleeEffectTintFill));
+                slashSprite.setTintMode?.(1);
+            }
+            if (this.config.meleeEffectAlpha != null && Number.isFinite(Number(this.config.meleeEffectAlpha))) {
+                slashSprite.setAlpha?.(Math.max(0, Math.min(1, Number(this.config.meleeEffectAlpha))));
+            }
         } else {
             const fadeSlash = (node, scale) => {
                 if (!node) return;
@@ -340,10 +357,10 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             };
             const slash = scene.add?.circle?.(player.x, player.y, Math.max(12, radius * 0.72), color, 0.35);
             slash?.setStrokeStyle?.(8, color, 0.95);
-            slash?.setDepth?.(12);
+            slash?.setDepth?.(1.5);
             const ring = scene.add?.circle?.(player.x, player.y, radius, color, 0);
             ring?.setStrokeStyle?.(6, 0xffe08a, 0.9);
-            ring?.setDepth?.(12);
+            ring?.setDepth?.(1.5);
             fadeSlash(slash, 1.35);
             fadeSlash(ring, 1.18);
         }
@@ -428,6 +445,9 @@ export default class WeaponStanceCycleModifier extends GameplayModifier {
             adapter.handleBulletEnemyOverlap = this._originalBulletOverlap;
         }
         if (adapter) delete adapter.toggleWeaponStance;
+        if (adapter?.playerArtRole && this.config.rangedPlayerArtRole) {
+            adapter.playerArtRole = 'player';
+        }
         this._toggleButton?.destroy?.();
         this._toggleButton = null;
         this._originalFireAtNearestEnemy = null;

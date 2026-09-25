@@ -30,7 +30,14 @@ export default class CertifiedSideScrollingBrawlerAdapter extends SideScrollingB
         const isTouchPointer = (pointer = {}) => Boolean(pointer.wasTouch)
             || String(pointer.event?.pointerType || pointer.pointerType || '').toLowerCase() === 'touch';
 
-        const onDown = (pointer) => {
+        const isTouchControl = (currentlyOver = []) => currentlyOver.some((object) =>
+            Object.entries(this.ui).some(([key, control]) => key.startsWith('touch') && control === object));
+        const onDown = (pointer, currentlyOver = []) => {
+            if (isTouchControl(currentlyOver)) {
+                this.touchMoveTarget = null;
+                this.touchPointerId = null;
+                return;
+            }
             if (!this.isRunning() || !isMovementZone(pointer)) return;
             this.touchPointerId = pointerId(pointer);
             this.touchMoveTarget = readPoint(pointer);

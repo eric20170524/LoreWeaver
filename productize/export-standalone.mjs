@@ -219,6 +219,17 @@ const readme = `# ${resolvedSpec.gameSpec.title} · LoreWeaver Standalone\n\n${r
   : "Playable candidate (UNVERIFIED_CANDIDATE). Browser verification is separate from release certification; do not present this archive as a certified release."}\n\n- Artifact label: ${releaseStatus.artifactLabel}\n- Release eligible: ${releaseStatus.releaseEligible}\n- Certification tier: ${releaseStatus.certificationTier}\n- Runtime: ${resolvedSpec.runtimeVersion}\n- Spec: ${resolvedSpec.specHash}\n\n## Play\n\n1. Extract the complete archive. Run ./start.sh, start.bat, or another static web server, then open the local URL. Opening index.html directly from the filesystem does not provide the asset URLs required by the game.\n2. Select a level on the main screen and tap/click to skip its intro. On mobile, drag to move; use the on-screen controls shown by each level. On desktop, follow the level hints for keyboard input.\n3. Sound starts after a user gesture. The control bar below the game has pause, mute, retry, fullscreen, and reset-save buttons. Reset-save deletes this archive's local progress.\n\nThe game runs locally after extraction and does not require a backend API.\n`;
 fs.writeFileSync(path.join(stage, "README.md"), readme);
 
+const workspaceNotice = path.join(LORE_ROOT, "productize/notices", `${path.basename(wsPath)}.md`);
+if (fs.existsSync(workspaceNotice)) {
+  fs.copyFileSync(workspaceNotice, path.join(stage, "FAN_NOTICE.md"));
+  fs.appendFileSync(path.join(stage, "README.md"), "\n## 同人原型说明\n\n本候选包为个人非商业、非官方同人原型，免费试玩。请在分享前阅读 [FAN_NOTICE.md](FAN_NOTICE.md)；音频来源见 `assets/audio/procedural/CREDITS.md`。\n");
+  const indexPath = path.join(stage, "index.html");
+  const index = fs.readFileSync(indexPath, "utf8");
+  const noticeButtonPattern = /(<button id="notice-button"[^>]*?)\s+hidden(?=>)/;
+  if (!noticeButtonPattern.test(index)) fail("Standalone page is missing the fan notice control");
+  fs.writeFileSync(indexPath, index.replace(noticeButtonPattern, "$1"));
+}
+
 const startSh = `#!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")"

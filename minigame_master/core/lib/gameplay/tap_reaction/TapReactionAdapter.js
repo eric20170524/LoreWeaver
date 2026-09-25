@@ -193,6 +193,10 @@ export default class TapReactionAdapter extends GameplayAdapter {
         const scene = this.scene;
         const { width, height } = this.world;
         const x = width / 2, y = height * 0.5;
+        const targetFillColor = Number.isFinite(Number(this.config.rhythmTargetFillColor))
+            ? Number(this.config.rhythmTargetFillColor) : 0x0f172a;
+        const targetFillAlpha = Number.isFinite(Number(this.config.rhythmTargetFillAlpha))
+            ? Math.max(0, Math.min(1, Number(this.config.rhythmTargetFillAlpha))) : 0.9;
         const text = (py, value, size = '20px') => scene.add.text(x, py, value, {
             fontFamily: 'sans-serif', fontSize: size, color: '#e2e8f0',
             align: 'center', wordWrap: { width: width - 64 }
@@ -200,7 +204,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
         this.rhythmUI = {
             title: text(210, this.t('rhythm.title', '节奏共鸣')),
             instructions: text(260, '外圈收拢到白色圆环时，点击中心或按空格', '16px'),
-            target: scene.add.circle(x, y, 64, 0x0f172a, 0.9).setStrokeStyle(3, 0xf8fafc, 0.95),
+            target: scene.add.circle(x, y, 64, targetFillColor, targetFillAlpha).setStrokeStyle(3, 0xf8fafc, 0.95),
             approach: scene.add.circle(x, y, 150, 0xdbeafe, 0).setStrokeStyle(4, 0xdbeafe, 0.9),
             moon: VFX.spriteClip(scene, this.runtimeArt, 'moon_pulse', x, y, {
                 clip: 'loop', depth: 4, destroyOnComplete: false
@@ -274,7 +278,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
         if (this.rhythmUI.moon?.active) {
             this.rhythmUI.moon.setDisplaySize?.(approachRadius * 2, approachRadius * 2);
             // The inherited pulse atlas is green; keep it subtle against the moonlit node art.
-            this.rhythmUI.moon.setAlpha?.(s.resolved ? 0.08 : 0.18);
+            this.rhythmUI.moon.setAlpha?.(s.resolved ? 0.03 : 0.06);
         }
 
         this.rhythmUI.target.setStrokeStyle(3, Math.abs(s.offsetMs) <= c.perfectWindowMs && !s.resolved ? 0xfbbf24 : 0xf8fafc, 1);

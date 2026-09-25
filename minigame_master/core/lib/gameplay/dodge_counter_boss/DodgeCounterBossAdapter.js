@@ -143,6 +143,7 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         }).setOrigin(0.5).setDepth(30);
         this.ui.bar = scene.add.graphics();
         this.boss = scene.add.circle(width / 2, Math.max(292, height * 0.40), 40, 0xef4444, 0.18)
+            .setStrokeStyle(3, 0xfbbf24, 0.65)
             .setInteractive({ useHandCursor: true });
         this.player = scene.add.circle(width / 2, height * 0.72, 18, 0x66fcf1, 0.18);
         this.telegraph = scene.add.circle(0, 0, 50, 0xef4444, 0).setStrokeStyle(3, 0xfbbf24, 0);
@@ -208,6 +209,9 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             clip: 'loop', depth: 4, destroyOnComplete: false
         });
         this.warningMark?.setDisplaySize?.(zone.r * 2.4, zone.r * 2.4);
+        if (typeof this.config.warningAudioCue === 'string' && this.config.warningAudioCue) {
+            this.context.onAudioCue?.(this.config.warningAudioCue);
+        }
     }
 
     spawnCombatVfx(effectId, x, y, clip, size, lifeMs) {
@@ -217,6 +221,7 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         if (sprite && lifeMs) {
             this.lifecycle?.trackTimer?.(this.scene.time.delayedCall(lifeMs, () => sprite.destroy?.()));
         }
+        return sprite;
     }
 
     tryCounter() {
@@ -236,7 +241,14 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.state.lastFeedback = 'boss_stagger';
         this.drawSlash(this.player?.x, this.player?.y, this.boss?.x, this.boss?.y, 0xfbbf24);
         this.spawnCombatVfx('black_blade', this.player?.x, this.player?.y, 'impact', 120);
-        this.spawnCombatVfx('white_ape', this.boss?.x, this.boss?.y, 'loop', 180, 520);
+        if (typeof this.config.counterAuraEffect === 'string' && this.config.counterAuraEffect) {
+            const aura = this.spawnCombatVfx(this.config.counterAuraEffect, this.player?.x, this.player?.y, 'loop', 168, 520);
+            aura?.setTint?.(Number(this.config.counterAuraTint) || 0xb83a2d);
+            aura?.setAlpha?.(0.6);
+        }
+        if (typeof this.config.counterAudioCue === 'string' && this.config.counterAudioCue) {
+            this.context.onAudioCue?.(this.config.counterAudioCue);
+        }
         if (this.state.gauge >= this.config.breakGaugeMax || this.state.bossHp <= 0) {
             this.finish(true, NODE_RESULT_REASONS.BOSS_DEFEATED);
             return true; // finish destroys UI; never refresh it afterwards.
@@ -305,6 +317,9 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
                 this.warningMark = null;
                 this.boss.setStrokeStyle(4, 0xfbbf24, 1);
                 this.ui.hint?.setText('反击窗口！点击 Boss 或按空格').setColor('#fbbf24');
+                if (typeof this.config.counterWindowAudioCue === 'string' && this.config.counterWindowAudioCue) {
+                    this.context.onAudioCue?.(this.config.counterWindowAudioCue);
+                }
             }
         } else if (this.state.phase === 'counter' && this.state.phaseLeft <= 0) {
             this.state.phase = 'idle';

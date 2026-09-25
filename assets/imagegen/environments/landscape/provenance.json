@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "loreweaver.landscape-background-provenance.v1",
+  "generator": "OpenAI built-in image_gen",
+  "generatedDate": "2026-09-24",
+  "promptSet": "assets/imagegen/landscape/PROMPTS.md",
+  "sourceFrameSize": { "w": 1672, "h": 941 },
+  "sha256": {
+    "node4_forge_gate.png": "8eb7a015e99c76fab83d0549c1a56fab26b14a91385a352ecbc4b116a556144a",
+    "node4_wind_gallery.png": "0dff6db09430a8393e0baa126033f6c1c701e2c3194e05863b04fd34f45a2b82",
+    "node4_flame_edge.png": "70e09ccf33b4557ac0df682fd212a6b24e7ff86e31abc40e36c2eae0ac9e4a6f"
+  }
+}

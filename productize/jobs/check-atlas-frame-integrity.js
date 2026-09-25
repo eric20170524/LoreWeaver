@@ -22,7 +22,7 @@ const MANIFEST = path.join(
   `data/workspaces/${WS}/assets/imagegen/manifest.json`
 );
 
-const CRITICAL = [
+const DEFAULT_CRITICAL = [
   "player_idle",
   "player_walk_0",
   "player_walk_1",
@@ -34,6 +34,17 @@ const CRITICAL = [
   "enemy_qiongqi_cub",
   "env_bg_desert"
 ];
+const CRITICAL = WS === "xuanjie-shimu-local"
+  ? [
+      "player_idle", "player_walk_0", "player_attack", "player_death",
+      "enemy_wild_rhino", "enemy_qiongqi_cub", "enemy_ancient_beast_king",
+      "player_bow_attack_0", "player_bow_attack_2", "player_bow_attack_3",
+      "enemy_arena_elite_4_idle", "enemy_arena_elite_5_idle",
+      "enemy_arena_boss_4_idle", "enemy_arena_boss_5_idle",
+      "vfx_white_ape_loop_0", "vfx_white_ape_loop_5",
+      "env_bg_desert", "env_bg_finale"
+    ]
+  : DEFAULT_CRITICAL;
 
 const MIN_CONTENT_PX = 200; // out of 64*64=4096
 

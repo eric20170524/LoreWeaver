@@ -103,6 +103,26 @@ function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths 
   };
 }
 
+function getAudioAssetUrl(assetPath: string | undefined, workspaceId?: string | null): string | null {
+  if (!assetPath || !/^assets\/audio\/[a-zA-Z0-9/_-]+\.mp3$/.test(assetPath)) return null;
+  if (typeof window !== "undefined" && Boolean((window as any).__LOREWEAVER_EMBEDDED_SPEC__)) {
+    return `./${assetPath}`;
+  }
+  return workspaceId
+    ? `/api/workspaces/${encodeURIComponent(workspaceId)}/asset-files/${assetPath}`
+    : null;
+}
+
+function getLandscapeAssetUrl(assetPath: string | undefined, workspaceId?: string | null): string | null {
+  if (!assetPath || !/^assets\/imagegen\/landscape\/[a-zA-Z0-9_-]+\.png$/.test(assetPath)) return null;
+  if (typeof window !== "undefined" && Boolean((window as any).__LOREWEAVER_EMBEDDED_SPEC__)) {
+    return `./${assetPath}`;
+  }
+  return workspaceId
+    ? `/api/workspaces/${encodeURIComponent(workspaceId)}/asset-files/${assetPath}`
+    : null;
+}
+
 
 export function initializePhaserGame(
   parentEl: HTMLElement,
@@ -135,6 +155,15 @@ export function initializePhaserGame(
 
     preload() {
       runtimeArtBinder.preload(this, imageGenAssetPaths);
+      for (const node of spec.nodes || []) {
+        if (node.gameplay?.cardId !== "side_scrolling_brawler") continue;
+        const backgrounds = (node.gameplay?.knobs as any)?.landscapeBackgrounds;
+        if (!Array.isArray(backgrounds)) continue;
+        backgrounds.forEach((assetPath: string, index: number) => {
+          const url = getLandscapeAssetUrl(assetPath, options.workspaceId);
+          if (url) this.load.image(`lw_landscape_bg_${node.id}_${index}`, url);
+        });
+      }
       this.load.on("loaderror", (file: any) => {
         if (typeof window !== "undefined") {
           const prev = (window as any).__LOREWEAVER_ART_PIPELINE__ || {};
@@ -738,6 +767,7 @@ export function initializePhaserGame(
             Phaser,
             testHooks: this.testHooks,
             modifiers: modifiersList,
+            onAudioCue: (cueId: string) => this.audioResolver?.playSfx(cueId),
             onEnd: (result: any) => {
               this.handleAdapterEnd(result);
             }
@@ -796,6 +826,7 @@ export function initializePhaserGame(
           this.adapter = new ShooterDuelAdapter({
             Phaser,
             testHooks: this.testHooks,
+            onAudioCue: (cueId: string) => this.audioResolver?.playSfx(cueId),
             onEnd: (result: any) => this.handleAdapterEnd(result)
           });
         } else if (cardId === "drag_to_core") {
@@ -810,6 +841,7 @@ export function initializePhaserGame(
             Phaser,
             testHooks: this.testHooks,
             runtimeArt,
+            onAudioCue: (cueId: string) => this.audioResolver?.playSfx(cueId),
             onEnd: (result: any) => this.handleAdapterEnd(result),
             spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
           });
@@ -876,9 +908,36 @@ export function initializePhaserGame(
       border.lineStyle(1.5, col, 0.4);
       border.strokeRect(12, 12, width - 24, height - 24);
 
-      // The survivor adapter owns its scrolling arena background. Other cards
-      // use the same semantic environment atlas beneath their gameplay UI.
-      if (this.node.gameplay?.cardId !== "survivor_horde") {
+      // The survivor adapter owns its scrolling arena background. The brawler
+      // uses per-wave side-view paintings in world coordinates as its camera moves.
+      const waveList = (this.node.gameplay?.knobs as any)?.waveList;
+      const landscapeBackgrounds = (this.node.gameplay?.knobs as any)?.landscapeBackgrounds;
+      const landscapeBackgroundLayout = (this.node.gameplay?.knobs as any)?.landscapeBackgroundLayout;
+      const useLandscapeBackgrounds = this.node.gameplay?.cardId === "side_scrolling_brawler"
+        && Array.isArray(waveList)
+        && Array.isArray(landscapeBackgrounds)
+        && waveList.length === landscapeBackgrounds.length
+        && landscapeBackgrounds.every((_: string, index: number) =>
+          this.textures.exists(`lw_landscape_bg_${this.node.id}_${index}`));
+      if (useLandscapeBackgrounds) {
+        const worldWidth = Math.max(Number((this.node.gameplay?.knobs as any)?.stageLengthPx || width), width);
+        let left = 0;
+        waveList.forEach((wave: any, index: number) => {
+          const right = index === waveList.length - 1
+            ? worldWidth
+            : Math.min(worldWidth, Math.max(left + 1, Number(wave.cameraMax || left + width)));
+          const layout = Array.isArray(landscapeBackgroundLayout)
+            ? landscapeBackgroundLayout[index] || {}
+            : {};
+          const heightScale = Number(layout.heightScale || 1.15);
+          const centerY = Number(layout.centerY || 0.55);
+          this.add.image((left + right) / 2, height * centerY,
+            `lw_landscape_bg_${this.node.id}_${index}`)
+            .setDisplaySize(right - left, height * heightScale)
+            .setDepth(-20);
+          left = right;
+        });
+      } else if (this.node.gameplay?.cardId !== "survivor_horde") {
         const artBinder = this.game.registry.get("runtimeArtBinder") as RuntimeArtBinder | null;
         const envKey = this.node.gameplay?.knobs?.envKey;
         artBinder?.createContext(this).createBackground({
@@ -902,6 +961,8 @@ export function initializePhaserGame(
       this.game.registry.set("audioResolver", this.audioResolver);
       for (const item of Array.isArray(spec.audioCueCatalog) ? spec.audioCueCatalog : []) {
         if (item?.id && item?.synth) this.audioResolver.registerSynthCue(item.id, item.synth);
+        const audioUrl = getAudioAssetUrl(item?.assetPath, options.workspaceId);
+        if (item?.id && audioUrl) this.audioResolver.registerCue(item.id, audioUrl);
       }
       const bgmKey = typeof knobs.bgmKey === "string" && knobs.bgmKey ? knobs.bgmKey : "bgm_default";
       const cue = (Array.isArray(spec.audioCueCatalog) ? spec.audioCueCatalog : []).find((item) => item?.id === bgmKey);
@@ -1046,17 +1107,20 @@ export function initializePhaserGame(
       // Display Boss dialogue / Taunt quotes
       const idx = Phaser.Math.Between(0, this.node.taunts.length - 1);
       const chosenTaunt = this.node.taunts[idx] || "「挑战尚未成功，再试一次吧！」";
+      const brawlerHeader = this.node.gameplay?.cardId === "side_scrolling_brawler";
       
-      const phraseText = this.add.text(width / 2, 100, chosenTaunt, {
+      const phraseText = this.add.text(brawlerHeader ? width / 2 : width - 32, brawlerHeader ? 78 : 32, chosenTaunt, {
         fontFamily: "Inter, sans-serif",
         fontSize: "18px",
         fontStyle: "italic",
         color: "#f59e0b",
-        wordWrap: { width: width - 80, useAdvancedWrap: true },
-        align: "center"
-      }).setOrigin(0.5);
+        backgroundColor: "rgba(3, 7, 18, 0.78)",
+        padding: { x: 6, y: 3 },
+        wordWrap: { width: brawlerHeader ? width - 80 : width / 2 - 40, useAdvancedWrap: true },
+        align: brawlerHeader ? "center" : "right"
+      }).setOrigin(brawlerHeader ? 0.5 : 1, brawlerHeader ? 0.5 : 0).setScrollFactor(0);
 
-      this.add.text(width / 2, 140, `${this.node.title.toUpperCase()}`, {
+      const titleText = this.add.text(width / 2, brawlerHeader ? 42 : 140, `${this.node.title.toUpperCase()}`, {
         fontFamily: "Inter, sans-serif",
         fontSize: "24px",
         fontStyle: "bold",
@@ -1065,6 +1129,17 @@ export function initializePhaserGame(
         padding: { x: 14, y: 7 },
         letterSpacing: 1
       } as any).setOrigin(0.5);
+      if (brawlerHeader) titleText.setScrollFactor(0);
+
+      // The brawler adapter owns HP, lives, waves and score in its top HUD.
+      // Leave the lower lane free for landscape touch controls.
+      if (brawlerHeader) {
+        // Phaser reuses this scene across nodes. Clear references to Text
+        // objects destroyed with the previous node before update() runs.
+        this.scoreHUD = null as any;
+        this.livesHUD = null as any;
+        return;
+      }
 
       // Lives and Target score indicators
       this.scoreHUD = this.add.text(32, height - 60, this.node.goalValue > 0 ? `目标进度：0 / ${this.node.goalValue}` : '当前得分：0', {
@@ -1670,16 +1745,29 @@ export function initializePhaserGame(
 
     private handleSurvivorRuntimeEvent(event: any) {
       if (event?.type !== "weapon-stance-attack") return;
-      this.audioResolver?.playSfx(event.stance === "ranged" ? "sfx_bow_release" : "sfx_blade_sweep");
+      const audioKnobs = (this.node.gameplay?.knobs || {}) as Record<string, any>;
+      const cue = event.stance === "ranged"
+        ? audioKnobs.rangedAudioCue || "sfx_bow_release"
+        : audioKnobs.meleeAudioCue || "sfx_blade_sweep";
+      this.audioResolver?.playSfx(cue);
+      if (event.stance === "melee" && Number(event.hitCount) > 0
+        && typeof audioKnobs.meleeHitAudioCue === "string" && audioKnobs.meleeHitAudioCue) {
+        this.audioResolver?.playSfx(audioKnobs.meleeHitAudioCue);
+      }
     }
 
     private handleSurvivorPresentationEvent(event: any) {
       if (!event || event.accepted === false) return;
 
+      if (typeof event.audioCue === "string" && event.audioCue) this.audioResolver?.playSfx(event.audioCue);
       if (event.kind === "weapon-stance") {
         this.audioResolver?.playSfx(event.stance === "ranged" ? "sfx_stance_ranged" : "sfx_stance_melee");
-      } else if (event.kind === "overdrive" && event.active === true) {
-        this.audioResolver?.playSfx("sfx_overdrive");
+      } else if (event.kind === "overdrive") {
+        const audioKnobs = (this.node.gameplay?.knobs || {}) as Record<string, any>;
+        const cue = typeof audioKnobs.overdriveAudioCue === "string" && audioKnobs.overdriveAudioCue
+          ? audioKnobs.overdriveAudioCue : "sfx_overdrive";
+        if (event.active === true) this.audioResolver?.playSfx(cue, { loop: Boolean(audioKnobs.overdriveAudioCue) });
+        else if (audioKnobs.overdriveAudioCue) this.audioResolver?.stopSfx(cue);
       } else if (event.kind === "run-growth-milestone") {
         this.audioResolver?.playSfx("sfx_growth");
       }
@@ -2109,12 +2197,6 @@ export function initializePhaserGame(
     }
 
     private enterLandscapePlay() {
-      // A portrait standalone phone cannot reliably lock browser orientation.
-      // Keep the belt-scroll card at the playable portrait size in that case.
-      if (options.hostKind === "standalone" && parentEl.clientWidth < 500) {
-        this.publishOrientation("portrait");
-        return;
-      }
       const scale = this.scale;
       if (scale.width < scale.height) {
         this.savedGameSize = { width: scale.width, height: scale.height };

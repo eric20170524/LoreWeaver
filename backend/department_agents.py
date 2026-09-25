@@ -129,7 +129,7 @@ def _summarize_gdd(gdd: dict) -> dict:
 
 def collect_report_signals(reports_dir: str) -> dict:
     """Best-effort scores from capabilities/reports for QA department."""
-    signals = {"files": [], "scores": {}, "notes": []}
+    signals = {"files": [], "scores": {}, "notes": [], "provenance": []}
     if not os.path.isdir(reports_dir):
         signals["notes"].append("reports_dir_missing")
         return signals
@@ -159,6 +159,12 @@ def collect_report_signals(reports_dir: str) -> dict:
         except Exception:
             signals["notes"].append(f"unreadable:{name}")
             continue
+        identity = data.get("identity") if isinstance(data.get("identity"), dict) else {}
+        signals["provenance"].append({
+            "file": name,
+            "createdAt": data.get("createdAt") or data.get("generatedAt"),
+            "artifactSha256": identity.get("artifactSha256") or data.get("artifactSha256"),
+        })
         status = str(data.get("status") or data.get("result") or "").lower()
         # Prefer explicit numeric score when present (node_smoke, etc.)
         if isinstance(data.get("score"), (int, float)):
@@ -1069,6 +1075,7 @@ def evaluate_all_stage_gates(
         "confirmedCount": state.get("confirmedCount"),
         "requiredCount": state.get("requiredCount"),
         "qaScore": qa_score,
+        "reportProvenance": report_signals.get("provenance") or [],
         "openRejects": len(open_reject_ids or []),
         "nodeSmoke": report_signals.get("nodeSmoke"),
         "transitions": transitions,
@@ -1701,6 +1708,8 @@ async def _run_one_scope(
                     "to": ho["to"],
                     "type": ho.get("type") or "request",
                     "summary": ho["summary"],
+                    "needs": ho.get("acceptanceCriteria") or ho.get("needs") or [ho["summary"]],
+                    "payloadRef": ho.get("payloadRef") or "",
                     "source": "auto_prep",
                     "unitId": scope_unit_id(scope),
                 })
@@ -1823,4 +1832,3 @@ async def run_auto_prep_pipeline(
         suggested.extend(one_ho)
         applied_all.extend(one_applied)
     return state, run_log, suggested, working_gdd, applied_all
-

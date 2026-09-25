@@ -270,8 +270,8 @@ WebGL commonly caps a single texture at 4096px. Stacking 1280px character sheets
 .venv/bin/python minigame_master/capabilities/imagegen/sprite_gen_bridge.py pack \
   --workspace <workspace-id> \
   --characters shi_mu,bandit_cultivator,human_genius,arena_champion,rock_golem \
-  --alias enemy_bandit_cultivator=enemy_arena_elite,enemy_arena_elite_1,enemy_arena_elite_2,enemy_arena_elite_3,enemy_elite_brute \
-  --alias enemy_human_genius=enemy_arena_boss,enemy_arena_boss_1,enemy_arena_boss_2,enemy_arena_boss_3 \
+  --alias enemy_bandit_cultivator=enemy_arena_elite,enemy_arena_elite_1,enemy_arena_elite_2,enemy_arena_elite_3,enemy_arena_elite_4,enemy_arena_elite_5,enemy_elite_brute \
+  --alias enemy_human_genius=enemy_arena_boss,enemy_arena_boss_1,enemy_arena_boss_2,enemy_arena_boss_3,enemy_arena_boss_4,enemy_arena_boss_5 \
   --alias enemy_arena_champion=enemy_dodge_counter_boss \
   --force
 ```

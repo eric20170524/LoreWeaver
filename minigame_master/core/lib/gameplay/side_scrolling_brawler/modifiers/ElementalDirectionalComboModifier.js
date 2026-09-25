@@ -17,6 +17,13 @@ const ELEMENT_COLORS = {
     wind: '#2dd4bf'
 };
 
+const ELEMENT_NAMES = {
+    fire: '烈炎',
+    ice: '寒霜',
+    thunder: '惊雷',
+    wind: '疾风'
+};
+
 export default class ElementalDirectionalComboModifier extends GameplayModifier {
     constructor(config = {}) {
         super({ ...DEFAULT_CONFIG, ...config });
@@ -45,7 +52,7 @@ export default class ElementalDirectionalComboModifier extends GameplayModifier 
                 neutral: '直拳'
             };
             return {
-                label: `${labels[dir] || dir}·${element}`,
+                label: `${labels[dir] || dir}·${ELEMENT_NAMES[element] || element}`,
                 damageMult: mult,
                 color: ELEMENT_COLORS[element] || '#fbbf24',
                 element,

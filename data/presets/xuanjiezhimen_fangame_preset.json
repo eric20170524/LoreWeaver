@@ -837,6 +837,74 @@
       "description": "局内成长达成的短音。"
     },
     {
+      "id": "sfx_awakening_heartbeat",
+      "runtimeSkillId": "dodge_counter_boss",
+      "synth": {
+        "frequencies": [56, 48],
+        "wave": "sine",
+        "durationMs": 420,
+        "volume": 0.12
+      },
+      "mixRole": "ability",
+      "description": "节点 10 反击成功时的双拍异血心跳，不预铺节点 11 血战声场。"
+    },
+    {
+      "id": "sfx_arena_drum_warning",
+      "runtimeSkillId": "dodge_counter_boss",
+      "synth": { "frequencies": [92, 138], "wave": "triangle", "durationMs": 300, "volume": 0.14 },
+      "mixRole": "combat_warning",
+      "description": "节点 2 四馆重击预警的低鼓双拍。"
+    },
+    {
+      "id": "sfx_arena_counter_open",
+      "runtimeSkillId": "dodge_counter_boss",
+      "synth": { "frequencies": [330, 220], "wave": "triangle", "durationMs": 210, "volume": 0.13 },
+      "mixRole": "combat_window",
+      "description": "节点 2 反击窗口亮起时的短促骨响。"
+    },
+    {
+      "id": "sfx_blood_heartbeat_window",
+      "runtimeSkillId": "overdrive_transformation",
+      "synth": { "frequencies": [68, 102], "wave": "sine", "durationMs": 220, "volume": 0.11 },
+      "mixRole": "ability_window",
+      "description": "节点 11 既有 6 秒 OVERDRIVE 窗口的异血心跳层。"
+    },
+    {
+      "id": "sfx_latent_heartbeat_window",
+      "runtimeSkillId": "overdrive_transformation",
+      "synth": { "frequencies": [62, 93], "wave": "sine", "durationMs": 180, "volume": 0.06 },
+      "mixRole": "ability_window",
+      "description": "节点 1 已获得白猿被动时，爆发窗口内的轻量异血脉冲。"
+    },
+    {
+      "id": "sfx_war_horn",
+      "runtimeSkillId": "defend_line",
+      "synth": { "frequencies": [116, 174], "wave": "triangle", "durationMs": 640, "volume": 0.11 },
+      "mixRole": "combat_warning",
+      "description": "节点 9 守线开场的双音号角。"
+    },
+    {
+      "id": "sfx_wall_breach",
+      "runtimeSkillId": "defend_line",
+      "synth": { "frequencies": [86, 172], "wave": "triangle", "durationMs": 300, "volume": 0.13 },
+      "mixRole": "combat_impact",
+      "description": "节点 9 城防实际受击时的低频撞击。"
+    },
+    {
+      "id": "sfx_wave_clear",
+      "runtimeSkillId": "arena_wave_boss",
+      "synth": { "frequencies": [330, 495], "wave": "triangle", "durationMs": 420, "volume": 0.11 },
+      "mixRole": "progression",
+      "description": "节点 1 三波清场后、1800ms 间歇开始时的短促结算音。"
+    },
+    {
+      "id": "sfx_horde_drum",
+      "runtimeSkillId": "horde_intensity",
+      "synth": { "frequencies": [92, 138], "wave": "triangle", "durationMs": 560, "volume": 0.12 },
+      "mixRole": "combat_warning",
+      "description": "节点 6 每四次围杀刷怪节拍的低鼓提示。"
+    },
+    {
       "id": "defeat_timeout",
       "runtimeSkillId": "defeat_timeout",
       "synth": {
@@ -896,10 +964,14 @@
               "toggleHint": "Q / SHIFT",
               "meleeDurationSec": 4,
               "rangedDurationSec": 5,
-              "meleeRadius": 96,
+              "meleeRadius": 112,
               "meleeDamage": 5,
+              "meleeColor": 5860475,
+              "meleeEffectTintFill": 5860475,
+              "meleeEffectAlpha": 0.78,
               "meleeMaxTargets": 10,
               "rangedBurstCount": 2,
+              "rangedPlayerArtRole": "player_bow",
               "rangedDamageMultiplier": 1.0,
               "swapBurst": true
             }
@@ -914,6 +986,11 @@
               "speedMultiplier": 1.25,
               "meleeRadiusBonus": 24,
               "requiresPassive": "white_ape_overdrive_passive",
+              "auraEffect": "hazard_mark",
+              "auraDisplaySize": 92,
+              "auraAlpha": 0.42,
+              "auraTint": 12073517,
+              "auraPulseHz": 2,
               "label": "OVERDRIVE"
             }
           },
@@ -928,7 +1005,9 @@
             "id": "arena_wave_boss",
             "knobs": {
               "totalWaves": 3,
-              "interWaveDelayMs": 1800
+              "interWaveDelayMs": 1800,
+              "waveStartAudioCue": "sfx_horde_drum",
+              "waveClearAudioCue": "sfx_wave_clear"
             }
           }
         ],
@@ -937,10 +1016,13 @@
           "difficulty": 1,
           "goalValue": 80,
           "enemySpawnRateSec": 1.25,
+          "enemyVisualMultiplier": 3,
           "enemyPool": [
             "bandit_cultivator",
             "human_genius"
           ],
+          "overdriveAudioCue": "sfx_latent_heartbeat_window",
+          "meleeHitAudioCue": "sfx_arena_counter_open",
           "weapon": {
             "fireIntervalMs": 720,
             "bulletSpeed": 500,
@@ -993,7 +1075,9 @@
           "allowExperimentalCard": true,
           "playerHp": 120,
           "bossHp": 360,
-          "breakGaugeMax": 100
+          "breakGaugeMax": 100,
+          "warningAudioCue": "sfx_arena_drum_warning",
+          "counterWindowAudioCue": "sfx_arena_counter_open"
         },
         "patchLevel": "L2"
       },
@@ -1036,9 +1120,10 @@
               "toggleHint": "Q / SHIFT",
               "meleeDurationSec": 5,
               "rangedDurationSec": 4,
-              "meleeRadius": 140,
+              "meleeRadius": 160,
               "meleeDamage": 8,
               "rangedBurstCount": 2,
+              "rangedPlayerArtRole": "player_bow",
               "swapBurst": true
             }
           },
@@ -1077,6 +1162,7 @@
           "difficulty": 2,
           "goalValue": 120,
           "enemySpawnRateSec": 1.0,
+          "enemyVisualMultiplier": 3,
           "enemyPool": [
             "rock_golem",
             "bandit_cultivator"
@@ -1149,6 +1235,20 @@
           "stageLengthPx": 3600,
           "playersMax": 1,
           "orientation": "landscape",
+          "enemyVisualScale": 15,
+          "bossVisualScale": 10.5,
+          "player": { "attackRange": 72 },
+          "layerBlackBladeAudio": true,
+          "landscapeBackgrounds": [
+            "assets/imagegen/landscape/node4_forge_gate.png",
+            "assets/imagegen/landscape/node4_wind_gallery.png",
+            "assets/imagegen/landscape/node4_flame_edge.png"
+          ],
+          "landscapeBackgroundLayout": [
+            { "heightScale": 1.15, "centerY": 0.55 },
+            { "heightScale": 1.30, "centerY": 0.62 },
+            { "heightScale": 1.20, "centerY": 0.57 }
+          ],
           "waveList": [
             {
               "id": "forge_gate",
@@ -1270,9 +1370,10 @@
             "knobs": {
               "meleeDurationSec": 4,
               "rangedDurationSec": 4,
-              "meleeRadius": 108,
+              "meleeRadius": 126,
               "meleeDamage": 7,
               "rangedBurstCount": 3,
+              "rangedPlayerArtRole": "player_bow",
               "controlMode": "manual",
               "initialStance": "melee",
               "meleeLabel": "黑刀",
@@ -1284,7 +1385,9 @@
             "id": "horde_intensity",
             "knobs": {
               "spawnMultiplier": 3,
-              "eliteChance": 0.18
+              "eliteChance": 0.18,
+              "waveAudioCue": "sfx_horde_drum",
+              "waveAudioEveryTicks": 4
             }
           },
           {
@@ -1300,6 +1403,13 @@
           "durationSec": 100,
           "difficulty": 4,
           "enemySpawnRateSec": 0.85,
+          "enemyVisualMultiplier": 3,
+          "weapon": {
+            "fireIntervalMs": 350
+          },
+          "player": {
+            "hp": 140
+          },
           "enemyPool": [
             "bandit_cultivator",
             "human_genius",
@@ -1349,7 +1459,9 @@
           "perfectWindowMs": 95,
           "goodWindowMs": 190,
           "targetProgress": 100,
-          "requiredBestCombo": 12
+          "requiredBestCombo": 12,
+          "rhythmTargetFillColor": 13358561,
+          "rhythmTargetFillAlpha": 0.14
         },
         "patchLevel": "L2"
       },
@@ -1389,9 +1501,10 @@
             "knobs": {
               "meleeDurationSec": 4,
               "rangedDurationSec": 3,
-              "meleeRadius": 112,
+              "meleeRadius": 132,
               "meleeDamage": 8,
               "rangedBurstCount": 3,
+              "rangedPlayerArtRole": "player_bow",
               "controlMode": "manual",
               "initialStance": "melee",
               "meleeLabel": "黑刀",
@@ -1420,6 +1533,7 @@
           "durationSec": 110,
           "difficulty": 5,
           "enemySpawnRateSec": 0.75,
+          "enemyVisualMultiplier": 3,
           "enemyPool": [
             "bandit_cultivator",
             "human_genius",
@@ -1468,9 +1582,10 @@
             "knobs": {
               "meleeDurationSec": 4,
               "rangedDurationSec": 4,
-              "meleeRadius": 115,
+              "meleeRadius": 135,
               "meleeDamage": 9,
               "rangedBurstCount": 3,
+              "rangedPlayerArtRole": "player_bow",
               "controlMode": "manual",
               "initialStance": "melee",
               "meleeLabel": "黑刀",
@@ -1482,7 +1597,10 @@
             "id": "defend_line",
             "knobs": {
               "wallHp": 160,
-              "breachDamage": 8
+              "breachDamage": 8,
+              "laneWidthRatio": 0.34,
+              "startAudioCue": "sfx_war_horn",
+              "breachAudioCue": "sfx_wall_breach"
             }
           },
           {
@@ -1497,6 +1615,10 @@
           "durationSec": 120,
           "difficulty": 5,
           "enemySpawnRateSec": 0.7,
+          "enemyVisualMultiplier": 3,
+          "weapon": {
+            "fireIntervalMs": 500
+          },
           "enemyPool": [
             "bandit_cultivator",
             "genius_beast",
@@ -1541,7 +1663,10 @@
           "allowExperimentalCard": true,
           "playerHp": 150,
           "bossHp": 620,
-          "breakGaugeMax": 120
+          "breakGaugeMax": 120,
+          "counterAuraEffect": "hazard_mark",
+          "counterAuraTint": 12073517,
+          "counterAudioCue": "sfx_awakening_heartbeat"
         },
         "patchLevel": "L2"
       },
@@ -1583,10 +1708,11 @@
             "knobs": {
               "meleeDurationSec": 3,
               "rangedDurationSec": 3,
-              "meleeRadius": 128,
+              "meleeRadius": 150,
               "meleeDamage": 12,
               "meleeMaxTargets": 18,
               "rangedBurstCount": 4,
+              "rangedPlayerArtRole": "player_bow",
               "rangedDamageMultiplier": 1.25,
               "controlMode": "manual",
               "initialStance": "melee",
@@ -1631,6 +1757,10 @@
           "durationSec": 125,
           "difficulty": 6,
           "enemySpawnRateSec": 0.55,
+          "enemyVisualMultiplier": 3,
+          "weapon": {
+            "fireIntervalMs": 500
+          },
           "enemyPool": [
             "genius_beast",
             "human_genius",
@@ -1638,9 +1768,10 @@
           ],
           "bossId": "qiongqi_cub",
           "player": {
-            "hp": 180,
+            "hp": 210,
             "speed": 195
-          }
+          },
+          "overdriveAudioCue": "sfx_blood_heartbeat_window"
         },
         "patchLevel": "L2"
       },
@@ -1682,16 +1813,19 @@
             "knobs": {
               "meleeDurationSec": 3,
               "rangedDurationSec": 3,
-              "meleeRadius": 132,
+              "meleeRadius": 155,
               "meleeDamage": 13,
               "meleeMaxTargets": 20,
               "rangedBurstCount": 4,
               "rangedDamageMultiplier": 1.3,
+              "rangedPlayerArtRole": "player_bow",
               "controlMode": "manual",
               "initialStance": "melee",
               "meleeLabel": "黑刀",
               "rangedLabel": "紫钢弓",
-              "toggleHint": "Q / SHIFT"
+              "toggleHint": "Q / SHIFT",
+              "meleeEffectTintFill": 3754848,
+              "meleeEffectAlpha": 0.84
             }
           },
           {
@@ -1738,12 +1872,16 @@
           "durationSec": 150,
           "difficulty": 7,
           "enemySpawnRateSec": 0.5,
+          "enemyVisualMultiplier": 3,
           "enemyPool": [
             "human_genius",
             "genius_beast",
             "rock_golem"
           ],
           "bossId": "ancient_beast_king",
+          "meleeAudioCue": "sfx_black_blade",
+          "rangedAudioCue": "sfx_bow_release",
+          "overdriveAudioCue": "sfx_blood_heartbeat_window",
           "player": {
             "hp": 200,
             "speed": 200

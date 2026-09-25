@@ -1944,36 +1944,10 @@ def list_handoffs(ws_id: str) -> list:
     return items
 
 
-def _department_maps(state: dict) -> list:
-    maps = []
-    scopes = state.get("scopes") if isinstance(state.get("scopes"), dict) else {}
-    trunk = ((scopes.get("trunk") or {}).get("departments") or {})
-    if isinstance(trunk, dict) and trunk:
-        maps.append(trunk)
-    for bucket in (scopes.get("nodes") or {}).values():
-        departments = (bucket or {}).get("departments") or {}
-        if isinstance(departments, dict) and departments and departments not in maps:
-            maps.append(departments)
-    flat = state.get("departments") or {}
-    if isinstance(flat, dict) and flat and all(flat is not item for item in maps):
-        maps.append(flat)
-    return maps
-
-
 def refresh_open_handoff_counts(ws_id: str, state: dict) -> dict:
-    handoffs = list_handoffs(ws_id)
-    counts: dict = {}
-    for ho in handoffs:
-        if ho.get("status") != "open":
-            continue
-        to_id = ho.get("to")
-        if to_id:
-            counts[to_id] = counts.get(to_id, 0) + 1
-    for departments in _department_maps(state):
-        for d_id, dept in departments.items():
-            if isinstance(dept, dict):
-                dept["openHandoffCount"] = counts.get(d_id, 0)
-    return state
+    from .department_handoffs import refresh_counts
+
+    return refresh_counts(state, list_handoffs(ws_id))
 
 
 def prepare_department_state(ws_id: str):
@@ -2108,6 +2082,8 @@ def _bind_request_scope(state: dict, gdd: dict, payload: dict, *, allow_all: boo
 async def api_confirm_department(ws_id: str, dept_id: str, payload: dict = None):
     resolve_existing_ws_path(ws_id)
     payload = payload or {}
+    if "qaScore" in payload:
+        raise HTTPException(status_code=400, detail="qaScore is report-owned and cannot be set during confirmation")
     from .department_agents import mark_downstream_stale, run_auto_prep_pipeline, topological_departments
     from .department_scope import ScopeError, direct_downstream_ids, job_for
 
@@ -2131,11 +2107,6 @@ async def api_confirm_department(ws_id: str, dept_id: str, payload: dict = None)
         dept["prepNotes"] = str(payload.get("prepNotes") or "")
     if payload.get("brief") is not None:
         dept["brief"] = str(payload.get("brief") or "")
-    if payload.get("qaScore") is not None:
-        try:
-            dept["qaScore"] = int(payload.get("qaScore"))
-        except (TypeError, ValueError):
-            pass
     dept["status"] = "confirmed"
     dept["version"] = int(dept.get("version") or 0) + 1
     dept["confirmedAt"] = utc_now_string()
@@ -2198,6 +2169,8 @@ async def api_confirm_department(ws_id: str, dept_id: str, payload: dict = None)
 def api_set_department_status(ws_id: str, dept_id: str, payload: dict):
     resolve_existing_ws_path(ws_id)
     payload = payload or {}
+    if "qaScore" in payload:
+        raise HTTPException(status_code=400, detail="qaScore is report-owned and cannot be set by status update")
     from .department_agents import mark_downstream_stale
     from .department_scope import ScopeError, get_runtime, job_for, put_runtime
 
@@ -2223,11 +2196,6 @@ def api_set_department_status(ws_id: str, dept_id: str, payload: dict):
     dept["status"] = status
     if payload.get("prepNotes") is not None:
         dept["prepNotes"] = str(payload.get("prepNotes") or "")
-    if payload.get("qaScore") is not None:
-        try:
-            dept["qaScore"] = int(payload.get("qaScore"))
-        except (TypeError, ValueError):
-            pass
     dept["updatedAt"] = utc_now_string()
     put_runtime(state, scope, registry, dept_id, dept)
     if status == "confirmed":
@@ -2245,7 +2213,8 @@ def api_list_handoffs(ws_id: str):
 @app.post("/api/workspaces/{ws_id}/departments/handoffs")
 def api_create_handoff(ws_id: str, payload: dict):
     resolve_existing_ws_path(ws_id)
-    from .department_scope import unit_id_from_scope_dict
+    from .department_handoffs import acceptance_criteria
+    from .department_scope import ScopeError, parse_scope, scope_unit_id
 
     registry = load_department_registry()
     ids = {d["id"] for d in registry.get("departments", [])}
@@ -2256,22 +2225,33 @@ def api_create_handoff(ws_id: str, payload: dict):
     ho_type = payload.get("type") or "request"
     if ho_type not in ("request", "ack", "reject", "escalate"):
         raise HTTPException(status_code=400, detail="Invalid handoff type")
-    ho_id = payload.get("id") or f"ho_{int(time.time())}_{secrets.token_hex(3)}"
+    state, gdd = prepare_department_state(ws_id)
+    try:
+        scope = parse_scope(payload.get("scope") or state.get("activeScope"), gdd, allow_all=False)
+    except ScopeError as exc:
+        _scope_error(exc)
+    summary = str(payload.get("summary") or "").strip()
+    if not summary:
+        raise HTTPException(status_code=400, detail="handoff summary is required")
+    try:
+        criteria = acceptance_criteria(payload, summary)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    ho_id = f"ho_{int(time.time())}_{secrets.token_hex(3)}"
     handoff = {
         "id": ho_id,
         "from": from_id,
         "to": to_id,
-        "unitId": payload.get("unitId") or unit_id_from_scope_dict(
-            payload.get("scope") if isinstance(payload.get("scope"), dict) else load_department_state(ws_id).get("activeScope")
-        ),
+        "unitId": scope_unit_id(scope),
         "type": ho_type,
-        "summary": str(payload.get("summary") or "").strip() or "(no summary)",
+        "summary": summary,
         "payloadRef": payload.get("payloadRef") or "",
-        "needs": payload.get("needs") or [],
+        "needs": criteria,
+        "acceptanceCriteria": criteria,
         "blockers": payload.get("blockers") or [],
         "patchLevelMax": payload.get("patchLevelMax") or "L2",
         "createdAt": utc_now_string(),
-        "status": payload.get("status") or "open",
+        "status": "open",
     }
     path = os.path.join(departments_dir(ws_id), "handoffs", f"{ho_id}.json")
     with open(path, "w", encoding="utf-8") as f:
@@ -2291,10 +2271,14 @@ def api_resolve_handoff(ws_id: str, handoff_id: str, payload: dict = None):
         raise HTTPException(status_code=404, detail="Handoff not found")
     with open(path, "r", encoding="utf-8") as f:
         handoff = json.load(f)
-    handoff["status"] = payload.get("status") or "resolved"
+    from .department_handoffs import resolution_fields
+
+    try:
+        resolution = resolution_fields(handoff, payload, LORE_ROOT)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    handoff.update(resolution)
     handoff["resolvedAt"] = utc_now_string()
-    if payload.get("note"):
-        handoff["resolveNote"] = str(payload.get("note"))
     with open(path, "w", encoding="utf-8") as f:
         json.dump(handoff, f, ensure_ascii=False, indent=2)
     state = load_department_state(ws_id)
@@ -2384,8 +2368,9 @@ async def api_auto_prep_departments(ws_id: str, payload: dict = None):
             "unitId": ho.get("unitId") or "trunk",
             "type": ho.get("type") or "request",
             "summary": ho.get("summary") or "",
-            "payloadRef": "",
-            "needs": [],
+            "payloadRef": ho.get("payloadRef") or "",
+            "needs": ho.get("needs") or [ho.get("summary") or ""],
+            "acceptanceCriteria": ho.get("needs") or [ho.get("summary") or ""],
             "blockers": [],
             "patchLevelMax": "L2",
             "createdAt": utc_now_string(),
@@ -2880,4 +2865,3 @@ def api_production_export_gate(ws_id: str, card_id: str = Query("survivor_horde"
             "stderr": proc.stderr if proc.returncode != 0 else None,
         },
     }
-

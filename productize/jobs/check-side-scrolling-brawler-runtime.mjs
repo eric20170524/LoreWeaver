@@ -116,6 +116,18 @@ test('lower action zone does not become a movement target', () => {
   adapter.destroy();
 });
 
+test('touch direction controls override tap-to-move without losing vertical movement', () => {
+  const { adapter, mock } = fixture();
+  const y0 = adapter.player.y;
+  adapter.ui.touchUp = {};
+  adapter.touchInput.up = true;
+  mock.scene.input._l.pointerdown({ id: 8, x: 630, y: 388, worldX: 630, worldY: 388, isDown: true }, [adapter.ui.touchUp]);
+  assert.equal(adapter.getTestState().touchMoving, false);
+  adapter.handleMovement(300);
+  assert.ok(adapter.player.y < y0 - 5, `up control should move player from ${y0}, got ${adapter.player.y}`);
+  adapter.destroy();
+});
+
 test('pause blocks touch movement and resume restores it', () => {
   const { adapter, mock } = fixture();
   const y = adapter.player.y;
@@ -163,6 +175,19 @@ test('locked screen spans one landscape viewport and keeps each wave theme', () 
   assert.deepEqual(adapter.getTestState().waveNames, ['锻口试刃', '风口回廊', '烈炎开锋']);
   assert.deepEqual(adapter.getTestState().waveThemes, [2760984, 1454136, 3807766]);
   assert.ok(bounds.w >= 960, `locked view should cover the landscape width, got ${bounds.w}`);
+  adapter.destroy();
+});
+
+test('normal, fire and wind attacks request matching authored sound cues', () => {
+  const { adapter } = fixture();
+  const cues = [];
+  adapter.context.onAudioCue = cue => cues.push(cue);
+  adapter.tryAttack(false, 100);
+  adapter._comboResolver = () => ({ element: 'fire', label: '烈炎', damageMult: 1, color: '#f97316' });
+  adapter.tryAttack(true, 400);
+  adapter._comboResolver = () => ({ element: 'wind', label: '疾风', damageMult: 1, color: '#38bdf8' });
+  adapter.tryAttack(false, 800);
+  assert.deepEqual(cues, ['sfx_black_blade', 'sfx_fire_slash', 'sfx_wind_slash']);
   adapter.destroy();
 });
 

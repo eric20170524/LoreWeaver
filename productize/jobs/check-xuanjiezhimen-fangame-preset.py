@@ -94,7 +94,7 @@ def main() -> None:
     require({"weapon_stance_cycle", "hazard_telegraph", "boss_phases"} <= node3_modifiers, "node 3 must combine horde and bullet-space pressure")
     node3_stance = next(item for item in node3["gameplay"]["modifiers"] if item.get("id") == "weapon_stance_cycle")
     require(node3_stance.get("knobs", {}).get("controlMode") == "manual", "node 3 stance must be player-controlled")
-    require(node3_stance.get("knobs", {}).get("meleeRadius") == 140, "node 3 blade sweep must cover the corpse ring")
+    require(node3_stance.get("knobs", {}).get("meleeRadius", 0) >= 140, "node 3 blade sweep must cover the corpse ring")
     require(node3_stance.get("knobs", {}).get("meleeDamage") == 8, "node 3 blade must drop a living corpse in one hit")
     node3_knobs = node3["gameplay"].get("knobs", {})
     require(node3_knobs.get("weapon", {}).get("fireIntervalMs") == 800, "node 3 attacks must fire on the 800ms clock")

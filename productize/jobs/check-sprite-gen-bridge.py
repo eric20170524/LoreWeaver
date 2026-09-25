@@ -278,12 +278,19 @@ def main() -> int:
             cand = ws / "assets/imagegen/sprite-gen" / name / "loreweaver"
             cand.mkdir(parents=True, exist_ok=True)
             image.save(cand / "atlas.png")
-            (cand / "manifest.json").write_text(json.dumps({
+            manifest_body = {
                 "semanticPrefix": prefix,
                 "clips": {"idle": {"keys": [f"{prefix}_idle_0"], "fps": 4, "loop": True}},
                 "frameSize": {"w": 64, "h": 64},
                 "frames": {prefix: {"frame": {"x": 0, "y": 0, "w": 64, "h": 64}}, f"{prefix}_idle_0": {"frame": {"x": 0, "y": 0, "w": 64, "h": 64}}},
-            }), encoding="utf-8")
+            }
+            if prefix == "player":
+                manifest_body["clipSets"] = {
+                    "player": manifest_body["clips"],
+                    "player_bow": {"idle": {"keys": ["player_bow_idle_0"], "fps": 8, "loop": True}},
+                }
+                manifest_body["frames"]["player_bow_idle_0"] = {"frame": {"x": 0, "y": 0, "w": 64, "h": 64}}
+            (cand / "manifest.json").write_text(json.dumps(manifest_body), encoding="utf-8")
             (cand / "provenance.json").write_text("{}", encoding="utf-8")
         try:
             module.pack_candidates(ws, ["hero", "bandit"], columns=2, max_edge=100, force=True)
@@ -305,6 +312,8 @@ def main() -> int:
         assert runtime["atlasSize"]["w"] <= module.MAX_ATLAS_EDGE
         assert runtime["atlasSize"]["h"] <= module.MAX_ATLAS_EDGE
         assert runtime["clipSets"]["player"]["idle"]["keys"] == ["player_idle_0"]
+        assert runtime["clipSets"]["player_bow"]["idle"]["keys"] == ["player_bow_idle_0"]
+        assert runtime["frames"]["player_bow_idle_0"]["frame"]["x"] == 0
         assert runtime["clipSets"]["enemy_bandit_cultivator"]["idle"]["loop"] is True
 
         fitted = module.pack_candidates(

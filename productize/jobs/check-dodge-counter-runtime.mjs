@@ -14,7 +14,7 @@ function object(x = 0, y = 0) {
   return o;
 }
 function fixture(knobs = {}, onEnd) {
-  const timers = [], results = [];
+  const timers = [], results = [], cues = [];
   const scene = {
     scale: { width: 720, height: 1280 },
     add: {
@@ -32,6 +32,7 @@ function fixture(knobs = {}, onEnd) {
     time: { now: 0, delayedCall(ms, callback) { const timer = { ms, callback, removed: false, remove() { this.removed = true; } }; timers.push(timer); return timer; } }
   };
   const adapter = new DodgeCounterBossAdapter({ Phaser: {}, random: () => 0.5,
+    onAudioCue: cue => cues.push(cue),
     onEnd(result) { results.push(result); onEnd?.(result, adapter); } });
   adapter.init({ nodeId: 'node_2', nodeConfig: { durationLimit: 70, gameplay: { cardId: 'dodge_counter_boss', knobs: { bossHp: 360, playerHp: 120, ...knobs } } } });
   adapter.create(scene);
@@ -42,7 +43,7 @@ function fixture(knobs = {}, onEnd) {
     assert.equal(adapter.state.phase, 'counter');
     assert.equal(adapter.state.counterUsed, false);
   };
-  return { adapter, scene, timers, results, step, counterWindow };
+  return { adapter, scene, timers, results, cues, step, counterWindow };
 }
 
 test('phase hint sits in the header band, clear of the host footer', () => {
@@ -79,6 +80,60 @@ test('attack contact and counter emit stagger/hurt presentation instead of silen
   for (let i = 0; i < 80 && f.adapter.state.phase !== 'counter'; i++) f.step(20);
   f.adapter.tryCounter();
   assert.equal(f.adapter.state.lastFeedback, 'boss_stagger');
+});
+
+test('generic counter avoids full ape art; node 10 shows a short player-side awakening mark', () => {
+  const run = knobs => {
+    const f = fixture(knobs);
+    const effects = [];
+    f.adapter.runtimeArt = {
+      createEffect(id, options) {
+        const sprite = object(options.x, options.y);
+        sprite.getData = key => key === 'artSource' ? 'atlas' : null;
+        sprite.setDisplaySize = () => sprite;
+        sprite.setTint = value => { sprite.tint = value; return sprite; };
+        sprite.setAlpha = value => { sprite.alpha = value; return sprite; };
+        effects.push({ id, sprite });
+        return sprite;
+      }
+    };
+    f.counterWindow();
+    effects.length = 0;
+    f.adapter.tryCounter();
+    return effects;
+  };
+  const generic = run({});
+  assert.deepEqual(generic.map(effect => effect.id), ['black_blade']);
+  const awakening = run({ counterAuraEffect: 'hazard_mark', counterAuraTint: 0xb83a2d });
+  assert.deepEqual(awakening.map(effect => effect.id), ['black_blade', 'hazard_mark']);
+  assert.equal(awakening[1].sprite.tint, 0xb83a2d);
+  assert.equal(awakening[1].sprite.alpha, 0.6);
+});
+
+test('node 10 heartbeat fires once per accepted counter; generic duel stays silent', () => {
+  const generic = fixture();
+  generic.counterWindow();
+  assert.equal(generic.adapter.tryCounter(), true);
+  assert.deepEqual(generic.cues, []);
+  const awakening = fixture({ counterAudioCue: 'sfx_awakening_heartbeat' });
+  awakening.counterWindow();
+  assert.equal(awakening.adapter.tryCounter(), true);
+  assert.equal(awakening.adapter.tryCounter(), false);
+  assert.deepEqual(awakening.cues, ['sfx_awakening_heartbeat']);
+});
+
+test('node 2 cue marks warning and counter window once without changing combat timing', () => {
+  const f = fixture({
+    warningAudioCue: 'sfx_arena_drum_warning',
+    counterWindowAudioCue: 'sfx_arena_counter_open'
+  });
+  assert.equal(f.adapter.config.warningSec, 0.7);
+  assert.equal(f.adapter.config.activeSec, 0.45);
+  assert.equal(f.adapter.config.counterWindowSec, 0.55);
+  f.counterWindow();
+  assert.deepEqual(f.cues, ['sfx_arena_drum_warning', 'sfx_arena_counter_open']);
+  f.adapter.tryCounter();
+  assert.deepEqual(f.cues, ['sfx_arena_drum_warning', 'sfx_arena_counter_open']);
 });
 
 test('one opening accepts only one counter across pointer and semantic input', () => {
