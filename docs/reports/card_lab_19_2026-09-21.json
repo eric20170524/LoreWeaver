@@ -1,0 +1,559 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "sequence_puzzle_combo",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "d987c6810a847bc6a16c7bc45be027847725b1a0",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check",
+      "shooter_duel",
+      "maze_exploration_choice",
+      "platform_escape",
+      "hazard_collect_waves",
+      "sequence_puzzle_combo"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "97e401c8d7a3a607c846c60a57fdf0664d9adcf4e9f1d8c0aa80ef3d4a99c84a"
+      },
+      {
+        "name": "game.js",
+        "sha256": "0e9c517346778fc2025ee6c20e741a818cb6973f1be55ddbf5cdc751a4e5620a"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T14:53:57.457Z",
+  "sourceNote": "Checkout revision is the build base; actual bundle SHA-256 identifies uncommitted and concurrent source included in the tested payload.",
+  "unitTests": {
+    "passed": 8,
+    "command": "node productize/jobs/check-combo-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "smokeAdapter": {
+    "enter": true,
+    "spawnOrProgress": true,
+    "retreat": true,
+    "noCrash": true,
+    "warnings": [
+      "no_envKey",
+      "no_bgmKey"
+    ]
+  },
+  "cases": [
+    {
+      "id": "default-mouse-visible-demo-and-puzzle",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "sequenceLength": 4,
+        "pieceCount": 4
+      },
+      "actions": [
+        {
+          "flash": 2,
+          "ordinal": 1
+        },
+        {
+          "flash": 2,
+          "ordinal": 2
+        },
+        {
+          "flash": 0,
+          "ordinal": 3
+        },
+        {
+          "flash": 0,
+          "ordinal": 4
+        },
+        {
+          "piece": 0,
+          "slot": 0,
+          "input": "mouse"
+        },
+        {
+          "piece": 1,
+          "slot": 1,
+          "input": "mouse"
+        },
+        {
+          "piece": 2,
+          "slot": 2,
+          "input": "mouse"
+        },
+        {
+          "piece": 3,
+          "slot": 3,
+          "input": "mouse"
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "progress": 100,
+        "score": 100,
+        "mistakes": 0,
+        "piecesPlaced": 4
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "mistakes": 0,
+          "phase": 2
+        }
+      }
+    },
+    {
+      "id": "wrong-sequence-and-wrong-slot-retry",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "sequenceLength": 4,
+        "pieceCount": 4
+      },
+      "actions": [
+        {
+          "flash": 2,
+          "ordinal": 1
+        },
+        {
+          "flash": 1,
+          "ordinal": 2
+        },
+        {
+          "flash": 1,
+          "ordinal": 3
+        },
+        {
+          "flash": 0,
+          "ordinal": 4
+        },
+        {
+          "flash": 2,
+          "ordinal": 1
+        },
+        {
+          "flash": 1,
+          "ordinal": 2
+        },
+        {
+          "flash": 1,
+          "ordinal": 3
+        },
+        {
+          "flash": 0,
+          "ordinal": 4
+        },
+        {
+          "piece": 0,
+          "slot": 0,
+          "input": "mouse"
+        },
+        {
+          "piece": 1,
+          "slot": 1,
+          "input": "mouse"
+        },
+        {
+          "piece": 2,
+          "slot": 2,
+          "input": "mouse"
+        },
+        {
+          "piece": 3,
+          "slot": 3,
+          "input": "mouse"
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "progress": 100,
+        "score": 100,
+        "mistakes": 2,
+        "piecesPlaced": 4
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "mistakes": 2,
+          "phase": 2
+        }
+      }
+    },
+    {
+      "id": "pause-demo-drag-outside-three-restarts",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "sequenceLength": 4,
+        "pieceCount": 4
+      },
+      "actions": [
+        {
+          "flash": 2,
+          "ordinal": 1
+        },
+        {
+          "flash": 0,
+          "ordinal": 2
+        },
+        {
+          "flash": 0,
+          "ordinal": 3
+        },
+        {
+          "flash": 3,
+          "ordinal": 4
+        },
+        {
+          "piece": 1,
+          "slot": 1,
+          "input": "mouse"
+        },
+        {
+          "piece": 2,
+          "slot": 2,
+          "input": "mouse"
+        },
+        {
+          "piece": 3,
+          "slot": 3,
+          "input": "mouse"
+        }
+      ],
+      "state": {
+        "phase": 1,
+        "progress": 0,
+        "score": 0,
+        "mistakes": 0,
+        "piecesPlaced": 0
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 0,
+          "mistakes": 0,
+          "phase": 1
+        }
+      }
+    },
+    {
+      "id": "maximum-eight-keyboard-both-phases",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "sequenceLength": 8,
+        "pieceCount": 8
+      },
+      "actions": [
+        {
+          "flash": 7,
+          "ordinal": 1
+        },
+        {
+          "flash": 0,
+          "ordinal": 2
+        },
+        {
+          "flash": 6,
+          "ordinal": 3
+        },
+        {
+          "flash": 4,
+          "ordinal": 4
+        },
+        {
+          "flash": 6,
+          "ordinal": 5
+        },
+        {
+          "flash": 5,
+          "ordinal": 6
+        },
+        {
+          "flash": 1,
+          "ordinal": 7
+        },
+        {
+          "flash": 6,
+          "ordinal": 8
+        },
+        {
+          "piece": 0,
+          "slot": 0,
+          "input": "keyboard"
+        },
+        {
+          "piece": 1,
+          "slot": 1,
+          "input": "keyboard"
+        },
+        {
+          "piece": 2,
+          "slot": 2,
+          "input": "keyboard"
+        },
+        {
+          "piece": 3,
+          "slot": 3,
+          "input": "keyboard"
+        },
+        {
+          "piece": 4,
+          "slot": 4,
+          "input": "keyboard"
+        },
+        {
+          "piece": 5,
+          "slot": 5,
+          "input": "keyboard"
+        },
+        {
+          "piece": 6,
+          "slot": 6,
+          "input": "keyboard"
+        },
+        {
+          "piece": 7,
+          "slot": 7,
+          "input": "keyboard"
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "progress": 100,
+        "score": 100,
+        "mistakes": 0,
+        "piecesPlaced": 8
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "mistakes": 0,
+          "phase": 2
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-victory",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "sequenceLength": 4,
+        "pieceCount": 4
+      },
+      "actions": [
+        {
+          "flash": 1,
+          "ordinal": 1
+        },
+        {
+          "flash": 0,
+          "ordinal": 2
+        },
+        {
+          "flash": 3,
+          "ordinal": 3
+        },
+        {
+          "flash": 3,
+          "ordinal": 4
+        },
+        {
+          "piece": 0,
+          "slot": 0,
+          "input": "touch"
+        },
+        {
+          "piece": 1,
+          "slot": 1,
+          "input": "touch"
+        },
+        {
+          "piece": 2,
+          "slot": 2,
+          "input": "touch"
+        },
+        {
+          "piece": 3,
+          "slot": 3,
+          "input": "touch"
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "progress": 100,
+        "score": 100,
+        "mistakes": 0,
+        "piecesPlaced": 4
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "mistakes": 0,
+          "phase": 2
+        }
+      }
+    },
+    {
+      "id": "offline-default-victory",
+      "passed": true,
+      "errors": [],
+      "config": {
+        "sequenceLength": 4,
+        "pieceCount": 4
+      },
+      "actions": [
+        {
+          "flash": 2,
+          "ordinal": 1
+        },
+        {
+          "flash": 3,
+          "ordinal": 2
+        },
+        {
+          "flash": 3,
+          "ordinal": 3
+        },
+        {
+          "flash": 1,
+          "ordinal": 4
+        },
+        {
+          "piece": 0,
+          "slot": 0,
+          "input": "mouse"
+        },
+        {
+          "piece": 1,
+          "slot": 1,
+          "input": "mouse"
+        },
+        {
+          "piece": 2,
+          "slot": 2,
+          "input": "mouse"
+        },
+        {
+          "piece": 3,
+          "slot": 3,
+          "input": "mouse"
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "progress": 100,
+        "score": 100,
+        "mistakes": 0,
+        "piecesPlaced": 4
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "mistakes": 0,
+          "phase": 2
+        }
+      }
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "id": "reaction_pick",
   "title": "Reaction Pick",
   "category": "microgame",
-  "status": "production_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -26,25 +26,33 @@
       "type": "integer",
       "default": 6,
       "patchLevel": "L1",
-      "description": "targetRounds"
+      "description": "targetRounds",
+      "min": 1,
+      "max": 50
     },
     "lives": {
       "type": "integer",
       "default": 3,
       "patchLevel": "L1",
-      "description": "lives"
+      "description": "lives",
+      "min": 1,
+      "max": 20
     },
     "showLifeMinSec": {
       "type": "number",
       "default": 2.2,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob showLifeMinSec"
+      "description": "Lightweight cert knob showLifeMinSec",
+      "min": 0.5,
+      "max": 10
     },
     "showLifeMaxSec": {
       "type": "number",
       "default": 3.2,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob showLifeMaxSec"
+      "description": "Lightweight cert knob showLifeMaxSec",
+      "min": 0.5,
+      "max": 10
     },
     "allowQuit": {
       "type": "boolean",
@@ -160,8 +168,8 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
+    "productionReady": false,
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package.",
     "conditionalWaivers": [
       "device_class_fps: headless soak proxy",
       "vlm_visual_overflow: deferred",

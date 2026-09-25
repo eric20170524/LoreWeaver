@@ -1,6 +1,8 @@
 import GameplayAdapter from '../GameplayAdapter.js';
+import RhythmTimingRound from './RhythmTimingRound.js';
 import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
+import VFX from '../../juice/VFX.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     id: 'rhythm_timing',
@@ -11,7 +13,7 @@ const DEFAULT_CONFIG = Object.freeze({
     damageOnMiss: 10,
     difficulty: 1,
     /** When true, pure timing loop (no boss phase) — preferred for gate demos */
-    skipBoss: false,
+    skipBoss: true,
     boss: {
         hp: 100,
         weakPointRadius: 20,
@@ -106,6 +108,22 @@ export default class TapReactionAdapter extends GameplayAdapter {
         this.state.score = 0;
         this.state.bossSpawned = false;
         this.readPlayabilityKnobs(payload, 'rhythm_timing');
+        // Pure rhythm is the default. Explicit skipBoss:false retains the old reaction/Boss mode.
+        this.rhythmRound = this.config.skipBoss ? new RhythmTimingRound({
+            ...knobs,
+            durationSec: knobs.durationSec ?? nodeConfig.duration ?? nodeConfig.durationLimit,
+            targetProgress: knobs.targetProgress ?? knobs.goalValue ?? nodeConfig.goalValue,
+            playerHp: knobs.playerHp ?? payload.playerStats?.hp
+        }) : null;
+        this.result = null;
+        this.state.elapsedSeconds = 0;
+        if (this.rhythmRound) {
+            Object.assign(this.config, this.rhythmRound.config, {
+                duration: this.rhythmRound.config.durationSec,
+                goalValue: this.rhythmRound.config.targetProgress
+            });
+            this.syncRhythmState();
+        }
         return this;
     }
 
@@ -134,11 +152,19 @@ export default class TapReactionAdapter extends GameplayAdapter {
         }
         this.lifecycle = new SceneLifecycle(scene);
         this.lifecycle.start();
+        this.runtimeArt = this.payload?.runtimeArt || this.payload?.art
+            || scene.game?.registry?.get?.('runtimeArtBinder')?.createContext?.(scene)
+            || scene.game?.registry?.get?.('runtimeArt')
+            || null;
 
         const width = scene.scale.width;
         const height = scene.scale.height;
         this.world = { width, height };
 
+        if (this.rhythmRound) {
+            this.createRhythmSurface();
+            return this;
+        }
         this.orbs = [];
         this.bossWeakPoints = [];
         this.bossGroup = scene.add.container(width / 2, height / 2);
@@ -163,6 +189,110 @@ export default class TapReactionAdapter extends GameplayAdapter {
         return this;
     }
 
+    createRhythmSurface() {
+        const scene = this.scene;
+        const { width, height } = this.world;
+        const x = width / 2, y = height * 0.5;
+        const targetFillColor = Number.isFinite(Number(this.config.rhythmTargetFillColor))
+            ? Number(this.config.rhythmTargetFillColor) : 0x0f172a;
+        const targetFillAlpha = Number.isFinite(Number(this.config.rhythmTargetFillAlpha))
+            ? Math.max(0, Math.min(1, Number(this.config.rhythmTargetFillAlpha))) : 0.9;
+        const text = (py, value, size = '20px') => scene.add.text(x, py, value, {
+            fontFamily: 'sans-serif', fontSize: size, color: '#e2e8f0',
+            align: 'center', wordWrap: { width: width - 64 }
+        }).setOrigin(0.5);
+        this.rhythmUI = {
+            title: text(210, this.t('rhythm.title', '节奏共鸣')),
+            instructions: text(260, '外圈收拢到白色圆环时，点击中心或按空格', '16px'),
+            target: scene.add.circle(x, y, 64, targetFillColor, targetFillAlpha).setStrokeStyle(3, 0xf8fafc, 0.95),
+            approach: scene.add.circle(x, y, 150, 0xdbeafe, 0).setStrokeStyle(4, 0xdbeafe, 0.9),
+            moon: VFX.spriteClip(scene, this.runtimeArt, 'moon_pulse', x, y, {
+                clip: 'loop', depth: 4, destroyOnComplete: false
+            }),
+            player: this.mountRhythmPlayer(x, y + 295),
+            pad: scene.add.circle(x, y, 92, 0xdbeafe, 0.01).setInteractive({ useHandCursor: true }),
+            feedback: text(y + 170, '准备', '28px'),
+            combo: text(y + 222, '', '18px'),
+            counts: text(height - 140, '', '16px')
+        };
+        this.lifecycle.trackListener(this.rhythmUI.pad, 'pointerdown', () => this.primaryAction());
+        this.lifecycle.trackListener(scene.input.keyboard, 'keydown-SPACE', event => {
+            if (!this.isRunning() || event?.repeat || this.playability?.keyboardEnabled === false) return;
+            event?.preventDefault?.(); this.primaryAction();
+        });
+        this.lifecycle.addCleanup(() => {
+            Object.values(this.rhythmUI || {}).forEach(object => object?.destroy?.());
+            this.rhythmUI = null;
+        });
+        this.renderRhythmSurface(); this.publishTestState();
+    }
+
+    primaryAction() {
+        if (!this.rhythmRound || !this.isRunning()) return { accepted: false, reason: 'not_running' };
+        const judgment = this.rhythmRound.hit();
+        if (!judgment.accepted) return judgment;
+        this.syncRhythmState();
+        if (this.finishRhythmIfNeeded()) return judgment;
+        this.playSynthSound(judgment.kind === 'miss' ? 'damage' : 'loot');
+        this.renderRhythmSurface(); this.publishTestState();
+        return judgment;
+    }
+
+    syncRhythmState() {
+        const state = this.rhythmRound.state;
+        this.state.hp = state.hp;
+        this.state.score = state.score;
+        this.state.elapsedSeconds = state.elapsedMs / 1000;
+        this.state.timeRemaining = Math.max(0, this.rhythmRound.config.durationSec - this.state.elapsedSeconds);
+    }
+
+    finishRhythmIfNeeded() {
+        const outcome = this.rhythmRound.state.outcome;
+        if (!outcome) return false;
+        this.finish(outcome.success, outcome.reason);
+        return true;
+    }
+
+    mountRhythmPlayer(x, y) {
+        try {
+            const sprite = this.runtimeArt?.createSprite?.('player', {
+                x, y, displaySize: 120, depth: 6, clip: 'idle', frameRate: 4, repeat: -1
+            });
+            if (sprite?.getData?.('artSource') !== 'atlas') {
+                sprite?.destroy?.();
+                return null;
+            }
+            return sprite;
+        } catch {
+            return null;
+        }
+    }
+
+    renderRhythmSurface() {
+        if (!this.rhythmUI || !this.isRunning()) return;
+        const s = this.rhythmRound.snapshot();
+        const c = this.rhythmRound.config;
+        const approachRadius = 64 + Math.max(0, Math.min(1, -s.offsetMs / c.beatIntervalMs)) * 100;
+        this.rhythmUI.approach.setRadius(approachRadius);
+        this.rhythmUI.approach.setAlpha(s.resolved ? 0.12 : 0.95);
+        if (this.rhythmUI.moon?.active) {
+            this.rhythmUI.moon.setDisplaySize?.(approachRadius * 2, approachRadius * 2);
+            // The inherited pulse atlas is green; keep it subtle against the moonlit node art.
+            this.rhythmUI.moon.setAlpha?.(s.resolved ? 0.03 : 0.06);
+        }
+
+        this.rhythmUI.target.setStrokeStyle(3, Math.abs(s.offsetMs) <= c.perfectWindowMs && !s.resolved ? 0xfbbf24 : 0xf8fafc, 1);
+        const last = s.lastJudgment;
+        const fresh = last && s.elapsedMs - last.atMs < 650;
+        this.rhythmUI.feedback.setText(fresh ? (last.kind === 'perfect' ? 'PERFECT +10'
+            : last.kind === 'good' ? 'GOOD +5' : last.source === 'early' ? '过早 · MISS' : '漏拍 · MISS') : '等待圆环重合');
+        this.rhythmUI.combo.setText(`连击 ${s.combo} · 最佳 ${s.bestCombo}/${c.requiredBestCombo} · 进度 ${s.score}/${c.targetProgress}`);
+        this.rhythmUI.counts.setText(`Perfect ${s.perfectHits}  /  Good ${s.goodHits}  /  Miss ${s.misses}`);
+    }
+
+    retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
+
     startTimers() {
         // Spawn normal orbs timer
         this.spawnTimerEvent = this.scene.time.addEvent({
@@ -184,6 +314,14 @@ export default class TapReactionAdapter extends GameplayAdapter {
 
     update(time, delta) {
         if (!this.isRunning()) return;
+        if (this.rhythmRound) {
+            this.rhythmRound.advance(delta);
+            this.syncRhythmState();
+            if (this.finishRhythmIfNeeded()) return;
+            this.renderRhythmSurface();
+            this.publishTestState();
+            return;
+        }
 
         // Rotate Boss Mandala graphic if spawned
         if (this.state.bossSpawned && this.bossGroup) {
@@ -593,6 +731,9 @@ export default class TapReactionAdapter extends GameplayAdapter {
     }
 
     finish(success, reason = null) {
+        // The host's legacy score shortcut cannot bypass the combo requirement.
+        // Success is accepted only when the actual timing rules have reached it.
+        if (success && this.rhythmRound && this.rhythmRound.state.outcome?.success !== true) return this.result;
         if (this.status === 'ended' || this.status === 'destroyed') return this.result;
         if (!this.lifecycle?.canTransition()) return this.result;
         this.lifecycle.beginEnd();
@@ -601,7 +742,9 @@ export default class TapReactionAdapter extends GameplayAdapter {
         if (this.spawnTimerEvent) this.spawnTimerEvent.destroy();
 
         const rewards = {};
-        if (success) {
+        if (success && this.rhythmRound) {
+            Object.assign(rewards, this.config.rewardTable || { score: 1 });
+        } else if (success) {
             // Apply rewards based on spec rewards multiplier
             rewards.mainCurrency = (this.payload.nodeConfig?.rewards?.score || this.config.goalValue) * 1.5;
         }
@@ -611,6 +754,7 @@ export default class TapReactionAdapter extends GameplayAdapter {
             reason: reason || (success ? NODE_RESULT_REASONS.COMPLETED : NODE_RESULT_REASONS.FAILED),
             rewards,
             telemetry: {
+                ...(this.rhythmRound ? this.rhythmRound.snapshot() : {}),
                 score: this.state.score,
                 elapsedSeconds: this.state.elapsedSeconds,
                 bossDefeated: success && this.state.bossSpawned,
@@ -671,6 +815,11 @@ export default class TapReactionAdapter extends GameplayAdapter {
     getTestState() {
         return {
             ...super.getTestState(),
+            ...(this.rhythmRound ? {
+                ...this.rhythmRound.snapshot(),
+                padPosition: this.rhythmUI?.pad ? { x: this.rhythmUI.pad.x, y: this.rhythmUI.pad.y } : null
+            } : {}),
+            adapterId: this.config.id,
             score: this.state.score,
             hp: this.state.hp,
             timer: this.state.timeRemaining,

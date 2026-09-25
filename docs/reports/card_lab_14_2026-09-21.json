@@ -1,0 +1,423 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "branching_dialogue_check",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "4f7a6be564cd044f7502f9fd2ffb7aee8f80af62",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "9662a6568d488186103a52e07181f9cf1952a84cc6b05221f32a8ffe1cf1dd5d"
+      },
+      {
+        "name": "game.js",
+        "sha256": "7bab7f1e7d2150c6457a3a8c355d3e8a2cd5e948e06b10502a7f4e95945adf9f"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T13:46:32.832Z",
+  "sourceNote": "Checkout revision is the base. Build includes uncommitted card changes and concurrent workspace changes. Actual bundle SHA-256 identifies tested payload.",
+  "unitTests": {
+    "passed": 8,
+    "command": "node --test productize/jobs/check-dialogue-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "cases": [
+    {
+      "id": "default-good-ending",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "node": "start",
+          "choice": "humble",
+          "allowed": true,
+          "next": "path_a"
+        },
+        {
+          "kind": "pointer",
+          "node": "path_a",
+          "choice": "accept",
+          "allowed": true,
+          "next": "end_good"
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 2,
+          "favor": 65
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "favor": 65,
+          "path": [
+            "start",
+            "path_a",
+            "end_good"
+          ],
+          "ending": "good",
+          "choicesMade": 2
+        }
+      }
+    },
+    {
+      "id": "missing-relic-fallback-neutral",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "node": "start",
+          "choice": "relic",
+          "allowed": false,
+          "next": "path_blocked"
+        },
+        {
+          "kind": "pointer",
+          "node": "path_blocked",
+          "choice": "leave",
+          "allowed": true,
+          "next": "end_neutral"
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "favor": 55
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "favor": 55,
+          "path": [
+            "start",
+            "path_blocked",
+            "end_neutral"
+          ],
+          "ending": "neutral",
+          "choicesMade": 2
+        }
+      }
+    },
+    {
+      "id": "relic-unlocks-good-ending",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "node": "start",
+          "choice": "relic",
+          "allowed": true,
+          "next": "path_c"
+        },
+        {
+          "kind": "pointer",
+          "node": "path_c",
+          "choice": "enter",
+          "allowed": true,
+          "next": "end_good"
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 2,
+          "favor": 85
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "has_relic"
+          ],
+          "gallery": []
+        },
+        "telemetry": {
+          "favor": 85,
+          "path": [
+            "start",
+            "path_c",
+            "end_good"
+          ],
+          "ending": "good",
+          "choicesMade": 2
+        }
+      }
+    },
+    {
+      "id": "realm-locked-fallback",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "node": "start",
+          "choice": "proud",
+          "allowed": true,
+          "next": "path_b"
+        },
+        {
+          "kind": "pointer",
+          "node": "path_b",
+          "choice": "fight",
+          "allowed": false,
+          "next": "end_neutral"
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "favor": 5
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "favor": 5,
+          "path": [
+            "start",
+            "path_b",
+            "end_neutral"
+          ],
+          "ending": "neutral",
+          "choicesMade": 2
+        }
+      }
+    },
+    {
+      "id": "bad-ending-positive-score-still-fails",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "node": "start",
+          "choice": "proud",
+          "allowed": true,
+          "next": "path_b"
+        },
+        {
+          "kind": "pointer",
+          "node": "path_b",
+          "choice": "fight",
+          "allowed": true,
+          "next": "end_bad"
+        }
+      ],
+      "result": {
+        "success": false,
+        "reason": "condition_failed",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "favor": 10,
+          "path": [
+            "start",
+            "path_b",
+            "end_bad"
+          ],
+          "ending": "bad",
+          "choicesMade": 2
+        }
+      }
+    },
+    {
+      "id": "paused-choice-ending-timer-and-restarts",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "node": "start",
+          "choice": "humble",
+          "allowed": true,
+          "next": "path_a"
+        },
+        {
+          "kind": "pointer",
+          "node": "path_a",
+          "choice": "accept",
+          "allowed": true,
+          "next": "end_good"
+        }
+      ],
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "favor": 40,
+          "path": [
+            "start"
+          ],
+          "ending": null,
+          "choicesMade": 0
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-good-ending",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "touch",
+          "node": "start",
+          "choice": "humble",
+          "allowed": true,
+          "next": "path_a"
+        },
+        {
+          "kind": "touch",
+          "node": "path_a",
+          "choice": "accept",
+          "allowed": true,
+          "next": "end_good"
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 2,
+          "favor": 65
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "favor": 65,
+          "path": [
+            "start",
+            "path_a",
+            "end_good"
+          ],
+          "ending": "good",
+          "choicesMade": 2
+        }
+      }
+    },
+    {
+      "id": "offline-neutral-ending",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "node": "start",
+          "choice": "proud",
+          "allowed": true,
+          "next": "path_b"
+        },
+        {
+          "kind": "pointer",
+          "node": "path_b",
+          "choice": "soften",
+          "allowed": true,
+          "next": "end_neutral"
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "favor": 42
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "favor": 42,
+          "path": [
+            "start",
+            "path_b",
+            "end_neutral"
+          ],
+          "ending": "neutral",
+          "choicesMade": 2
+        }
+      }
+    }
+  ]
+}

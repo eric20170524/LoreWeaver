@@ -3,7 +3,7 @@
   "id": "turn_based_skill_battle",
   "title": "Turn-Based Skill Battle",
   "category": "combat",
-  "status": "production_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "html_canvas",
@@ -22,6 +22,7 @@
   ],
   "failure": [
     "player_hp_zero",
+    "timer_expired",
     "retreated"
   ],
   "knobs": {
@@ -35,7 +36,7 @@
     },
     "enemyHp": {
       "type": "integer",
-      "default": 1800,
+      "default": 180,
       "min": 1,
       "max": 999999,
       "patchLevel": "L1",
@@ -43,17 +44,31 @@
     },
     "enemyAtk": {
       "type": "integer",
-      "default": 120,
+      "default": 18,
       "min": 0,
       "max": 99999,
       "patchLevel": "L1",
       "description": "Enemy base attack."
     },
+    "timeLimitSec": {
+      "type": "integer",
+      "default": 45,
+      "min": 5,
+      "max": 3600,
+      "patchLevel": "L1",
+      "description": "Total battle countdown in seconds."
+    },
+    "failOnTimeout": {
+      "type": "boolean",
+      "default": true,
+      "patchLevel": "L1",
+      "description": "End the battle with timer_expired when the total countdown reaches zero."
+    },
     "skillDeck": {
       "type": "array",
       "default": [],
       "patchLevel": "L2",
-      "description": "Available player actions with cooldown and effects."
+      "description": "Available player actions with cooldown and effects. Cooldown N blocks the next N player turns."
     },
     "rewardTable": {
       "type": "object",
@@ -116,10 +131,13 @@
     "path": null,
     "assertions": [
       "battle starts with player and enemy hp",
-      "skill click changes hp or cooldown",
-      "enemy turn advances",
-      "victory sends NodeResult",
-      "defeat sends failed NodeResult"
+      "total countdown decreases while running and freezes while paused",
+      "skill click changes hp and cooldown",
+      "cooldown N blocks the next N player turns",
+      "enemy turn advances once per accepted player action",
+      "victory sends one NodeResult",
+      "defeat sends one failed NodeResult",
+      "restart resets hp, cooldowns, turn and countdown"
     ]
   },
   "sourceProvenance": [
@@ -139,9 +157,10 @@
   },
   "knownRisks": [
     "combat can become shallow without interesting skill deck constraints",
+    "custom skill decks should keep at least one zero-cooldown action to avoid an all-skills-locked turn",
     "needs strong telemetry for balancing"
   ],
-  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
+  "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner; timer/cooldown/lifecycle demo controls hardened 2026-09-15.",
   "requiredAssets": {
     "playerClips": [
       "idle"
@@ -182,7 +201,7 @@
       ]
     },
     {
-      "id": "demo_e2e_enter_retreat_fail_win",
+      "id": "demo_e2e_enter_retreat_fail_win_pause_restart",
       "tags": [
         "e2e",
         "demo",
@@ -191,8 +210,8 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
+    "productionReady": false,
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package.",
     "conditionalWaivers": [
       "device_class_fps: headless soak avgFps proxy",
       "vlm_visual_overflow: deferred; deterministic visual_audit used",

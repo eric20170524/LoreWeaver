@@ -35,7 +35,7 @@
 | 阶段 id | 名称 | 完成判据 |
 | --- | --- | --- |
 | `import_source` | 导入题材 | 主题 / workspace / 语料路径就绪 |
-| `production_prep` | 制作筹备 | 各部门对当前「单元」（如 N 节点战役或单节点）完成确认 |
+| `production_prep` | 制作筹备 | 主干部门确认作品级字段；每个 `node.id` 的关卡部门确认该关，或明确延后 |
 | `asset_confirm` | 资产确认 | art/audio/ability/gameplay-card 清单与 provenance 齐；node smoke |
 | `runtime_stage` | 运行与导出 | 每节点可玩合同（card/时长/文案）+ build/e2e 过线，可 export |
 
@@ -68,7 +68,7 @@
 机器可读注册表见：
 
 ```text
-docs/workflow/department_agents.registry.json
+minigame_master/skills/department_agents.registry.json
 ```
 
 ---
@@ -88,7 +88,7 @@ confirmed → stale（上游变更导致失效）
 | `status` | 上表状态 |
 | `version` | 部门产出版本（V1…Vn），确认时 +1 |
 | `prepNotes` | 筹备意见（人对 Agent 或 Agent 自述方案） |
-| `qaScore` | 0–100，来自本部门自检或 qa 部门回写 |
+| `qaScore` | 0–100 的筹备分，只读；记录草案/自检成熟度，不代表当前候选包的发布验收 |
 | `handoffs` | 交接与问题列表（见 §5） |
 | `artifacts` | 本部门写下的路径列表 |
 | `dependsOn` | 上游部门 id[] |
@@ -107,15 +107,18 @@ confirmed → stale（上游变更导致失效）
   "id": "ho_20260717_gameplay_to_art_01",
   "from": "gameplay",
   "to": "art",
-  "unitId": "campaign_12" ,
+  "unitId": "node:4",
   "type": "request | ack | reject | escalate",
   "summary": "Node4 需要 laser_warning 预警圈 + 阵眼 core_eye 贴图",
   "payloadRef": "nodes[3].gameplay",
   "needs": ["art:env_bg_tide", "art:core_eye", "vfx:laser_telegraph"],
+  "acceptanceCriteria": ["实战画面中能看到预警圈和阵眼", "列出对应资源及复测报告"],
   "blockers": [],
   "patchLevelMax": "L2",
   "createdAt": "ISO-8601",
-  "status": "open | resolved | wontfix"
+  "status": "open | resolved | wontfix",
+  "evidenceRefs": [{ "path": "docs/fangame/evidence/node4_visual.json", "sha256": "<文件真实 SHA-256>" }],
+  "resolveNote": "逐项说明如何满足验收条件"
 }
 ```
 
@@ -124,111 +127,218 @@ confirmed → stale（上游变更导致失效）
 1. **下游只读上游已 confirmed 的产物**（或明确标记的 draft 预览）。  
 2. **上游变更 → 下游 `stale`**，必须重新确认。  
 3. **跨部门改别人的产物** → 只能开 handoff `request`，由拥有方 patch。  
-4. **质检组** 可对任何部门写 `qaScore` 与 `handoffs[].type=reject`。  
+4. **质检组** 可以建立 `reject` 交接；筹备分由 Agent/报告产生，确认和状态接口不能手填覆盖。
 5. **合规组** 在 export 前拥有一票否决（`blocked`）。
+
+交接创建时填写明确的 `acceptanceCriteria`；旧数据没有该字段时，以原 `summary` 作为最低限度的验收提示。交接列表和开放数量按 `(unitId, departmentId)` 统计；“全部关卡”用于调度，详情仍显示选中关卡的交接。`resolved` 必须有逐项说明及仓库内证据文件，后端校验文件存在并记录/核对 SHA-256；`wontfix` 必须说明原因，`reject` 不能在部门台以 `wontfix` 绕过。没有证据的旧关闭记录保留原貌，另写更正记录，不静默改写历史。
+
+部门台并列显示独立的当前候选包发布决策、SHA-256、阻断项，以及筹备报告的生成时间和是否绑定当前包。未绑定当前包的 `*_latest.json` 只供筹备参考，不能作为当前 ZIP 的发布证据。个人非商业《玄界之门》石牧同人原型按非官方、免费、素材来源和具体传播平台风险审查；不要求商业授权材料，也不据“非商业”推定公开传播许可。
 
 这与现有 `ManifestPatch` / revision 体系兼容：handoff 可挂 `proposedPatch` 或 `revisionId`。
 
 ---
 
-## 6. 单元粒度（左栏「分集 / 工作单元」）
+## 6. 调度范围：主干与关卡
 
-图中「01 · 第七张相片」对应我们的 **工作单元 unit**：
+运行时的边界是：主干 Scene 管持久化、成长、资源和关卡入口；关卡 Scene 只跑这一局，结束用 `NodeResult` 回到主干。部门筹备沿用这条边界。一次调度只有一个 `scope`。公开标识用 `nodes[].id`。patch 路径里的数组下标只在运行时由 id 解析，id 重复或对不上就拒绝写入。
 
-| unit 类型 | 示例 | 部门筹备范围 |
+`NodePayload` / `NodeResult` 的字段形状不在任何部门的可写集合里。成长进关卡只走 modifier 和 `progressionSystems.nodePayloadEffect`。
+
+产品模板里的「12 个 Node」只约束新战役的主界面预览，不约束调度器。节点数以当前 manifest 为准。`campaign_12` 不再作为调度输入。
+
+| scope.kind | 含义 | 谁可以跑 |
 | --- | --- | --- |
-| `campaign` | 整局战役（主节点与 N 个子节点） | 全部门 |
-| `node` | 单个子节点 Node_i | 玩法/美术/音频/代码/质检为主 |
-| `card` | 单张 gameplay card | 玩法馆 + core + 质检 |
-| `export` | 一次公开导出 | 合规 + 质检 + 导演 |
+| `trunk` | 作品级字段：经济、成长、目录、shell | 下表「主干」列 |
+| `nodes` | `nodeIds: number[]`，一关或显式多关。多关在服务端拆成一关一次调用 | 下表「关卡」列 |
+| `card` | 一张玩法卡本身 | 保留，当前接口返回 `scope_reserved` |
+| `export` | 一次公开导出 | 保留，当前接口返回 `scope_reserved` |
+| `all` | 仅一键自动筹备：先主干，再按 `node.id` 升序逐关 | 导演编排，不作为单部门默认 |
 
-同一 unit 下统计：`已确认部门数 / 应确认部门数`（如图 `12/12 部门已确认`）。
+注册表字段 `scopeLayer`：`trunk`、`node`、`mixed`、`director`。混合部门一次按钮只跑当前 scope 对应的那一次任务。
 
----
+| 部门 | scopeLayer | 主干任务 `job=catalog` | 关卡任务 `job=binding` |
+| --- | --- | --- | --- |
+| 导演 | `director` | 只写本 scope 汇总，不改 manifest | 同左 |
+| 世界观 | `trunk` | `title` `themeColor` `economy` `progressionSystems` `pipeline_dna` | 不可调度 |
+| 架构 | `trunk` | shell、registry、Runtime Feature Pack 清单 | 不可调度 |
+| 合规 | `trunk` | 内容安全、导出清单、同人声明与传播风险 | 不可调度。关卡正文只作扫描证据 |
+| 叙事 | `node` | 不可调度。提示词只放全关 `{id, title}` 索引 | `title` `intro` `taunts` `planning.notes` |
+| 玩法 | `node` | 不可调度 | `gameplay` 与 `mechanics` |
+| 代码 | `node` | 不可调度。shell 接线走 L3 交接 | `knobs.runtimeCardId`。`shellRetreat` 仅在该关尚无此键时补一次 |
+| 能力 | `mixed` | `abilityCatalog` `passiveSkillCatalog` | 该关 `planning.runSkillPool`（缺省补 `[]`，不发明技能 id） |
+| 美术 | `mixed` | `asset-pipeline` 美术清单、图集计划、共享语义键 | 该关 `knobs.envKey` `knobs.artAtlasFirst` |
+| 音频 | `mixed` | `audioCueCatalog`、credits、菜单/主干 cue | 该关 `bgmKey` `sfxVictory` `sfxDefeat` `bossBgmKey` |
+| 质检 | `mixed` | build、scene hygiene、聚合报告 | 选中关的 node smoke 阅读 |
 
-## 7. 一键自动筹备（右上）
-
-`director` Orchestrator 算法（简版）：
-
-```text
-1. 读取 unit + department_agents.registry
-2. 拓扑排序 dependsOn
-3. 对每个部门：
-   a. 注入上游 confirmed artifacts
-   b. 调用该 Agent 的 system prompt + 工具白名单
-   c. 写 prepNotes + 产物 patch（限 patchLevel）
-   d. 跑部门自检 → qaScore
-   e. 若 score < 阈值 → status=blocked，写 handoff 给 qa/人工
-   f. 否则 status=ready_for_review（默认不自动 confirmed，除非 policy 允许）
-4. 汇总「可进入下一阶段」条件
-```
-
-**默认 HITL：** 自动筹备只到 `ready_for_review`，人点「确认」才 `confirmed`（对齐图中部门确认）。
+同一 scope 下统计：`已确认部门数 / 本 scope 应确认部门数`。导演不计入应确认数。
 
 ---
 
-## 8. 与现有五部 Agent / UI 的映射
+## 7. 「调度本部门 Agent」的请求
 
-| 现有 AgentChatPanel | 新部门 id | 备注 |
-| --- | --- | --- |
-| world_builder | `world` | 保留 |
-| narrative | `narrative` | 保留 |
-| sandbox | `architecture` | 扩职责到 RFP |
-| code_foundry | `code` + 部分 `ability`/`audio` | 拆清所有权 |
-| auditor | `qa` + `compliance` | 拆视觉质检与导出合规 |
-| （新增） | `gameplay` `art` `audio` `ability` `director` | 补齐制片筹备缺的部门 |
-
-前端演进建议：
-
-1. **Phase A** ✅：部门注册表 + handoff JSON 落盘到 `workspace/loreweaver/departments/`（API 见 backend）  
-2. **Phase B** ✅：工作台 Tab「部门筹备台」— 部门列表 + 筹备意见/质检/交接三栏 + 确认  
-3. **Phase C** ✅：导演拓扑调度（`backend/department_agents.py`）+ 部门 system prompt + Gemini/程序化草案；质检分可读 `workflow/reports`；单部门「调度本部门 Agent」  
-4. **Phase D** ✅：确认后下游 `stale`；`/departments/gate` + `advance-stage` 硬门禁；自动筹备在所有权内写 L1/L2 受控 patch（如 `gameplay.cardId`、`knobs.envKey`）并落盘 manifest  
-5. **Phase E** ✅：确认后默认 `reprepDownstream=true` 自动重跑过期下游草案；部门注册表 `chatAgentId` 绑定 HITL 聊天角色
-
----
-
-## 9. 工作区落盘约定
-
-```text
-data/workspaces/<id>/loreweaver/departments/
-  state.json              # 全部门状态与确认计数
-  handoffs/
-    <handoff_id>.json
-  prep/
-    world.v4.md           # 可选：长文筹备意见
-    gameplay.v2.json
-  qa/
-    art_coverage.json
-    e2e_latest.json       # 可软链 reports/
-```
-
-`state.json` 最小形状：
+单部门接口 `POST /api/workspaces/{id}/departments/{deptId}/run-prep`。缺少 `scope` 返回 400 `scope_required`。部门与 scope 不匹配返回 400 `department_not_on_scope`。未知或重复的 `node.id` 返回 400。
 
 ```json
 {
-  "schemaVersion": "loreweaver.department-state.v1",
-  "unitId": "campaign_12",
-  "stageId": "production_prep",
-  "departments": {
-    "gameplay": {
-      "status": "confirmed",
-      "version": 2,
-      "qaScore": 92,
-      "prepNotes": "…",
-      "artifacts": ["docs/gameplay_cards/…"],
-      "openHandoffCount": 1
-    }
-  },
-  "confirmedCount": 8,
-  "requiredCount": 10
+  "scope": { "kind": "nodes", "nodeIds": [3] },
+  "activeScope": { "kind": "nodes", "nodeIds": [3] },
+  "brief": "",
+  "force": false,
+  "applyPatches": true
 }
 ```
 
+| 字段 | 默认 |
+| --- | --- |
+| `scope` | 无默认。主干部门用 `{ "kind": "trunk" }`。关卡部门用筹备台当前选中的关。未选关时按钮不可用 |
+| `activeScope` | 筹备台正在查看的范围。多关运行时，详情仍停在这一关上 |
+| `brief` | 空字符串。人写的本次约束，单独存在部门记录的 `brief` 上。不从筹备意见文本框带入，生成结果只写 `prepNotes` |
+| `force` | `false`。该 scope 上已是 `confirmed` 的部门跳过 |
+| `applyPatches` | `true`，但路径必须先过 scope。出现范围外路径时，该部门本次不写 manifest |
+
+系统始终在提示词里附上固定范围句。`brief` 非空时再追加「本次约束」。
+
+范围句：
+
+- 主干：「只写本部门的作品级字段。节点仅提供 id 与标题索引。」
+- 关卡：「只处理这些 nodeId。缺省只填本关尚不存在的字段。其他关与经济、目录根字段保持原样。」
+
+导演组只写本 scope 的汇总，不把 `only` 置空，不顺带跑其他部门。全体部门只走「一键自动筹备」。
+
+一键自动筹备 `POST .../departments/auto-prep` 接受 `scope.kind = "all"`（缺省也是 all）：按拓扑先跑主干，再按 `node.id` 升序一关一次跑关卡部门。每步停在 `ready_for_review`。每个 scope 各写一条导演汇总。已确认且 `force` 不为 true 的记录跳过。
+
+提示词材料：
+
+- 主干调用携带本部门根字段、全关索引 `{id, title}`、上游主干筹备意见、主干门禁报告。不携带各关 `intro` / `taunts` / `gameplay`。
+- 关卡调用一关一次，携带该关完整 `NodeSpec`，外加已确认主干切片（标题、货币名、境界名、能力 id）。其他关只出现在索引里。上游意见只取同一 `nodeId` 的记录；关卡部门依赖世界观时，读主干上的世界观记录。
+
+无 LLM 时走同一 scope 的程序化草案，文案点名本次 `nodeIds`。
+
 ---
 
-## 10. 一句话产品定义
+## 8. 写入、确认与过期
 
-> **LoreWeaver = 游戏制片筹备台**：每个制作环节是独立部门 Agent，产物有主，确认有态，质检有分，交接有单；导演编排调度，人在关键门确认，机器跑局部 patch 与 gate。
+`build_controlled_patches` 只为本次下标生成关卡路径。`catalog` 任务丢弃任何 `nodes[...]` 路径。`binding` 任务丢弃根字段，以及不属于本次 id 的下标。
 
-这与参考图「分集部门筹备」是同一交互范式，只是部门从摄影/灯光换成了玩法/美术/代码/质检。
+补缺规则：
+
+- 玩法组只在本次关内，于缺少 `cardId` 时用生产目录 `catalog_resolve_card_id` 填入。
+- 范围内实验卡、且该关未设 `knobs.allowExperimentalCard` 时，才替换为生产卡。
+- 范围外的实验卡写入 `risks`，不改 manifest。
+- 已有 `cardId`、`victoryMode`、`envKey`、`bgmKey` 不覆盖。
+- `shellRetreat: true` 只在该关还没有这个键时写一次。
+- 美术 `ENV_BY_NODE`、音频 `BGM_BY_NODE` 按 `node.id` 取模，不按数组位置。
+
+交接 `unitId` 写成 `trunk` 或 `node:3`。下游只读同一 scope 的已确认产物；关卡任务另外可以读已确认的主干。
+
+确认只提升这一对 `(部门, scope)` 的版本。确认请求默认 `reprepDownstream: false`。勾选后，只重跑**同一 scope** 的直接下游。
+
+过期：
+
+- 确认主干部门后，主干上依赖它的部门标为 `stale`；关卡上依赖它的叙事、玩法、能力绑定、美术、音频、代码、质检也标为 `stale`。
+- 确认关卡 3 的叙事后，只把关卡 3 的下游标为 `stale`。其他关与主干记录不动。
+- 只把已经是 `confirmed` / `ready_for_review` / `drafting` 的记录改为 `stale`。`idle` 保持 `idle`。
+
+关卡部门可以标为 `deferred`（延后）。战役门禁里，延后的关卡部门不阻断进入资产确认。主干部门不能靠延后放行。
+
+资产确认门禁：每个主干应确认部门都是 `confirmed`，且每个 `node.id` 的关卡应确认部门都是 `confirmed` 或 `deferred`。质检分读取主干上的质检记录。node smoke 仍是这条门禁的运行时证据。
+
+神识对话携带同一个 `scope`。模型返回后，服务端按 scope 把范围外的 manifest 改动收回：主干任务恢复全部 `nodes[]`，关卡任务恢复根字段和其他关。导演汇总任务不写 manifest。
+
+---
+
+## 9. 状态落盘（v2）
+
+```text
+data/workspaces/<id>/loreweaver/departments/
+  state.json
+  handoffs/<handoff_id>.json
+  prep/
+  qa/
+```
+
+```json
+{
+  "schemaVersion": "loreweaver.department-state.v2",
+  "stageId": "production_prep",
+  "activeScope": { "kind": "nodes", "nodeIds": [3] },
+  "scopes": {
+    "trunk": {
+      "departments": {
+        "world": {
+          "status": "confirmed",
+          "version": 2,
+          "qaScore": 86,
+          "prepNotes": "",
+          "brief": ""
+        }
+      }
+    },
+    "nodes": {
+      "3": {
+        "departments": {
+          "gameplay": {
+            "status": "ready_for_review",
+            "version": 1,
+            "qaScore": 80,
+            "prepNotes": "",
+            "brief": ""
+          }
+        }
+      }
+    }
+  },
+  "legacyCampaignNotes": {},
+  "departments": {},
+  "confirmedCount": 0,
+  "requiredCount": 0
+}
+```
+
+`state.departments` 是 `activeScope` 的投影，给仍按部门 id 读取的调用方使用。确认数按这个投影里「当前 scope 应确认的部门」计算。
+
+从 v1 读入时自动迁移，并写回 v2：
+
+- 世界观、架构、导演、合规：原状态进入 `scopes.trunk`。
+- 叙事、玩法、代码、能力、美术、音频、质检：原意见进入 `legacyCampaignNotes`，主干与各关记录回到 `idle`。
+- 不因为迁移再跑一遍全关补缺。已在 manifest 里的字段保持原样。
+- 旧 `unitId` 挪到 `legacyUnitId`，调度不再读取它。
+
+筹备台在部门列表上方提供 scope 条：主干、每个关的 `id · title`、以及需要显式勾选的「全关」。全关不是打开页面时的默认值。按钮文案带上范围，例如「调度本部门 · 主干」或「调度本部门 · Node 3」。
+
+---
+
+## 10. 与五部 Agent 的映射，以及阶段记录
+
+| 现有 AgentChatPanel | 部门 id | 备注 |
+| --- | --- | --- |
+| world_builder | `world` | 主干 |
+| narrative | `narrative` | 关卡文案 |
+| sandbox | `architecture` | 主干 shell / RFP |
+| code_foundry | `code`，以及美术/音频的关卡绑定通道 | 关卡 knobs |
+| auditor | `qa` + `compliance` | 质检可主干可关卡；合规只在主干 |
+
+1. **Phase A** ✅：部门注册表 + handoff 落盘  
+2. **Phase B** ✅：部门筹备台  
+3. **Phase C** ✅：拓扑调度、部门 system prompt、单部门调度  
+4. **Phase D** ✅：下游 `stale`、阶段门禁、受控 L1/L2 patch  
+5. **Phase E** ✅：`chatAgentId` 绑定神识通道。确认后自动重跑下游已取消，默认改为不重跑  
+6. **Phase F** ✅：主干 / 关卡 scope。见 `backend/department_scope.py`
+
+---
+
+## 11. 一句话产品定义
+
+> **LoreWeaver = 游戏制片筹备台**：每个制作环节是独立部门 Agent；主干与关卡分开调度，产物有主，确认有态，质检有分，交接有单；导演只编排当前范围，人在关键门确认。
+
+## 12. 验收
+
+1. 调度世界观：落盘 patch 没有 `nodes[...]`。
+2. 调度玩法且 `nodeIds: [3]`：只出现该 id 对应下标；其他关的 `cardId` 与 knobs 不变。
+3. 关卡在范围内时，提示词含它的完整 `NodeSpec`；不在范围内时只有 id 和标题。
+4. 点导演组不改变其他部门的 `updatedAt`。
+5. 范围外的实验卡保持原值，并出现在 `risks`。
+6. 确认关 3 叙事后，关 3 玩法变为 `stale`，关 4 玩法仍为 `confirmed`。确认主干世界观后，各关已确认的叙事变为 `stale`。
+7. 无 LLM 时，程序化草案点名本次 `nodeIds`，且不给范围外的关写 `envKey` 或 `bgmKey`。
+8. 关卡部门缺少 `scope`，或主干部门被套上关卡 scope：接口 400，manifest 无变化。
+9. v1 `state.json` 读入后变成 v2；世界观确认状态还在，玩法确认不复制到每一关。

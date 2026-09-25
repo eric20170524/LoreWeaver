@@ -7,13 +7,16 @@ const DEFAULT_CONFIG = Object.freeze({
     eliteSpeed: 40,
     eliteScale: 2.2,
     eliteDamage: 18,
-    eliteColor: 0xb45309
+    eliteColor: 0xb45309,
+    waveAudioCue: null,
+    waveAudioEveryTicks: 4
 });
 
 export default class HordeIntensityModifier extends GameplayModifier {
     constructor(config = {}) {
         super({ ...DEFAULT_CONFIG, ...config });
         this._originalSpawnWave = null;
+        this._waveTicks = 0;
     }
 
     install(context) {
@@ -22,11 +25,21 @@ export default class HordeIntensityModifier extends GameplayModifier {
         this._originalSpawnWave = adapter.spawnWave.bind(adapter);
         const mult = Math.max(1, Number(this.config.spawnMultiplier || 3));
         const self = this;
+        this._waveTicks = 0;
 
         adapter.spawnWave = function patchedSpawnWave() {
             if (!adapter.isRunning()) return;
+            self._waveTicks += 1;
             for (let i = 0; i < mult; i += 1) {
                 self._originalSpawnWave();
+            }
+            const every = Math.max(1, Math.floor(Number(self.config.waveAudioEveryTicks) || 4));
+            if (self.config.waveAudioCue && (self._waveTicks - 1) % every === 0) {
+                context.helpers.emitPresentation({
+                    kind: 'horde-wave-beat',
+                    tick: self._waveTicks,
+                    audioCue: self.config.waveAudioCue
+                });
             }
             // Extra elite chance once per wave tick
             if (Math.random() < self.config.eliteChance) {

@@ -17,20 +17,11 @@ const DEFAULT_CONFIG = Object.freeze({
 
 function mergeConfig(base, patch) {
     if (!patch || typeof patch !== 'object') return { ...base };
-    return { ...base, ...patch };
-}
-
-/** Ray-cast point-in-polygon */
-function pointInPoly(x, y, poly) {
-    let inside = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-        const xi = poly[i].x; const yi = poly[i].y;
-        const xj = poly[j].x; const yj = poly[j].y;
-        const intersect = ((yi > y) !== (yj > y))
-            && (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-9) + xi);
-        if (intersect) inside = !inside;
-    }
-    return inside;
+    const config = { ...base, ...patch };
+    const bounds = { captureTarget: [0.3, 0.95], gridCols: [10, 48], gridRows: [8, 36], playerSpeed: [70, 420], enemyCount: [0, 8], enemySpeed: [30, 300], timeLimitSec: [20, 300], pathMinCells: [2, 12] };
+    for (const [key, [min, max]] of Object.entries(bounds)) config[key] = Number.isFinite(config[key]) ? Math.max(min, Math.min(max, config[key])) : base[key];
+    for (const key of ['gridCols', 'gridRows', 'enemyCount', 'pathMinCells']) config[key] = Math.floor(config[key]);
+    return config;
 }
 
 export default class QixAreaCaptureAdapter extends GameplayAdapter {
@@ -44,6 +35,7 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         this.player = null;
         this.enemies = [];
         this.keys = null;
+        this.random = context.random || Math.random;
         this.ui = {};
         this.state = {
             col: 0, row: 0,
@@ -65,7 +57,7 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         const rows = Number(this.config.gridRows || 16);
         this.cols = cols;
         this.rows = rows;
-        this.state.claimed = Array.from({ length: rows }, () => Array(cols).fill(false));
+        this.state.claimed = Array.from({ length: rows }, (_, r) => Array.from({ length: cols }, (_, c) => this.isBorder(c, r)));
         // start on border
         this.state.col = 0;
         this.state.row = Math.floor(rows / 2);
@@ -73,7 +65,9 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         this.state.path = [];
         this.state.captureRatio = 0;
         this.state.elapsed = 0;
-        this.state.hp = payload.playerStats?.hp || 100;
+        this.state.hp = Number.isFinite(payload.playerStats?.hp) ? Math.max(0, payload.playerStats.hp) : 100;
+        this.state.pathHits = 0;
+        this._pointerTarget = null;
         this.state.score = 0;
         return this;
     }
@@ -86,19 +80,19 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         const { width, height } = scene.scale;
 
         const padX = 24;
-        const padY = 100;
+        const padY = 330;
         this.cellW = (width - padX * 2) / this.cols;
-        this.cellH = (height - padY - 50) / this.rows;
+        this.cellH = (height - padY - 170) / this.rows;
         this.originX = padX;
         this.originY = padY;
 
-        this.ui.title = scene.add.text(width / 2, 36, '区域占领', {
+        this.ui.title = scene.add.text(width / 2, 188, '区域占领', {
             fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
-        this.ui.status = scene.add.text(width / 2, 68, '', {
+        this.ui.status = scene.add.text(width / 2, 234, '', {
             fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
         }).setOrigin(0.5);
-        this.ui.hint = scene.add.text(width / 2, height - 32, 'WASD 沿边移动 · 进入空白画线 · 闭合边界完成占领', {
+        this.ui.hint = scene.add.text(width / 2, height - 95, 'WASD 或点击目的格 · 离开安全区画线 · 回到安全区占领', {
             fontFamily: 'Inter, sans-serif', fontSize: '11px', color: '#64748b'
         }).setOrigin(0.5);
         this.ui.bar = scene.add.graphics();
@@ -108,15 +102,16 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         this.player = scene.add.circle(0, 0, Math.min(this.cellW, this.cellH) * 0.35, 0x66fcf1, 1)
             .setDepth(10);
 
-        const enemyCount = Number(this.config.enemyCount || 2);
+        const enemyCount = this.config.enemyCount;
         for (let i = 0; i < enemyCount; i += 1) {
             const e = scene.add.circle(0, 0, Math.min(this.cellW, this.cellH) * 0.4, 0xef4444, 0.9).setDepth(9);
-            e.cx = 4 + Math.floor(Math.random() * (this.cols - 8));
-            e.cy = 3 + Math.floor(Math.random() * (this.rows - 6));
-            e.vx = (Math.random() < 0.5 ? -1 : 1) * this.config.enemySpeed;
-            e.vy = (Math.random() < 0.5 ? -1 : 1) * this.config.enemySpeed * 0.8;
+            e.cx = 4 + Math.floor(this.random() * (this.cols - 8));
+            e.cy = 3 + Math.floor(this.random() * (this.rows - 6));
+            e.vx = (this.random() < 0.5 ? -1 : 1) * this.config.enemySpeed;
+            e.vy = (this.random() < 0.5 ? -1 : 1) * this.config.enemySpeed * 0.8;
             e.px = this.cellToX(e.cx);
             e.py = this.cellToY(e.cy);
+            e.x = e.px; e.y = e.py;
             this.enemies.push(e);
         }
 
@@ -127,7 +122,8 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
             });
         }
         // pointer: move toward tapped cell
-        scene.input.on('pointerdown', (p) => {
+        this.lifecycle.trackListener(scene.input, 'pointerdown', p => {
+            if (!this.isRunning() || p.x < this.originX || p.x >= this.originX + this.cols * this.cellW || p.y < this.originY || p.y >= this.originY + this.rows * this.cellH) return;
             this._pointerTarget = this.xyToCell(p.x, p.y);
         });
 
@@ -143,6 +139,9 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
             this.pathGfx?.destroy();
             this.player?.destroy();
             this.enemies.forEach((e) => e.destroy?.());
+            for (const key of Object.values(this.keys || {})) scene.input.keyboard?.removeKey?.(key, true);
+            this.ui = {}; this.gfx = null; this.pathGfx = null; this.player = null;
+            this.enemies = []; this.keys = null; this._pointerTarget = null;
         });
         return this;
     }
@@ -173,7 +172,7 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
     }
 
     tryStep(dc, dr) {
-        if (!this.isRunning()) return;
+        if (!this.isRunning() || !Number.isInteger(dc) || !Number.isInteger(dr) || Math.abs(dc) + Math.abs(dr) !== 1) return;
         const nc = this.state.col + dc;
         const nr = this.state.row + dr;
         if (nc < 0 || nr < 0 || nc >= this.cols || nr >= this.rows) return;
@@ -200,6 +199,7 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
                 this.state.path.pop();
                 this.state.col = nc;
                 this.state.row = nr;
+                if (this.isSafe(nc, nr)) { this.state.drawing = false; this.state.path = []; }
                 this.syncPlayerSprite();
                 this.drawPath();
                 return;
@@ -213,65 +213,32 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         if (this.state.drawing) {
             this.state.path.push({ c: nc, r: nr });
             this.drawPath();
-            if (nextSafe && this.state.path.length >= this.config.pathMinCells) {
-                this.closePath();
+            if (nextSafe) {
+                if (this.state.path.length >= this.config.pathMinCells) this.closePath();
+                else { this.state.drawing = false; this.state.path = []; this.pathGfx.clear(); }
             }
         }
         this.publishTestState();
     }
 
     closePath() {
+        if (!this.isRunning() || !this.state.drawing || this.state.path.length < this.config.pathMinCells) return;
+        if (this.enemies.some(e => { const cell = this.xyToCell(e.px, e.py); return this.touchesPath(e) || this.state.path.some(p => p.c === cell.c && p.r === cell.r); })) return this.killPath();
         const path = this.state.path.slice();
-        this.state.drawing = false;
-        this.state.path = [];
-        this.pathGfx.clear();
-
-        // Build closed polygon in cell centers + claim flood region on smaller side
-        const poly = path.map((p) => ({ x: p.c + 0.5, y: p.r + 0.5 }));
-        // mark path cells claimed
-        path.forEach((p) => { this.state.claimed[p.r][p.c] = true; });
-
-        // Flood-fill unclaimed regions; claim the smaller open region(s) that don't contain enemies
-        const visited = Array.from({ length: this.rows }, () => Array(this.cols).fill(false));
-        const regions = [];
-        for (let r = 0; r < this.rows; r += 1) {
-            for (let c = 0; c < this.cols; c += 1) {
-                if (this.state.claimed[r][c] || visited[r][c]) continue;
-                const region = [];
-                const q = [[c, r]];
-                visited[r][c] = true;
-                let hasEnemy = false;
-                while (q.length) {
-                    const [x, y] = q.pop();
-                    region.push({ c: x, r: y });
-                    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                        const nx = x + dx; const ny = y + dy;
-                        if (nx < 0 || ny < 0 || nx >= this.cols || ny >= this.rows) continue;
-                        if (visited[ny][nx] || this.state.claimed[ny][nx]) continue;
-                        visited[ny][nx] = true;
-                        q.push([nx, ny]);
-                    }
-                }
-                for (const e of this.enemies) {
-                    const ec = Math.floor((e.px - this.originX) / this.cellW);
-                    const er = Math.floor((e.py - this.originY) / this.cellH);
-                    if (region.some((cell) => cell.c === ec && cell.r === er)) hasEnemy = true;
-                }
-                // also use poly containment as soft check
-                const mid = region[Math.floor(region.length / 2)];
-                const inPoly = poly.length >= 3 && pointInPoly(mid.c + 0.5, mid.r + 0.5, poly);
-                regions.push({ region, hasEnemy, inPoly, size: region.length });
-            }
+        this.state.drawing = false; this.state.path = []; this.pathGfx.clear();
+        path.forEach(p => { this.state.claimed[p.r][p.c] = true; });
+        // Safe borders and the completed trail separate open regions. Only regions
+        // unreachable from every enemy are captured, independent of polygon size.
+        const reachable = Array.from({ length: this.rows }, () => Array(this.cols).fill(false));
+        const queue = this.enemies.map(e => this.xyToCell(e.px, e.py));
+        while (queue.length) {
+            const { c, r } = queue.pop();
+            if (c < 0 || r < 0 || c >= this.cols || r >= this.rows || reachable[r][c] || this.state.claimed[r][c]) continue;
+            reachable[r][c] = true;
+            queue.push({ c: c - 1, r }, { c: c + 1, r }, { c, r: r - 1 }, { c, r: r + 1 });
         }
-
-        // Claim regions that are enclosed (inPoly or smaller non-enemy region)
-        const totalOpen = this.cols * this.rows;
-        regions.sort((a, b) => a.size - b.size);
-        for (const reg of regions) {
-            if (reg.hasEnemy) continue;
-            if (reg.inPoly || reg.size < totalOpen * 0.45) {
-                reg.region.forEach((cell) => { this.state.claimed[cell.r][cell.c] = true; });
-            }
+        for (let r = 1; r < this.rows - 1; r++) for (let c = 1; c < this.cols - 1; c++) {
+            if (!reachable[r][c]) this.state.claimed[r][c] = true;
         }
 
         this.recomputeCapture();
@@ -280,20 +247,12 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         this.scene.cameras.main.flash(80, 52, 211, 153);
 
         if (this.state.captureRatio >= this.config.captureTarget) {
-            this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
+            return this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
         }
         this.refreshHud();
     }
 
     recomputeCapture() {
-        let claimed = 0;
-        const total = this.cols * this.rows;
-        for (let r = 0; r < this.rows; r += 1) {
-            for (let c = 0; c < this.cols; c += 1) {
-                if (this.state.claimed[r][c] || this.isBorder(c, r)) claimed += 1;
-            }
-        }
-        // borders always "claimed" for ratio of interior
         const interior = (this.cols - 2) * (this.rows - 2);
         let interiorClaimed = 0;
         for (let r = 1; r < this.rows - 1; r += 1) {
@@ -301,7 +260,7 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
                 if (this.state.claimed[r][c]) interiorClaimed += 1;
             }
         }
-        this.state.captureRatio = interior > 0 ? interiorClaimed / interior : claimed / total;
+        this.state.captureRatio = interiorClaimed / interior;
     }
 
     redrawField() {
@@ -339,7 +298,14 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         }
     }
 
+    touchesPath(e) {
+        return this.state.drawing && this.state.path.some(p => !this.isSafe(p.c, p.r) && Math.hypot((e.px - this.cellToX(p.c)) / this.cellW, (e.py - this.cellToY(p.r)) / this.cellH) < 0.55);
+    }
+
     killPath() {
+        if (!this.isRunning() || !this.state.drawing) return;
+        this._pointerTarget = null;
+        this.state.pathHits += 1;
         this.state.drawing = false;
         this.state.path = [];
         this.pathGfx.clear();
@@ -349,18 +315,20 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         this.syncPlayerSprite();
         this.state.hp = Math.max(0, this.state.hp - 20);
         this.scene.cameras.main.shake(120, 0.012);
-        if (this.state.hp <= 0) this.finish(false, NODE_RESULT_REASONS.HP_ZERO);
+        if (this.state.hp <= 0) return this.finish(false, NODE_RESULT_REASONS.HP_ZERO);
         this.refreshHud();
     }
 
     update(_time, delta) {
-        if (!this.isRunning()) return;
+        if (!this.isRunning() || !Number.isFinite(delta) || delta <= 0) return;
+        if (this.state.hp <= 0) return this.finish(false, NODE_RESULT_REASONS.HP_ZERO);
         const dt = delta / 1000;
         this.state.elapsed += dt;
+        if (this.state.elapsed >= this.config.timeLimitSec) return this.finish(false, NODE_RESULT_REASONS.TIMER_EXPIRED);
 
         // keyboard step movement on accumulator
         this.moveAcc += dt;
-        const stepEvery = 0.12;
+        const stepEvery = 0.12 * 140 / this.config.playerSpeed;
         if (this.moveAcc >= stepEvery) {
             this.moveAcc = 0;
             let dc = 0; let dr = 0;
@@ -376,49 +344,25 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
                 else this._pointerTarget = null;
             }
             if (dc || dr) this.tryStep(dc, dr);
+            if (!this.isRunning()) return;
         }
 
-        // enemies move in continuous space, bounce on claimed/border
-        this.enemies.forEach((e) => {
-            e.px += e.vx * dt;
-            e.py += e.vy * dt;
-            const minX = this.cellToX(1);
-            const maxX = this.cellToX(this.cols - 2);
-            const minY = this.cellToY(1);
-            const maxY = this.cellToY(this.rows - 2);
-            if (e.px < minX || e.px > maxX) e.vx *= -1;
-            if (e.py < minY || e.py > maxY) e.vy *= -1;
-            e.px = Math.max(minX, Math.min(maxX, e.px));
-            e.py = Math.max(minY, Math.min(maxY, e.py));
-            // bounce out of claimed
-            const cell = this.xyToCell(e.px, e.py);
-            if (this.state.claimed[cell.r]?.[cell.c]) {
-                e.vx *= -1;
-                e.vy *= -1;
-            }
-            e.x = e.px;
-            e.y = e.py;
-
-            // hit open path
-            if (this.state.drawing) {
-                for (const p of this.state.path) {
-                    if (Math.hypot(e.px - this.cellToX(p.c), e.py - this.cellToY(p.r)) < this.cellW * 0.55) {
-                        this.killPath();
-                        break;
-                    }
+        // Substeps prevent tunnelling; reject the colliding axis before bouncing.
+        const steps = Math.max(1, Math.ceil(dt * this.config.enemySpeed * 2 / Math.min(this.cellW, this.cellH)));
+        for (let step = 0; step < steps; step++) {
+            for (const e of this.enemies) {
+                for (const [position, velocity] of [['px', 'vx'], ['py', 'vy']]) {
+                    const old = e[position]; e[position] += e[velocity] * dt / steps;
+                    const cell = this.xyToCell(e.px, e.py);
+                    if (this.isSafe(cell.c, cell.r)) { e[position] = old; e[velocity] *= -1; }
                 }
+                e.x = e.px; e.y = e.py;
+                if (this.touchesPath(e)) this.killPath();
+                if (!this.isRunning()) return;
             }
-        });
-
+        }
         this.refreshHud();
         this.publishTestState();
-        if (this.state.elapsed >= this.config.timeLimitSec) {
-            if (this.state.captureRatio >= this.config.captureTarget) {
-                this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
-            } else {
-                this.finish(false, NODE_RESULT_REASONS.TIMER_EXPIRED);
-            }
-        }
     }
 
     refreshHud() {
@@ -428,9 +372,9 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
             const ratio = Math.min(1, this.state.captureRatio / this.config.captureTarget);
             g.clear();
             g.fillStyle(0x1e293b, 0.9);
-            g.fillRoundedRect(width * 0.2, 86, width * 0.6, 10, 5);
+            g.fillRoundedRect(width * 0.2, 280, width * 0.6, 10, 5);
             g.fillStyle(0x3b82f6, 1);
-            g.fillRoundedRect(width * 0.2, 86, width * 0.6 * ratio, 10, 5);
+            g.fillRoundedRect(width * 0.2, 280, width * 0.6 * ratio, 10, 5);
         }
         const left = Math.max(0, this.config.timeLimitSec - this.state.elapsed);
         this.ui.status?.setText(
@@ -445,7 +389,13 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
             hp: this.state.hp,
             score: this.state.score,
             captureRatio: this.state.captureRatio,
-            drawing: this.state.drawing,
+            drawing: this.state.drawing, goalValue: 0,
+            timer: Math.max(0, this.config.timeLimitSec - this.state.elapsed), captureTarget: this.config.captureTarget,
+            col: this.state.col, row: this.state.row, cols: this.cols, rows: this.rows,
+            claimed: this.state.claimed?.map(row => [...row]), path: this.state.path.map(p => ({ ...p })), pathHits: this.state.pathHits || 0,
+            geometry: { originX: this.originX, originY: this.originY, cellW: this.cellW, cellH: this.cellH },
+            stepEvery: 0.12 * 140 / this.config.playerSpeed,
+            enemies: this.enemies.map(e => ({ x: e.px, y: e.py, vx: e.vx, vy: e.vy })) ,
             lastResult: this.result
         };
     }
@@ -471,9 +421,10 @@ export default class QixAreaCaptureAdapter extends GameplayAdapter {
         return result;
     }
 
-    retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
+    pause() { if (this.config.allowPause !== false) { this._pointerTarget = null; super.pause(); } }
+    retreat() { return this.config.allowQuit === false ? null : this.finish(false, NODE_RESULT_REASONS.RETREATED); }
     isRunning() { return this.status === 'running' && !this.lifecycle?.transitionLocked; }
-    destroy() { this.lifecycle?.cleanup(); super.destroy(); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
     publishTestState() {
         this.context.testHooks?.update({
             adapterId: this.config.id,

@@ -15,12 +15,16 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 SCRIPT_PATH = Path(__file__).resolve()
-LORE_ROOT = SCRIPT_PATH.parents[2]
+LORE_ROOT = SCRIPT_PATH.parents[3]
 REPO_ROOT = LORE_ROOT.parent
 if not (REPO_ROOT / "minigame_master").exists():
     REPO_ROOT = LORE_ROOT
 REPORTS_DIR = LORE_ROOT / "minigame_master" / "capabilities" / "reports"
 SURVIVOR_DEMO_CONFIG = REPO_ROOT / "minigame_master" / "core" / "demo" / "survivor_horde" / "vite.config.mjs"
+
+def launch_chromium(playwright):
+    executable = os.environ.get("LOREWEAVER_CHROMIUM_EXECUTABLE")
+    return playwright.chromium.launch(headless=True, **({"executable_path": executable} if executable else {}))
 
 def utc_now_iso():
     return datetime.utcnow().isoformat(timespec="seconds") + "Z"
@@ -176,7 +180,7 @@ def run_survivor_horde_demo_test():
     try:
         wait_for_url(url)
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = launch_chromium(p)
             page = browser.new_page(viewport={"width": 720, "height": 1280}, device_scale_factor=1)
 
             page.on("pageerror", lambda err: errors.append(f"Page Error: {err}"))
@@ -351,7 +355,7 @@ def run_loreweaver_app_test():
         time.sleep(4)
         print("LoreWeaver App server is ready. Launching Playwright...")
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = launch_chromium(p)
             page = browser.new_page(viewport={"width": 1280, "height": 800})
             page.add_init_script("""
             () => {
@@ -920,7 +924,7 @@ def run_test(game_name, node_id=None, grant_state_str=None):
     errors = []
     
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = launch_chromium(p)
         page = browser.new_page()
 
         page.on("pageerror", lambda err: errors.append(f"Page Error: {err}"))

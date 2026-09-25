@@ -1,0 +1,822 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "drag_to_core",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "4d51c4dfbb66da61087702f303c149cce4ab010c",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "bc3412518ec9c2233318d8aeed7fc657458288d009509d694fbaa09079e5f1c4"
+      },
+      {
+        "name": "game.js",
+        "sha256": "4f4e60a6a7741883acdfb3591fc2f1252b2a3eec38506f0d10b261c5bc7dccad"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T13:19:07.300Z",
+  "sourceNote": "Checkout revision is the base; build includes uncommitted card changes and concurrent unrelated edits. Bundle SHA-256 identifies tested payload.",
+  "unitTests": {
+    "passed": 6,
+    "command": "node --test productize/jobs/check-drag-core-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "cases": [
+    {
+      "id": "default-hazards-victory",
+      "passed": true,
+      "errors": [],
+      "actionCount": 13,
+      "actions": [
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 0,
+            "x": 608.8083960513645,
+            "y": 640
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 7.8571428571428585
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 1,
+            "x": 584.9596809222624,
+            "y": 746.7644042119059
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 15.714285714285717
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 2,
+            "x": 506.59825548817884,
+            "y": 834.3866005144289
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 23.571428571428577
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 3,
+            "x": 413.7784030967398,
+            "y": 873.8025560280718
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 31.428571428571434
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 4,
+            "x": 304.4666512911744,
+            "y": 892.2457537378468
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 39.28571428571429
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 5,
+            "x": 211.4120138154936,
+            "y": 829.8532850731782
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 47.14285714285715
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 6,
+            "x": 127.7635519819043,
+            "y": 748.1876993123785
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 55.000000000000014
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 7,
+            "x": 113.538015286003,
+            "y": 640
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 62.857142857142875
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 8,
+            "x": 131.99490221898466,
+            "y": 535.3351744392531
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 70.71428571428574
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 9,
+            "x": 204.85858239647013,
+            "y": 442.73517439171246
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 78.5714285714286
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 10,
+            "x": 306.99134686708635,
+            "y": 396.2392375237222
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 86.42857142857146
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 11,
+            "x": 416.1054012221475,
+            "y": 411.84278351846825
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 94.28571428571432
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 12,
+            "x": 506.21378077571853,
+            "y": 440.4411827845378
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 100
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "deposited": 13,
+          "fails": 0
+        }
+      }
+    },
+    {
+      "id": "hazard-penalty-retry",
+      "passed": true,
+      "errors": [],
+      "actionCount": 1,
+      "actions": [
+        {
+          "kind": "hazard-drop",
+          "fails": 1
+        }
+      ],
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 0,
+          "deposited": 0,
+          "fails": 1
+        }
+      }
+    },
+    {
+      "id": "pause-resume-and-three-restarts",
+      "passed": true,
+      "errors": [],
+      "actionCount": 3,
+      "actions": [
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 0,
+            "x": 617.6427261837716,
+            "y": 640
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 36.66666666666667
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 1,
+            "x": 235.0518697652028,
+            "y": 864.1848512496523
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 73.33333333333334
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 2,
+            "x": 243.10297806439172,
+            "y": 431.8911383698727
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 100
+        }
+      ],
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 0,
+          "deposited": 0,
+          "fails": 0
+        }
+      }
+    },
+    {
+      "id": "drop-outside-core-remains-retryable",
+      "passed": true,
+      "errors": [],
+      "actionCount": 1,
+      "actions": [
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 0,
+            "x": 88.8731979994116,
+            "y": 399.4748551990439
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 100
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "deposited": 1,
+          "fails": 0
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-victory",
+      "passed": true,
+      "errors": [],
+      "actionCount": 13,
+      "actions": [
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 0,
+            "x": 596.6528008026874,
+            "y": 640
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 7.8571428571428585
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 1,
+            "x": 585.7530455409297,
+            "y": 742.2078906859138
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 15.714285714285717
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 2,
+            "x": 506.75144084175747,
+            "y": 832.352600309419
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 23.571428571428577
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 3,
+            "x": 415.64460217430735,
+            "y": 880.0456369825498
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 31.428571428571434
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 4,
+            "x": 307.04579274795265,
+            "y": 891.8138596421715
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 39.28571428571429
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 5,
+            "x": 198.49074960214725,
+            "y": 835.7477470563542
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 47.14285714285715
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 6,
+            "x": 136.05336711255825,
+            "y": 751.2151572573805
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 55.000000000000014
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 7,
+            "x": 103.31875883760046,
+            "y": 640
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 62.857142857142875
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 8,
+            "x": 136.29753134048275,
+            "y": 537.8328876219982
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 70.71428571428574
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 9,
+            "x": 205.73093186153642,
+            "y": 454.228328054053
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 78.5714285714286
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 10,
+            "x": 305.23946784854184,
+            "y": 405.77170100789147
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 86.42857142857146
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 11,
+            "x": 416.7912767213753,
+            "y": 410.5642899678778
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 94.28571428571432
+        },
+        {
+          "kind": "touch-drag",
+          "from": {
+            "id": 12,
+            "x": 508.29854802817863,
+            "y": 441.38324676151035
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 100
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "deposited": 13,
+          "fails": 0
+        }
+      }
+    },
+    {
+      "id": "offline-default-victory",
+      "passed": true,
+      "errors": [],
+      "actionCount": 13,
+      "actions": [
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 0,
+            "x": 595.0918078455902,
+            "y": 640
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 7.8571428571428585
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 1,
+            "x": 570.7836766155056,
+            "y": 748.958625859497
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 15.714285714285717
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 2,
+            "x": 507.6421074690636,
+            "y": 831.9850638219432
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 23.571428571428577
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 3,
+            "x": 415.2305800428098,
+            "y": 876.745304352135
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 31.428571428571434
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 4,
+            "x": 302.85465901436817,
+            "y": 889.1346901741982
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 39.28571428571429
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 5,
+            "x": 201.95629909478467,
+            "y": 833.1464685385089
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 47.14285714285715
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 6,
+            "x": 139.98512377812867,
+            "y": 741.7892059717929
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 55.000000000000014
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 7,
+            "x": 120.34492592254566,
+            "y": 640
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 62.857142857142875
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 8,
+            "x": 134.36749405074215,
+            "y": 538.3596973294043
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 70.71428571428574
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 9,
+            "x": 211.5699441981886,
+            "y": 449.0210710205821
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 78.5714285714286
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 10,
+            "x": 305.41178122337755,
+            "y": 402.69785085082265
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 86.42857142857146
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 11,
+            "x": 417.080719031065,
+            "y": 390.8678886606841
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 94.28571428571432
+        },
+        {
+          "kind": "mouse-drag",
+          "from": {
+            "id": 12,
+            "x": 511.71491775717425,
+            "y": 444.1267204467788
+          },
+          "to": {
+            "x": 360,
+            "y": 640,
+            "radius": 50
+          },
+          "progress": 100
+        }
+      ],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "deposited": 13,
+          "fails": 0
+        }
+      }
+    }
+  ]
+}

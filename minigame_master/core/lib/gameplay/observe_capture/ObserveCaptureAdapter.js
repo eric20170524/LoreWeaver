@@ -10,8 +10,8 @@ const DEFAULT_CONFIG = Object.freeze({
     moveSpeed: 280,
     pauseIntervalMinSec: 1.4,
     pauseIntervalMaxSec: 2.8,
-    pauseWindowSec: 0.55,
-    lockRingRadius: 28,
+    pauseWindowSec: 0.7,
+    lockRingRadius: 46,
     rewardTable: { score: 1 }
 });
 
@@ -24,6 +24,8 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
     constructor(context = {}) {
         super(context);
         this.lifecycle = null;
+        this.random = context.random || Math.random;
+        this.feedbackTimer = null;
         this.config = { ...DEFAULT_CONFIG };
         this.Phaser = context.Phaser || globalThis.Phaser;
         this.target = null;
@@ -48,14 +50,27 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
         super.init(payload);
         const knobs = payload.nodeConfig?.gameplay?.knobs || payload.nodeConfig?.knobs || {};
         this.config = mergeConfig(DEFAULT_CONFIG, { ...(payload.nodeConfig?.gameplay || {}), ...knobs });
+        const bounded = (key, min, max, integer = false) => {
+            const input = Number(this.config[key]);
+            const value = Math.min(max, Math.max(min, Number.isFinite(input) ? input : DEFAULT_CONFIG[key]));
+            this.config[key] = integer ? Math.round(value) : value;
+        };
+        bounded('targetProgress', 1, 1000, true);
+        bounded('captureGain', 1, 1000, true);
+        bounded('missPenalty', 0, 1000, true);
+        bounded('pauseWindowSec', 0.2, 5);
+        bounded('pauseIntervalMinSec', 0.5, 5);
+        bounded('pauseIntervalMaxSec', this.config.pauseIntervalMinSec, 10);
+        bounded('moveSpeed', 50, 600);
+        bounded('lockRingRadius', 42, 60);
         this.state.progress = 0;
         this.state.captures = 0;
         this.state.misses = 0;
         this.state.paused = false;
         this.state.pauseLeft = 0;
         this.state.nextPauseIn = this.randPauseInterval();
-        this.state.vx = 1;
-        this.state.vy = 0.5;
+        this.state.vx = 1 / Math.hypot(1, 0.5);
+        this.state.vy = 0.5 / Math.hypot(1, 0.5);
         this.state.hp = payload.playerStats?.hp || 100;
         this.state.score = 0;
         this.state.elapsed = 0;
@@ -65,7 +80,7 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
     randPauseInterval() {
         const a = Number(this.config.pauseIntervalMinSec || 1.4);
         const b = Number(this.config.pauseIntervalMaxSec || 2.8);
-        return a + Math.random() * Math.max(0, b - a);
+        return a + this.random() * Math.max(0, b - a);
     }
 
     create(scene) {
@@ -75,27 +90,28 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
         this.lifecycle.start();
         const { width, height } = scene.scale;
 
-        this.ui.title = scene.add.text(width / 2, 40, '观形捕捉', {
-            fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
+        this.ui.title = scene.add.text(width / 2, 188, '观形捕捉', {
+            fontFamily: 'Inter, sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
-        this.ui.status = scene.add.text(width / 2, 72, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
+        this.ui.status = scene.add.text(width / 2, 234, '', {
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', color: '#94a3b8'
         }).setOrigin(0.5);
         this.ui.bar = scene.add.graphics();
-        this.ui.hint = scene.add.text(width / 2, height - 40, '目标停顿/锁定环出现时点击捕捉', {
-            fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#64748b'
+        this.ui.hint = scene.add.text(width / 2, height - 110, '蓝环亮起时点击目标，移动时误点扣进度', {
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', color: '#64748b'
         }).setOrigin(0.5);
 
-        this.target = scene.add.circle(width * 0.3, height * 0.5, 18, 0xf472b6, 1)
+        this.target = scene.add.circle(width * 0.3, height * 0.5, 36, 0xf472b6, 1)
             .setStrokeStyle(2, 0xffffff, 0.5)
             .setInteractive({ useHandCursor: true });
         this.lockRing = scene.add.circle(this.target.x, this.target.y, this.config.lockRingRadius, 0x38bdf8, 0)
             .setStrokeStyle(3, 0x38bdf8, 0);
 
-        this.target.on('pointerdown', () => this.tryCapture());
-        scene.input.on('pointerdown', (p) => {
+        // Scene input owns judging: Phaser also dispatches object pointerdown for this click.
+        this.lifecycle.trackListener(scene.input, 'pointerdown', (p) => {
+            if (!this.isRunning() || !this.target) return;
             const d = Math.hypot(p.x - this.target.x, p.y - this.target.y);
-            if (d < 40) this.tryCapture();
+            if (d <= 48) this.tryCapture();
             else if (!this.state.paused) this.missClick();
         });
 
@@ -103,6 +119,11 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
             Object.values(this.ui).forEach((n) => n?.destroy?.());
             this.target?.destroy();
             this.lockRing?.destroy();
+            this.feedbackTimer?.remove(false);
+            this.feedbackTimer = null;
+            this.target = null;
+            this.lockRing = null;
+            this.ui = {};
         });
         this.refreshHud();
         this.publishTestState();
@@ -111,12 +132,12 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
 
     update(_time, delta) {
         if (!this.isRunning() || !this.target) return;
-        const dt = delta / 1000;
+        const dt = Number.isFinite(delta) ? Math.max(0, delta) / 1000 : 0;
         this.state.elapsed += dt;
         const { width, height } = this.scene.scale;
 
         if (this.state.paused) {
-            this.state.pauseLeft -= dt;
+            this.state.pauseLeft = Math.max(0, this.state.pauseLeft - dt);
             this.lockRing.setPosition(this.target.x, this.target.y);
             this.lockRing.setStrokeStyle(3, 0x38bdf8, 0.9 + Math.sin(this.state.elapsed * 20) * 0.1);
             this.lockRing.setAlpha(1);
@@ -125,9 +146,10 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
                 this.lockRing.setAlpha(0);
                 this.state.nextPauseIn = this.randPauseInterval();
                 // bounce direction change
-                this.state.vx = (Math.random() - 0.5) * 2;
-                this.state.vy = (Math.random() - 0.5) * 2;
-                const len = Math.hypot(this.state.vx, this.state.vy) || 1;
+                this.state.vx = (this.random() - 0.5) * 2;
+                this.state.vy = (this.random() - 0.5) * 2;
+                if (Math.hypot(this.state.vx, this.state.vy) < 0.001) this.state.vx = 1;
+                const len = Math.hypot(this.state.vx, this.state.vy);
                 this.state.vx /= len;
                 this.state.vy /= len;
             }
@@ -136,24 +158,20 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
             const speed = this.config.moveSpeed;
             this.target.x += this.state.vx * speed * dt;
             this.target.y += this.state.vy * speed * dt;
-            if (this.target.x < 30 || this.target.x > width - 30) this.state.vx *= -1;
-            if (this.target.y < 100 || this.target.y > height - 80) this.state.vy *= -1;
-            this.target.x = Math.max(30, Math.min(width - 30, this.target.x));
-            this.target.y = Math.max(100, Math.min(height - 80, this.target.y));
+            if (this.target.x < 48 || this.target.x > width - 48) this.state.vx *= -1;
+            if (this.target.y < 330 || this.target.y > height - 170) this.state.vy *= -1;
+            this.target.x = Math.max(48, Math.min(width - 48, this.target.x));
+            this.target.y = Math.max(330, Math.min(height - 170, this.target.y));
             this.lockRing.setPosition(this.target.x, this.target.y).setAlpha(0);
 
             if (this.state.nextPauseIn <= 0) {
                 this.state.paused = true;
                 this.state.pauseLeft = this.config.pauseWindowSec;
+                this.lockRing.setStrokeStyle(3, 0x38bdf8, 1).setAlpha(1);
             }
         }
 
-        // slow passive progress
-        this.state.progress = Math.min(this.config.targetProgress, this.state.progress + dt * 1.5);
         this.refreshHud();
-        if (this.state.progress >= this.config.targetProgress) {
-            this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
-        }
     }
 
     tryCapture() {
@@ -161,7 +179,7 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
         if (this.state.paused) {
             this.state.captures += 1;
             this.state.progress = Math.min(this.config.targetProgress, this.state.progress + this.config.captureGain);
-            this.state.score += 15;
+            this.state.score = this.state.progress;
             this.state.paused = false;
             this.state.pauseLeft = 0;
             this.lockRing.setAlpha(0);
@@ -169,7 +187,7 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
             this.context.spawnParticles?.(this.target.x, this.target.y, 0x38bdf8);
             this.scene.cameras.main.flash(60, 56, 189, 248);
             if (this.state.progress >= this.config.targetProgress) {
-                this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
+                return this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
             }
         } else {
             this.missClick();
@@ -179,13 +197,19 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
     }
 
     missClick() {
+        if (!this.isRunning() || !this.target) return;
         this.state.misses += 1;
         this.state.progress = Math.max(0, this.state.progress - this.config.missPenalty);
+        this.state.score = this.state.progress;
         this.scene.cameras.main.shake(80, 0.006);
         this.target.setFillStyle(0xf87171, 1);
-        this.lifecycle.trackTimer(this.scene.time.delayedCall(100, () => {
+        this.feedbackTimer?.remove(false);
+        this.feedbackTimer = this.scene.time.delayedCall(100, () => {
+            this.feedbackTimer = null;
             this.target?.setFillStyle(0xf472b6, 1);
-        }));
+        });
+        this.refreshHud();
+        this.publishTestState();
     }
 
     refreshHud() {
@@ -195,22 +219,31 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
         const ratio = this.state.progress / this.config.targetProgress;
         g.clear();
         g.fillStyle(0x1e293b, 0.9);
-        g.fillRoundedRect(width * 0.2, 96, width * 0.6, 12, 6);
+        g.fillRoundedRect(width * 0.2, 270, width * 0.6, 12, 6);
         g.fillStyle(0x38bdf8, 1);
-        g.fillRoundedRect(width * 0.2, 96, width * 0.6 * ratio, 12, 6);
+        g.fillRoundedRect(width * 0.2, 270, width * 0.6 * ratio, 12, 6);
         this.ui.status?.setText(
-            `进度 ${Math.floor(this.state.progress)}%  ·  捕捉 ${this.state.captures}  ·  误点 ${this.state.misses}${this.state.paused ? '  ·  锁定中！' : ''}`
+            `进度 ${Math.floor(ratio * 100)}%  ·  捕捉 ${this.state.captures}  ·  误点 ${this.state.misses}${this.state.paused ? '  ·  锁定中！' : ''}`
         );
     }
 
     getTestState() {
         return {
+            ...super.getTestState(),
             adapter: 'ObserveCaptureAdapter',
             status: this.status,
             hp: this.state.hp,
             score: this.state.score,
             progress: this.state.progress,
             paused: this.state.paused,
+            captureWindowOpen: this.state.paused,
+            windowRemaining: this.state.pauseLeft,
+            timer: this.state.paused ? this.state.pauseLeft : this.state.nextPauseIn,
+            targetProgress: this.config.targetProgress,
+            goalValue: this.config.targetProgress,
+            captures: this.state.captures,
+            misses: this.state.misses,
+            target: this.target ? { x: this.target.x, y: this.target.y } : null,
             lastResult: this.result
         };
     }
@@ -237,9 +270,10 @@ export default class ObserveCaptureAdapter extends GameplayAdapter {
         return result;
     }
 
-    retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
+    pause() { if (this.config.allowPause !== false) super.pause(); }
+    retreat() { return this.config.allowQuit === false ? null : this.finish(false, NODE_RESULT_REASONS.RETREATED); }
     isRunning() { return this.status === 'running' && !this.lifecycle?.transitionLocked; }
-    destroy() { this.lifecycle?.cleanup(); super.destroy(); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
     publishTestState() {
         this.context.testHooks?.update({
             adapterId: this.config.id, status: this.status,

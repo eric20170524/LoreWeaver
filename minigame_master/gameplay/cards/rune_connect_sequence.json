@@ -35,13 +35,17 @@
       "type": "number",
       "default": 36,
       "patchLevel": "L1",
-      "description": "Snap radius in px."
+      "description": "Snap radius in px.",
+      "min": 24,
+      "max": 60
     },
     "maxMistakes": {
       "type": "integer",
       "default": 6,
       "patchLevel": "L1",
-      "description": "Wrong links before fail."
+      "description": "Wrong links before fail.",
+      "min": 1,
+      "max": 30
     }
   },
   "patchPolicy": {

@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "rune_connect_sequence",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "e67719fbbf54943d49411b45c5f59703198d30dc",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "5c4caf7a237076e5d3447166b0d46f3e3d8e84a4cf834197f7dcd02a7171b6a7"
+      },
+      {
+        "name": "game.js",
+        "sha256": "f3dec1b096ef4483c4685ce370b279bcab2b3b8f1d276a9e28c4f1bf0fd6d964"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T13:33:00.523Z",
+  "sourceNote": "Checkout revision is the build base; uncommitted source is identified by the actual bundle SHA-256, not a clean exact-HEAD claim.",
+  "unitTests": {
+    "passed": 7,
+    "command": "node --test productize/jobs/check-rune-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "cases": [
+    {
+      "id": "default-seven-links-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 7,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "mistakes": 0,
+          "runeCount": 8,
+          "elapsedSec": 1,
+          "links": 7
+        }
+      }
+    },
+    {
+      "id": "wrong-start-and-destination-failure",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "wrong start and destination each consume exactly one mistake"
+      ],
+      "actionCount": 0,
+      "result": {
+        "success": false,
+        "reason": "condition_failed",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "mistakes": 2,
+          "runeCount": 8,
+          "elapsedSec": 0,
+          "links": 0
+        }
+      }
+    },
+    {
+      "id": "blank-release-pause-resume-three-restarts",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 7,
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "mistakes": 0,
+          "runeCount": 8,
+          "elapsedSec": 0,
+          "links": 0
+        }
+      }
+    },
+    {
+      "id": "maximum-sixteen-runes-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 15,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "mistakes": 0,
+          "runeCount": 16,
+          "elapsedSec": 4,
+          "links": 15
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 7,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "mistakes": 0,
+          "runeCount": 8,
+          "elapsedSec": 2,
+          "links": 7
+        }
+      }
+    },
+    {
+      "id": "offline-default-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actionCount": 7,
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "mistakes": 0,
+          "runeCount": 8,
+          "elapsedSec": 1,
+          "links": 7
+        }
+      }
+    }
+  ]
+}

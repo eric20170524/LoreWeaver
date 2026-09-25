@@ -19,10 +19,53 @@
     "objective_met"
   ],
   "failure": [
-    "failed",
+    "hp_zero",
     "retreated"
   ],
-  "knobs": {},
+  "knobs": {
+    "gravity": {
+      "type": "integer",
+      "default": 1800,
+      "min": 400,
+      "max": 3000,
+      "patchLevel": "L1"
+    },
+    "moveSpeed": {
+      "type": "integer",
+      "default": 280,
+      "min": 80,
+      "max": 600,
+      "patchLevel": "L1"
+    },
+    "jumpV0": {
+      "type": "integer",
+      "default": 720,
+      "min": 300,
+      "max": 1000,
+      "patchLevel": "L1"
+    },
+    "levelLen": {
+      "type": "integer",
+      "default": 1800,
+      "min": 400,
+      "max": 6000,
+      "patchLevel": "L1"
+    },
+    "progressSpeed": {
+      "type": "integer",
+      "default": 80,
+      "min": 40,
+      "max": 200,
+      "patchLevel": "L1"
+    },
+    "hazardIntervalMs": {
+      "type": "integer",
+      "default": 900,
+      "min": 500,
+      "max": 3000,
+      "patchLevel": "L1"
+    }
+  },
   "patchPolicy": {
     "defaultAllowedLevels": [
       "L0",
@@ -42,7 +85,7 @@
   },
   "testFixture": {
     "type": "e2e",
-    "path": null,
+    "path": "productize/jobs/run-platform-card-lab-e2e.mjs",
     "assertions": [
       "playable",
       "NodeResult"

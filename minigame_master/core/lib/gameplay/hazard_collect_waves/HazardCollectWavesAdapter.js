@@ -15,7 +15,16 @@ const DEFAULT_CONFIG = Object.freeze({
 
 function mergeConfig(base, patch) {
     if (!patch || typeof patch !== 'object') return { ...base };
-    return { ...base, ...patch };
+    const config = { ...base, ...patch };
+    const bounds = { maxWave: [1, 10], waveTimeSec: [3, 120], warningSec: [0.3, 2], strikeDamage: [1, 100], collectTargetPerWave: [1, 20], hazardIntervalSec: [0.5, 4] };
+    for (const [key, [min, max]] of Object.entries(bounds)) {
+        config[key] = Number.isFinite(config[key]) ? Math.max(min, Math.min(max, config[key])) : base[key];
+    }
+    for (const key of ['maxWave', 'collectTargetPerWave', 'strikeDamage']) config[key] = Math.floor(config[key]);
+    // Enough spawns for the final wave, including warning and collection time.
+    const minimum = (config.collectTargetPerWave + config.maxWave - 1) * config.hazardIntervalSec + config.warningSec + 0.2;
+    config.waveTimeSec = Math.max(config.waveTimeSec, Math.ceil(minimum * 10) / 10);
+    return config;
 }
 
 export default class HazardCollectWavesAdapter extends GameplayAdapter {
@@ -25,6 +34,8 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
         this.config = { ...DEFAULT_CONFIG };
         this.Phaser = context.Phaser || globalThis.Phaser;
         this.player = null;
+        this.keys = null;
+        this.random = context.random || Math.random;
         this.hazards = [];
         this.pickups = [];
         this.ui = {};
@@ -42,7 +53,8 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
         this.state.waveLeft = Number(this.config.waveTimeSec || 15);
         this.state.collected = 0;
         this.state.need = Number(this.config.collectTargetPerWave || 4);
-        this.state.hp = payload.playerStats?.hp || 100;
+        this.state.hp = Number.isFinite(payload.playerStats?.hp) ? Math.max(0, payload.playerStats.hp) : 100;
+        this.state.hits = 0;
         this.state.score = 0;
         this.state.invuln = 0;
         this.state.nascent = 0;
@@ -56,22 +68,22 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
         this.lifecycle.start();
         const { width, height } = scene.scale;
 
-        this.ui.title = scene.add.text(width / 2, 36, '闪避采集', {
+        this.ui.title = scene.add.text(width / 2, 188, '闪避采集', {
             fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
-        this.ui.status = scene.add.text(width / 2, 68, '', {
+        this.ui.status = scene.add.text(width / 2, 234, '', {
             fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
         }).setOrigin(0.5);
-        this.ui.hint = scene.add.text(width / 2, height - 36, '拖动躲避预警区 · 限时拾取能量珠', {
+        this.ui.hint = scene.add.text(width / 2, height - 95, '拖动或 WASD 移动 · 点击或靠近能量珠采集', {
             fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#64748b'
         }).setOrigin(0.5);
 
         this.player = scene.add.circle(width / 2, height / 2, 16, 0x66fcf1, 1);
-        scene.input.on('pointermove', (p) => {
-            if (!this.isRunning()) return;
-            this.player.x = p.x;
-            this.player.y = Math.max(100, Math.min(height - 50, p.y));
-        });
+        this.bounds = { left: 24, right: width - 24, top: 330, bottom: height - 180 };
+        const move = p => { if (p.isDown) this.moveTo(p.x, p.y); };
+        this.lifecycle.trackListener(scene.input, 'pointermove', move);
+        this.lifecycle.trackListener(scene.input, 'pointerdown', move);
+        if (scene.input.keyboard) this.keys = scene.input.keyboard.addKeys({ left: 'A', right: 'D', up: 'W', down: 'S', left2: 'LEFT', right2: 'RIGHT', up2: 'UP', down2: 'DOWN' });
 
         this.lifecycle.trackTimer(scene.time.addEvent({
             delay: 100, loop: true, callback: () => this.tick(0.1)
@@ -85,31 +97,49 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
             this.player?.destroy();
             this.hazards.forEach((h) => h.sprite?.destroy());
             this.pickups.forEach((p) => p.destroy?.());
+            for (const key of Object.values(this.keys || {})) scene.input.keyboard?.removeKey?.(key, true);
+            this.ui = {}; this.player = null; this.hazards = []; this.pickups = []; this.keys = null;
         });
         this.refreshHud();
         this.publishTestState();
         return this;
     }
 
+    moveTo(x, y) {
+        if (!this.isRunning() || !Number.isFinite(x) || !Number.isFinite(y)) return;
+        this.player.x = Math.max(this.bounds.left, Math.min(this.bounds.right, x));
+        this.player.y = Math.max(this.bounds.top, Math.min(this.bounds.bottom, y));
+    }
+
+    update(_time, delta) {
+        if (!this.isRunning() || !Number.isFinite(delta) || delta <= 0) return;
+        const down = key => this.keys?.[key]?.isDown;
+        const dx = Number(Boolean(down('right') || down('right2'))) - Number(Boolean(down('left') || down('left2')));
+        const dy = Number(Boolean(down('down') || down('down2'))) - Number(Boolean(down('up') || down('up2')));
+        const distance = Math.hypot(dx, dy) || 1;
+        this.moveTo(this.player.x + dx / distance * 400 * delta / 1000, this.player.y + dy / distance * 400 * delta / 1000);
+    }
+
     spawnHazard() {
         if (!this.isRunning()) return;
-        const { width, height } = this.scene.scale;
-        const x = 60 + Math.random() * (width - 120);
-        const y = 120 + Math.random() * (height - 200);
-        const r = 40 + Math.random() * 30;
+        const { left, right, top, bottom } = this.bounds;
+        const x = left + 70 + this.random() * (right - left - 140);
+        const y = top + 70 + this.random() * (bottom - top - 140);
+        const r = 40 + this.random() * 30;
         const sprite = this.scene.add.circle(x, y, r, 0xfbbf24, 0.2).setStrokeStyle(2, 0xfbbf24, 0.8);
         const h = { sprite, x, y, r, phase: 'warn', left: this.config.warningSec };
         this.hazards.push(h);
     }
 
     tick(dt) {
-        if (!this.isRunning()) return;
-        this.state.waveLeft -= dt;
+        if (!this.isRunning() || !Number.isFinite(dt) || dt <= 0) return;
+        if (this.state.hp <= 0) return this.finish(false, NODE_RESULT_REASONS.HP_ZERO);
+        this.state.waveLeft = Math.max(0, this.state.waveLeft - dt);
         this.state.invuln = Math.max(0, this.state.invuln - dt);
 
         this.hazards = this.hazards.filter((h) => {
             h.left -= dt;
-            if (h.phase === 'warn' && h.left <= 0) {
+            if (h.phase === 'warn' && h.left <= 1e-9) {
                 h.phase = 'strike';
                 h.left = 0.25;
                 h.sprite.setFillStyle(0xef4444, 0.55);
@@ -118,23 +148,24 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
                 if (d <= h.r + 16 && this.state.invuln <= 0) {
                     this.state.hp = Math.max(0, this.state.hp - this.config.strikeDamage);
                     this.state.invuln = 0.6;
+                    this.state.hits += 1;
                     this.scene.cameras.main.shake(100, 0.01);
-                    if (this.state.hp <= 0) {
-                        this.finish(false, NODE_RESULT_REASONS.HP_ZERO);
-                        return false;
-                    }
                 }
                 // spawn collectible after strike
                 const p = this.scene.add.circle(h.x, h.y, 10, 0x67e8f9, 0.95)
                     .setInteractive({ useHandCursor: true });
                 p.on('pointerdown', () => this.collect(p));
                 this.pickups.push(p);
-            } else if (h.phase === 'strike' && h.left <= 0) {
+                if (this.pickups.length > 64) this.pickups.shift().destroy();
+            } else if (h.phase === 'strike' && h.left <= 1e-9) {
                 h.sprite.destroy();
                 return false;
             }
             return true;
         });
+
+        // Do not run cleanup inside filter; onEnd may stop the scene synchronously.
+        if (this.state.hp <= 0) return this.finish(false, NODE_RESULT_REASONS.HP_ZERO);
 
         // auto collect near player
         this.pickups = this.pickups.filter((p) => {
@@ -146,7 +177,7 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
             return true;
         });
 
-        if (this.state.waveLeft <= 0) {
+        if (this.state.waveLeft <= 1e-9) {
             if (this.state.collected >= this.state.need) {
                 if (this.state.wave >= this.config.maxWave) {
                     this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
@@ -167,13 +198,14 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
     }
 
     collect(p) {
-        if (!p?.active) return;
+        if (!this.isRunning() || !p?.active || !this.pickups.includes(p)) return;
+        const { x, y } = p;
         p.destroy();
         this.state.collected += 1;
         this.state.nascent = Math.min(100, this.state.nascent + 12);
         this.state.score += 10;
         this.state.hp = Math.min(100, this.state.hp + 3);
-        this.context.spawnParticles?.(p.x, p.y, 0x67e8f9);
+        this.context.spawnParticles?.(x, y, 0x67e8f9);
         this.refreshHud();
     }
 
@@ -187,7 +219,12 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
         return {
             adapter: 'HazardCollectWavesAdapter', status: this.status,
             hp: this.state.hp, score: this.state.score, wave: this.state.wave,
-            collected: this.state.collected, lastResult: this.result
+            collected: this.state.collected, need: this.state.need, maxWave: this.config.maxWave,
+            timer: this.state.waveLeft, goalValue: 0, hits: this.state.hits || 0,
+            player: this.player ? { x: this.player.x, y: this.player.y } : null,
+            hazards: this.hazards.map(({ x, y, r, phase, left }) => ({ x, y, r, phase, left })),
+            pickups: this.pickups.filter(p => p.active).map(p => ({ x: p.x, y: p.y })),
+            lastResult: this.result
         };
     }
 
@@ -208,9 +245,10 @@ export default class HazardCollectWavesAdapter extends GameplayAdapter {
         return result;
     }
 
-    retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
+    pause() { if (this.config.allowPause !== false) super.pause(); }
+    retreat() { return this.config.allowQuit === false ? null : this.finish(false, NODE_RESULT_REASONS.RETREATED); }
     isRunning() { return this.status === 'running' && !this.lifecycle?.transitionLocked; }
-    destroy() { this.lifecycle?.cleanup(); super.destroy(); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
     publishTestState() {
         this.context.testHooks?.update({
             adapterId: this.config.id, status: this.status, wave: this.state.wave, lastResult: this.result

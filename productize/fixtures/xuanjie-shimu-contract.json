@@ -1,0 +1,902 @@
+{
+  "title": "玄界之门·石牧武途（同人原型）",
+  "nodes": [
+    {
+      "id": 1,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {
+            "id": "weapon_stance_cycle",
+            "knobs": {
+              "controlMode": "manual",
+              "initialStance": "melee",
+              "meleeLabel": "黑刀",
+              "rangedLabel": "紫钢弓",
+              "toggleHint": "Q / SHIFT",
+              "meleeDurationSec": 4,
+              "rangedDurationSec": 5,
+              "meleeRadius": 96,
+              "meleeDamage": 5,
+              "meleeMaxTargets": 10,
+              "rangedBurstCount": 2,
+              "rangedDamageMultiplier": 1.0,
+              "swapBurst": true
+            }
+          },
+          {
+            "id": "overdrive_transformation",
+            "knobs": {
+              "durationSec": 6,
+              "hpTriggerRatio": 0.45,
+              "damageMultiplier": 1.55,
+              "incomingDamageMultiplier": 0.7,
+              "speedMultiplier": 1.25,
+              "meleeRadiusBonus": 24,
+              "requiresPassive": "white_ape_overdrive_passive",
+              "label": "OVERDRIVE"
+            }
+          },
+          {
+            "id": "horde_intensity",
+            "knobs": {
+              "spawnMultiplier": 2,
+              "eliteChance": 0.12
+            }
+          },
+          {
+            "id": "arena_wave_boss",
+            "knobs": {
+              "totalWaves": 3,
+              "interWaveDelayMs": 1800
+            }
+          }
+        ],
+        "knobs": {
+          "durationSec": 75,
+          "difficulty": 1,
+          "goalValue": 80,
+          "enemySpawnRateSec": 1.25,
+          "enemyPool": [
+            "bandit_cultivator",
+            "human_genius"
+          ],
+          "weapon": {
+            "fireIntervalMs": 720,
+            "bulletSpeed": 500,
+            "bulletDamage": 2.5,
+            "bulletRadius": 4,
+            "bulletColor": 14196006
+          },
+          "player": {
+            "hp": 120,
+            "speed": 175
+          }
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": [
+          "fengchi_blade"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "dodge_counter_boss",
+        "modifiers": [],
+        "knobs": {
+          "allowExperimentalCard": true,
+          "playerHp": 120,
+          "bossHp": 360,
+          "breakGaugeMax": 100
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": []
+      }
+    },
+    {
+      "id": 3,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {
+            "id": "weapon_stance_cycle",
+            "knobs": {
+              "controlMode": "manual",
+              "initialStance": "melee",
+              "meleeLabel": "黑刀",
+              "rangedLabel": "紫钢弓",
+              "toggleHint": "Q / SHIFT",
+              "meleeDurationSec": 5,
+              "rangedDurationSec": 4,
+              "meleeRadius": 140,
+              "meleeDamage": 8,
+              "rangedBurstCount": 2,
+              "swapBurst": true
+            }
+          },
+          {
+            "id": "overdrive_transformation",
+            "knobs": {
+              "durationSec": 6,
+              "hpTriggerRatio": 0.45,
+              "requiresPassive": "white_ape_overdrive_passive"
+            }
+          },
+          {
+            "id": "hazard_telegraph",
+            "knobs": {
+              "warningMs": 900,
+              "activeMs": 260,
+              "intervalMs": 2800,
+              "radius": 56,
+              "damage": 16,
+              "shape": "circle"
+            }
+          },
+          {
+            "id": "boss_phases",
+            "knobs": {
+              "phaseThresholds": [
+                0.66,
+                0.33
+              ],
+              "phaseAnnouncement": true
+            }
+          }
+        ],
+        "knobs": {
+          "durationSec": 85,
+          "difficulty": 2,
+          "goalValue": 120,
+          "enemySpawnRateSec": 1.0,
+          "enemyPool": [
+            "rock_golem",
+            "bandit_cultivator"
+          ],
+          "bossId": "human_genius",
+          "weapon": {
+            "fireIntervalMs": 800,
+            "bulletSpeed": 500,
+            "bulletDamage": 3,
+            "bulletRadius": 4,
+            "bulletColor": 16773570
+          },
+          "player": {
+            "hp": 120,
+            "speed": 170
+          }
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": [
+          "black_blade_flame"
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "side_scrolling_brawler",
+        "modifiers": [
+          {
+            "id": "locked_screen_wave",
+            "knobs": {}
+          },
+          {
+            "id": "elemental_directional_combo",
+            "knobs": {
+              "elementTags": [
+                "fire",
+                "wind"
+              ]
+            }
+          }
+        ],
+        "knobs": {
+          "allowExperimentalCard": true,
+          "stageLengthPx": 3600,
+          "playersMax": 1,
+          "orientation": "landscape",
+          "waveList": [
+            {
+              "id": "forge_gate",
+              "name": "锻口试刃",
+              "triggerX": 280,
+              "lockX": 360,
+              "cameraMax": 1320,
+              "theme": { "sky": 2760984, "ground": 4863012 }
+            },
+            {
+              "id": "wind_gallery",
+              "name": "风口回廊",
+              "triggerX": 1400,
+              "lockX": 1480,
+              "cameraMax": 2440,
+              "theme": { "sky": 1454136, "ground": 1985076 }
+            },
+            {
+              "id": "flame_edge",
+              "name": "烈炎开锋",
+              "triggerX": 2520,
+              "lockX": 2600,
+              "cameraMax": 3560,
+              "bossIntro": true,
+              "theme": { "sky": 3807766, "ground": 5909020 }
+            }
+          ]
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": []
+      }
+    },
+    {
+      "id": 5,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "shooter_duel",
+        "modifiers": [],
+        "knobs": {
+          "allowExperimentalCard": true,
+          "playerHp": 120,
+          "bossHp": 420,
+          "timeLimitSec": 75
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": []
+      }
+    },
+    {
+      "id": 6,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {
+            "id": "weapon_stance_cycle",
+            "knobs": {
+              "meleeDurationSec": 4,
+              "rangedDurationSec": 4,
+              "meleeRadius": 108,
+              "meleeDamage": 7,
+              "rangedBurstCount": 3,
+              "controlMode": "manual",
+              "initialStance": "melee",
+              "meleeLabel": "黑刀",
+              "rangedLabel": "紫钢弓",
+              "toggleHint": "Q / SHIFT"
+            }
+          },
+          {
+            "id": "horde_intensity",
+            "knobs": {
+              "spawnMultiplier": 3,
+              "eliteChance": 0.18
+            }
+          },
+          {
+            "id": "debuff_zone",
+            "knobs": {
+              "zoneRadius": 90,
+              "speedCap": 65,
+              "moveIntervalMs": 6000
+            }
+          }
+        ],
+        "knobs": {
+          "durationSec": 100,
+          "difficulty": 4,
+          "enemySpawnRateSec": 0.85,
+          "enemyPool": [
+            "bandit_cultivator",
+            "human_genius",
+            "genius_beast"
+          ]
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": [
+          "swallow_moon"
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "rhythm_timing",
+        "modifiers": [],
+        "knobs": {
+          "allowExperimentalCard": true,
+          "beatIntervalMs": 1350,
+          "perfectWindowMs": 95,
+          "goodWindowMs": 190,
+          "targetProgress": 100,
+          "requiredBestCombo": 12
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": [
+          "swallow_moon"
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {
+            "id": "weapon_stance_cycle",
+            "knobs": {
+              "meleeDurationSec": 4,
+              "rangedDurationSec": 3,
+              "meleeRadius": 112,
+              "meleeDamage": 8,
+              "rangedBurstCount": 3,
+              "controlMode": "manual",
+              "initialStance": "melee",
+              "meleeLabel": "黑刀",
+              "rangedLabel": "紫钢弓",
+              "toggleHint": "Q / SHIFT"
+            }
+          },
+          {
+            "id": "hazard_telegraph",
+            "knobs": {
+              "warningMs": 760,
+              "activeMs": 260,
+              "damage": 20,
+              "shape": "line"
+            }
+          },
+          {
+            "id": "arena_wave_boss",
+            "knobs": {
+              "totalWaves": 5,
+              "interWaveDelayMs": 1600
+            }
+          }
+        ],
+        "knobs": {
+          "durationSec": 110,
+          "difficulty": 5,
+          "enemySpawnRateSec": 0.75,
+          "enemyPool": [
+            "bandit_cultivator",
+            "human_genius",
+            "genius_beast"
+          ]
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": []
+      }
+    },
+    {
+      "id": 9,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {
+            "id": "weapon_stance_cycle",
+            "knobs": {
+              "meleeDurationSec": 4,
+              "rangedDurationSec": 4,
+              "meleeRadius": 115,
+              "meleeDamage": 9,
+              "rangedBurstCount": 3,
+              "controlMode": "manual",
+              "initialStance": "melee",
+              "meleeLabel": "黑刀",
+              "rangedLabel": "紫钢弓",
+              "toggleHint": "Q / SHIFT"
+            }
+          },
+          {
+            "id": "defend_line",
+            "knobs": {
+              "wallHp": 160,
+              "breachDamage": 8
+            }
+          },
+          {
+            "id": "horde_intensity",
+            "knobs": {
+              "spawnMultiplier": 3,
+              "eliteChance": 0.22
+            }
+          }
+        ],
+        "knobs": {
+          "durationSec": 120,
+          "difficulty": 5,
+          "enemySpawnRateSec": 0.7,
+          "enemyPool": [
+            "bandit_cultivator",
+            "genius_beast",
+            "human_genius"
+          ]
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": []
+      }
+    },
+    {
+      "id": 10,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "dodge_counter_boss",
+        "modifiers": [],
+        "knobs": {
+          "allowExperimentalCard": true,
+          "playerHp": 150,
+          "bossHp": 620,
+          "breakGaugeMax": 120
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": [
+          "white_ape_overdrive"
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {
+            "id": "weapon_stance_cycle",
+            "knobs": {
+              "meleeDurationSec": 3,
+              "rangedDurationSec": 3,
+              "meleeRadius": 128,
+              "meleeDamage": 12,
+              "meleeMaxTargets": 18,
+              "rangedBurstCount": 4,
+              "rangedDamageMultiplier": 1.25,
+              "controlMode": "manual",
+              "initialStance": "melee",
+              "meleeLabel": "黑刀",
+              "rangedLabel": "紫钢弓",
+              "toggleHint": "Q / SHIFT"
+            }
+          },
+          {
+            "id": "overdrive_transformation",
+            "knobs": {
+              "durationSec": 6,
+              "hpTriggerRatio": 0.45,
+              "damageMultiplier": 1.55,
+              "incomingDamageMultiplier": 0.7,
+              "speedMultiplier": 1.25,
+              "meleeRadiusBonus": 24,
+              "requiresAbility": "white_ape_overdrive",
+              "label": "OVERDRIVE"
+            }
+          },
+          {
+            "id": "horde_intensity",
+            "knobs": {
+              "spawnMultiplier": 4,
+              "eliteChance": 0.28
+            }
+          },
+          {
+            "id": "boss_phases",
+            "knobs": {
+              "phaseThresholds": [
+                0.75,
+                0.5,
+                0.25
+              ],
+              "phaseAnnouncement": true
+            }
+          }
+        ],
+        "knobs": {
+          "durationSec": 125,
+          "difficulty": 6,
+          "enemySpawnRateSec": 0.55,
+          "enemyPool": [
+            "genius_beast",
+            "human_genius",
+            "rock_golem"
+          ],
+          "bossId": "qiongqi_cub",
+          "player": {
+            "hp": 180,
+            "speed": 195
+          }
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": []
+      }
+    },
+    {
+      "id": 12,
+      "gameplay": {
+        "adapter": "phaser",
+        "cardId": "survivor_horde",
+        "modifiers": [
+          {
+            "id": "weapon_stance_cycle",
+            "knobs": {
+              "meleeDurationSec": 3,
+              "rangedDurationSec": 3,
+              "meleeRadius": 132,
+              "meleeDamage": 13,
+              "meleeMaxTargets": 20,
+              "rangedBurstCount": 4,
+              "rangedDamageMultiplier": 1.3,
+              "controlMode": "manual",
+              "initialStance": "melee",
+              "meleeLabel": "黑刀",
+              "rangedLabel": "紫钢弓",
+              "toggleHint": "Q / SHIFT"
+            }
+          },
+          {
+            "id": "overdrive_transformation",
+            "knobs": {
+              "durationSec": 6,
+              "hpTriggerRatio": 0.45,
+              "damageMultiplier": 1.55,
+              "incomingDamageMultiplier": 0.7,
+              "speedMultiplier": 1.25,
+              "meleeRadiusBonus": 24,
+              "requiresAbility": "white_ape_overdrive",
+              "label": "OVERDRIVE"
+            }
+          },
+          {
+            "id": "arena_wave_boss",
+            "knobs": {
+              "totalWaves": 6,
+              "interWaveDelayMs": 1400
+            }
+          },
+          {
+            "id": "hazard_telegraph",
+            "knobs": {
+              "warningMs": 680,
+              "activeMs": 240,
+              "damage": 24,
+              "shape": "circle"
+            }
+          },
+          {
+            "id": "boss_phases",
+            "knobs": {
+              "phaseThresholds": [
+                0.66,
+                0.33
+              ],
+              "phaseAnnouncement": true
+            }
+          }
+        ],
+        "knobs": {
+          "durationSec": 150,
+          "difficulty": 7,
+          "enemySpawnRateSec": 0.5,
+          "enemyPool": [
+            "human_genius",
+            "genius_beast",
+            "rock_golem"
+          ],
+          "bossId": "ancient_beast_king",
+          "player": {
+            "hp": 200,
+            "speed": 200
+          }
+        },
+        "patchLevel": "L2"
+      },
+      "planning": {
+        "rewardUnlocks": []
+      }
+    }
+  ],
+  "abilityCatalog": [
+    {
+      "id": "fengchi_blade",
+      "name": "风驰十三式",
+      "description": "石牧早期标志性刀法。游戏中承担近身快速清群与连斩成长。",
+      "category": "martial_art",
+      "lineage": "blade",
+      "unlockSource": "initial",
+      "unlockCondition": "开局获得基础式，随武技熟练逐步提升",
+      "gameplayTags": [
+        "melee",
+        "aoe",
+        "combo"
+      ],
+      "runtimeSkillIds": [
+        "melee_sweep",
+        "weapon_stance_melee"
+      ],
+      "affectedNodeIds": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        8,
+        9,
+        11,
+        12
+      ],
+      "designRole": "近战清群主轴",
+      "characterHooks": [
+        "meteorite_black_blade"
+      ]
+    },
+    {
+      "id": "purple_steel_bow",
+      "name": "紫钢弓",
+      "description": "远程压制与安全输出手段，承担自动射击、精英点杀与弹幕缝隙输出。",
+      "category": "weapon",
+      "lineage": "bow",
+      "unlockSource": "initial",
+      "unlockCondition": "第一章战斗配置解锁",
+      "gameplayTags": [
+        "ranged",
+        "projectile",
+        "single_target"
+      ],
+      "runtimeSkillIds": [
+        "starter_projectile",
+        "weapon_stance_ranged"
+      ],
+      "affectedNodeIds": [
+        1,
+        3,
+        5,
+        6,
+        8,
+        9,
+        11,
+        12
+      ],
+      "designRole": "远程弹道主轴"
+    },
+    {
+      "id": "black_blade_flame",
+      "name": "陨铁黑刀·烈炎",
+      "description": "将火属性强化叠加到黑刀上，使近战清群转化为持续压场能力。",
+      "category": "weapon_upgrade",
+      "lineage": "fire_blade",
+      "unlockSource": "node_reward",
+      "unlockCondition": "完成中前期兵刃炼化节点",
+      "gameplayTags": [
+        "melee",
+        "fire",
+        "area_damage"
+      ],
+      "runtimeSkillIds": [
+        "melee_sweep_fire",
+        "burn_on_hit"
+      ],
+      "affectedNodeIds": [
+        4,
+        6,
+        8,
+        9,
+        11,
+        12
+      ],
+      "designRole": "黑刀中期质变",
+      "effects": [
+        {
+          "target": "weapon_stance_cycle.meleeDamage",
+          "op": "multiply",
+          "value": 1.25
+        }
+      ]
+    },
+    {
+      "id": "swallow_moon",
+      "name": "吞月式",
+      "description": "月下参悟带来的长期成长能力，主要服务于熟练度、血脉和资源转化。",
+      "category": "cultivation",
+      "lineage": "moon",
+      "unlockSource": "node_reward",
+      "unlockCondition": "完成月华参悟试炼",
+      "gameplayTags": [
+        "growth",
+        "insight",
+        "resource"
+      ],
+      "runtimeSkillIds": [
+        "moon_insight_bonus"
+      ],
+      "affectedNodeIds": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "designRole": "长期成长加速器",
+      "effects": [
+        {
+          "target": "weapon_stance_cycle.rangedDamageMultiplier",
+          "op": "multiply",
+          "value": 1.2
+        }
+      ]
+    },
+    {
+      "id": "white_ape_overdrive",
+      "name": "白猿血脉·爆发",
+      "description": "石牧的终局辨识能力。高压阶段进入短时爆发形态，强化范围、伤害与抗压。",
+      "category": "bloodline",
+      "lineage": "white_ape",
+      "unlockSource": "hybrid",
+      "unlockCondition": "血脉觉醒进度与关键剧情节点共同解锁",
+      "gameplayTags": [
+        "ultimate",
+        "aoe",
+        "survival",
+        "burst"
+      ],
+      "runtimeSkillIds": [
+        "ultimate_form",
+        "bloodline_overdrive"
+      ],
+      "affectedNodeIds": [
+        10,
+        11,
+        12
+      ],
+      "designRole": "终局爆发与角色身份核心",
+      "effects": [
+        {
+          "target": "player.hp",
+          "op": "multiply",
+          "value": 1.15
+        },
+        {
+          "target": "overdrive_transformation.damageMultiplier",
+          "op": "multiply",
+          "value": 1.2
+        },
+        {
+          "target": "overdrive_transformation.durationSec",
+          "op": "add",
+          "value": 2
+        }
+      ]
+    }
+  ],
+  "passiveSkillCatalog": [
+    {
+      "id": "blade_speed_1",
+      "name": "疾风刀势",
+      "treeTier": "T1",
+      "cost": 20,
+      "requires": null,
+      "runtimeStatus": "implemented",
+      "effects": [
+        {
+          "target": "weapon_stance_cycle.meleeDamage",
+          "op": "multiply",
+          "value": 1.15
+        }
+      ],
+      "affectedRuntimeSkillIds": [
+        "melee_sweep"
+      ],
+      "description": "提高近战架势的清怪效率。"
+    },
+    {
+      "id": "bow_burst_1",
+      "name": "连珠箭",
+      "treeTier": "T1",
+      "cost": 20,
+      "requires": null,
+      "runtimeStatus": "implemented",
+      "effects": [
+        {
+          "target": "weapon_stance_cycle.rangedBurstCount",
+          "op": "add",
+          "value": 1
+        }
+      ],
+      "affectedRuntimeSkillIds": [
+        "starter_projectile"
+      ],
+      "description": "提高远程架势的连射数量。"
+    },
+    {
+      "id": "bloodline_toughness",
+      "name": "异血强身",
+      "treeTier": "T2",
+      "cost": 60,
+      "requires": "blade_speed_1",
+      "runtimeStatus": "implemented",
+      "effects": [
+        {
+          "target": "player.hp",
+          "op": "multiply",
+          "value": 1.2
+        }
+      ],
+      "affectedRuntimeSkillIds": [
+        "bloodline_overdrive"
+      ],
+      "description": "以血脉力量提高高压关卡中的生存空间。"
+    },
+    {
+      "id": "moon_insight_1",
+      "name": "吞月参悟",
+      "treeTier": "T2",
+      "cost": 40,
+      "requires": null,
+      "runtimeStatus": "implemented",
+      "effects": [
+        {
+          "target": "clickPower",
+          "op": "multiply",
+          "value": 1.25
+        },
+        {
+          "target": "activeMultiplier",
+          "op": "multiply",
+          "value": 1.2
+        }
+      ],
+      "affectedRuntimeSkillIds": [
+        "moon_insight_bonus"
+      ],
+      "description": "提高吐纳与自动积累效率，让跨局成长更快兑现。"
+    },
+    {
+      "id": "white_ape_overdrive_passive",
+      "name": "白猿变身",
+      "treeTier": "T3",
+      "cost": 80,
+      "requires": "bloodline_toughness",
+      "runtimeStatus": "implemented",
+      "effects": [
+        {
+          "target": "player.hp",
+          "op": "multiply",
+          "value": 1.15
+        }
+      ],
+      "affectedRuntimeSkillIds": [
+        "bloodline_overdrive"
+      ],
+      "description": "高压时触发通用爆发变身：伤害提升、减伤、加速。按 E 或生命过低自动发动。"
+    }
+  ]
+}

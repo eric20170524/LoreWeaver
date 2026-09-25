@@ -3,7 +3,7 @@
   "id": "drag_to_core",
   "title": "Drag To Core",
   "category": "microgame",
-  "status": "production_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -18,7 +18,6 @@
     "progress_100"
   ],
   "failure": [
-    "retreated",
     "retreated"
   ],
   "knobs": {
@@ -26,25 +25,33 @@
       "type": "integer",
       "default": 14,
       "patchLevel": "L1",
-      "description": "fragCount"
+      "description": "fragCount",
+      "min": 1,
+      "max": 24
     },
     "hazardCount": {
       "type": "integer",
       "default": 3,
       "patchLevel": "L1",
-      "description": "hazardCount"
+      "description": "hazardCount",
+      "min": 0,
+      "max": 8
     },
     "hazardPenalty": {
       "type": "integer",
       "default": 12,
       "patchLevel": "L1",
-      "description": "hazardPenalty"
+      "description": "hazardPenalty",
+      "min": 0,
+      "max": 100
     },
     "hazardSpeed": {
       "type": "integer",
       "default": 70,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob hazardSpeed"
+      "description": "Lightweight cert knob hazardSpeed",
+      "min": 0,
+      "max": 300
     },
     "allowQuit": {
       "type": "boolean",
@@ -160,8 +167,8 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
+    "productionReady": false,
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package.",
     "conditionalWaivers": [
       "device_class_fps: headless soak proxy",
       "vlm_visual_overflow: deferred",

@@ -120,6 +120,7 @@ export default class RuntimeArtBinder {
     constructor(options = {}) {
         this.statusKey = options.statusKey || DEFAULT_GLOBAL_STATUS_KEY;
         this.atlasTextureKey = options.atlasTextureKey || 'lw_imagegen_combat_atlas';
+        this.environmentAtlasTextureKey = options.environmentAtlasTextureKey || 'lw_imagegen_environment_atlas';
         this.manifestCacheKey = options.manifestCacheKey || 'lw_imagegen_manifest';
         this.scene = null;
         this.manifest = null;
@@ -454,6 +455,14 @@ export default class RuntimeArtBinder {
         });
         scene.load.json(this.manifestCacheKey, paths.manifestPath);
         scene.load.image(this.atlasTextureKey, paths.atlasPath);
+        if (paths.environmentAtlasPath) {
+            scene.load.once(`filecomplete-json-${this.manifestCacheKey}`, () => {
+                const manifest = scene.cache?.json?.get?.(this.manifestCacheKey);
+                if (manifest?.environmentAtlas?.image) {
+                    scene.load.image(this.environmentAtlasTextureKey, paths.environmentAtlasPath);
+                }
+            });
+        }
         return this;
     }
 
@@ -543,8 +552,11 @@ export default class RuntimeArtBinder {
 
     copyFrame(scene, frameKey, textureKey, frameSpec) {
         const frame = frameSpec?.frame;
-        if (!frame || !scene.textures.exists(this.atlasTextureKey)) return false;
-        const atlasTexture = scene.textures.get(this.atlasTextureKey);
+        const atlasKey = frameSpec?.atlas === 'environment'
+            ? this.environmentAtlasTextureKey
+            : this.atlasTextureKey;
+        if (!frame || !scene.textures.exists(atlasKey)) return false;
+        const atlasTexture = scene.textures.get(atlasKey);
         const sourceImage = atlasTexture.getSourceImage?.();
         if (!sourceImage) return false;
 
@@ -622,6 +634,9 @@ export default class RuntimeArtBinder {
             candidates.push(...SEMANTIC_ALIASES[roleOrId]);
         } else {
             const id = String(roleOrId);
+            if (clip) {
+                candidates.push(`${id}_${clip}`, `${id}_${clip}_0`);
+            }
             candidates.push(id, `lw_art_${id}`, `lw_enemy_${id}`, `enemy_${id}`, `player_${id}`);
         }
 
@@ -638,6 +653,37 @@ export default class RuntimeArtBinder {
     /**
      * List texture keys for a clip (player multi-frame or enemy single/multi).
      */
+    clipPrefix(roleOrId, options = {}) {
+        if (roleOrId === 'player' || roleOrId === 'hero') return 'player';
+        if (roleOrId === 'enemy' || options.enemyId || String(roleOrId || '').startsWith('enemy_')) {
+            const raw = String(options.enemyId || roleOrId || '').replace(/^enemy_/, '').replace(/^lw_enemy_/, '');
+            return `enemy_${raw}`;
+        }
+        return String(options.semanticPrefix || roleOrId || '').replace(/^lw_art_/, '');
+    }
+
+    /**
+     * Read the canonical clip contract from manifest.clipSets.
+     * Legacy single-asset manifests fall back to manifest.clips.
+     */
+    resolveClipSpec(roleOrId, clip = 'walk', options = {}) {
+        const prefix = this.clipPrefix(roleOrId, options);
+        const sets = this.manifest?.clipSets || {};
+        const set = sets && typeof sets === 'object' ? sets[prefix] : null;
+        if (set && set[clip]) return { ...set[clip], semanticPrefix: prefix };
+
+        const legacy = this.manifest?.clips || {};
+        const legacyPrefix = this.manifest?.semanticPrefix;
+        if (legacy?.[clip] && (!legacyPrefix || legacyPrefix === prefix || (prefix === 'player' && legacyPrefix === 'bundle'))) {
+            return { ...legacy[clip], semanticPrefix: prefix };
+        }
+        return null;
+    }
+
+    /**
+     * List texture keys for a clip. manifest.clipSets is authoritative; bounded
+     * player/enemy probing remains only as backwards compatibility.
+     */
     resolveClipKeys(roleOrId, clip = 'walk', options = {}) {
         const keys = [];
         const push = (k) => {
@@ -652,12 +698,15 @@ export default class RuntimeArtBinder {
             return null;
         };
 
+        const spec = this.resolveClipSpec(roleOrId, clip, options);
+        if (spec && Array.isArray(spec.keys)) {
+            for (const frameKey of spec.keys) push(resolveFrame(frameKey));
+            if (keys.length) return keys;
+        }
+
         if (roleOrId === 'player' || roleOrId === 'hero') {
-            for (let i = 0; i < 8; i += 1) {
-                push(resolveFrame(`player_${clip}_${i}`));
-            }
+            for (let i = 0; i < 8; i += 1) push(resolveFrame(`player_${clip}_${i}`));
             push(resolveFrame(`player_${clip}`));
-            // idle fallback chain
             if (clip === 'idle') {
                 push(this.resolve('player'));
                 push(resolveFrame('player_idle'));
@@ -670,24 +719,31 @@ export default class RuntimeArtBinder {
             return keys;
         }
 
-        const id = String(options.enemyId || roleOrId || '')
-            .replace(/^enemy_/, '')
-            .replace(/^lw_enemy_/, '');
-        // Prefer explicit clip frames, then numbered, then base
-        push(resolveFrame(`enemy_${id}_${clip}`));
-        for (let i = 0; i < 4; i += 1) {
-            push(resolveFrame(`enemy_${id}_${clip}_${i}`));
+        const isEnemy = roleOrId === 'enemy' || options.enemyId || String(roleOrId || '').startsWith('enemy_');
+        if (isEnemy) {
+            const id = String(options.enemyId || roleOrId || '')
+                .replace(/^enemy_/, '')
+                .replace(/^lw_enemy_/, '');
+            // Prefer explicit clip frames, then numbered, then base.
+            // Probe 8 frames so component-row sheets longer than the old enemy-4 fallback still play.
+            push(resolveFrame(`enemy_${id}_${clip}`));
+            for (let i = 0; i < 8; i += 1) push(resolveFrame(`enemy_${id}_${clip}_${i}`));
+            if (clip === 'idle' || clip === 'walk') {
+                push(resolveFrame(`enemy_${id}`));
+                push(resolveFrame(`enemy_${id}_idle`));
+                push(this.resolve('enemy', { enemyId: id }));
+            }
+            if (keys.length === 1 && clip !== 'idle') {
+                const idle = resolveFrame(`enemy_${id}_idle`) || resolveFrame(`enemy_${id}`) || this.resolve('enemy', { enemyId: id });
+                if (idle && idle !== keys[0]) keys.unshift(idle);
+            }
+            return keys;
         }
-        if (clip === 'idle' || clip === 'walk') {
-            push(resolveFrame(`enemy_${id}`));
-            push(resolveFrame(`enemy_${id}_idle`));
-            push(this.resolve('enemy', { enemyId: id }));
-        }
-        // For attack/hurt/death with only one frame, pair with idle for a 2-frame blink
-        if (keys.length === 1 && clip !== 'idle') {
-            const idle = resolveFrame(`enemy_${id}_idle`) || resolveFrame(`enemy_${id}`) || this.resolve('enemy', { enemyId: id });
-            if (idle && idle !== keys[0]) keys.unshift(idle);
-        }
+
+        const prefix = this.clipPrefix(roleOrId, options);
+        push(resolveFrame(`${prefix}_${clip}`));
+        for (let i = 0; i < 8; i += 1) push(resolveFrame(`${prefix}_${clip}_${i}`));
+        push(this.resolve(prefix, { clip }));
         return keys;
     }
 
@@ -718,7 +774,7 @@ export default class RuntimeArtBinder {
             scene.anims.create({
                 key: animKey,
                 frames,
-                frameRate: config.frameRate || (frames.length <= 2 ? 6 : 10),
+                frameRate: config.frameRate ?? (frames.length <= 2 ? 6 : 10),
                 repeat: config.repeat == null ? -1 : config.repeat
             });
             return animKey;
@@ -733,28 +789,35 @@ export default class RuntimeArtBinder {
      */
     playClip(sprite, roleOrId, clip = 'walk', options = {}) {
         if (!sprite || !this.scene) return null;
-        const enemyId = options.enemyId || (roleOrId !== 'player' && roleOrId !== 'hero' ? roleOrId : null);
-        const keys = this.resolveClipKeys(
-            roleOrId === 'player' || roleOrId === 'hero' ? 'player' : (enemyId || roleOrId),
-            clip,
-            { enemyId }
-        );
-        const animKey = options.animKey
-            || `lw_${roleOrId === 'player' || roleOrId === 'hero' ? 'player' : `enemy_${enemyId}`}_${clip}`;
+        const isPlayer = roleOrId === 'player' || roleOrId === 'hero';
+        const isEnemy = roleOrId === 'enemy' || options.enemyId || String(roleOrId || '').startsWith('enemy_');
+        const enemyId = isEnemy
+            ? String(options.enemyId || roleOrId || '').replace(/^enemy_/, '').replace(/^lw_enemy_/, '')
+            : null;
+        const target = isPlayer ? 'player' : (isEnemy ? enemyId : roleOrId);
+        const clipOptions = isEnemy ? { ...options, enemyId } : options;
+        const spec = this.resolveClipSpec(target, clip, clipOptions);
+        const keys = this.resolveClipKeys(target, clip, clipOptions);
+        const safeRole = String(isPlayer ? 'player' : (isEnemy ? `enemy_${enemyId}` : roleOrId))
+            .replace(/[^a-zA-Z0-9_-]+/g, '_');
+        const animKey = options.animKey || `lw_${safeRole}_${clip}`;
+        const frameRate = options.frameRate ?? (Number(spec?.fps) > 0 ? Number(spec.fps) : undefined);
+        const repeat = options.repeat ?? (spec ? (spec.loop === false ? 0 : -1) : undefined);
 
         const ensured = this.ensureAnimation(this.scene, animKey, keys, {
-            frameRate: options.frameRate,
-            repeat: options.repeat
+            frameRate,
+            repeat
         });
         if (!ensured) return null;
 
-        // single-frame: just set texture
         if (this._singleFrameAnims?.has(animKey)) {
             const tex = this._animFrameMap.get(animKey);
             if (tex && sprite.setTexture) {
                 sprite.setTexture(tex);
                 sprite.setData?.('artClip', clip);
                 sprite.setData?.('artAnim', animKey);
+                sprite.setData?.('artClipFps', frameRate ?? null);
+                sprite.setData?.('artClipLoop', repeat === -1);
             }
             return animKey;
         }
@@ -766,6 +829,8 @@ export default class RuntimeArtBinder {
             }
             sprite.setData?.('artClip', clip);
             sprite.setData?.('artAnim', animKey);
+            sprite.setData?.('artClipFps', frameRate ?? null);
+            sprite.setData?.('artClipLoop', repeat === -1);
         }
         return animKey;
     }
@@ -794,7 +859,7 @@ export default class RuntimeArtBinder {
             const bg = scene.add.image(width / 2, height / 2, bgTex);
             const scale = Math.max(width / Math.max(bg.width, 1), height / Math.max(bg.height, 1));
             bg.setScale(scale * 1.05);
-            bg.setAlpha(options.alpha ?? 0.55);
+            bg.setAlpha(options.alpha ?? 0.78);
             container.add(bg);
         } else {
             const g = scene.add.graphics();
@@ -920,6 +985,24 @@ export default class RuntimeArtBinder {
     }
 
     /**
+     * Create a sprite-backed VFX clip from a semantic prefix such as vfx_fireball.
+     * Procedural VFX remains a fallback owned by the caller.
+     */
+    createEffect(scene, effectId, options = {}) {
+        const raw = String(effectId || '').replace(/^vfx_/, '');
+        const role = `vfx_${raw}`;
+        const clip = options.clip || 'loop';
+        const sprite = this.createSprite(scene, role, {
+            ...options,
+            clip,
+            critical: false
+        });
+        sprite?.setData?.('effectId', raw);
+        sprite?.setData?.('artRole', role);
+        return sprite;
+    }
+
+    /**
      * Build a lightweight art context object for adapters.
      */
     createContext(scene = this.scene) {
@@ -936,17 +1019,21 @@ export default class RuntimeArtBinder {
             validateRequiredAssets: (req, opts) => binder.validateRequiredAssets(req, opts),
             has: (key) => binder.has(key),
             resolve: (role, opts) => binder.resolve(role, opts),
+            resolveClipSpec: (role, clip, opts) => binder.resolveClipSpec(role, clip, opts),
             resolveClipKeys: (role, clip, opts) => binder.resolveClipKeys(role, clip, opts),
             ensureAnimation: (animKey, keys, cfg) => binder.ensureAnimation(scene, animKey, keys, cfg),
             playClip: (sprite, role, clip, opts) => binder.playClip(sprite, role, clip, opts),
             createSprite: (role, opts) => binder.createSprite(scene, role, opts),
+            createEffect: (effectId, opts) => binder.createEffect(scene, effectId, opts),
             createBackground: (opts) => binder.createBackground(scene, opts),
             resolveEnvKey: (nodeId, prefer) => binder.resolveEnvKey(nodeId, prefer),
             playerKey: () => binder.resolve('player'),
             enemyKey: (id, clip) => binder.resolve('enemy', { enemyId: id, clip }),
             projectileKey: () => binder.resolve('projectile'),
             pickupKey: () => binder.resolve('pickup'),
-            vfxKey: () => binder.resolve('vfx'),
+            vfxKey: (id = null, clip = null) => id
+                ? binder.resolve(`vfx_${String(id).replace(/^vfx_/, '')}`, { clip })
+                : binder.resolve('vfx'),
             propKey: (name) => binder.resolve(name, {
                 prefer: [name, `lw_art_${name}`, textureKeyForFrame(name)]
             })

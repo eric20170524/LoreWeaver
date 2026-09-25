@@ -90,6 +90,7 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
         this.config = { ...DEFAULT_CONFIG };
         this.Phaser = context.Phaser || (typeof globalThis !== 'undefined' ? globalThis.Phaser : null);
         this.graph = new Map();
+        this.endingTimer = null;
         this.choiceButtons = [];
         this.ui = {};
         this.state = {
@@ -112,7 +113,10 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
         const nodes = Array.isArray(this.config.dialogueGraph) && this.config.dialogueGraph.length
             ? this.config.dialogueGraph
             : DEFAULT_NODES;
-        this.graph = new Map(nodes.map((n) => [n.id, n]));
+        this.invalidGraph = nodes.some(n => !n || typeof n.id !== 'string' || !n.id);
+        this.graph = new Map(nodes.filter(n => n && typeof n.id === 'string').map(n => [n.id, n]));
+        this.invalidGraph ||= this.graph.size !== nodes.length || nodes.some(n => !n?.ending &&
+            (!Array.isArray(n?.choices) || !n.choices.length || n.choices.some(c => !c || !this.graph.has(c.next) || (c.fallback && !this.graph.has(c.fallback)))));
 
         const inventory = payload.inventory || {};
         const storyFlags = payload.storyFlags || payload.flags || [];
@@ -120,16 +124,14 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
         if (inventory.relics?.length || knobs.hasRelic) flags.push('has_relic');
         if (payload.playerPerks?.some?.((p) => /relic/i.test(String(p)))) flags.push('has_relic');
 
-        this.state.favor = Number(knobs.startFavor ?? this.config.startFavor ?? 40);
+        const favor = Number(this.config.startFavor);
+        this.state.favor = Math.min(100, Math.max(0, Number.isFinite(favor) ? favor : 40));
         this.state.nodeId = nodes[0]?.id || 'start';
         this.state.path = [this.state.nodeId];
-        this.state.flags = flags;
-        this.state.realmStage = Number(
-            payload.playerStats?.realmStage
-            || payload.playerStats?.realm
-            || knobs.realmStage
-            || 1
-        );
+        this.state.flags = [...new Set(flags)];
+        const overrideRealm = Number(knobs.realmStage);
+        const realm = Number(Number.isFinite(overrideRealm) && overrideRealm > 0 ? overrideRealm : (payload.playerStats?.realmStage ?? payload.playerStats?.realm ?? 1));
+        this.state.realmStage = Math.min(100, Math.max(1, Number.isFinite(realm) ? Math.floor(realm) : 1));
         this.state.hp = payload.playerStats?.hp || 100;
         this.state.score = 0;
         this.state.choicesMade = 0;
@@ -146,22 +148,26 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
         this.ui.panel = scene.add.rectangle(width / 2, height * 0.38, width * 0.86, height * 0.42, 0x0f172a, 0.92)
             .setStrokeStyle(2, 0x38bdf8, 0.4);
         this.ui.speaker = scene.add.text(width * 0.12, height * 0.22, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#38bdf8'
+            fontFamily: 'Inter, sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#38bdf8'
         });
         this.ui.body = scene.add.text(width * 0.12, height * 0.28, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '15px', color: '#e2e8f0',
-            wordWrap: { width: width * 0.76 }
+            fontFamily: 'Inter, sans-serif', fontSize: '26px', color: '#e2e8f0',
+            wordWrap: { width: width * 0.76, useAdvancedWrap: true }
         });
         this.ui.meta = scene.add.text(width / 2, height * 0.58, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', color: '#94a3b8'
         }).setOrigin(0.5);
 
         this.lifecycle.addCleanup(() => {
             Object.values(this.ui).forEach((n) => n?.destroy?.());
             this.clearChoices();
+            this.ui = {};
+            this.endingTimer?.remove(false);
+            this.endingTimer = null;
         });
 
-        this.renderNode();
+        if (this.invalidGraph) this.finish(false, NODE_RESULT_REASONS.CONDITION_FAILED);
+        else this.renderNode();
         this.publishTestState();
         return this;
     }
@@ -194,51 +200,60 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
 
         this.ui.speaker?.setText(node.speaker || '—');
         this.ui.body?.setText(node.text || '');
-        this.ui.meta?.setText(`属性 ${this.state.favor}  ·  阶段 ${this.state.realmStage}  ·  路径 ${this.state.path.join(' → ')}`);
+        this.ui.meta?.setText(`好感 ${this.state.favor}  ·  阶段 ${this.state.realmStage}  ·  已选择 ${this.state.choicesMade} 次`);
 
         if (node.ending) {
-            this.state.score = (node.rewardTier || 0) * 50 + Math.max(0, this.state.favor);
-            this.lifecycle.trackTimer(this.scene.time.delayedCall(900, () => {
+            const tier = Number(node.rewardTier ?? 0);
+            this.state.score = (Number.isFinite(tier) ? tier : 0) * 50 + Math.max(0, this.state.favor);
+            this.endingTimer?.remove(false);
+            this.endingTimer = this.scene.time.delayedCall(900, () => {
+                this.endingTimer = null;
                 if (node.fail) this.finish(false, NODE_RESULT_REASONS.CONDITION_FAILED);
                 else this.finish(true, NODE_RESULT_REASONS.OBJECTIVE_MET);
-            }));
+            });
             return;
         }
 
         const { width, height } = this.scene.scale;
         const choices = node.choices || [];
         choices.forEach((choice, i) => {
-            const y = height * 0.66 + i * 52;
+            const step = Math.min(88, 350 / choices.length);
+            const y = height * 0.66 + i * step;
             const ok = this.meetsRequirement(choice.requires);
-            const bg = this.scene.add.rectangle(width / 2, y, width * 0.8, 42, ok ? 0x1e293b : 0x334155, 0.95)
+            const bg = this.scene.add.rectangle(width / 2, y, width * 0.8, Math.min(72, step - 8), ok ? 0x1e293b : 0x334155, 0.95)
                 .setStrokeStyle(1, ok ? 0x38bdf8 : 0x64748b, 0.5)
                 .setInteractive({ useHandCursor: ok });
             const label = this.scene.add.text(width / 2, y, choice.label, {
                 fontFamily: 'Inter, sans-serif',
-                fontSize: '14px',
+                fontSize: `${Math.min(24, step * 0.4)}px`,
                 color: ok ? '#f8fafc' : '#94a3b8'
             }).setOrigin(0.5);
             let lock = null;
             if (!ok) {
-                lock = this.scene.add.text(width * 0.86, y, '锁', {
-                    fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#f87171'
+                lock = this.scene.add.text(width * 0.86, y, choice.fallback ? '改道' : '锁定', {
+                    fontFamily: 'Inter, sans-serif', fontSize: '22px', color: '#f87171'
                 }).setOrigin(0.5);
             }
             if (ok) {
                 bg.on('pointerdown', () => this.pickChoice(choice));
             } else if (choice.fallback) {
                 bg.setInteractive({ useHandCursor: true });
-                bg.on('pointerdown', () => this.pickChoice({ ...choice, next: choice.fallback, favorDelta: (choice.favorDelta || 0) - 5 }));
+                bg.on('pointerdown', () => this.pickChoice(choice));
             }
-            this.choiceButtons.push({ bg, label, lock });
+            this.choiceButtons.push({ bg, label, lock, choice, allowed: ok });
         });
     }
 
     pickChoice(choice) {
         if (!this.isRunning()) return;
+        const node = this.graph.get(this.state.nodeId);
+        if (node?.ending || !node?.choices?.includes(choice)) return;
+        const allowed = this.meetsRequirement(choice.requires);
+        if (!allowed && !choice.fallback) return;
+        const next = allowed ? choice.next : choice.fallback;
+        const delta = Number(choice.favorDelta ?? 0);
         this.state.choicesMade += 1;
-        this.state.favor += Number(choice.favorDelta || 0);
-        const next = choice.next;
+        this.state.favor += (Number.isFinite(delta) ? delta : 0) - (allowed ? 0 : 5);
         if (!next || !this.graph.has(next)) {
             this.finish(false, NODE_RESULT_REASONS.CONDITION_FAILED);
             return;
@@ -250,7 +265,9 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
     }
 
     getTestState() {
+        const bodyBounds = this.ui.body?.getBounds?.();
         return {
+            ...super.getTestState(),
             adapter: 'BranchingDialogueCheckAdapter',
             status: this.status,
             hp: this.state.hp,
@@ -259,6 +276,12 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
             nodeId: this.state.nodeId,
             path: this.state.path.slice(),
             choicesMade: this.state.choicesMade,
+            bodyBounds: bodyBounds ? { x: bodyBounds.x, y: bodyBounds.y, width: bodyBounds.width, height: bodyBounds.height } : null,
+            goalValue: 0, // Only the graph ending decides success, including bad endings with positive favor.
+            realmStage: this.state.realmStage,
+            flags: this.state.flags.slice(),
+            ending: this.graph.get(this.state.nodeId)?.ending || null,
+            choices: this.choiceButtons.map(b => ({ id: b.choice.id, label: b.choice.label, allowed: b.allowed, fallback: b.choice.fallback || null, x: b.bg.x, y: b.bg.y })),
             lastResult: this.result
         };
     }
@@ -271,7 +294,7 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
         const rewards = success
             ? {
                 ...(this.config.rewardTable || {}),
-                score: (this.config.rewardTable?.score ?? 1) * (node?.rewardTier || 1),
+                score: (this.config.rewardTable?.score ?? 1) * (Number.isFinite(Number(node?.rewardTier)) ? Number(node.rewardTier) : 1),
                 favor: this.state.favor
             }
             : {};
@@ -294,9 +317,10 @@ export default class BranchingDialogueCheckAdapter extends GameplayAdapter {
         return result;
     }
 
-    retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
+    pause() { if (this.config.allowPause !== false) super.pause(); }
+    retreat() { return this.config.allowQuit === false ? null : this.finish(false, NODE_RESULT_REASONS.RETREATED); }
     isRunning() { return this.status === 'running' && !this.lifecycle?.transitionLocked; }
-    destroy() { this.lifecycle?.cleanup(); super.destroy(); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
     publishTestState() {
         this.context.testHooks?.update({
             adapterId: this.config.id,

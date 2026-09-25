@@ -1,12 +1,14 @@
 import GameplayAdapter from '../GameplayAdapter.js';
 import { NODE_RESULT_REASONS } from '../../contracts/NodeContracts.js';
 import SceneLifecycle from '../../contracts/SceneLifecycle.js';
+import VFX from '../../juice/VFX.js';
 
 const DEFAULT_CONFIG = Object.freeze({
     id: 'dodge_counter_boss',
     playerHp: 100,
     bossHp: 300,
     breakGaugeMax: 100,
+    durationSec: 90,
     attackIntervalSec: 2.2,
     warningSec: 0.7,
     activeSec: 0.45,
@@ -18,10 +20,11 @@ const DEFAULT_CONFIG = Object.freeze({
     rewardTable: { score: 1 }
 });
 
-function mergeConfig(base, patch) {
-    if (!patch || typeof patch !== 'object') return { ...base };
-    return { ...base, ...patch };
-}
+const DODGE_HINT = '按住拖动避开红区 · 金圈亮起时点击 Boss 或按空格反击';
+const positive = (value, fallback) => {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : fallback;
+};
 
 export default class DodgeCounterBossAdapter extends GameplayAdapter {
     constructor(context = {}) {
@@ -33,35 +36,49 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.randomMetadata = typeof context.randomMetadata === 'function' ? context.randomMetadata : null;
         this.player = null;
         this.boss = null;
+        this.playerSprite = null;
+        this.bossSprite = null;
         this.telegraph = null;
+        this.figures = null;
+        this.slash = null;
+        this.playerHitFlash = 0;
+        this.bossHitFlash = 0;
+        this.runtimeArt = context.runtimeArt || context.art || null;
+        this.bossEnemyId = 'arena_champion';
         this.ui = {};
-        this.state = {
-            playerHp: 100,
-            bossHp: 300,
-            gauge: 0,
-            phase: 'idle', // idle | warning | active | counter
-            phaseLeft: 0,
-            invuln: 0,
-            attackZone: null,
-            score: 0,
-            dodges: 0,
-            counters: 0
+        this.state = this.initialState();
+    }
+
+    initialState() {
+        return {
+            playerHp: this.config.playerHp, bossHp: this.config.bossHp,
+            gauge: 0, phase: 'idle', phaseLeft: this.config.attackIntervalSec,
+            invuln: 0, attackZone: null, hitThisAttack: false, counterUsed: false,
+            score: 0, dodges: 0, counters: 0, elapsedSeconds: 0,
+            timeRemaining: this.config.durationSec,
+            lastFeedback: 'idle',
+            playerFigure: 'fighter',
+            bossFigure: 'brute'
         };
     }
 
     init(payload = {}) {
         super.init(payload);
         const knobs = payload.nodeConfig?.gameplay?.knobs || payload.nodeConfig?.knobs || {};
-        this.config = mergeConfig(DEFAULT_CONFIG, { ...(payload.nodeConfig?.gameplay || {}), ...knobs });
-        this.state.playerHp = Number(knobs.playerHp ?? this.config.playerHp ?? payload.playerStats?.hp ?? 100);
-        this.state.bossHp = Number(knobs.bossHp ?? this.config.bossHp ?? 300);
-        this.state.gauge = 0;
-        this.state.phase = 'idle';
-        this.state.phaseLeft = Number(this.config.attackIntervalSec || 2.2);
-        this.state.invuln = 0;
-        this.state.score = 0;
-        this.state.dodges = 0;
-        this.state.counters = 0;
+        const playability = this.readPlayabilityKnobs(payload, DEFAULT_CONFIG.id);
+        this.config = { ...DEFAULT_CONFIG, ...(payload.nodeConfig?.gameplay || {}), ...knobs };
+        for (const key of Object.keys(DEFAULT_CONFIG)) {
+            if (typeof DEFAULT_CONFIG[key] === 'number') {
+                this.config[key] = positive(this.config[key], DEFAULT_CONFIG[key]);
+            }
+        }
+        this.config.durationSec = positive(playability.durationSec, DEFAULT_CONFIG.durationSec);
+        const payloadHp = Number(payload.playerStats?.hp);
+        if (Number.isFinite(payloadHp) && payloadHp > 0) this.config.playerHp = payloadHp;
+        this.runtimeArt = payload.runtimeArt || payload.art || this.runtimeArt || this.context.runtimeArt || null;
+        this.bossEnemyId = knobs.bossId || knobs.enemyId || 'arena_champion';
+        this.state = this.initialState();
+        this.result = null;
         return this;
     }
 
@@ -69,83 +86,99 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         return [...new Set([...super.semanticActions(), 'move', 'primary'])];
     }
 
+    movePlayer(x, y) {
+        if (!this.player || !this.scene) throw new Error('semantic_move_surface_unavailable');
+        if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('semantic_move_requires_finite_x_y');
+        // Paused semantic positioning remains available for the exact-frame probe.
+        if (this.status === 'ended' || this.status === 'destroyed' || this.lifecycle?.transitionLocked) return false;
+        const { width, height } = this.scene.scale;
+        this.player.x = Math.max(20, Math.min(width - 20, x));
+        this.player.y = Math.max(height * 0.52, Math.min(height - 110, y));
+        return true;
+    }
+
     handleSemanticInput(payload = {}) {
         const action = String(payload?.action || '').trim();
         if (action === 'move') {
-            if (!this.player || !this.scene) throw new Error('semantic_move_surface_unavailable');
-            const x = Number(payload?.x);
-            const y = Number(payload?.y);
-            if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('semantic_move_requires_finite_x_y');
-            const { width, height } = this.scene.scale;
-            this.player.x = Math.max(20, Math.min(width - 20, x));
-            this.player.y = Math.max(height * 0.45, Math.min(height - 60, y));
-            const result = { action, x: this.player.x, y: this.player.y };
+            const accepted = this.movePlayer(Number(payload.x), Number(payload.y));
+            const result = { action, accepted, x: this.player?.x, y: this.player?.y };
             this.updateObservationState({ semanticAction: result });
             return result;
         }
-        if (action === 'primary') return this.primaryAction(payload);
+        if (action === 'primary') return this.primaryAction();
         return super.handleSemanticInput(payload);
     }
 
     primaryAction() {
-        const before = {
-            phase: this.state.phase,
-            bossHp: this.state.bossHp,
-            gauge: this.state.gauge,
-            counters: this.state.counters
-        };
+        const snapshot = () => ({
+            phase: this.state.phase, bossHp: this.state.bossHp,
+            gauge: this.state.gauge, counters: this.state.counters
+        });
+        const before = snapshot();
         const accepted = this.tryCounter();
-        return {
-            action: 'primary',
-            accepted,
-            before,
-            after: {
-                phase: this.state.phase,
-                bossHp: this.state.bossHp,
-                gauge: this.state.gauge,
-                counters: this.state.counters
-            }
-        };
+        return { action: 'primary', accepted, before, after: snapshot() };
     }
 
     create(scene) {
         super.create(scene);
-        if (!this.Phaser) throw new Error('DodgeCounterBossAdapter requires Phaser.');
         this.lifecycle = new SceneLifecycle(scene);
         this.lifecycle.start();
         const { width, height } = scene.scale;
-
-        this.ui.title = scene.add.text(width / 2, 36, '闪避反击', {
-            fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
+        // The host owns y=32/100/140 and the bottom 42px. Keep adapter UI clear.
+        this.ui.title = scene.add.text(width / 2, 188, '闪避 → 反击 → 破势', {
+            fontFamily: 'Inter, sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
-        this.ui.status = scene.add.text(width / 2, 68, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '13px', color: '#94a3b8'
-        }).setOrigin(0.5);
-        this.ui.hint = scene.add.text(width / 2, height - 40, '拖动闪避红区 · 反击窗点 Boss 积攒破势', {
-            fontFamily: 'Inter, sans-serif', fontSize: '12px', color: '#64748b'
-        }).setOrigin(0.5);
+        this.ui.status = scene.add.text(width / 2, 216, '', {
+            fontFamily: 'Inter, sans-serif', fontSize: '18px', color: '#e2e8f0'
+        }).setOrigin(0.5).setDepth(30);
+        // Host HUD owns the bottom strip (score/HP at height-42, 20px). A 12px
+        // slate hint there sits under sprites and the phone bezel, so keep the
+        // phase prompt in the header band, above the break gauge and the boss.
+        this.ui.hint = scene.add.text(width / 2, 286, DODGE_HINT, {
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc',
+            align: 'center',
+            backgroundColor: 'rgba(2, 6, 23, 0.82)',
+            padding: { x: 14, y: 8 },
+            wordWrap: { width: width - 80, useAdvancedWrap: true }
+        }).setOrigin(0.5).setDepth(30);
         this.ui.bar = scene.add.graphics();
-
-        this.boss = scene.add.circle(width / 2, height * 0.32, 40, 0xef4444, 1)
+        this.boss = scene.add.circle(width / 2, Math.max(292, height * 0.40), 40, 0xef4444, 0.18)
+            .setStrokeStyle(3, 0xfbbf24, 0.65)
             .setInteractive({ useHandCursor: true });
-        this.player = scene.add.circle(width / 2, height * 0.72, 18, 0x66fcf1, 1);
+        this.player = scene.add.circle(width / 2, height * 0.72, 18, 0x66fcf1, 0.18);
         this.telegraph = scene.add.circle(0, 0, 50, 0xef4444, 0).setStrokeStyle(3, 0xfbbf24, 0);
+        this.figures = scene.add.graphics();
+        this.slash = scene.add.graphics();
+        this.figures.setDepth?.(11);
+        this.slash.setDepth?.(12);
+        this.bindAtlasSprites();
+        this.drawPresentation();
 
-        this.boss.on('pointerdown', () => this.tryCounter());
-        scene.input.on('pointermove', (p) => {
-            if (!this.isRunning()) return;
-            // smooth follow pointer for mobile-friendly dodge
-            this.player.x += (p.x - this.player.x) * 0.2;
-            this.player.y += (p.y - this.player.y) * 0.2;
-            this.player.x = Math.max(20, Math.min(width - 20, this.player.x));
-            this.player.y = Math.max(height * 0.45, Math.min(height - 60, this.player.y));
+        this.lifecycle.trackListener(this.boss, 'pointerdown', () => this.tryCounter());
+        const move = (pointer) => {
+            if (!this.isRunning() || !pointer.isDown || pointer.y < height * 0.52 || pointer.y > height - 110) return;
+            this.movePlayer(Number(pointer.x), Number(pointer.y));
+        };
+        this.lifecycle.trackListener(scene.input, 'pointerdown', move);
+        this.lifecycle.trackListener(scene.input, 'pointermove', move);
+        this.lifecycle.trackListener(scene.input.keyboard, 'keydown-SPACE', (event) => {
+            if (!this.isRunning() || event?.repeat) return;
+            event?.preventDefault?.();
+            this.tryCounter();
         });
-
+        this.lifecycle.trackListener(scene.events, 'shutdown', () => this.destroy());
         this.lifecycle.addCleanup(() => {
-            Object.values(this.ui).forEach((n) => n?.destroy?.());
+            Object.values(this.ui).forEach((object) => object?.destroy?.());
             this.boss?.destroy();
             this.player?.destroy();
             this.telegraph?.destroy();
+            this.figures?.destroy?.();
+            this.slash?.destroy?.();
+            this.playerSprite?.destroy?.();
+            this.bossSprite?.destroy?.();
+            this.ui = {};
+            this.boss = this.player = this.telegraph = this.figures = this.slash = null;
+            this.playerSprite = this.bossSprite = null;
         });
         this.refreshHud();
         this.publishTestState();
@@ -153,7 +186,9 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
     }
 
     beginAttack() {
+        if (!this.isRunning()) return;
         const { width, height } = this.scene.scale;
+        // Preserve three seeded RNG draws per attack for replay compatibility.
         const zone = {
             x: 60 + this.random() * (width - 120),
             y: height * 0.55 + this.random() * (height * 0.25),
@@ -161,6 +196,7 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         };
         this.state.attackZone = zone;
         this.state.hitThisAttack = false;
+        this.state.counterUsed = false;
         this.state.phase = 'warning';
         this.state.phaseLeft = this.config.warningSec;
         this.telegraph.setPosition(zone.x, zone.y);
@@ -168,37 +204,86 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
         this.telegraph.setStrokeStyle(3, 0xfbbf24, 0.9);
         this.telegraph.setFillStyle(0xfbbf24, 0.15);
         this.telegraph.setAlpha(1);
+        this.warningMark?.destroy?.();
+        this.warningMark = VFX.spriteClip(this.scene, this.runtimeArt, 'hazard_mark', zone.x, zone.y, {
+            clip: 'loop', depth: 4, destroyOnComplete: false
+        });
+        this.warningMark?.setDisplaySize?.(zone.r * 2.4, zone.r * 2.4);
+        if (typeof this.config.warningAudioCue === 'string' && this.config.warningAudioCue) {
+            this.context.onAudioCue?.(this.config.warningAudioCue);
+        }
+    }
+
+    spawnCombatVfx(effectId, x, y, clip, size, lifeMs) {
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        const sprite = VFX.spriteClip(this.scene, this.runtimeArt, effectId, x, y, { clip, depth: 12 });
+        sprite?.setDisplaySize?.(size, size);
+        if (sprite && lifeMs) {
+            this.lifecycle?.trackTimer?.(this.scene.time.delayedCall(lifeMs, () => sprite.destroy?.()));
+        }
+        return sprite;
     }
 
     tryCounter() {
-        if (!this.isRunning() || this.state.phase !== 'counter') return false;
+        if (!this.isRunning() || this.state.phase !== 'counter' || this.state.counterUsed) return false;
+        // Reserve before callbacks: each opening accepts exactly one counter.
+        this.state.counterUsed = true;
         this.state.counters += 1;
         this.state.gauge = Math.min(this.config.breakGaugeMax, this.state.gauge + this.config.counterGaugeGain);
         this.state.bossHp = Math.max(0, this.state.bossHp - this.config.counterDamage);
-        this.state.score += 20;
+        // Host uses score >= goalValue to end a node. Report actual break progress,
+        // not an unrelated 20-point reward which used to win before full gauge.
+        this.state.score = this.state.gauge;
         this.context.spawnParticles?.(this.boss.x, this.boss.y, 0xfbbf24);
         this.scene.cameras.main.shake(80, 0.006);
-        this.boss.setFillStyle(0xfafafa, 1);
-        this.lifecycle.trackTimer(this.scene.time.delayedCall(80, () => this.boss?.setFillStyle(0xef4444, 1)));
-
+        this.scene.cameras.main.flash?.(70, 250, 220, 80);
+        this.bossHitFlash = 0.22;
+        this.state.lastFeedback = 'boss_stagger';
+        this.drawSlash(this.player?.x, this.player?.y, this.boss?.x, this.boss?.y, 0xfbbf24);
+        this.spawnCombatVfx('black_blade', this.player?.x, this.player?.y, 'impact', 120);
+        if (typeof this.config.counterAuraEffect === 'string' && this.config.counterAuraEffect) {
+            const aura = this.spawnCombatVfx(this.config.counterAuraEffect, this.player?.x, this.player?.y, 'loop', 168, 520);
+            aura?.setTint?.(Number(this.config.counterAuraTint) || 0xb83a2d);
+            aura?.setAlpha?.(0.6);
+        }
+        if (typeof this.config.counterAudioCue === 'string' && this.config.counterAudioCue) {
+            this.context.onAudioCue?.(this.config.counterAudioCue);
+        }
         if (this.state.gauge >= this.config.breakGaugeMax || this.state.bossHp <= 0) {
             this.finish(true, NODE_RESULT_REASONS.BOSS_DEFEATED);
+            return true; // finish destroys UI; never refresh it afterwards.
         }
+        this.boss.setFillStyle(0xfafafa, 1);
+        this.boss.setStrokeStyle(0);
+        this.ui.hint?.setText('反击成功 · 等待下一次预警');
+        this.lifecycle.trackTimer(this.scene.time.delayedCall(80, () => {
+            if (this.isRunning() && this.boss?.active) this.boss.setFillStyle(0xef4444, 1);
+        }));
         this.refreshHud();
         this.publishTestState();
         return true;
     }
 
     update(_time, delta) {
-        if (!this.isRunning()) return;
+        if (!this.isRunning() || !Number.isFinite(delta) || delta < 0) return;
         const dt = delta / 1000;
+        this.state.elapsedSeconds += dt;
+        this.state.timeRemaining = Math.max(0, this.config.durationSec - this.state.elapsedSeconds);
+        if (this.state.timeRemaining <= 0) {
+            this.finish(false, NODE_RESULT_REASONS.TIMER_EXPIRED);
+            return;
+        }
         this.state.invuln = Math.max(0, this.state.invuln - dt);
+        this.playerHitFlash = Math.max(0, this.playerHitFlash - dt);
+        this.bossHitFlash = Math.max(0, this.bossHitFlash - dt);
         this.state.phaseLeft -= dt;
-
         if (this.state.phase === 'idle') {
             if (this.state.phaseLeft <= 0) this.beginAttack();
         } else if (this.state.phase === 'warning') {
             this.telegraph.setAlpha(0.5 + Math.sin(this.scene.time.now / 50) * 0.3);
+            if (this.warningMark?.active && this.state.attackZone) {
+                this.warningMark.setPosition?.(this.state.attackZone.x, this.state.attackZone.y);
+            }
             if (this.state.phaseLeft <= 0) {
                 this.state.phase = 'active';
                 this.state.phaseLeft = this.config.activeSec;
@@ -206,14 +291,17 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
                 this.telegraph.setStrokeStyle(3, 0xef4444, 1);
             }
         } else if (this.state.phase === 'active') {
-            const z = this.state.attackZone;
-            if (z && this.state.invuln <= 0) {
-                const d = Math.hypot(this.player.x - z.x, this.player.y - z.y);
-                if (d <= z.r + 16) {
+            const zone = this.state.attackZone;
+            if (zone && !this.state.hitThisAttack && this.state.invuln <= 0) {
+                if (Math.hypot(this.player.x - zone.x, this.player.y - zone.y) <= zone.r + 18) {
+                    this.state.hitThisAttack = true;
                     this.state.playerHp = Math.max(0, this.state.playerHp - this.config.attackDamage);
                     this.state.invuln = this.config.dodgeIFrameSec;
-                    this.state.hitThisAttack = true;
                     this.scene.cameras.main.shake(120, 0.012);
+                    this.scene.cameras.main.flash?.(90, 180, 40, 40);
+                    this.playerHitFlash = 0.2;
+                    this.state.lastFeedback = 'player_hurt';
+                    this.drawSlash(this.boss?.x, this.boss?.y, this.player?.x, this.player?.y, 0xef4444);
                     if (this.state.playerHp <= 0) {
                         this.finish(false, NODE_RESULT_REASONS.HP_ZERO);
                         return;
@@ -225,55 +313,194 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
                 this.state.phase = 'counter';
                 this.state.phaseLeft = this.config.counterWindowSec;
                 this.telegraph.setAlpha(0);
-                this.boss.setStrokeStyle?.(4, 0xfbbf24, 1);
-                this.ui.hint?.setText('反击窗口！点击 Boss').setColor('#fbbf24');
+                this.warningMark?.destroy?.();
+                this.warningMark = null;
+                this.boss.setStrokeStyle(4, 0xfbbf24, 1);
+                this.ui.hint?.setText('反击窗口！点击 Boss 或按空格').setColor('#fbbf24');
+                if (typeof this.config.counterWindowAudioCue === 'string' && this.config.counterWindowAudioCue) {
+                    this.context.onAudioCue?.(this.config.counterWindowAudioCue);
+                }
             }
-        } else if (this.state.phase === 'counter') {
-            if (this.state.phaseLeft <= 0) {
-                this.state.phase = 'idle';
-                this.state.phaseLeft = this.config.attackIntervalSec;
-                this.boss.setStrokeStyle?.(0);
-                this.ui.hint?.setText('拖动闪避红区 · 反击窗点 Boss 积攒破势').setColor('#64748b');
-            }
+        } else if (this.state.phase === 'counter' && this.state.phaseLeft <= 0) {
+            this.state.phase = 'idle';
+            this.state.phaseLeft = this.config.attackIntervalSec;
+            this.boss.setStrokeStyle(0);
+            this.ui.hint?.setText(DODGE_HINT).setColor('#f8fafc');
         }
-
+        this.drawPresentation();
         this.refreshHud();
         this.publishTestState();
     }
 
+    drawSlash(x1, y1, x2, y2, color) {
+        const g = this.slash;
+        if (!g?.clear) return;
+        g.clear();
+        if (![x1, y1, x2, y2].every(Number.isFinite)) return;
+        g.lineStyle?.(8, color, 0.9);
+        g.beginPath?.();
+        g.moveTo?.(x1, y1);
+        g.lineTo?.(x2, y2);
+        g.strokePath?.();
+        this.lifecycle?.trackTimer?.(this.scene.time.delayedCall(120, () => {
+            if (this.slash?.active) this.slash.clear();
+        }));
+    }
+
+    bindAtlasSprites() {
+        const scene = this.scene;
+        if (typeof scene?.add?.sprite !== 'function') return;
+        if (!this.runtimeArt && scene.game?.registry?.get) {
+            const binder = scene.game.registry.get('runtimeArtBinder');
+            if (binder?.createContext) this.runtimeArt = binder.createContext(scene);
+            else this.runtimeArt = scene.game.registry.get('runtimeArt') || null;
+        } else if (this.runtimeArt?.binder && scene) {
+            this.runtimeArt = this.runtimeArt.binder.createContext(scene);
+        }
+        const mount = (role, options) => {
+            if (!this.runtimeArt?.createSprite) return null;
+            const sprite = this.runtimeArt.createSprite(role, {
+                ...options,
+                fallbackFactory: () => null
+            });
+            if (!sprite || sprite.getData?.('artSource') !== 'atlas') {
+                sprite?.destroy?.();
+                return null;
+            }
+            sprite.setOrigin?.(0.5, 0.82);
+            return sprite;
+        };
+        if (this.player) {
+            this.playerSprite = mount('player', {
+                x: this.player.x,
+                y: this.player.y,
+                displaySize: 88,
+                depth: 10,
+                clip: 'idle',
+                frameRate: 4,
+                repeat: -1
+            });
+        }
+        if (this.boss) {
+            this.bossSprite = mount('enemy', {
+                enemyId: this.bossEnemyId,
+                x: this.boss.x,
+                y: this.boss.y,
+                displaySize: 132,
+                depth: 10,
+                clip: 'idle',
+                frameRate: 4,
+                repeat: -1
+            }) || mount('enemy', {
+                enemyId: 'human_genius',
+                x: this.boss.x,
+                y: this.boss.y,
+                displaySize: 132,
+                depth: 10,
+                clip: 'idle',
+                frameRate: 4,
+                repeat: -1
+            });
+        }
+    }
+
+    playRoleClip(sprite, role, clip, options = {}) {
+        if (!sprite?.active || sprite.getData?.('artClip') === clip) return;
+        this.runtimeArt?.playClip?.(sprite, role, clip, options);
+    }
+
+    drawPresentation() {
+        const g = this.figures;
+        if (!g?.clear || !this.player || !this.boss) return;
+        g.clear();
+        const bossLunge = this.state.phase === 'active' ? 18 : this.state.phase === 'warning' ? 8 : 0;
+        const playerColor = this.playerHitFlash > 0 ? 0xf8fafc : 0x66fcf1;
+        const bossColor = this.bossHitFlash > 0 ? 0xfafafa : 0xb91c1c;
+        if (this.playerSprite?.active) {
+            this.playerSprite.setPosition?.(this.player.x, this.player.y);
+            this.playRoleClip(
+                this.playerSprite,
+                'player',
+                this.playerHitFlash > 0 ? 'hurt' : 'idle',
+                { repeat: this.playerHitFlash > 0 ? 0 : -1, frameRate: this.playerHitFlash > 0 ? 8 : 4 }
+            );
+        } else {
+            this.drawFighter(g, this.player.x, this.player.y, 16, playerColor, false);
+        }
+        if (this.bossSprite?.active) {
+            this.bossSprite.setPosition?.(this.boss.x, this.boss.y + bossLunge);
+            if (this.bossSprite.setFlipX) this.bossSprite.setFlipX(this.player.x < this.boss.x);
+            const bossClip = this.bossHitFlash > 0
+                ? 'hurt'
+                : (this.state.phase === 'active' ? 'attack' : 'idle');
+            this.playRoleClip(this.bossSprite, 'enemy', bossClip, {
+                enemyId: this.bossEnemyId,
+                repeat: bossClip === 'idle' ? -1 : 0,
+                frameRate: bossClip === 'attack' ? 10 : 6
+            });
+        } else {
+            this.drawFighter(g, this.boss.x, this.boss.y + bossLunge, 28, bossColor, true);
+        }
+        if (this.state.phase === 'warning' || this.state.phase === 'active') {
+            const zone = this.state.attackZone;
+            if (zone) {
+                g.lineStyle?.(4, this.state.phase === 'active' ? 0xef4444 : 0xfbbf24, 0.85);
+                g.beginPath?.();
+                g.moveTo?.(this.boss.x, this.boss.y + 20);
+                g.lineTo?.(zone.x, zone.y);
+                g.strokePath?.();
+            }
+        }
+    }
+
+    drawFighter(graphics, x, y, radius, color, brute) {
+        const bodyH = brute ? radius * 2.2 : radius * 1.8;
+        const bodyW = brute ? radius * 1.5 : radius * 1.1;
+        graphics.fillStyle?.(color, 1);
+        graphics.fillRoundedRect?.(x - bodyW / 2, y - bodyH * 0.15, bodyW, bodyH, 6);
+        graphics.fillCircle?.(x, y - bodyH * 0.45, brute ? radius * 0.62 : radius * 0.48);
+        graphics.fillRoundedRect?.(
+            x + (brute ? -bodyW * 0.7 : bodyW * 0.15),
+            y - 8,
+            brute ? 16 : 28,
+            brute ? 44 : 8,
+            3
+        );
+    }
+
     refreshHud() {
+        if (!this.isRunning()) return;
         const { width } = this.scene.scale;
-        const g = this.ui.bar;
-        if (g) {
-            const ratio = this.state.gauge / this.config.breakGaugeMax;
-            g.clear();
-            g.fillStyle(0x1e293b, 0.9);
-            g.fillRoundedRect(width * 0.2, 96, width * 0.6, 10, 5);
-            g.fillStyle(0xfbbf24, 1);
-            g.fillRoundedRect(width * 0.2, 96, width * 0.6 * ratio, 10, 5);
+        const graphics = this.ui.bar;
+        if (graphics?.active) {
+            graphics.clear();
+            graphics.fillStyle(0x1e293b, 0.9);
+            graphics.fillRoundedRect(width * 0.2, 244, width * 0.6, 10, 5);
+            graphics.fillStyle(0xfbbf24, 1);
+            graphics.fillRoundedRect(width * 0.2, 244, width * 0.6 * this.state.gauge / this.config.breakGaugeMax, 10, 5);
         }
         this.ui.status?.setText(
-            `HP ${Math.ceil(this.state.playerHp)}  ·  Boss ${Math.ceil(this.state.bossHp)}  ·  破势 ${Math.floor(this.state.gauge)}  ·  ${this.state.phase}`
+            `HP ${Math.ceil(this.state.playerHp)} · Boss ${Math.ceil(this.state.bossHp)} · 破势 ${Math.floor(this.state.gauge)} · ${Math.ceil(this.state.timeRemaining)}s`
         );
     }
 
     getTestState() {
         return {
-            adapter: 'DodgeCounterBossAdapter',
-            status: this.status,
-            hp: this.state.playerHp,
-            score: this.state.score,
-            bossHp: this.state.bossHp,
-            gauge: this.state.gauge,
-            phase: this.state.phase,
-            phaseLeft: this.state.phaseLeft,
-            invuln: this.state.invuln,
-            attackZone: this.state.attackZone,
-            dodges: this.state.dodges,
-            counters: this.state.counters,
+            ...super.getTestState(), adapterId: this.config.id,
+            hp: this.state.playerHp, score: this.state.score,
+            goalValue: this.config.breakGaugeMax, timer: this.state.timeRemaining,
+            bossHp: this.state.bossHp, gauge: this.state.gauge,
+            phase: this.state.phase, phaseLeft: this.state.phaseLeft,
+            invuln: this.state.invuln, counterUsed: this.state.counterUsed,
+            attackZone: this.state.attackZone ? { ...this.state.attackZone } : null,
+            dodges: this.state.dodges, counters: this.state.counters,
+            lastFeedback: this.state.lastFeedback,
+            playerFigure: this.state.playerFigure,
+            bossFigure: this.state.bossFigure,
+            playerArt: this.playerSprite?.getData?.('artKey') || 'silhouette',
+            bossArt: this.bossSprite?.getData?.('artKey') || 'silhouette',
             playerPosition: this.player ? { x: this.player.x, y: this.player.y } : null,
-            determinism: this.randomMetadata ? { random: this.randomMetadata() } : null,
-            lastResult: this.result
+            determinism: this.randomMetadata ? { random: this.randomMetadata() } : null
         };
     }
 
@@ -286,42 +513,24 @@ export default class DodgeCounterBossAdapter extends GameplayAdapter {
             reason: reason || (success ? NODE_RESULT_REASONS.BOSS_DEFEATED : NODE_RESULT_REASONS.HP_ZERO),
             rewards: success ? { ...(this.config.rewardTable || {}), score: 1 } : {},
             telemetry: {
-                gauge: this.state.gauge,
-                counters: this.state.counters,
-                dodges: this.state.dodges,
-                bossHp: this.state.bossHp,
-                playerHp: this.state.playerHp
+                gauge: this.state.gauge, counters: this.state.counters, dodges: this.state.dodges,
+                bossHp: this.state.bossHp, playerHp: this.state.playerHp,
+                elapsedSeconds: this.state.elapsedSeconds, timeRemaining: this.state.timeRemaining
             }
         });
         this.lifecycle.cleanup();
         this.lifecycle.finishEnd();
-        this.context.onEnd?.(result, this);
         this.publishTestState();
+        this.context.onEnd?.(result, this);
         return result;
     }
 
     retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
     isRunning() { return this.status === 'running' && !this.lifecycle?.transitionLocked; }
-    destroy() { this.lifecycle?.cleanup(); super.destroy(); }
-    publishTestState() {
-        this.context.testHooks?.update({
-            adapterId: this.config.id,
-            status: this.status,
-            hp: this.state.playerHp,
-            gauge: this.state.gauge,
-            phase: this.state.phase,
-            phaseLeft: this.state.phaseLeft,
-            invuln: this.state.invuln,
-            attackZone: this.state.attackZone ? { ...this.state.attackZone } : null,
-            bossHp: this.state.bossHp,
-            score: this.state.score,
-            dodges: this.state.dodges,
-            counters: this.state.counters,
-            playerPosition: this.player ? { x: this.player.x, y: this.player.y } : null,
-            determinism: this.randomMetadata ? { random: this.randomMetadata() } : null,
-            lastResult: this.result
-        });
-    }
+    pause() { super.pause(); this.lifecycle?.pause(); }
+    resume() { super.resume(); this.lifecycle?.resume(); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
+    publishTestState() { this.context.testHooks?.update(this.getTestState()); }
 }
 
 export { DEFAULT_CONFIG as DODGE_COUNTER_BOSS_DEFAULT_CONFIG };

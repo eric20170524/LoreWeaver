@@ -1,0 +1,436 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "node_iframe_microgame",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "cases": [
+    {
+      "id": "normalized-base64-result-reward-once",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "child decoded base64_json payload and rendered its node title",
+        "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+      ],
+      "actions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "qi": 3,
+          "xp": 30,
+          "skill": "iframe_focus"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "iframe_demo_clear"
+          ],
+          "gallery": []
+        },
+        "telemetry": {
+          "hits": 4,
+          "needed": 4
+        }
+      },
+      "rewardSaves": [
+        {
+          "currentRealmIndex": 0,
+          "mainCurrencyCount": 0,
+          "secondaryResources": {
+            "练习记录": 3
+          },
+          "unlockedNodeIds": [
+            1,
+            2
+          ],
+          "completedNodeIds": [
+            1
+          ],
+          "unlockedAbilities": [
+            "iframe_focus"
+          ],
+          "activeMultiplier": 1.1,
+          "clickPower": 1.5,
+          "storyFlags": [
+            "iframe_demo_clear"
+          ],
+          "unlockedPassives": [],
+          "hp": 100
+        }
+      ]
+    },
+    {
+      "id": "plain-json-legacy-in-flow-result",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "child decoded plain_json payload and rendered its node title",
+        "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+      ],
+      "actions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "qi": 3,
+          "xp": 30,
+          "skill": "iframe_focus",
+          "skillUp": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "iframe_demo_clear"
+          ],
+          "gallery": []
+        },
+        "telemetry": {}
+      },
+      "rewardSaves": [
+        {
+          "currentRealmIndex": 0,
+          "mainCurrencyCount": 0,
+          "secondaryResources": {
+            "练习记录": 3
+          },
+          "unlockedNodeIds": [
+            1,
+            2
+          ],
+          "completedNodeIds": [
+            1
+          ],
+          "unlockedAbilities": [
+            "iframe_focus"
+          ],
+          "activeMultiplier": 1.1,
+          "clickPower": 1.5,
+          "storyFlags": [
+            "iframe_demo_clear"
+          ],
+          "unlockedPassives": [],
+          "hp": 100
+        }
+      ]
+    },
+    {
+      "id": "child-natural-timeout-no-reward",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actions": [],
+      "result": {
+        "success": false,
+        "reason": "timer_expired",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "hits": 0,
+          "needed": 4
+        }
+      },
+      "rewardSaves": []
+    },
+    {
+      "id": "parent-message-timeout-removes-child",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actions": [],
+      "result": {
+        "success": false,
+        "reason": "timer_expired",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "messageTimeout": true
+        }
+      },
+      "rewardSaves": []
+    },
+    {
+      "id": "cooperative-pause-freezes-both-deadlines",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "child decoded base64_json payload and rendered its node title",
+        "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+      ],
+      "actions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "qi": 3,
+          "xp": 30,
+          "skill": "iframe_focus"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "iframe_demo_clear"
+          ],
+          "gallery": []
+        },
+        "telemetry": {
+          "hits": 4,
+          "needed": 4
+        }
+      },
+      "rewardSaves": [
+        {
+          "currentRealmIndex": 0,
+          "mainCurrencyCount": 0,
+          "secondaryResources": {
+            "练习记录": 3
+          },
+          "unlockedNodeIds": [
+            1,
+            2
+          ],
+          "completedNodeIds": [
+            1
+          ],
+          "unlockedAbilities": [
+            "iframe_focus"
+          ],
+          "activeMultiplier": 1.1,
+          "clickPower": 1.5,
+          "storyFlags": [
+            "iframe_demo_clear"
+          ],
+          "unlockedPassives": [],
+          "hp": 100
+        }
+      ]
+    },
+    {
+      "id": "foreign-message-three-live-restarts-and-child-close",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "actions": [],
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "closedBy": "NODE_CLOSE"
+        }
+      },
+      "rewardSaves": []
+    },
+    {
+      "id": "mobile-touch-real-child-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "child decoded base64_json payload and rendered its node title",
+        "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+      ],
+      "actions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "qi": 3,
+          "xp": 30,
+          "skill": "iframe_focus"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "iframe_demo_clear"
+          ],
+          "gallery": []
+        },
+        "telemetry": {
+          "hits": 4,
+          "needed": 4
+        }
+      },
+      "rewardSaves": [
+        {
+          "currentRealmIndex": 0,
+          "mainCurrencyCount": 0,
+          "secondaryResources": {
+            "练习记录": 3
+          },
+          "unlockedNodeIds": [
+            1,
+            2
+          ],
+          "completedNodeIds": [
+            1
+          ],
+          "unlockedAbilities": [
+            "iframe_focus"
+          ],
+          "activeMultiplier": 1.1,
+          "clickPower": 1.5,
+          "storyFlags": [
+            "iframe_demo_clear"
+          ],
+          "unlockedPassives": [],
+          "hp": 100
+        }
+      ]
+    },
+    {
+      "id": "offline-child-payload-and-result",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "child decoded base64_json payload and rendered its node title",
+        "one completed-node save, 3 resource units and ability/flag rewards after duplicate child replies"
+      ],
+      "actions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "qi": 3,
+          "xp": 30,
+          "skill": "iframe_focus"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [
+            "iframe_demo_clear"
+          ],
+          "gallery": []
+        },
+        "telemetry": {
+          "hits": 4,
+          "needed": 4
+        }
+      },
+      "rewardSaves": [
+        {
+          "currentRealmIndex": 0,
+          "mainCurrencyCount": 0,
+          "secondaryResources": {
+            "练习记录": 3
+          },
+          "unlockedNodeIds": [
+            1,
+            2
+          ],
+          "completedNodeIds": [
+            1
+          ],
+          "unlockedAbilities": [
+            "iframe_focus"
+          ],
+          "activeMultiplier": 1.1,
+          "clickPower": 1.5,
+          "storyFlags": [
+            "iframe_demo_clear"
+          ],
+          "unlockedPassives": [],
+          "hp": 100
+        }
+      ]
+    }
+  ],
+  "build": {
+    "revision": "e562bde26c49e33e2bcba04ca3b3fa09b5b7f53a",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check",
+      "shooter_duel",
+      "maze_exploration_choice",
+      "platform_escape",
+      "hazard_collect_waves",
+      "sequence_puzzle_combo",
+      "rhythm_then_pickup",
+      "qix_area_capture",
+      "point_drag_progression",
+      "node_iframe_microgame"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "nodes/node1.html",
+        "sha256": "6b6eb6dcd70ca172ccdeed79fae27a26793f2cb8922ea7b2bd86b1fe6e9bc4e2"
+      },
+      {
+        "name": "iframe-node.js",
+        "sha256": "7635973e94e7bf5e2993ed3f439cd2541077ac9fb1cb3e5f088b9df3d9ce9af9"
+      },
+      {
+        "name": "index.html",
+        "sha256": "c0f9c7a5878d2fad8982d3327be6f6e0ac5b87e3d4443d683e35baa6e2b0afb0"
+      },
+      {
+        "name": "game.js",
+        "sha256": "e0b37630bbce8a0c2f7c5cd223877601e1f1708621dc944d5697dc834e3a55b7"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T15:54:42.162Z",
+  "sourceNote": "Checkout revision is the build base; actual bundle SHA-256 identifies uncommitted and concurrent source included in the tested payload.",
+  "validation": {
+    "unitTests": 9,
+    "typescript": "passed",
+    "mobileVisualInspection": "passed"
+  }
+}

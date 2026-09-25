@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
+import { createNodePayload } from "../../minigame_master/core/lib/contracts/NodeContracts.js";
 import SurvivorHordeAdapter, {
   SURVIVOR_HORDE_DEFAULT_CONFIG
 } from "../../minigame_master/core/lib/gameplay/survivor_horde/SurvivorHordeAdapter.js";
+
+assert.equal(createNodePayload({ nodeId: 0, id: 9, runSeed: 0 }).nodeId, 0);
+assert.equal(createNodePayload({ runSeed: 0 }).runSeed, 0);
+assert.equal(createNodePayload({ id: 0 }).nodeId, 0);
+assert.equal(createNodePayload({}).runSeed, null);
+assert.equal(createNodePayload({}).nodeId, "node_unknown");
 
 const payload = {
   nodeId: "node_1",
@@ -34,6 +41,7 @@ console.log(JSON.stringify({
   schemaVersion: "loreweaver.runtime-kernel-contract.v1",
   status: "passed",
   assertions: [
+    "payload preserves zero seed and zero node identity while defaulting absent values",
     "new run resets weapon damage",
     "new run resets nested enemy config",
     "module default remains unchanged"

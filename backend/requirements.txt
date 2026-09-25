@@ -3,3 +3,5 @@ uvicorn>=0.28.0
 sqlalchemy>=2.0.0
 pydantic>=2.0.0
 google-genai>=0.1.1
+# Sprite atlas generation backend (Apache-2.0), pinned for reproducible manifests.
+sprite-gen @ git+https://github.com/aldegad/sprite-gen.git@eb941234bf2d7e5ea9d5f2f180494932a109b9de ; python_version >= "3.11"

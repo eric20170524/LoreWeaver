@@ -12,7 +12,7 @@ import asyncio
 import json
 import os
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from .llm_client import generate_json, log_ollama_deferred_notice, resolve_provider
 
@@ -41,14 +41,14 @@ Propose prep notes for IP DNA, currency, realms, visual/audio style seeds.
 Do not rewrite node prose or gameplay cards.
 Output JSON only.""",
     "narrative": """You are the Narrative department (叙事组).
-Own: nodes[].title, intro, taunts, planning.notes.
-Propose prep notes for 12-node chronology and stakes. Do not change economy roots.
+Own: nodes[].title, intro, taunts, planning.notes for the nodes in scope.
+Propose prep notes for those nodes' chronology and stakes. Do not change economy roots.
 Output JSON only.""",
     "gameplay": """You are the Gameplay department (玩法组).
-Own: gameplay card assignment, nodes[].gameplay (cardId, modifiers, knobs).
+Own: gameplay card assignment, nodes[].gameplay (cardId, modifiers, knobs) for the nodes in scope.
 Prefer existing validated cards: survivor_horde, rhythm_timing, drag_collect_grid, turn_based_skill_battle,
 sequence_synthesis, side_scrolling_brawler, energy_balance, etc.
-Propose prep notes mapping nodes to cards/modifiers and L1 knobs only.
+Propose prep notes mapping only the in-scope nodes to cards/modifiers and L1 knobs.
 Output JSON only.""",
     "ability": """You are the Ability Runtime department (能力组).
 Own: abilityCatalog, passiveSkillCatalog, runtimeSkillIds, VFX/voice binding intent.
@@ -61,8 +61,8 @@ Output JSON only.""",
     "art": """You are the Art department (美术组).
 Own: asset-pipeline artAssets, imagegen atlas plans, RuntimeArtBinder semantic keys
 (player/enemy/projectile/pickup/env_bg_*/core_eye/escort_npc/portal_ring/wall_segment).
-Supported imagegen provider: Antigravity generate_image tool (ImageName, Prompt, spriteClips, atlas specifications).
-Propose prep notes for atlas coverage, Antigravity imagegen prompts, and node envKey mapping.
+Supported imagegen backends: Antigravity generate_image for standalone art and the sprite-gen bridge for multi-frame runtime sprite atlases (idle/walk/attack/hurt/death).
+Propose prep notes for atlas coverage, provider-appropriate generation prompts, semantic prefixes, and node envKey mapping.
 Output JSON only.""",
     "audio": """You are the Audio department (音频组).
 Own: audio cue catalog, BGM/SFX/voice channels, credits/provenance.
@@ -129,7 +129,7 @@ def _summarize_gdd(gdd: dict) -> dict:
 
 def collect_report_signals(reports_dir: str) -> dict:
     """Best-effort scores from capabilities/reports for QA department."""
-    signals = {"files": [], "scores": {}, "notes": []}
+    signals = {"files": [], "scores": {}, "notes": [], "provenance": []}
     if not os.path.isdir(reports_dir):
         signals["notes"].append("reports_dir_missing")
         return signals
@@ -159,6 +159,12 @@ def collect_report_signals(reports_dir: str) -> dict:
         except Exception:
             signals["notes"].append(f"unreadable:{name}")
             continue
+        identity = data.get("identity") if isinstance(data.get("identity"), dict) else {}
+        signals["provenance"].append({
+            "file": name,
+            "createdAt": data.get("createdAt") or data.get("generatedAt"),
+            "artifactSha256": identity.get("artifactSha256") or data.get("artifactSha256"),
+        })
         status = str(data.get("status") or data.get("result") or "").lower()
         # Prefer explicit numeric score when present (node_smoke, etc.)
         if isinstance(data.get("score"), (int, float)):
@@ -247,8 +253,19 @@ def _procedural_prep(dept: dict, gdd_summary: dict, upstream: dict, report_signa
         f"拥有产物：{', '.join(owns[:6]) or '（调度/状态）'}",
         f"上游依赖：{', '.join(deps) or '无'}",
     ]
+    if gdd_summary.get("scopeInstruction"):
+        lines.append(str(gdd_summary.get("scopeInstruction")))
+    if gdd_summary.get("brief"):
+        lines.append(f"本次约束：{gdd_summary.get('brief')}")
     if gdd_summary.get("title"):
-        lines.append(f"当前作品：{gdd_summary.get('title')}（{gdd_summary.get('nodeCount', 0)} 节点）")
+        scope = gdd_summary.get("scope") if isinstance(gdd_summary.get("scope"), dict) else {}
+        scoped_ids = scope.get("nodeIds") or []
+        scope_label = "主干" if scope.get("kind") == "trunk" else (
+            "关卡 " + ", ".join(str(n) for n in scoped_ids) if scoped_ids else "当前范围"
+        )
+        lines.append(
+            f"当前作品：{gdd_summary.get('title')}（{gdd_summary.get('nodeCount', 0)} 节点，本次 {scope_label}）"
+        )
     if did == "gameplay" and gdd_summary.get("nodeTitles"):
         lines.append("节点玩法映射建议：")
         for n in gdd_summary["nodeTitles"][:6]:
@@ -300,6 +317,10 @@ async def _llm_prep(
         system = DEPARTMENT_PROMPTS.get(did, DEPARTMENT_PROMPTS["director"])
         prompt = f"""{system}
 
+Scope:
+{gdd_summary.get("scopeInstruction") or "Stay inside this department's ownership."}
+{("本次约束：" + str(gdd_summary.get("brief"))) if gdd_summary.get("brief") else ""}
+
 Department metadata:
 {json.dumps({k: dept.get(k) for k in ('id','title','owns','dependsOn','defaultPatchLevels','pipelineSteps')}, ensure_ascii=False)}
 
@@ -325,7 +346,8 @@ Return ONLY JSON with this shape:
 
 Rules:
 - Stay inside your ownership. Do not claim L3 adapter rewrites.
-- prepNotes must be concrete for THIS project title and nodes.
+- prepNotes must be concrete for THIS project and the nodes listed in the scope.
+- Do not propose changes outside the scope instruction.
 - qaScore reflects readiness, not vanity (70-92 typical for draft).
 - Chinese preferred for prepNotes if project title is Chinese.
 """
@@ -479,30 +501,33 @@ def mark_downstream_stale(
     registry: dict,
     changed_dept_id: str,
     reason: str = "upstream_confirmed",
+    scope=None,
 ) -> List[str]:
-    """Mark all transitive downstream departments as stale (except director)."""
-    graph = build_downstream_map(registry)
-    seen = set()
-    stack = list(graph.get(changed_dept_id) or [])
-    stale_ids: List[str] = []
-    while stack:
-        did = stack.pop()
-        if did in seen or did == "director":
-            continue
-        seen.add(did)
-        dept = (state.get("departments") or {}).get(did)
-        if not dept:
-            continue
-        if dept.get("status") in ("confirmed", "ready_for_review", "drafting"):
-            dept["status"] = "stale"
-            dept["staleReason"] = f"{reason}:{changed_dept_id}"
-            dept["updatedAt"] = __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime())
-            state["departments"][did] = dept
-            stale_ids.append(did)
-        for nxt in graph.get(did) or []:
-            if nxt not in seen:
-                stack.append(nxt)
-    return stale_ids
+    """Mark transitive downstream rows stale inside the confirming scope.
+
+    Trunk confirmation also stales the same downstream ids on every node
+    bucket. A node confirmation stays on that node id. Labels look like
+    ``trunk:ability`` or ``node:3:gameplay``.
+    """
+    from .department_scope import Scope, mark_downstream_stale_scoped
+
+    if scope is None:
+        active = state.get("activeScope") if isinstance(state.get("activeScope"), dict) else {}
+        if active.get("kind") == "nodes" and active.get("nodeIds"):
+            scope = Scope("nodes", [int(active["nodeIds"][0])])
+        else:
+            scope = Scope("trunk")
+    elif not isinstance(scope, Scope):
+        scope = Scope(getattr(scope, "kind", "trunk"), list(getattr(scope, "node_ids", []) or []))
+    stamp = __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime())
+    return mark_downstream_stale_scoped(
+        state,
+        registry,
+        changed_dept_id,
+        scope,
+        reason=reason,
+        stamp=stamp,
+    )
 
 
 # Canonical production stages (registry stages subset used for advance buttons).
@@ -759,7 +784,10 @@ def evaluate_runtime_stage_gate(
 
     _append_soft_report_warnings(report_signals, warnings)
 
-    compliance = (state.get("departments") or {}).get("compliance") or {}
+    if state.get("schemaVersion") == "loreweaver.department-state.v2":
+        compliance = (((state.get("scopes") or {}).get("trunk") or {}).get("departments") or {}).get("compliance") or {}
+    else:
+        compliance = (state.get("departments") or {}).get("compliance") or {}
     if compliance.get("status") == "blocked":
         blockers.append("compliance:blocked")
 
@@ -780,12 +808,21 @@ def evaluate_runtime_stage_gate(
     }
 
 
+def _qa_record(state: dict) -> dict:
+    if state.get("schemaVersion") == "loreweaver.department-state.v2":
+        record = (((state.get("scopes") or {}).get("trunk") or {}).get("departments") or {}).get("qa")
+    else:
+        record = (state.get("departments") or {}).get("qa")
+    return record or {}
+
+
 def evaluate_advance_gate(
     state: dict,
     registry: dict,
     report_signals: Optional[dict] = None,
     min_qa: int = 70,
     require_node_smoke: bool = True,
+    gdd: Optional[dict] = None,
 ) -> dict:
     """
     Hard gate for production_prep → asset_confirm.
@@ -796,6 +833,8 @@ def evaluate_advance_gate(
       - gameplay: card/duration/goal contract failures
       - art/audio: soft warnings only
     """
+    from .department_scope import SCHEMA_V2, campaign_confirmation_blockers
+
     report_signals = report_signals or {}
     required = state.get("requiredDepartmentIds") or [
         d["id"] for d in registry.get("departments", []) if d["id"] != "director"
@@ -803,18 +842,23 @@ def evaluate_advance_gate(
     blockers: List[str] = []
     warnings: List[str] = []
 
-    for d_id in required:
-        dept = (state.get("departments") or {}).get(d_id) or {}
-        st = dept.get("status")
-        if st != "confirmed":
-            blockers.append(f"{d_id}:status={st or 'missing'}")
-        if st == "blocked":
-            blockers.append(f"{d_id}:blocked")
-        if st == "stale":
-            blockers.append(f"{d_id}:stale")
-
-    qa = (state.get("departments") or {}).get("qa") or {}
-    compliance = (state.get("departments") or {}).get("compliance") or {}
+    if state.get("schemaVersion") == SCHEMA_V2:
+        blockers.extend(campaign_confirmation_blockers(state, registry, gdd))
+        trunk = (((state.get("scopes") or {}).get("trunk") or {}).get("departments") or {})
+        qa = trunk.get("qa") or {}
+        compliance = trunk.get("compliance") or {}
+    else:
+        for d_id in required:
+            dept = (state.get("departments") or {}).get(d_id) or {}
+            st = dept.get("status")
+            if st != "confirmed":
+                blockers.append(f"{d_id}:status={st or 'missing'}")
+            if st == "blocked":
+                blockers.append(f"{d_id}:blocked")
+            if st == "stale":
+                blockers.append(f"{d_id}:stale")
+        qa = (state.get("departments") or {}).get("qa") or {}
+        compliance = (state.get("departments") or {}).get("compliance") or {}
     qa_score = qa.get("qaScore")
     if qa_score is None and report_signals.get("aggregate") is not None:
         qa_score = report_signals["aggregate"]
@@ -903,8 +947,7 @@ def evaluate_transition_gate(
         "stageId": current,
         "confirmedCount": state.get("confirmedCount"),
         "requiredCount": state.get("requiredCount"),
-        "qaScore": ((state.get("departments") or {}).get("qa") or {}).get("qaScore")
-        or report_signals.get("aggregate"),
+        "qaScore": _qa_record(state).get("qaScore") or report_signals.get("aggregate"),
         "nodeSmoke": report_signals.get("nodeSmoke"),
     }
 
@@ -933,7 +976,7 @@ def evaluate_transition_gate(
 
     # Immediate next: run specific gate
     if target == "asset_confirm":
-        gate = evaluate_advance_gate(state, registry, report_signals)
+        gate = evaluate_advance_gate(state, registry, report_signals, gdd=gdd)
         # open rejects hard-block only this transition
         if open_reject_ids:
             gate["blockers"] = _dedupe(
@@ -1016,7 +1059,7 @@ def evaluate_all_stage_gates(
             "warnings": [],
         }
 
-    qa_score = ((state.get("departments") or {}).get("qa") or {}).get("qaScore")
+    qa_score = _qa_record(state).get("qaScore")
     if qa_score is None:
         qa_score = report_signals.get("aggregate")
 
@@ -1032,6 +1075,7 @@ def evaluate_all_stage_gates(
         "confirmedCount": state.get("confirmedCount"),
         "requiredCount": state.get("requiredCount"),
         "qaScore": qa_score,
+        "reportProvenance": report_signals.get("provenance") or [],
         "openRejects": len(open_reject_ids or []),
         "nodeSmoke": report_signals.get("nodeSmoke"),
         "transitions": transitions,
@@ -1105,6 +1149,8 @@ def _path_allowed(dept_id: str, path: str) -> bool:
     if dept_id == "narrative":
         # only prose fields
         return bool(re.match(r"^nodes\[\d+\]\.(title|intro|taunts|planning\.notes)$", path))
+    if dept_id == "ability" and re.match(r"^nodes\[\d+\]\.planning\.runSkillPool$", path):
+        return True
     if dept_id == "gameplay":
         return bool(re.match(r"^nodes\[\d+\]\.gameplay(\.|$)", path)) or bool(
             re.match(r"^nodes\[\d+\]\.mechanics$", path)
@@ -1117,16 +1163,39 @@ def _path_allowed(dept_id: str, path: str) -> bool:
     return False
 
 
-def build_controlled_patches(dept_id: str, gdd: dict) -> List[dict]:
-    """Deterministic safe L1/L2 patches inside ownership."""
+def build_controlled_patches(
+    dept_id: str,
+    gdd: dict,
+    *,
+    job: Optional[str] = None,
+    node_indexes: Optional[Iterable[int]] = None,
+) -> List[dict]:
+    """Deterministic safe L1/L2 patches inside ownership and scope.
+
+    job=None keeps the historical whole-manifest fill. catalog writes root
+    fields only. binding writes the allowed node indexes only.
+    """
     patches: List[dict] = []
     nodes = gdd.get("nodes") or []
     if not isinstance(nodes, list):
         return patches
+    allowed = None if node_indexes is None else set(node_indexes)
+
+    def node_ok(index: int) -> bool:
+        if job is None:
+            return True
+        if job != "binding":
+            return False
+        if allowed is None:
+            return True
+        return index in allowed
+
+    def root_ok() -> bool:
+        return job in (None, "catalog")
 
     if dept_id == "gameplay":
         for i, node in enumerate(nodes):
-            if not isinstance(node, dict):
+            if not isinstance(node, dict) or not node_ok(i):
                 continue
             gp = node.get("gameplay") if isinstance(node.get("gameplay"), dict) else {}
             card = gp.get("cardId")
@@ -1257,10 +1326,10 @@ def build_controlled_patches(dept_id: str, gdd: dict) -> List[dict]:
                         "reason": "collectGoal mirror needAmount",
                     })
 
-    if dept_id == "art":
+    if dept_id == "art" and (job is None or job == "binding"):
         # side-channel: env keys suggested into gameplay knobs.envKey (L1)
         for i, node in enumerate(nodes):
-            if not isinstance(node, dict):
+            if not isinstance(node, dict) or not node_ok(i):
                 continue
             gp = node.get("gameplay") if isinstance(node.get("gameplay"), dict) else {}
             knobs = gp.get("knobs") if isinstance(gp.get("knobs"), dict) else {}
@@ -1281,9 +1350,9 @@ def build_controlled_patches(dept_id: str, gdd: dict) -> List[dict]:
                     "reason": "RuntimeArtBinder atlas-first",
                 })
 
-    if dept_id == "audio":
+    if dept_id == "audio" and (job is None or job == "binding"):
         for i, node in enumerate(nodes):
-            if not isinstance(node, dict):
+            if not isinstance(node, dict) or not node_ok(i):
                 continue
             gp = node.get("gameplay") if isinstance(node.get("gameplay"), dict) else {}
             knobs = gp.get("knobs") if isinstance(gp.get("knobs"), dict) else {}
@@ -1318,7 +1387,7 @@ def build_controlled_patches(dept_id: str, gdd: dict) -> List[dict]:
                     "reason": "boss BGM cue",
                 })
 
-    if dept_id == "world":
+    if dept_id == "world" and root_ok():
         if not gdd.get("themeColor"):
             patches.append({
                 "path": "themeColor",
@@ -1335,7 +1404,7 @@ def build_controlled_patches(dept_id: str, gdd: dict) -> List[dict]:
                 "reason": "default currency",
             })
 
-    if dept_id == "ability":
+    if dept_id == "ability" and root_ok():
         catalog = gdd.get("abilityCatalog")
         if not isinstance(catalog, list) or len(catalog) == 0:
             patches.append({
@@ -1353,10 +1422,23 @@ def build_controlled_patches(dept_id: str, gdd: dict) -> List[dict]:
                 "reason": "seed minimal ability catalog",
             })
 
-    if dept_id == "code":
+    if dept_id == "ability" and job == "binding":
+        for i, node in enumerate(nodes):
+            if not isinstance(node, dict) or not node_ok(i):
+                continue
+            planning = node.get("planning") if isinstance(node.get("planning"), dict) else {}
+            if planning.get("runSkillPool") is None:
+                patches.append({
+                    "path": f"nodes[{i}].planning.runSkillPool",
+                    "value": [],
+                    "level": "L1",
+                    "reason": "init in-scope runSkillPool; do not invent skill ids",
+                })
+
+    if dept_id == "code" and (job is None or job == "binding"):
         # Ensure each node has a resolvable phaser card + retreat contract for GameRunner
         for i, node in enumerate(nodes):
-            if not isinstance(node, dict):
+            if not isinstance(node, dict) or not node_ok(i):
                 continue
             gp = node.get("gameplay") if isinstance(node.get("gameplay"), dict) else {}
             knobs = gp.get("knobs") if isinstance(gp.get("knobs"), dict) else {}
@@ -1379,13 +1461,24 @@ def build_controlled_patches(dept_id: str, gdd: dict) -> List[dict]:
     return patches
 
 
-def apply_controlled_patches(gdd: dict, dept_id: str, patches: List[dict]) -> Tuple[dict, List[dict]]:
+def apply_controlled_patches(
+    gdd: dict,
+    dept_id: str,
+    patches: List[dict],
+    *,
+    job: Optional[str] = None,
+    node_indexes: Optional[Iterable[int]] = None,
+) -> Tuple[dict, List[dict]]:
     """Apply allowlisted patches; return (gdd, applied_list)."""
+    from .department_scope import path_allowed_for_job
+
     applied = []
     if not isinstance(gdd, dict):
         return gdd, applied
     # Always include deterministic patches first
-    all_patches = list(patches or []) + build_controlled_patches(dept_id, gdd)
+    all_patches = list(patches or []) + build_controlled_patches(
+        dept_id, gdd, job=job, node_indexes=node_indexes
+    )
     # de-dupe by path keeping last
     by_path = {}
     for p in all_patches:
@@ -1394,6 +1487,8 @@ def apply_controlled_patches(gdd: dict, dept_id: str, patches: List[dict]) -> Tu
     for path, p in by_path.items():
         level = str(p.get("level") or "L1")
         if level not in ("L0", "L1", "L2"):
+            continue
+        if job is not None and not path_allowed_for_job(path, job, node_indexes):
             continue
         if not _path_allowed(dept_id, path):
             # art/audio side-channel knobs live under nodes[].gameplay.knobs
@@ -1433,26 +1528,247 @@ async def run_department_prep(
     gdd: dict,
     upstream_states: Dict[str, dict],
     report_signals: Optional[dict] = None,
+    *,
+    scope=None,
+    job: Optional[str] = None,
+    brief: str = "",
+    node_index_map: Optional[Dict[int, int]] = None,
 ) -> dict:
+    from .department_scope import Scope, experimental_card_risks, split_patches, summarize_gdd
+
     report_signals = report_signals or {}
-    gdd_summary = _summarize_gdd(gdd or {})
-    # Only pass upstream prep slices
-    upstream = {}
-    for dep_id in dept.get("dependsOn") or []:
-        if dep_id in upstream_states:
-            u = upstream_states[dep_id]
-            upstream[dep_id] = {
-                "status": u.get("status"),
-                "version": u.get("version"),
-                "qaScore": u.get("qaScore"),
-                "prepNotes": (u.get("prepNotes") or "")[:800],
-            }
+    if scope is None:
+        gdd_summary = _summarize_gdd(gdd or {})
+        upstream = {}
+        for dep_id in dept.get("dependsOn") or []:
+            if dep_id in upstream_states:
+                u = upstream_states[dep_id]
+                upstream[dep_id] = {
+                    "status": u.get("status"),
+                    "version": u.get("version"),
+                    "qaScore": u.get("qaScore"),
+                    "prepNotes": (u.get("prepNotes") or "")[:800],
+                }
+        patch_job = None
+        indexes = None
+    else:
+        if not isinstance(scope, Scope):
+            scope = Scope(scope.kind, list(getattr(scope, "node_ids", []) or []))
+        gdd_summary = summarize_gdd(gdd or {}, scope, brief=brief, job=job or "")
+        upstream = upstream_states or {}
+        patch_job = job
+        indexes = set((node_index_map or {}).values()) if node_index_map is not None else set()
     result = await _llm_prep(dept, gdd or {}, gdd_summary, upstream, report_signals)
-    # Always attach deterministic controlled patches for ownership
-    det = build_controlled_patches(dept["id"], gdd or {})
+    det = build_controlled_patches(dept["id"], gdd or {}, job=patch_job, node_indexes=indexes)
     extra = result.get("patches") if isinstance(result.get("patches"), list) else []
-    result["patches"] = det + [p for p in extra if isinstance(p, dict)]
+    extra = [p for p in extra if isinstance(p, dict)]
+    if patch_job is None:
+        kept_extra, rejected = extra, []
+    else:
+        kept_extra, rejected = split_patches(extra, patch_job, indexes)
+    result["patches"] = det + kept_extra
+    result["rejectedPatches"] = rejected
+    if dept.get("id") == "gameplay" and patch_job == "binding":
+        risks = list(result.get("risks") or [])
+        risks.extend(experimental_card_risks(gdd or {}, indexes, catalog_resolve_card_id))
+        result["risks"] = risks
     return result
+
+
+async def _run_one_scope(
+    registry: dict,
+    state: dict,
+    working_gdd: dict,
+    report_signals: dict,
+    scope,
+    *,
+    force: bool,
+    only_set: Optional[set],
+    apply_patches: bool,
+    brief: str,
+    write_director: bool,
+) -> Tuple[dict, List[dict], List[dict], dict, List[dict]]:
+    """Prep the departments that are legal for one trunk or one node."""
+    from .department_scope import (
+        ScopeError,
+        collect_upstream,
+        get_runtime,
+        job_for,
+        put_runtime,
+        resolve_node_indexes,
+        scope_unit_id,
+    )
+
+    ordered = topological_departments(registry.get("departments") or [])
+    run_log: List[dict] = []
+    suggested_handoffs: List[dict] = []
+    all_applied: List[dict] = []
+    index_map: Dict[int, int] = {}
+    if scope.kind == "nodes":
+        index_map = resolve_node_indexes(working_gdd, scope.node_ids)
+    node_id = scope.node_ids[0] if scope.node_ids else None
+    stamp = __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime())
+    run_content = only_set is None or any(did != "director" for did in only_set)
+
+    if run_content:
+        for dept in ordered:
+            did = dept["id"]
+            if did == "director":
+                continue
+            if only_set is not None and did not in only_set:
+                continue
+            try:
+                job = job_for(did, scope, registry)
+            except ScopeError as exc:
+                run_log.append({
+                    "id": did,
+                    "skipped": True,
+                    "reason": exc.code,
+                    "scopeKind": scope.kind,
+                    "nodeId": node_id,
+                })
+                continue
+            if job == "summary":
+                continue
+            current = get_runtime(state, scope, did) or {"id": did, "status": "idle"}
+            if current.get("status") == "confirmed" and not force:
+                run_log.append({
+                    "id": did,
+                    "skipped": True,
+                    "reason": "already_confirmed",
+                    "scopeKind": scope.kind,
+                    "nodeId": node_id,
+                })
+                continue
+
+            upstream = collect_upstream(state, dept.get("dependsOn") or [], scope)
+            missing = []
+            for dep_id in dept.get("dependsOn") or []:
+                up = upstream.get(dep_id) or {}
+                if up.get("status") not in ("ready_for_review", "confirmed", "drafting"):
+                    missing.append(dep_id)
+
+            dept_brief = brief if (only_set is None or did in only_set) else ""
+            result = await run_department_prep(
+                dept,
+                working_gdd,
+                upstream,
+                report_signals,
+                scope=scope,
+                job=job,
+                brief=dept_brief,
+                node_index_map=index_map,
+            )
+            notes = str(result.get("prepNotes") or "")
+            if missing:
+                notes += f"\n\n⚠ 上游尚未就绪：{', '.join(missing)}（草案仍生成，确认前请先确认上游）。"
+            if result.get("risks"):
+                notes += "\n\n风险：\n" + "\n".join(f"- {r}" for r in result["risks"][:8])
+
+            rejected = result.get("rejectedPatches") or []
+            applied: List[dict] = []
+            if rejected:
+                notes += "\n\n范围外 patch 已拒绝，本次不写 manifest。\n" + "\n".join(
+                    f"- {p.get('path')}" for p in rejected[:8]
+                )
+            elif apply_patches:
+                working_gdd, applied = apply_controlled_patches(
+                    working_gdd,
+                    did,
+                    result.get("patches") or [],
+                    job=job,
+                    node_indexes=set(index_map.values()) if scope.kind == "nodes" else set(),
+                )
+                if applied:
+                    notes += "\n\n【已应用受控 patch】\n" + "\n".join(
+                        f"- {p['path']} = {json.dumps(p['value'], ensure_ascii=False)} ({p['level']})"
+                        for p in applied[:12]
+                    )
+                    all_applied.extend(applied)
+
+            current["prepNotes"] = notes
+            current["qaScore"] = int(result.get("qaScore") or 78)
+            current["status"] = "ready_for_review"
+            current["source"] = result.get("source")
+            current["provider"] = result.get("provider")
+            if dept_brief:
+                current["brief"] = dept_brief
+            current.setdefault("brief", "")
+            current["artifacts"] = result.get("focusArtifacts") or dept.get("owns") or []
+            current["lastPatches"] = applied
+            current["updatedAt"] = stamp
+            current.pop("staleReason", None)
+            put_runtime(state, scope, registry, did, current)
+
+            for ho in result.get("suggestedHandoffs") or []:
+                if not isinstance(ho, dict) or not ho.get("to") or not ho.get("summary"):
+                    continue
+                suggested_handoffs.append({
+                    "from": did,
+                    "to": ho["to"],
+                    "type": ho.get("type") or "request",
+                    "summary": ho["summary"],
+                    "needs": ho.get("acceptanceCriteria") or ho.get("needs") or [ho["summary"]],
+                    "payloadRef": ho.get("payloadRef") or "",
+                    "source": "auto_prep",
+                    "unitId": scope_unit_id(scope),
+                })
+            run_log.append({
+                "id": did,
+                "skipped": False,
+                "source": result.get("source"),
+                "qaScore": current["qaScore"],
+                "missingUpstream": missing,
+                "risks": result.get("risks") or [],
+                "patchesApplied": len(applied),
+                "rejected": [p.get("path") for p in rejected],
+                "scopeKind": scope.kind,
+                "nodeId": node_id,
+            })
+
+    if write_director:
+        director = get_runtime(state, scope, "director") or {"id": "director", "status": "idle"}
+        if director.get("status") == "confirmed" and not force:
+            run_log.append({
+                "id": "director",
+                "skipped": True,
+                "reason": "already_confirmed",
+                "scopeKind": scope.kind,
+                "nodeId": node_id,
+                "patchesApplied": 0,
+            })
+        else:
+            done = [x for x in run_log if not x.get("skipped")]
+            where = "主干" if scope.kind == "trunk" else f"关卡 {node_id}"
+            dir_notes = [
+                f"【导演组汇总 · {where}】",
+                f"本范围生成草案部门：{len(done)}。",
+                f"Reports 聚合分：{report_signals.get('aggregate')}",
+                f"受控 patch 合计：{len(all_applied)}",
+                "确认策略：各部门须人工确认；禁止自动 confirmed。",
+            ]
+            for entry in done[:8]:
+                dir_notes.append(
+                    f"- {entry['id']}: qa={entry.get('qaScore')} source={entry.get('source')} patches={entry.get('patchesApplied', 0)}"
+                )
+            director["prepNotes"] = "\n".join(dir_notes)
+            director["qaScore"] = report_signals.get("aggregate") or 80
+            director["status"] = "ready_for_review"
+            director["source"] = "orchestrator"
+            director["updatedAt"] = stamp
+            director.pop("staleReason", None)
+            put_runtime(state, scope, registry, "director", director)
+            run_log.append({
+                "id": "director",
+                "skipped": False,
+                "source": "orchestrator",
+                "qaScore": director["qaScore"],
+                "patchesApplied": 0,
+                "scopeKind": scope.kind,
+                "nodeId": node_id,
+            })
+
+    return state, run_log, suggested_handoffs, working_gdd, all_applied
 
 
 async def run_auto_prep_pipeline(
@@ -1463,118 +1779,56 @@ async def run_auto_prep_pipeline(
     force: bool = False,
     only: Optional[List[str]] = None,
     apply_patches: bool = True,
+    scope=None,
+    brief: str = "",
 ) -> Tuple[dict, List[dict], List[dict], dict, List[dict]]:
     """
     Returns (new_state, run_log, suggested_handoffs, gdd, all_applied_patches).
+
+    scope=None or kind=all walks trunk, then each node id. A nodes scope with
+    several ids runs one node at a time. Director is written only when this
+    call is a full scope prep or an explicit director run.
     """
-    departments = registry.get("departments") or []
-    ordered = topological_departments(departments)
-    report_signals = collect_report_signals(reports_dir)
-    run_log: List[dict] = []
-    suggested_handoffs: List[dict] = []
-    all_applied: List[dict] = []
+    from .department_scope import Scope, node_ids_of, normalize_department_state, parse_scope
+
+    state = normalize_department_state(state, registry)
+    if isinstance(scope, Scope):
+        parsed = scope
+    elif isinstance(scope, dict) or scope is None:
+        parsed = parse_scope(scope, gdd or {}, allow_all=True) if scope is not None else Scope("all", node_ids_of(gdd or {}))
+    else:
+        parsed = Scope("all", node_ids_of(gdd or {}))
+
+    if parsed.kind == "all":
+        targets = [Scope("trunk")] + [Scope("nodes", [nid]) for nid in parsed.node_ids]
+    elif parsed.kind == "nodes" and len(parsed.node_ids) > 1:
+        targets = [Scope("nodes", [nid]) for nid in parsed.node_ids]
+    else:
+        targets = [parsed]
+
     only_set = set(only) if only else None
-    working_gdd = json.loads(json.dumps(gdd or {}))  # deep copy
-
-    for dept in ordered:
-        did = dept["id"]
-        if only_set is not None and did not in only_set:
+    write_director = only_set is None or "director" in only_set
+    report_signals = collect_report_signals(reports_dir)
+    working_gdd = json.loads(json.dumps(gdd or {}))
+    run_log: List[dict] = []
+    suggested: List[dict] = []
+    applied_all: List[dict] = []
+    for target in targets:
+        if target.kind == "nodes" and not target.node_ids:
             continue
-        if did == "director":
-            continue
-        current = (state.get("departments") or {}).get(did) or {"id": did}
-        if current.get("status") == "confirmed" and not force:
-            run_log.append({"id": did, "skipped": True, "reason": "already_confirmed"})
-            continue
-
-        # Block if required upstream not ready (unless force)
-        missing = []
-        for dep_id in dept.get("dependsOn") or []:
-            up = (state.get("departments") or {}).get(dep_id) or {}
-            if up.get("status") not in ("ready_for_review", "confirmed", "drafting") and dep_id != "director":
-                if not force and up.get("status") not in ("ready_for_review", "confirmed"):
-                    missing.append(dep_id)
-
-        result = await run_department_prep(dept, working_gdd, state.get("departments") or {}, report_signals)
-        notes = str(result.get("prepNotes") or "")
-        if missing:
-            notes = notes + f"\n\n⚠ 上游尚未就绪：{', '.join(missing)}（草案仍生成，确认前请先确认上游）。"
-
-        applied: List[dict] = []
-        if apply_patches:
-            working_gdd, applied = apply_controlled_patches(
-                working_gdd, did, result.get("patches") or []
-            )
-            all_applied.extend(applied)
-            if applied:
-                notes = notes + "\n\n【已应用受控 patch】\n" + "\n".join(
-                    f"- {p['path']} = {json.dumps(p['value'], ensure_ascii=False)} ({p['level']})"
-                    for p in applied[:12]
-                )
-
-        current["prepNotes"] = notes
-        current["qaScore"] = int(result.get("qaScore") or 78)
-        current["status"] = "ready_for_review"
-        current["source"] = result.get("source")
-        current["provider"] = result.get("provider")
-        current["artifacts"] = result.get("focusArtifacts") or dept.get("owns") or []
-        current["lastPatches"] = applied
-        current["updatedAt"] = __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime())
-        # clearing stale flag when re-prepped
-        current.pop("staleReason", None)
-        state.setdefault("departments", {})[did] = current
-
-        for ho in result.get("suggestedHandoffs") or []:
-            if not isinstance(ho, dict) or not ho.get("to") or not ho.get("summary"):
-                continue
-            suggested_handoffs.append({
-                "from": did,
-                "to": ho["to"],
-                "type": ho.get("type") or "request",
-                "summary": ho["summary"],
-                "source": "auto_prep",
-            })
-
-        run_log.append({
-            "id": did,
-            "skipped": False,
-            "source": result.get("source"),
-            "qaScore": current["qaScore"],
-            "missingUpstream": missing,
-            "risks": result.get("risks") or [],
-            "patchesApplied": len(applied),
-        })
-
-    # Director summary last
-    done = [x for x in run_log if not x.get("skipped")]
-    gate = evaluate_advance_gate(state, registry, report_signals)
-    dir_notes = [
-        "【导演组汇总】",
-        f"拓扑调度完成，生成草案部门：{len(done)}。",
-        f"Reports 聚合分：{report_signals.get('aggregate')}",
-        f"受控 patch 合计：{len(all_applied)}",
-        "确认策略：各部门须人工确认；禁止自动 confirmed。",
-        "建议确认顺序（拓扑）：" + " → ".join(d["id"] for d in ordered if d["id"] != "director"),
-        f"资产确认门禁：{'可通过' if gate['allowed'] else '未通过'} · blockers={len(gate['blockers'])}",
-    ]
-    for entry in done[:8]:
-        dir_notes.append(
-            f"- {entry['id']}: qa={entry.get('qaScore')} source={entry.get('source')} patches={entry.get('patchesApplied', 0)}"
+        state, one_log, one_ho, working_gdd, one_applied = await _run_one_scope(
+            registry,
+            state,
+            working_gdd,
+            report_signals,
+            target,
+            force=force,
+            only_set=only_set,
+            apply_patches=apply_patches,
+            brief=brief,
+            write_director=write_director,
         )
-    if len(done) > 8:
-        dir_notes.append(f"…共 {len(done)} 项")
-    director = (state.get("departments") or {}).get("director") or {"id": "director"}
-    director["prepNotes"] = "\n".join(dir_notes)
-    director["qaScore"] = report_signals.get("aggregate") or 80
-    director["status"] = "ready_for_review"
-    director["updatedAt"] = __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime())
-    state.setdefault("departments", {})["director"] = director
-    run_log.append({
-        "id": "director",
-        "skipped": False,
-        "source": "orchestrator",
-        "qaScore": director["qaScore"],
-        "patchesApplied": 0,
-    })
-
-    return state, run_log, suggested_handoffs, working_gdd, all_applied
+        run_log.extend(one_log)
+        suggested.extend(one_ho)
+        applied_all.extend(one_applied)
+    return state, run_log, suggested, working_gdd, applied_all

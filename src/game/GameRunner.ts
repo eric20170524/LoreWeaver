@@ -3,6 +3,7 @@ import { GameSpec, PlayerState, NodeSpec, GameplayModifierSpec, NodeResult } fro
 import { synth } from "../utils/AudioSynth";
 import AudioAssetResolver from "../../minigame_master/core/lib/audio/AudioAssetResolver.js";
 import { RewardApplier } from "../utils/RewardApplier";
+import { mapIframeRewards } from "../utils/iframeRewards";
 import {
   SurvivorHordeAdapter,
   createSurvivorHordeModifier,
@@ -42,6 +43,7 @@ import { UIPlugin, UIPluginContext } from "./ui/UIPlugin";
 import { GAMEPLAY_CARD_OPTIONS } from "../utils/gameplayManifest";
 import { DefaultUIPlugin } from "./ui/DefaultUIPlugin";
 import { CultivationUIPlugin } from "./ui/CultivationUIPlugin";
+import { foldOwnedAbilityEffectsIntoKnobs, foldPassiveEffectsIntoKnobs, resolveNodeCombatStats } from "./ui/cultivationModel";
 
 const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
   hazard_telegraph: {
@@ -60,52 +62,10 @@ const SURVIVOR_MODIFIER_DEFAULT_KNOBS: Record<string, Record<string, any>> = {
   }
 };
 
-type RunSkillState = {
-  id: string;
-  label: string;
-  level: number;
-};
-
-type FirstNodeGrowthEvent = {
-  type: "collection" | "skill_level" | "skill_unlock";
-  milestone?: string;
-  amount?: number;
-  score?: number;
-  skillId?: string;
-  level?: number;
-  before?: Record<string, number | null>;
-  after?: Record<string, number | null>;
-  atMs: number;
-};
-
-type FirstNodeGrowthState = {
-  enabled: boolean;
-  collectionSource: string;
-  growthTrigger: string;
-  runtimeMutation: string;
-  playerFeedback: string;
-  combatImpact: string;
-  triggerThreshold: number;
-  collectedEssence: number;
-  lastObservedScore: number;
-  activeSkills: RunSkillState[];
-  mutationStats: {
-    weaponDamage: number;
-    playerHp: number | null;
-  };
-  combatStats: {
-    bulletDamageBefore: number;
-    bulletDamageAfter: number;
-    healedHp: number;
-    unlockedAoE: boolean;
-  };
-  lastFeedback: string;
-  events: FirstNodeGrowthEvent[];
-};
-
 type ImageGenAssetPaths = {
   manifestPath: string;
   atlasPath: string;
+  environmentAtlasPath?: string;
   provenancePath: string;
   sourceImagePath: string;
   transparentSourceImagePath: string;
@@ -114,6 +74,7 @@ type ImageGenAssetPaths = {
 
 type PhaserGameOptions = {
   workspaceId?: string | null;
+  hostKind?: "ide" | "standalone" | "test";
 };
 
 function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths | null {
@@ -121,6 +82,7 @@ function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths 
     return {
       manifestPath: "assets/imagegen/manifest.json",
       atlasPath: "assets/imagegen/atlas.png",
+      environmentAtlasPath: "assets/imagegen/environment-atlas.png",
       provenancePath: "assets/imagegen/provenance.json",
       sourceImagePath: "assets/imagegen/source/generated-sprite-atlas-20260628.png",
       transparentSourceImagePath: "assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png",
@@ -133,11 +95,32 @@ function getImageGenAssetPaths(workspaceId?: string | null): ImageGenAssetPaths 
   return {
     manifestPath: `${workspacePrefix}/assets/imagegen/manifest.json`,
     atlasPath: `${workspacePrefix}/assets/imagegen/atlas.png`,
+    environmentAtlasPath: `${workspacePrefix}/assets/imagegen/environment-atlas.png`,
     provenancePath: `${workspacePrefix}/assets/imagegen/provenance.json`,
     sourceImagePath: `${workspacePrefix}/assets/imagegen/source/generated-sprite-atlas-20260628.png`,
     transparentSourceImagePath: `${workspacePrefix}/assets/imagegen/source/generated-sprite-atlas-20260628-transparent.png`,
     mode: "workspace_live"
   };
+}
+
+function getAudioAssetUrl(assetPath: string | undefined, workspaceId?: string | null): string | null {
+  if (!assetPath || !/^assets\/audio\/[a-zA-Z0-9/_-]+\.mp3$/.test(assetPath)) return null;
+  if (typeof window !== "undefined" && Boolean((window as any).__LOREWEAVER_EMBEDDED_SPEC__)) {
+    return `./${assetPath}`;
+  }
+  return workspaceId
+    ? `/api/workspaces/${encodeURIComponent(workspaceId)}/asset-files/${assetPath}`
+    : null;
+}
+
+function getLandscapeAssetUrl(assetPath: string | undefined, workspaceId?: string | null): string | null {
+  if (!assetPath || !/^assets\/imagegen\/landscape\/[a-zA-Z0-9_-]+\.png$/.test(assetPath)) return null;
+  if (typeof window !== "undefined" && Boolean((window as any).__LOREWEAVER_EMBEDDED_SPEC__)) {
+    return `./${assetPath}`;
+  }
+  return workspaceId
+    ? `/api/workspaces/${encodeURIComponent(workspaceId)}/asset-files/${assetPath}`
+    : null;
 }
 
 
@@ -172,6 +155,15 @@ export function initializePhaserGame(
 
     preload() {
       runtimeArtBinder.preload(this, imageGenAssetPaths);
+      for (const node of spec.nodes || []) {
+        if (node.gameplay?.cardId !== "side_scrolling_brawler") continue;
+        const backgrounds = (node.gameplay?.knobs as any)?.landscapeBackgrounds;
+        if (!Array.isArray(backgrounds)) continue;
+        backgrounds.forEach((assetPath: string, index: number) => {
+          const url = getLandscapeAssetUrl(assetPath, options.workspaceId);
+          if (url) this.load.image(`lw_landscape_bg_${node.id}_${index}`, url);
+        });
+      }
       this.load.on("loaderror", (file: any) => {
         if (typeof window !== "undefined") {
           const prev = (window as any).__LOREWEAVER_ART_PIPELINE__ || {};
@@ -244,9 +236,9 @@ export function initializePhaserGame(
       const titleText = this.add.text(width / 2, height / 2 - 220, String(bootKnobs.loadingLabel || "LORE WEAVER"), {
         fontFamily: "Inter, sans-serif",
         fontSize: "28px",
-        fontWeight: "bold",
+        fontStyle: "bold",
         color: spec.themeColor,
-        letterSpacing: "4"
+        letterSpacing: 4
       } as any).setOrigin(0.5);
 
       const subtitleText = this.add.text(width / 2, height / 2 + 190, String(
@@ -405,9 +397,15 @@ export function initializePhaserGame(
           const mechLabels: { [key: string]: string } = {
             tap_reaction: "⚡ 快速聚灵 (TAP)",
             collect_dodge: "🍃 虚空飞渡 (DODGE)",
-            memory_sequence: "🔮 心魂律动 (MEMORY)"
+            memory_sequence: "🔮 心魂律动 (MEMORY)",
+            survivor_horde: "割草守线",
+            dodge_counter_boss: "闪避反击",
+            side_scrolling_brawler: "横版清场",
+            shooter_duel: "远程对决",
+            rhythm_timing: "节奏参悟"
           };
-          const rawMech = mechLabels[node.mechanics] || node.mechanics.toUpperCase();
+          const cardId = node.gameplay?.cardId || node.mechanics;
+          const rawMech = mechLabels[cardId] || mechLabels[node.mechanics] || String(cardId || node.mechanics || "").slice(0, 12);
           const tag = this.add.text(42, dy + 82, `玩法: ${rawMech}`, {
             fontFamily: "JetBrains Mono, monospace",
             fontSize: "15px",
@@ -471,6 +469,19 @@ export function initializePhaserGame(
     };
 
     private saveStateToStore() {
+      const latest = this.game.registry.get("playerState") as PlayerState | undefined;
+      if (latest && latest !== this.state) {
+        const union = (left?: string[] | number[], right?: string[] | number[]) => (
+          [...new Set([...(left || []), ...(right || [])])]
+        );
+        this.state.completedNodeIds = union(this.state.completedNodeIds, latest.completedNodeIds) as number[];
+        this.state.unlockedNodeIds = union(this.state.unlockedNodeIds, latest.unlockedNodeIds) as number[];
+        this.state.unlockedAbilities = union(this.state.unlockedAbilities, latest.unlockedAbilities) as string[];
+        this.state.unlockedPassives = union(this.state.unlockedPassives, latest.unlockedPassives) as string[];
+        if ((latest.activeMultiplier || 0) > (this.state.activeMultiplier || 0)) {
+          this.state.activeMultiplier = latest.activeMultiplier;
+        }
+      }
       this.game.registry.set("playerState", this.state);
       onSaveState(this.state);
     }
@@ -497,12 +508,11 @@ export function initializePhaserGame(
     
     private adapter: any = null;
     private testHooks: any = null;
-    private runGrowthState: FirstNodeGrowthState | null = null;
-    private growthHUD: Phaser.GameObjects.Text | null = null;
     private activeIframe: HTMLIFrameElement | null = null;
     private iframeListener: ((ev: MessageEvent) => void) | null = null;
     private iframeContainer: any = null;
     private audioResolver: any = null;
+    private savedGameSize: { width: number; height: number } | null = null;
 
     // Tap Reaction lists
     private spawnTimer!: Phaser.Time.TimerEvent;
@@ -526,6 +536,7 @@ export function initializePhaserGame(
     }
 
     init(data: { node: NodeSpec }) {
+      if (this.scene.isActive("MainScene")) this.scene.stop("MainScene");
       (this as any)._didRetreat = false;
       (this as any)._retreatBtn = null;
       this.node = data.node;
@@ -534,8 +545,6 @@ export function initializePhaserGame(
       this.livesCount = 3;
       this.adapter = null;
       this.testHooks = null;
-      this.runGrowthState = null;
-      this.growthHUD = null;
 
       if (this.node.gameplay) {
         this.testHooks = new TestHooks("__LOREWEAVER_TEST_HOOKS__");
@@ -587,27 +596,9 @@ export function initializePhaserGame(
                 environments: ["bg_default"]
               },
               {
-                enemyIdMap: {
-                  mob: "wild_rhino",
-                  elite: "green_scaled_eagle",
-                  boss: "qiongqi_cub"
-                },
-                envKeyMap: { bg_default: "lw_art_env_bg_desert" },
-                semanticAssetMapping: {
-                  player: {
-                    idle: "lw_runtime_player_idle",
-                    walk: "lw_runtime_player_walk",
-                    attack: "lw_runtime_player_attack",
-                    hurt: "lw_runtime_player_hurt",
-                    death: "lw_runtime_player_death"
-                  },
-                  enemy: {
-                    mob: "lw_enemy_wild_rhino",
-                    elite: "lw_enemy_green_scaled_eagle",
-                    boss: "lw_enemy_qiongqi_cub"
-                  },
-                  environment: { bg_default: "lw_art_env_bg_desert" }
-                }
+                enemyIdMap: mergedRaw.enemyIdMap || {},
+                envKeyMap: mergedRaw.envKeyMap || {},
+                semanticAssetMapping: mergedRaw.semanticAssetMapping || {}
               }
             );
           } catch (artErr: any) {
@@ -629,6 +620,10 @@ export function initializePhaserGame(
           gameplay: { cardId }
         });
 
+        const knobHp = Number(
+          (mergedKnobs as any).player?.hp ?? mergedRaw.player?.hp ?? mergedRaw.playerHp ?? 100
+        );
+        const combatStats = resolveNodeCombatStats(pState, spec.passiveSkillCatalog || [], { hp: knobHp, stanceKnobs: {} }, abilityCatalog);
         const payload = createNodePayload({
           id: this.node.id,
           nodeId: `node_${this.node.id}`,
@@ -651,7 +646,7 @@ export function initializePhaserGame(
             }
           },
           playerStats: {
-            hp: pState.hp || 100
+            hp: combatStats.hp
           },
           playerPerks: [
             ...planning.mainlineHooks,
@@ -660,6 +655,7 @@ export function initializePhaserGame(
           inventory: {
             abilities: abilityCatalog,
             unlockedAbilities,
+            unlockedPassives: Array.isArray(pState.unlockedPassives) ? pState.unlockedPassives : [],
             runSkillPool: planning.runSkillPool
           }
         });
@@ -671,12 +667,29 @@ export function initializePhaserGame(
           const modifiersList = (this.node.gameplay?.modifiers || []).flatMap((modSpec: GameplayModifierSpec) => {
             try {
               const defaultKnobs = SURVIVOR_MODIFIER_DEFAULT_KNOBS[modSpec.id] || {};
+              const baseKnobs = {
+                ...defaultKnobs,
+                ...(modSpec.knobs || {})
+              };
+              const knobs = modSpec.id === "weapon_stance_cycle"
+                ? resolveNodeCombatStats(pState, spec.passiveSkillCatalog || [], {
+                    hp: knobHp,
+                    stanceKnobs: baseKnobs
+                  }, abilityCatalog).stanceKnobs
+                : foldOwnedAbilityEffectsIntoKnobs(
+                  modSpec.id,
+                  foldPassiveEffectsIntoKnobs(
+                    modSpec.id,
+                    baseKnobs,
+                    pState,
+                    spec.passiveSkillCatalog || []
+                  ),
+                  pState,
+                  abilityCatalog
+                );
               return [createSurvivorHordeModifier({
                 id: modSpec.id,
-                knobs: {
-                  ...defaultKnobs,
-                  ...(modSpec.knobs || {})
-                }
+                knobs
               })];
             } catch (error) {
               onLog(`⚠️ 跳过暂不支持的 survivor_horde modifier: ${modSpec.id}`);
@@ -687,6 +700,9 @@ export function initializePhaserGame(
           this.adapter = new SurvivorHordeAdapter({
             testHooks: this.testHooks,
             modifiers: modifiersList,
+            onRuntimeEvent: (event: any) => {
+              this.handleSurvivorRuntimeEvent(event);
+            },
             onPresentationEvent: (event: any) => {
               this.handleSurvivorPresentationEvent(event);
             },
@@ -751,6 +767,7 @@ export function initializePhaserGame(
             Phaser,
             testHooks: this.testHooks,
             modifiers: modifiersList,
+            onAudioCue: (cueId: string) => this.audioResolver?.playSfx(cueId),
             onEnd: (result: any) => {
               this.handleAdapterEnd(result);
             }
@@ -809,6 +826,7 @@ export function initializePhaserGame(
           this.adapter = new ShooterDuelAdapter({
             Phaser,
             testHooks: this.testHooks,
+            onAudioCue: (cueId: string) => this.audioResolver?.playSfx(cueId),
             onEnd: (result: any) => this.handleAdapterEnd(result)
           });
         } else if (cardId === "drag_to_core") {
@@ -822,6 +840,8 @@ export function initializePhaserGame(
           this.adapter = new DodgeCounterBossAdapter({
             Phaser,
             testHooks: this.testHooks,
+            runtimeArt,
+            onAudioCue: (cueId: string) => this.audioResolver?.playSfx(cueId),
             onEnd: (result: any) => this.handleAdapterEnd(result),
             spawnParticles: (x: number, y: number, color: number) => this.spawnParticleExplosion(x, y, color)
           });
@@ -867,23 +887,67 @@ export function initializePhaserGame(
 
         if (this.adapter) {
           this.adapter.init(payload);
-          this.setupFirstNodeGrowthLoop(cardId);
         }
       }
     }
 
     create() {
+      if (this.node.gameplay?.cardId === "side_scrolling_brawler") {
+        this.enterLandscapePlay();
+      }
       const { width, height } = this.scale;
       const col = Phaser.Display.Color.HexStringToColor(spec.themeColor).color;
 
       // Dark background with cosmic borders
-      const bg = this.add.graphics();
+      const bg = this.add.graphics().setDepth(-100);
       bg.fillGradientStyle(0x020617, 0x020617, 0x070b14, 0x070b14, 1);
       bg.fillRect(0, 0, width, height);
 
       // Arena borders matching custom color spec
-      bg.lineStyle(1.5, col, 0.4);
-      bg.strokeRect(12, 12, width - 24, height - 24);
+      const border = this.add.graphics().setDepth(100);
+      border.lineStyle(1.5, col, 0.4);
+      border.strokeRect(12, 12, width - 24, height - 24);
+
+      // The survivor adapter owns its scrolling arena background. The brawler
+      // uses per-wave side-view paintings in world coordinates as its camera moves.
+      const waveList = (this.node.gameplay?.knobs as any)?.waveList;
+      const landscapeBackgrounds = (this.node.gameplay?.knobs as any)?.landscapeBackgrounds;
+      const landscapeBackgroundLayout = (this.node.gameplay?.knobs as any)?.landscapeBackgroundLayout;
+      const useLandscapeBackgrounds = this.node.gameplay?.cardId === "side_scrolling_brawler"
+        && Array.isArray(waveList)
+        && Array.isArray(landscapeBackgrounds)
+        && waveList.length === landscapeBackgrounds.length
+        && landscapeBackgrounds.every((_: string, index: number) =>
+          this.textures.exists(`lw_landscape_bg_${this.node.id}_${index}`));
+      if (useLandscapeBackgrounds) {
+        const worldWidth = Math.max(Number((this.node.gameplay?.knobs as any)?.stageLengthPx || width), width);
+        let left = 0;
+        waveList.forEach((wave: any, index: number) => {
+          const right = index === waveList.length - 1
+            ? worldWidth
+            : Math.min(worldWidth, Math.max(left + 1, Number(wave.cameraMax || left + width)));
+          const layout = Array.isArray(landscapeBackgroundLayout)
+            ? landscapeBackgroundLayout[index] || {}
+            : {};
+          const heightScale = Number(layout.heightScale || 1.15);
+          const centerY = Number(layout.centerY || 0.55);
+          this.add.image((left + right) / 2, height * centerY,
+            `lw_landscape_bg_${this.node.id}_${index}`)
+            .setDisplaySize(right - left, height * heightScale)
+            .setDepth(-20);
+          left = right;
+        });
+      } else if (this.node.gameplay?.cardId !== "survivor_horde") {
+        const artBinder = this.game.registry.get("runtimeArtBinder") as RuntimeArtBinder | null;
+        const envKey = this.node.gameplay?.knobs?.envKey;
+        artBinder?.createContext(this).createBackground({
+          width,
+          height,
+          nodeId: this.node.id,
+          prefer: envKey ? [envKey] : null,
+          depth: -20
+        });
+      }
 
       // Level general Header
       this.drawLevelHeader(width, height, col);
@@ -893,9 +957,20 @@ export function initializePhaserGame(
       if (!this.audioResolver) {
         this.audioResolver = new AudioAssetResolver({ synthFallback: true });
       }
+      this.audioResolver.setMuted(synth.getMuteState() || this.game.registry.get("audioMuted") === true);
+      this.game.registry.set("audioResolver", this.audioResolver);
+      for (const item of Array.isArray(spec.audioCueCatalog) ? spec.audioCueCatalog : []) {
+        if (item?.id && item?.synth) this.audioResolver.registerSynthCue(item.id, item.synth);
+        const audioUrl = getAudioAssetUrl(item?.assetPath, options.workspaceId);
+        if (item?.id && audioUrl) this.audioResolver.registerCue(item.id, audioUrl);
+      }
       const bgmKey = typeof knobs.bgmKey === "string" && knobs.bgmKey ? knobs.bgmKey : "bgm_default";
+      const cue = (Array.isArray(spec.audioCueCatalog) ? spec.audioCueCatalog : []).find((item) => item?.id === bgmKey);
+      const synthHz = Number(cue?.synth?.frequencies?.[0]);
       onLog(`🎵 节点 BGM 合同: ${bgmKey}${knobs.bossBgmKey ? ` · boss=${knobs.bossBgmKey}` : ""}`);
-      this.audioResolver.playBgm(bgmKey);
+      this.audioResolver.playBgm(bgmKey, 1000, Number.isFinite(synthHz) ? synthHz : null);
+      this.input.once("pointerdown", () => { void this.audioResolver?.unlock(); });
+      this.input.keyboard?.once("keydown", () => { void this.audioResolver?.unlock(); });
 
       // Show level introductory overlay, and launch game only when skipped/completed
       this.showLevelIntro(() => {
@@ -920,6 +995,13 @@ export function initializePhaserGame(
 
         // Retreat AFTER intro so it is never covered by the skip zone.
         this.mountRetreatButton(knobs);
+        // Verification hosts can start replay at the completed adapter setup,
+        // before any gameplay frame. Browser polling must not define frame zero.
+        const verification = (window as any).__LOREWEAVER_DETERMINISM__;
+        if (this.adapter && verification?.mode === 'verification' && verification.pauseOnStart === true) {
+          this.adapter.pause();
+          this.adapter.updateObservationState({ paused: true });
+        }
       });
     }
 
@@ -939,7 +1021,7 @@ export function initializePhaserGame(
           fontStyle: "bold",
           color: "#ffffff",
           backgroundColor: "rgba(239, 68, 68, 0.75)",
-          padding: { x: 10, y: 6 }
+          padding: { x: 12, y: 22 }
         })
         .setInteractive({ useHandCursor: true })
         .setDepth(100000)
@@ -978,7 +1060,6 @@ export function initializePhaserGame(
         this.adapter.update(time, delta);
         const testState = this.adapter.getTestState?.() || {};
         if (testState) {
-          this.observeFirstNodeGrowth(testState);
           const goal =
             typeof (testState as any).goalValue === "number"
               ? (testState as any).goalValue
@@ -1000,7 +1081,7 @@ export function initializePhaserGame(
               ? (this.adapter as any).state.hp
               : 100;
           if (this.scoreHUD) {
-            this.scoreHUD.setText(`目标进度：${score} / ${goal}`);
+            this.scoreHUD.setText(goal > 0 ? `目标进度：${score} / ${goal}` : `当前得分：${score}`);
           }
           if (this.livesHUD) {
             this.livesHUD.setText(`生命精力：${Math.ceil(hp)}`);
@@ -1026,247 +1107,56 @@ export function initializePhaserGame(
       // Display Boss dialogue / Taunt quotes
       const idx = Phaser.Math.Between(0, this.node.taunts.length - 1);
       const chosenTaunt = this.node.taunts[idx] || "「挑战尚未成功，再试一次吧！」";
+      const brawlerHeader = this.node.gameplay?.cardId === "side_scrolling_brawler";
       
-      const phraseText = this.add.text(width / 2, 100, chosenTaunt, {
+      const phraseText = this.add.text(brawlerHeader ? width / 2 : width - 32, brawlerHeader ? 78 : 32, chosenTaunt, {
         fontFamily: "Inter, sans-serif",
         fontSize: "18px",
         fontStyle: "italic",
         color: "#f59e0b",
-        wordWrap: { width: width - 80, useAdvancedWrap: true },
-        align: "center"
-      }).setOrigin(0.5);
+        backgroundColor: "rgba(3, 7, 18, 0.78)",
+        padding: { x: 6, y: 3 },
+        wordWrap: { width: brawlerHeader ? width - 80 : width / 2 - 40, useAdvancedWrap: true },
+        align: brawlerHeader ? "center" : "right"
+      }).setOrigin(brawlerHeader ? 0.5 : 1, brawlerHeader ? 0.5 : 0).setScrollFactor(0);
 
-      this.add.text(width / 2, 140, `${this.node.title.toUpperCase()}`, {
+      const titleText = this.add.text(width / 2, brawlerHeader ? 42 : 140, `${this.node.title.toUpperCase()}`, {
         fontFamily: "Inter, sans-serif",
         fontSize: "24px",
-        style: "bold",
-        color: spec.themeColor,
-        letterSpacing: "1"
+        fontStyle: "bold",
+        color: "#fca5a5",
+        backgroundColor: "rgba(3, 7, 18, 0.78)",
+        padding: { x: 14, y: 7 },
+        letterSpacing: 1
       } as any).setOrigin(0.5);
+      if (brawlerHeader) titleText.setScrollFactor(0);
+
+      // The brawler adapter owns HP, lives, waves and score in its top HUD.
+      // Leave the lower lane free for landscape touch controls.
+      if (brawlerHeader) {
+        // Phaser reuses this scene across nodes. Clear references to Text
+        // objects destroyed with the previous node before update() runs.
+        this.scoreHUD = null as any;
+        this.livesHUD = null as any;
+        return;
+      }
 
       // Lives and Target score indicators
-      this.scoreHUD = this.add.text(32, height - 42, `目标进度：0 / ${this.node.goalValue}`, {
+      this.scoreHUD = this.add.text(32, height - 60, this.node.goalValue > 0 ? `目标进度：0 / ${this.node.goalValue}` : '当前得分：0', {
         fontFamily: "JetBrains Mono, monospace",
-        fontSize: "20px",
-        color: "#ffffff"
-      });
-
-      this.livesHUD = this.add.text(width - 150, height - 42, `生命精力：${this.livesCount}`, {
-        fontFamily: "JetBrains Mono, monospace",
-        fontSize: "20px",
-        color: "#10b981"
-      });
-
-      if (this.runGrowthState?.enabled) {
-        this.growthHUD = this.add.text(32, height - 72, "", {
-          fontFamily: "JetBrains Mono, monospace",
-          fontSize: "18px",
-          color: "#fbbf24"
-        });
-        this.refreshGrowthHUD();
-      }
-    }
-
-    private setupFirstNodeGrowthLoop(cardId: string) {
-      if (this.node.id !== 1 || cardId !== "survivor_horde" || !this.adapter) return;
-
-      const baseDamage = Number(this.adapter.config?.weapon?.bulletDamage || 2);
-      this.runGrowthState = {
-        enabled: true,
-        collectionSource: "beast_essence_score_from_survivor_horde_collectibles",
-        growthTrigger: "Collect 2 early beast-essence score motes",
-        runtimeMutation: "activeSkills[].level and adapter.config.weapon.bulletDamage",
-        playerFeedback: "Growth HUD, floating skill text, particle burst, and loot cue",
-        combatImpact: "Lv.2 primordial_fist raises bullet damage for subsequent shots",
-        triggerThreshold: 2,
-        collectedEssence: 0,
-        lastObservedScore: 0,
-        activeSkills: [
-          {
-            id: "primordial_fist",
-            label: this.getRuntimeSkillLabel("primordial_fist"),
-            level: 1
-          }
-        ],
-        mutationStats: {
-          weaponDamage: baseDamage,
-          playerHp: this.readAdapterHp()
-        },
-        combatStats: {
-          bulletDamageBefore: baseDamage,
-          bulletDamageAfter: baseDamage,
-          healedHp: 0,
-          unlockedAoE: false
-        },
-        lastFeedback: "awaiting_collection",
-        events: []
-      };
-
-      this.publishGrowthState();
-    }
-
-    private observeFirstNodeGrowth(testState: any) {
-      const growth = this.runGrowthState;
-      if (!growth?.enabled || !this.adapter || this.adapter.status !== "running") return;
-
-      const score = Math.max(0, Math.floor(Number(testState?.score || 0)));
-      if (score > growth.lastObservedScore) {
-        const amount = score - growth.lastObservedScore;
-        growth.lastObservedScore = score;
-        growth.collectedEssence += amount;
-        growth.events.push({
-          type: "collection",
-          amount,
-          score,
-          atMs: Math.round(this.time.now || 0)
-        });
-      }
-
-      if (growth.collectedEssence >= 2) {
-        this.applyFirstNodeGrowthMilestone("primordial_fist_lv2");
-      }
-
-      if (growth.collectedEssence >= 4) {
-        this.applyFirstNodeGrowthMilestone("suan_ni_roar_unlock");
-      }
-
-      this.refreshGrowthHUD();
-      this.publishGrowthState();
-    }
-
-    private applyFirstNodeGrowthMilestone(milestone: string) {
-      const growth = this.runGrowthState;
-      if (!growth || growth.events.some((event) => event.milestone === milestone)) return;
-
-      const before = this.readGrowthMutationStats();
-
-      if (milestone === "primordial_fist_lv2") {
-        const skill = growth.activeSkills.find((item) => item.id === "primordial_fist");
-        if (skill) {
-          skill.level = Math.max(skill.level, 2);
-        }
-
-        const currentDamage = Number(this.adapter?.config?.weapon?.bulletDamage || 2);
-        this.adapter.config.weapon.bulletDamage = Math.max(currentDamage + 2, Math.ceil(currentDamage * 1.6));
-        growth.lastFeedback = `${this.getRuntimeSkillLabel("primordial_fist")} Lv.2`;
-        this.showGrowthFeedback("基础拳 Lv.2，拳罡更重", 0xf59e0b);
-        growth.events.push({
-          type: "skill_level",
-          milestone,
-          skillId: "primordial_fist",
-          level: 2,
-          before,
-          after: this.readGrowthMutationStats(),
-          atMs: Math.round(this.time.now || 0)
-        });
-      } else if (milestone === "suan_ni_roar_unlock") {
-        growth.activeSkills.push({
-          id: "suan_ni_roar",
-          label: this.getRuntimeSkillLabel("suan_ni_roar"),
-          level: 1
-        });
-
-        const currentDamage = Number(this.adapter?.config?.weapon?.bulletDamage || 2);
-        this.adapter.config.weapon.bulletDamage = currentDamage + 3;
-        growth.combatStats.unlockedAoE = true;
-        growth.lastFeedback = `${this.getRuntimeSkillLabel("suan_ni_roar")} unlocked`;
-        this.showGrowthFeedback("临阵参悟：狻猊怒啸", 0xfacc15);
-        growth.events.push({
-          type: "skill_unlock",
-          milestone,
-          skillId: "suan_ni_roar",
-          level: 1,
-          before,
-          after: this.readGrowthMutationStats(),
-          atMs: Math.round(this.time.now || 0)
-        });
-      }
-
-      const after = this.readGrowthMutationStats();
-      growth.mutationStats.weaponDamage = after.weaponDamage || 0;
-      growth.mutationStats.playerHp = after.playerHp;
-      growth.combatStats.bulletDamageAfter = after.weaponDamage || growth.combatStats.bulletDamageAfter;
-      this.refreshGrowthHUD();
-    }
-
-    private getRuntimeSkillLabel(skillId: string) {
-      const directLabels: Record<string, string> = {
-        primordial_fist: "原始真解·基础拳",
-        suan_ni_roar: "狻猊宝术·怒啸",
-        willow_blessing: "柳神赐福·回春"
-      };
-      if (directLabels[skillId]) return directLabels[skillId];
-
-      const ability = spec.abilityCatalog?.find((item) => item.runtimeSkillIds?.includes(skillId));
-      return ability?.name || skillId;
-    }
-
-    private readAdapterHp() {
-      const hp = this.adapter?.state?.hp;
-      return typeof hp === "number" ? hp : null;
-    }
-
-    private readGrowthMutationStats() {
-      return {
-        weaponDamage: Number(this.adapter?.config?.weapon?.bulletDamage || 0),
-        playerHp: this.readAdapterHp()
-      };
-    }
-
-    private refreshGrowthHUD() {
-      if (!this.growthHUD || !this.runGrowthState) return;
-
-      const growth = this.runGrowthState;
-      const skills = growth.activeSkills
-        .map((skill) => `${skill.label} Lv.${skill.level}`)
-        .join(" / ");
-      this.growthHUD.setText(`血气参悟：${growth.collectedEssence}/${growth.triggerThreshold} · ${skills}`);
-    }
-
-    private showGrowthFeedback(text: string, color: number) {
-      synth.playLoot();
-      const { width, height } = this.scale;
-      const fx = this.add.text(width / 2, height - 118, text, {
-        fontFamily: "Inter, sans-serif",
         fontSize: "22px",
-        fontStyle: "bold",
-        color: "#fff7d6",
-        backgroundColor: "rgba(15, 23, 42, 0.72)",
-        padding: { x: 10, y: 6 }
-      }).setOrigin(0.5).setDepth(20);
-
-      this.spawnParticleExplosion(width / 2, height / 2, color);
-      this.cameras.main.flash(160, 245, 158, 11);
-      this.tweens.add({
-        targets: fx,
-        y: height - 150,
-        alpha: 0,
-        duration: 1200,
-        onComplete: () => fx.destroy()
+        color: "#ffffff",
+        backgroundColor: "rgba(3, 7, 18, 0.78)",
+        padding: { x: 7, y: 3 }
       });
-    }
 
-    private publishGrowthState() {
-      if (!this.testHooks || !this.runGrowthState) return;
-
-      const growth = this.runGrowthState;
-      this.testHooks.update({
-        growth: {
-          enabled: growth.enabled,
-          collectionSource: growth.collectionSource,
-          growthTrigger: growth.growthTrigger,
-          runtimeMutation: growth.runtimeMutation,
-          playerFeedback: growth.playerFeedback,
-          combatImpact: growth.combatImpact,
-          triggerThreshold: growth.triggerThreshold,
-          collectedEssence: growth.collectedEssence,
-          activeSkills: growth.activeSkills.map((skill) => ({ ...skill })),
-          mutationStats: { ...growth.mutationStats },
-          combatStats: { ...growth.combatStats },
-          lastFeedback: growth.lastFeedback,
-          events: growth.events.slice(-8)
-        }
-      });
+      this.livesHUD = this.add.text(width - 32, height - 60, `生命精力：${this.livesCount}`, {
+        fontFamily: "JetBrains Mono, monospace",
+        fontSize: "22px",
+        color: "#6ee7b7",
+        backgroundColor: "rgba(3, 7, 18, 0.78)",
+        padding: { x: 7, y: 3 }
+      }).setOrigin(1, 0);
     }
 
     private tickLevelTimer() {
@@ -1666,11 +1556,17 @@ export function initializePhaserGame(
     }
 
     private handleAdapterEnd(result: any) {
+      const audioKnobs = (this.node.gameplay?.knobs || {}) as Record<string, any>;
       if (result.success) {
         // Stop combat BGM, play fanfare
         synth.stopBossTheme();
         synth.stopBgm();
-        synth.playVictoryFanfare();
+        if (this.audioResolver) {
+          this.audioResolver.stopAll();
+          this.audioResolver.playSfx(audioKnobs.sfxVictory || "victory_sting");
+        } else {
+          synth.playVictoryFanfare();
+        }
         onLog(`🎉 关卡胜利！已成功通过节点 [${this.node.id}: ${this.node.title}]！`);
 
         const pState = { ...this.game.registry.get("playerState") } as PlayerState;
@@ -1713,10 +1609,19 @@ export function initializePhaserGame(
       } else {
         synth.stopBossTheme();
         synth.stopBgm();
+        this.audioResolver?.stopAll();
         if (result.reason === "retreated") {
           this.safeRetreat();
         } else {
-          synth.playDamage();
+          const reason = String(result.reason || "");
+          const specificCue = /time|expired|timeout/i.test(reason)
+            ? "defeat_timeout"
+            : /hp|death|dead|defeat|player/i.test(reason)
+              ? "defeat_death"
+              : null;
+          const hasSpecificCue = specificCue && (spec.audioCueCatalog || []).some((item) => item?.id === specificCue);
+          if (this.audioResolver) this.audioResolver.playSfx(hasSpecificCue ? specificCue : (audioKnobs.sfxDefeat || "defeat_sting"));
+          else synth.playDamage();
           onLog(`❌ 关卡失败: 已从节点中震退，原因: [${result.reason || "未知"}]。`);
           this.cameras.main.shake(250, 0.015);
           this.showDefeatOverlay(result.reason || "能量耗尽，挑战失败");
@@ -1792,8 +1697,11 @@ export function initializePhaserGame(
       introContainer.add([title, descText, mech, prompt]);
 
       const skipZone = this.add.zone(width / 2, height / 2, width, height).setInteractive();
-      skipZone.on("pointerdown", () => {
-        synth.playClick();
+      let closing = false;
+      const closeIntro = () => {
+        if (closing) return;
+        closing = true;
+        skipZone.disableInteractive();
         this.tweens.add({
           targets: introContainer,
           alpha: 0,
@@ -1804,22 +1712,14 @@ export function initializePhaserGame(
             onComplete();
           }
         });
+      };
+      skipZone.on("pointerdown", () => {
+        void this.audioResolver?.unlock();
+        synth.playClick();
+        closeIntro();
       });
 
-      this.time.delayedCall(2500, () => {
-        if (introContainer.active) {
-          this.tweens.add({
-            targets: introContainer,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => {
-              introContainer.destroy();
-              skipZone.destroy();
-              onComplete();
-            }
-          });
-        }
-      });
+      this.time.delayedCall(2500, closeIntro);
     }
 
     private spawnParticleExplosion(x: number, y: number, color: number) {
@@ -1843,8 +1743,34 @@ export function initializePhaserGame(
       }
     }
 
+    private handleSurvivorRuntimeEvent(event: any) {
+      if (event?.type !== "weapon-stance-attack") return;
+      const audioKnobs = (this.node.gameplay?.knobs || {}) as Record<string, any>;
+      const cue = event.stance === "ranged"
+        ? audioKnobs.rangedAudioCue || "sfx_bow_release"
+        : audioKnobs.meleeAudioCue || "sfx_blade_sweep";
+      this.audioResolver?.playSfx(cue);
+      if (event.stance === "melee" && Number(event.hitCount) > 0
+        && typeof audioKnobs.meleeHitAudioCue === "string" && audioKnobs.meleeHitAudioCue) {
+        this.audioResolver?.playSfx(audioKnobs.meleeHitAudioCue);
+      }
+    }
+
     private handleSurvivorPresentationEvent(event: any) {
-      if (!event || event.accepted !== true) return;
+      if (!event || event.accepted === false) return;
+
+      if (typeof event.audioCue === "string" && event.audioCue) this.audioResolver?.playSfx(event.audioCue);
+      if (event.kind === "weapon-stance") {
+        this.audioResolver?.playSfx(event.stance === "ranged" ? "sfx_stance_ranged" : "sfx_stance_melee");
+      } else if (event.kind === "overdrive") {
+        const audioKnobs = (this.node.gameplay?.knobs || {}) as Record<string, any>;
+        const cue = typeof audioKnobs.overdriveAudioCue === "string" && audioKnobs.overdriveAudioCue
+          ? audioKnobs.overdriveAudioCue : "sfx_overdrive";
+        if (event.active === true) this.audioResolver?.playSfx(cue, { loop: Boolean(audioKnobs.overdriveAudioCue) });
+        else if (audioKnobs.overdriveAudioCue) this.audioResolver?.stopSfx(cue);
+      } else if (event.kind === "run-growth-milestone") {
+        this.audioResolver?.playSfx("sfx_growth");
+      }
 
       if (event.action === "treasure_opened") synth.playLoot();
       else if (event.action === "channel_interrupted" || event.action === "guards_alerted") synth.playDamage();
@@ -1858,8 +1784,13 @@ export function initializePhaserGame(
         this.cameras.main.flash(120, 245, 158, 11);
       }
 
-      if (typeof event.callout !== "string" || !event.callout.trim()) return;
-      const callout = this.add.text(x, y - 54, event.callout, {
+      const calloutText = event.callout || (
+        event.kind === "run-growth-milestone" ? event.feedback
+          : event.kind === "overdrive" && event.active ? event.label
+            : event.kind === "weapon-stance" && event.swapBurst ? event.label : ""
+      );
+      if (typeof calloutText !== "string" || !calloutText.trim()) return;
+      const callout = this.add.text(x, y - 54, calloutText, {
         fontFamily: "Inter, sans-serif",
         fontSize: "17px",
         fontStyle: "bold",
@@ -2174,7 +2105,7 @@ export function initializePhaserGame(
 
       container.init(payload);
       const iframe = container.mount(parentEl, {
-        src: `./nodes/node${this.node.id}.html`,
+        src: typeof knobs.src === "string" ? knobs.src : undefined,
         nodeId: this.node.id
       });
       this.activeIframe = iframe;
@@ -2206,42 +2137,9 @@ export function initializePhaserGame(
         const pState = { ...this.game.registry.get("playerState") } as PlayerState;
         const rwdKey = spec.economy.resources[0] || "金币";
 
-        const mappedSecondary: { [key: string]: number } = {};
-        if (typeof reward.qi === "number") {
-          mappedSecondary[rwdKey] = reward.qi;
-        } else if (reward.secondaryResources) {
-          Object.assign(mappedSecondary, reward.secondaryResources);
-        } else {
-          mappedSecondary[rwdKey] = 1;
-        }
-
-        const mappedAbilities: string[] = [];
-        if (reward.skill) {
-          mappedAbilities.push(reward.skill);
-        }
-        if (reward.unlockedAbilities) {
-          mappedAbilities.push(...reward.unlockedAbilities);
-        }
-        if (mappedAbilities.length === 0 && this.node.planning?.rewardUnlocks) {
-          mappedAbilities.push(...this.node.planning.rewardUnlocks);
-        }
-
-        const mappedFlags: string[] = [];
-        if (reward.storyFlags) {
-          mappedFlags.push(...reward.storyFlags);
-        } else if (reward.relic) {
-          mappedFlags.push(reward.relic);
-        }
-
         const nodeResult: NodeResult = {
           success: true,
-          rewards: {
-            multiplierGain: reward.multiplierGain ?? (reward.xp ? reward.xp / 300.0 : this.node.resourceMultiplier / 12.0),
-            secondaryResources: mappedSecondary,
-            unlockedAbilities: mappedAbilities,
-            storyFlags: mappedFlags,
-            unlockNextNode: reward.unlockNextNode !== false
-          }
+          rewards: mapIframeRewards(reward, this.node, rwdKey)
         };
 
         const nextState = RewardApplier.apply(pState, this.node, nodeResult);
@@ -2284,7 +2182,39 @@ export function initializePhaserGame(
       this.scene.start("MainScene");
     }
 
+    private publishOrientation(orientation: "landscape" | "portrait") {
+      if (typeof window === "undefined") return;
+      window.dispatchEvent(new CustomEvent("loreweaver:orientation", { detail: orientation }));
+      const lockable = window.screen?.orientation as (ScreenOrientation & {
+        lock?: (orientation: string) => Promise<void>;
+        unlock?: () => void;
+      }) | undefined;
+      if (orientation === "landscape") {
+        lockable?.lock?.("landscape")?.catch(() => {});
+      } else {
+        lockable?.unlock?.();
+      }
+    }
+
+    private enterLandscapePlay() {
+      const scale = this.scale;
+      if (scale.width < scale.height) {
+        this.savedGameSize = { width: scale.width, height: scale.height };
+        scale.setGameSize(960, 540);
+      }
+      this.publishOrientation("landscape");
+    }
+
+    private leaveLandscapePlay() {
+      if (this.savedGameSize) {
+        this.scale.setGameSize(this.savedGameSize.width, this.savedGameSize.height);
+        this.savedGameSize = null;
+      }
+      this.publishOrientation("portrait");
+    }
+
     shutdown() {
+      this.leaveLandscapePlay();
       // Kill all active tweens to prevent callbacks on destroyed objects
       try {
         this.tweens?.killAll();
@@ -2355,11 +2285,17 @@ export function initializePhaserGame(
   }
 
   // Phaser instance instantiation bootstrap
+  const narrowStandalone = options.hostKind === "standalone"
+    && parentEl.clientWidth > 0 && parentEl.clientWidth < 500 && parentEl.clientHeight > 0;
+  const gameWidth = narrowStandalone ? 540 : 720;
+  const gameHeight = narrowStandalone
+    ? Math.max(900, Math.min(1500, Math.round(gameWidth * parentEl.clientHeight / parentEl.clientWidth)))
+    : 1280;
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.WEBGL,
     parent: parentEl,
-    width: 720,
-    height: 1280,
+    width: gameWidth,
+    height: gameHeight,
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH

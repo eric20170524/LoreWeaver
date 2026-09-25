@@ -1,0 +1,514 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "point_drag_progression",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "5bb79ae26dcedfeec06e441d772bdf07f37eab70",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check",
+      "shooter_duel",
+      "maze_exploration_choice",
+      "platform_escape",
+      "hazard_collect_waves",
+      "sequence_puzzle_combo",
+      "rhythm_then_pickup",
+      "qix_area_capture",
+      "point_drag_progression"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "e9058dce023109f67428f44053da20d0267968c06e7e692c5113fc9d836d7484"
+      },
+      {
+        "name": "game.js",
+        "sha256": "e6915edca2f8c9bd48122145c8569efae8c09c70d1e1da0b1e3129619ae6ed18"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T15:26:21.272Z",
+  "sourceNote": "Checkout revision is the build base; actual bundle SHA-256 identifies uncommitted and concurrent source included in the tested payload.",
+  "unitTests": {
+    "passed": 10,
+    "command": "node productize/jobs/check-point-drag-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "smokeAdapter": {
+    "enter": true,
+    "spawnOrProgress": true,
+    "retreat": true,
+    "noCrash": true,
+    "warnings": [
+      "no_envKey",
+      "no_bgmKey"
+    ]
+  },
+  "cases": [
+    {
+      "id": "default-mouse-stages-and-branch-reward",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed stages 1,2,3"
+      ],
+      "config": {
+        "targetProgress": 100,
+        "instabilityMax": 100,
+        "matchProgress": 14,
+        "nearMatchProgress": 7,
+        "instabilityOnMismatch": 18,
+        "instabilityOnMiss": 8,
+        "instabilityDecayPerSec": 4,
+        "poolSpawnIntervalSec": 1.1
+      },
+      "actionCount": 6,
+      "state": {
+        "progress": 100,
+        "instability": 0,
+        "stage": 3,
+        "matches": 6,
+        "mismatches": 0,
+        "misses": 0,
+        "branchWeights": {
+          "wood": 4,
+          "fire": 0,
+          "water": 1,
+          "metal": 0,
+          "earth": 1
+        }
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "branch": "wood"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "instability": 0,
+          "stage": 3,
+          "matches": 6,
+          "mismatches": 0,
+          "branchWeights": {
+            "wood": 4,
+            "fire": 0,
+            "water": 1,
+            "metal": 0,
+            "earth": 1
+          },
+          "elapsedSec": 3.5000000000000018
+        }
+      }
+    },
+    {
+      "id": "default-mismatch-instability-failure",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "targetProgress": 100,
+        "instabilityMax": 100,
+        "matchProgress": 14,
+        "nearMatchProgress": 7,
+        "instabilityOnMismatch": 18,
+        "instabilityOnMiss": 8,
+        "instabilityDecayPerSec": 4,
+        "poolSpawnIntervalSec": 1.1
+      },
+      "actionCount": 7,
+      "state": {
+        "progress": 17.15,
+        "instability": 100,
+        "stage": 1,
+        "matches": 0,
+        "mismatches": 7,
+        "misses": 0,
+        "branchWeights": {
+          "wood": 0,
+          "fire": 0,
+          "water": 0,
+          "metal": 0,
+          "earth": 0
+        }
+      },
+      "result": {
+        "success": false,
+        "reason": "condition_failed",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 17.15,
+          "instability": 100,
+          "stage": 1,
+          "matches": 0,
+          "mismatches": 7,
+          "branchWeights": {
+            "wood": 0,
+            "fire": 0,
+            "water": 0,
+            "metal": 0,
+            "earth": 0
+          },
+          "elapsedSec": 4.6
+        }
+      }
+    },
+    {
+      "id": "default-empty-drop-instability-failure",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "targetProgress": 100,
+        "instabilityMax": 100,
+        "matchProgress": 14,
+        "nearMatchProgress": 7,
+        "instabilityOnMismatch": 18,
+        "instabilityOnMiss": 8,
+        "instabilityDecayPerSec": 4,
+        "poolSpawnIntervalSec": 1.1
+      },
+      "actionCount": 25,
+      "state": {
+        "progress": 0,
+        "instability": 100,
+        "stage": 1,
+        "matches": 0,
+        "mismatches": 0,
+        "misses": 25,
+        "branchWeights": {
+          "wood": 0,
+          "fire": 0,
+          "water": 0,
+          "metal": 0,
+          "earth": 0
+        }
+      },
+      "result": {
+        "success": false,
+        "reason": "condition_failed",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 0,
+          "instability": 100,
+          "stage": 1,
+          "matches": 0,
+          "mismatches": 0,
+          "branchWeights": {
+            "wood": 0,
+            "fire": 0,
+            "water": 0,
+            "metal": 0,
+            "earth": 0
+          },
+          "elapsedSec": 24.400000000000077
+        }
+      }
+    },
+    {
+      "id": "pause-cancel-outside-three-restarts",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed stages 1,2"
+      ],
+      "config": {
+        "targetProgress": 30,
+        "instabilityMax": 100,
+        "matchProgress": 14,
+        "nearMatchProgress": 7,
+        "instabilityOnMismatch": 18,
+        "instabilityOnMiss": 8,
+        "instabilityDecayPerSec": 4,
+        "poolSpawnIntervalSec": 1.1
+      },
+      "actionCount": 2,
+      "state": {
+        "progress": 0,
+        "instability": 0,
+        "stage": 1,
+        "matches": 0,
+        "mismatches": 0,
+        "misses": 0,
+        "branchWeights": {
+          "wood": 0,
+          "fire": 0,
+          "water": 0,
+          "metal": 0,
+          "earth": 0
+        }
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 0,
+          "instability": 0,
+          "stage": 1,
+          "matches": 0,
+          "mismatches": 0,
+          "branchWeights": {
+            "wood": 0,
+            "fire": 0,
+            "water": 0,
+            "metal": 0,
+            "earth": 0
+          },
+          "elapsedSec": 0.1
+        }
+      }
+    },
+    {
+      "id": "maximum-two-hundred-keyboard-progression",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed stages 1,2,3"
+      ],
+      "config": {
+        "targetProgress": 200,
+        "instabilityMax": 100,
+        "matchProgress": 14,
+        "nearMatchProgress": 7,
+        "instabilityOnMismatch": 18,
+        "instabilityOnMiss": 8,
+        "instabilityDecayPerSec": 4,
+        "poolSpawnIntervalSec": 1.1
+      },
+      "actionCount": 15,
+      "state": {
+        "progress": 200,
+        "instability": 0,
+        "stage": 3,
+        "matches": 15,
+        "mismatches": 0,
+        "misses": 0,
+        "branchWeights": {
+          "wood": 5,
+          "fire": 3,
+          "water": 3,
+          "metal": 3,
+          "earth": 1
+        }
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "branch": "wood"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 200,
+          "instability": 0,
+          "stage": 3,
+          "matches": 15,
+          "mismatches": 0,
+          "branchWeights": {
+            "wood": 5,
+            "fire": 3,
+            "water": 3,
+            "metal": 3,
+            "earth": 1
+          },
+          "elapsedSec": 13.199999999999969
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed stages 1,2,3"
+      ],
+      "config": {
+        "targetProgress": 100,
+        "instabilityMax": 100,
+        "matchProgress": 14,
+        "nearMatchProgress": 7,
+        "instabilityOnMismatch": 18,
+        "instabilityOnMiss": 8,
+        "instabilityDecayPerSec": 4,
+        "poolSpawnIntervalSec": 1.1
+      },
+      "actionCount": 6,
+      "state": {
+        "progress": 100,
+        "instability": 0,
+        "stage": 3,
+        "matches": 6,
+        "mismatches": 0,
+        "misses": 0,
+        "branchWeights": {
+          "wood": 2,
+          "fire": 2,
+          "water": 2,
+          "metal": 0,
+          "earth": 0
+        }
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "branch": "wood"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "instability": 0,
+          "stage": 3,
+          "matches": 6,
+          "mismatches": 0,
+          "branchWeights": {
+            "wood": 2,
+            "fire": 2,
+            "water": 2,
+            "metal": 0,
+            "earth": 0
+          },
+          "elapsedSec": 3.700000000000002
+        }
+      }
+    },
+    {
+      "id": "offline-default-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "observed stages 1,2,3"
+      ],
+      "config": {
+        "targetProgress": 100,
+        "instabilityMax": 100,
+        "matchProgress": 14,
+        "nearMatchProgress": 7,
+        "instabilityOnMismatch": 18,
+        "instabilityOnMiss": 8,
+        "instabilityDecayPerSec": 4,
+        "poolSpawnIntervalSec": 1.1
+      },
+      "actionCount": 6,
+      "state": {
+        "progress": 100,
+        "instability": 0,
+        "stage": 3,
+        "matches": 6,
+        "mismatches": 0,
+        "misses": 0,
+        "branchWeights": {
+          "wood": 4,
+          "fire": 0,
+          "water": 2,
+          "metal": 0,
+          "earth": 0
+        }
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1,
+          "branch": "wood"
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "progress": 100,
+          "instability": 0,
+          "stage": 3,
+          "matches": 6,
+          "mismatches": 0,
+          "branchWeights": {
+            "wood": 4,
+            "fire": 0,
+            "water": 2,
+            "metal": 0,
+            "earth": 0
+          },
+          "elapsedSec": 3.5000000000000018
+        }
+      }
+    }
+  ]
+}

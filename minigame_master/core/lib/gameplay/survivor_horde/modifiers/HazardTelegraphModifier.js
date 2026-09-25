@@ -1,4 +1,5 @@
 import GameplayModifier from '../../GameplayModifier.js';
+import VFX from '../../../juice/VFX.js';
 import { NODE_RESULT_REASONS } from '../../../contracts/NodeContracts.js';
 
 const DEFAULT_CONFIG = Object.freeze({
@@ -17,9 +18,19 @@ function distance(a, b) {
     return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+function pickPositive(primary, secondary, fallback) {
+    const value = Number(primary ?? secondary);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 export default class HazardTelegraphModifier extends GameplayModifier {
     constructor(config = {}) {
-        super({ ...DEFAULT_CONFIG, ...config });
+        super({
+            ...DEFAULT_CONFIG,
+            ...config,
+            warningDelayMs: pickPositive(config.warningMs, config.warningDelayMs, DEFAULT_CONFIG.warningDelayMs),
+            strikeDurationMs: pickPositive(config.activeMs, config.strikeDurationMs, DEFAULT_CONFIG.strikeDurationMs)
+        });
         this.timer = null;
         this.activeObjects = new Set();
     }
@@ -38,8 +49,22 @@ export default class HazardTelegraphModifier extends GameplayModifier {
         if (!context.adapter.isRunning()) return;
 
         const point = this.pickPoint(context);
-        const warning = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.warningColor, this.config.alpha);
-        warning.setStrokeStyle?.(2, this.config.warningColor, 0.8);
+        const line = this.config.shape === 'line';
+        const diameter = Math.round(this.config.radius * 2.4);
+        let warning = VFX.spriteClip(context.scene, context.adapter?.runtimeArt, 'hazard_mark', point.x, point.y, {
+            clip: 'loop',
+            depth: 4,
+            destroyOnComplete: false
+        });
+        if (warning) {
+            warning.setDisplaySize?.(
+                line ? Math.round(this.config.radius * 5) : diameter,
+                line ? Math.round(this.config.radius * 0.7) : diameter
+            );
+        } else {
+            warning = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.warningColor, this.config.alpha);
+            warning.setStrokeStyle?.(2, this.config.warningColor, 0.8);
+        }
         this.activeObjects.add(warning);
 
         context.lifecycle.trackTimer(context.scene.time.delayedCall(this.config.warningDelayMs, () => {
@@ -66,7 +91,21 @@ export default class HazardTelegraphModifier extends GameplayModifier {
     strike(context, point) {
         if (!context.adapter.isRunning()) return;
 
-        const strike = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.strikeColor, this.config.alpha * 1.6);
+        const line = this.config.shape === 'line';
+        let strike = VFX.spriteClip(context.scene, context.adapter?.runtimeArt, 'hazard_mark', point.x, point.y, {
+            clip: 'loop',
+            depth: 5,
+            destroyOnComplete: false
+        });
+        if (strike) {
+            strike.setDisplaySize?.(
+                line ? Math.round(this.config.radius * 5) : Math.round(this.config.radius * 2.2),
+                line ? Math.round(this.config.radius * 0.55) : Math.round(this.config.radius * 2.2)
+            );
+            strike.setAlpha?.(0.95);
+        } else {
+            strike = context.scene.add.circle(point.x, point.y, this.config.radius, this.config.strikeColor, this.config.alpha * 1.6);
+        }
         this.activeObjects.add(strike);
 
         if (distance(point, context.player) <= this.config.radius + context.config.player.radius) {

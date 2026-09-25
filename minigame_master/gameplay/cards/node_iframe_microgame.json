@@ -53,6 +53,40 @@
       "default": true,
       "patchLevel": "L1",
       "description": "Whether the iframe node overlays the full viewport."
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "default": 0,
+      "min": 0,
+      "max": 300000,
+      "patchLevel": "L1",
+      "description": "Parent message deadline; zero disables it. Pause-aware children suspend this deadline."
+    },
+    "demoTarget": {
+      "type": "integer",
+      "default": 4,
+      "min": 1,
+      "max": 12,
+      "patchLevel": "L1",
+      "description": "Bundled demonstration target count."
+    },
+    "demoTimeLimitSec": {
+      "type": "number",
+      "default": 15,
+      "min": 3,
+      "max": 60,
+      "patchLevel": "L1",
+      "description": "Bundled demonstration gameplay deadline."
+    },
+    "responseFormat": {
+      "type": "enum",
+      "default": "normalized",
+      "values": [
+        "normalized",
+        "legacy"
+      ],
+      "patchLevel": "L1",
+      "description": "Bundled child reply compatibility format."
     }
   },
   "patchPolicy": {
@@ -87,7 +121,7 @@
   },
   "testFixture": {
     "type": "e2e",
-    "path": null,
+    "path": "productize/jobs/run-iframe-card-lab-e2e.mjs",
     "assertions": [
       "iframe is mounted",
       "payload is readable by child",
@@ -113,9 +147,8 @@
     ]
   },
   "knownRisks": [
-    "postMessage origin is currently wildcard in the source case study",
-    "child pages may send partial rewards instead of normalized NodeResult",
-    "iframe cleanup must handle close, fail, and result paths"
+    "Pausing requires NODE_READY supportsPause=true and cooperative NODE_PAUSE/NODE_RESUME handling in the child.",
+    "The bundled game verifies the container contract, not arbitrary external child gameplay."
   ],
   "implementationNotes": "Core adapter/modifier wired in minigame_master + GameRunner (2026-07-17).",
   "requiredAssets": {

@@ -13,15 +13,23 @@ const ORB_TYPES = [
 const DEFAULT_CONFIG = Object.freeze({
     id: 'energy_balance',
     targetStableSec: 20,
-    failOverWarn: 5,
+    failOverWarn: 8,
     failViolationLimit: 5,
     orbSpawnMinSec: 0.8,
     orbSpawnMaxSec: 1.6,
     safeZoneWidth: 0.22,
     warnZoneWidth: 0.4,
     pointerDrift: 0.015,
+    allowQuit: true,
+    allowPause: true,
     rewardTable: { score: 1 }
 });
+
+function bounded(value, fallback, min, max, integer = false) {
+    const number = Number(value);
+    const valid = Number.isFinite(number) ? number : fallback;
+    return Math.max(min, Math.min(max, integer ? Math.floor(valid) : valid));
+}
 
 function mergeConfig(base, patch) {
     if (!patch || typeof patch !== 'object') return { ...base };
@@ -42,6 +50,9 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
         this.lifecycle = null;
         this.config = { ...DEFAULT_CONFIG };
         this.Phaser = context.Phaser || (typeof globalThis !== 'undefined' ? globalThis.Phaser : null);
+        this.random = typeof context.random === 'function' ? context.random : Math.random;
+        this.spawnTimer = null;
+        this.orbSerial = 0;
         this.orbs = [];
         this.dragging = null;
         this.ui = {};
@@ -51,6 +62,7 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
             violations: 0,
             overWarnSec: 0,
             elapsedSec: 0,
+            deposits: 0,
             hp: 100,
             score: 0
         };
@@ -61,16 +73,22 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
         const knobs = payload.nodeConfig?.gameplay?.knobs || payload.nodeConfig?.knobs || {};
         const gameplay = payload.nodeConfig?.gameplay || {};
         this.config = mergeConfig(DEFAULT_CONFIG, mergeConfig(gameplay, knobs));
-        this.config.targetStableSec = Number(knobs.targetStableSec ?? knobs.TARGET_STABLE ?? this.config.targetStableSec ?? 20);
-        this.config.failOverWarn = Number(knobs.failOverWarn ?? this.config.failOverWarn ?? 5);
-        this.config.failViolationLimit = Number(knobs.failViolationLimit ?? this.config.failViolationLimit ?? 5);
-        this.config.safeZoneWidth = Number(knobs.safeZoneWidth ?? this.config.safeZoneWidth);
+        this.config.targetStableSec = bounded(knobs.targetStableSec ?? knobs.TARGET_STABLE ?? this.config.targetStableSec, 20, 5, 120);
+        this.config.failOverWarn = bounded(this.config.failOverWarn, 8, 1, 30);
+        this.config.failViolationLimit = bounded(this.config.failViolationLimit, 5, 1, 20, true);
+        this.config.safeZoneWidth = bounded(this.config.safeZoneWidth, 0.22, 0.05, 0.6);
+        this.config.warnZoneWidth = bounded(this.config.warnZoneWidth, 0.4, this.config.safeZoneWidth, 1);
+        this.config.orbSpawnMinSec = bounded(this.config.orbSpawnMinSec, 0.8, 0.4, 5);
+        this.config.orbSpawnMaxSec = bounded(this.config.orbSpawnMaxSec, 1.6, this.config.orbSpawnMinSec, 5);
+        this.config.pointerDrift = bounded(this.config.pointerDrift, 0.015, 0, 0.1);
+        this.driftDirection = this.random() < 0.5 ? -1 : 1;
         this.state = {
             balance: 0.5,
             stableSec: 0,
             violations: 0,
             overWarnSec: 0,
             elapsedSec: 0,
+            deposits: 0,
             hp: payload.playerStats?.hp || 100,
             score: 0
         };
@@ -90,17 +108,20 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
         this.ui.warn = scene.add.rectangle(width / 2, height * 0.28, width * 0.7 * this.config.warnZoneWidth, 28, 0xfbbf24, 0.15);
         this.ui.pointer = scene.add.rectangle(width / 2, height * 0.28, 6, 36, 0xf8fafc, 1);
         this.ui.core = scene.add.circle(width / 2, height * 0.52, 48, 0x38bdf8, 0.35).setStrokeStyle(2, 0x38bdf8, 0.8);
-        this.ui.title = scene.add.text(width / 2, 48, '能量平衡', {
+        this.ui.title = scene.add.text(width / 2, 188, '能量平衡', {
             fontFamily: 'Inter, sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#f8fafc'
         }).setOrigin(0.5);
         this.ui.status = scene.add.text(width / 2, height * 0.36, '', {
-            fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#cbd5e1'
+            fontFamily: 'Inter, sans-serif', fontSize: '20px', color: '#cbd5e1'
         }).setOrigin(0.5);
 
         this.lifecycle.addCleanup(() => {
+            this.spawnTimer?.remove(false); this.spawnTimer = null;
             Object.values(this.ui).forEach((n) => n?.destroy?.());
-            this.orbs.forEach((o) => o.sprite?.destroy());
+            this.ui = {};
+            this.orbs.forEach((o) => this.disposeOrb(o));
             this.orbs = [];
+            this.dragging = null;
         });
 
         this.scheduleOrbSpawn();
@@ -110,9 +131,10 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
             callback: () => this.tickBalance(0.1)
         }));
 
-        scene.input.on('pointerdown', (p) => this.onPointerDown(p));
-        scene.input.on('pointermove', (p) => this.onPointerMove(p));
-        scene.input.on('pointerup', () => this.onPointerUp());
+        this.lifecycle.trackListener(scene.input, 'pointerdown', (p) => this.onPointerDown(p));
+        this.lifecycle.trackListener(scene.input, 'pointermove', (p) => this.onPointerMove(p));
+        this.lifecycle.trackListener(scene.input, 'pointerup', () => this.onPointerUp());
+        this.lifecycle.trackListener(scene.input, 'pointerupoutside', () => { this.dragging = null; });
 
         this.refreshHud();
         this.publishTestState();
@@ -122,34 +144,46 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
     scheduleOrbSpawn() {
         const min = Number(this.config.orbSpawnMinSec || 0.8) * 1000;
         const max = Number(this.config.orbSpawnMaxSec || 1.6) * 1000;
-        const delay = min + Math.random() * Math.max(0, max - min);
-        this.lifecycle.trackTimer(this.scene.time.delayedCall(delay, () => {
+        const delay = min + this.random() * Math.max(0, max - min);
+        this.spawnTimer?.remove(false);
+        this.spawnTimer = this.scene.time.delayedCall(delay, () => {
+            this.spawnTimer = null;
             if (!this.isRunning()) return;
             this.spawnOrb();
             this.scheduleOrbSpawn();
-        }));
+        });
+    }
+
+    disposeOrb(orb) {
+        orb.alive = false; orb.sprite?.destroy(); orb.label?.destroy();
+        if (this.dragging === orb) this.dragging = null;
     }
 
     spawnOrb() {
+        if (!this.isRunning()) return;
+        if (this.orbs.length >= 12) {
+            const oldest = this.orbs.find(o => o !== this.dragging);
+            this.disposeOrb(oldest); this.orbs = this.orbs.filter(o => o.alive);
+        }
         const { width, height } = this.scene.scale;
-        const type = ORB_TYPES[Math.floor(Math.random() * ORB_TYPES.length)];
-        const side = Math.random() < 0.5 ? 0.15 : 0.85;
-        const sprite = this.scene.add.circle(width * side, height * (0.55 + Math.random() * 0.3), 18, type.color, 0.95)
+        const type = ORB_TYPES[Math.floor(this.random() * ORB_TYPES.length)];
+        const side = this.random() < 0.5 ? 0.15 : 0.85;
+        const sprite = this.scene.add.circle(width * side, height * (0.55 + this.random() * 0.3), 36, type.color, 0.95)
             .setStrokeStyle(2, 0xffffff, 0.4)
             .setInteractive({ useHandCursor: true });
         const label = this.scene.add.text(sprite.x, sprite.y, type.label, {
-            fontFamily: 'Inter, sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#0f172a'
+            fontFamily: 'Inter, sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#0f172a'
         }).setOrigin(0.5);
-        const orb = { sprite, label, type, alive: true };
+        const orb = { id: ++this.orbSerial, sprite, label, type, alive: true };
         this.orbs.push(orb);
-        sprite.on('pointerdown', () => { this.dragging = orb; });
     }
 
     onPointerDown(pointer) {
+        if (!this.isRunning()) return;
         // allow click-pick nearest
         if (this.dragging) return;
         let best = null;
-        let bestD = 40;
+        let bestD = 48;
         this.orbs.forEach((orb) => {
             if (!orb.alive) return;
             const d = Math.hypot(orb.sprite.x - pointer.x, orb.sprite.y - pointer.y);
@@ -159,7 +193,7 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
     }
 
     onPointerMove(pointer) {
-        if (!this.dragging?.alive) return;
+        if (!this.isRunning() || !pointer.isDown || !this.dragging?.alive) return;
         this.dragging.sprite.x = pointer.x;
         this.dragging.sprite.y = pointer.y;
         this.dragging.label.x = pointer.x;
@@ -167,16 +201,16 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
     }
 
     onPointerUp() {
+        if (!this.isRunning()) { this.dragging = null; return; }
         if (!this.dragging?.alive) { this.dragging = null; return; }
         const core = this.ui.core;
         const d = Math.hypot(this.dragging.sprite.x - core.x, this.dragging.sprite.y - core.y);
         if (d <= 56) {
             this.state.balance = Math.max(0, Math.min(1, this.state.balance + this.dragging.type.bias * 0.08));
             this.state.score += 1;
+            this.state.deposits += 1;
             this.context.spawnParticles?.(core.x, core.y, this.dragging.type.color);
-            this.dragging.alive = false;
-            this.dragging.sprite.destroy();
-            this.dragging.label.destroy();
+            this.disposeOrb(this.dragging);
             this.orbs = this.orbs.filter((o) => o.alive);
         }
         this.dragging = null;
@@ -185,10 +219,12 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
     }
 
     tickBalance(dt) {
-        if (!this.isRunning()) return;
+        if (!this.isRunning() || !Number.isFinite(dt) || dt <= 0) return;
         this.state.elapsedSec += dt;
         // natural drift toward edges
-        this.state.balance += (this.state.balance - 0.5) * this.config.pointerDrift * dt * 10;
+        // A centered gauge used to be an absorbing equilibrium: no input could
+        // always win. A small directional pressure makes balancing necessary.
+        this.state.balance += ((this.state.balance - 0.5) * 10 + this.driftDirection) * this.config.pointerDrift * dt;
         this.state.balance = Math.max(0, Math.min(1, this.state.balance));
 
         const safeHalf = this.config.safeZoneWidth / 2;
@@ -196,7 +232,7 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
         const dev = Math.abs(this.state.balance - 0.5);
 
         if (dev <= safeHalf) {
-            this.state.stableSec += dt;
+            this.state.stableSec = Math.min(this.config.targetStableSec, this.state.stableSec + dt);
             this.state.overWarnSec = 0;
             this.state.score = Math.max(this.state.score, Math.floor(this.state.stableSec));
         } else if (dev > warnHalf) {
@@ -225,7 +261,7 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
         const { width } = this.scene.scale;
         const gaugeW = width * 0.7;
         const left = width / 2 - gaugeW / 2;
-        this.ui.pointer.x = left + this.state.balance * gaugeW;
+        if (this.ui.pointer) this.ui.pointer.x = left + this.state.balance * gaugeW;
         this.ui.status?.setText(
             `稳定 ${this.state.stableSec.toFixed(1)}/${this.config.targetStableSec}s  ·  失衡 ${this.state.violations}/${this.config.failViolationLimit}`
         );
@@ -233,13 +269,25 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
 
     getTestState() {
         return {
+            ...super.getTestState(),
             adapter: 'EnergyBalanceAdapter',
+            adapterId: 'energy_balance',
             status: this.status,
             hp: this.state.hp,
             score: Math.floor(this.state.stableSec),
             balance: this.state.balance,
             stableSec: this.state.stableSec,
             violations: this.state.violations,
+            goalValue: this.config.targetStableSec,
+            targetStableSec: this.config.targetStableSec,
+            failViolationLimit: this.config.failViolationLimit,
+            safeZoneWidth: this.config.safeZoneWidth,
+            timer: Math.max(0, this.config.targetStableSec - this.state.stableSec),
+            overWarnSec: this.state.overWarnSec,
+            elapsedSec: this.state.elapsedSec,
+            deposits: this.state.deposits,
+            core: this.ui.core ? { x: this.ui.core.x, y: this.ui.core.y } : null,
+            orbs: this.orbs.filter(o => o.alive).map(o => ({ id: o.id, label: o.type.label, bias: o.type.bias, x: o.sprite.x, y: o.sprite.y })),
             lastResult: this.result
         };
     }
@@ -265,9 +313,10 @@ export default class EnergyBalanceAdapter extends GameplayAdapter {
         return result;
     }
 
-    retreat() { return this.finish(false, NODE_RESULT_REASONS.RETREATED); }
+    pause() { if (this.config.allowPause !== false) { this.dragging = null; super.pause(); } }
+    retreat() { return this.config.allowQuit === false ? null : this.finish(false, NODE_RESULT_REASONS.RETREATED); }
     isRunning() { return this.status === 'running' && !this.lifecycle?.transitionLocked; }
-    destroy() { this.lifecycle?.cleanup(); super.destroy(); }
+    destroy() { this.lifecycle?.destroy(); super.destroy(); }
     publishTestState() {
         this.context.testHooks?.update({
             adapterId: this.config.id,

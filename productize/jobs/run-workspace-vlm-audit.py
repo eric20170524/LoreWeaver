@@ -169,7 +169,7 @@ def main() -> int:
         "artifactSha256": browser["artifactSha256"],
         "screenshotSha256": screenshot_sha256,
         "stageResults": browser.get("stageResults") or [],
-        "viewport": "720x1280",
+        "viewport": browser.get("viewport") or "720x1280",
     }
     critic = run_visual_critic(screenshot_path.read_bytes(), summary)
     result = critic.get("result") if isinstance(critic, dict) else None

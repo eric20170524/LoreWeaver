@@ -15,6 +15,7 @@ import RuntimeArtBinder, {
 } from "../../minigame_master/core/lib/graphics/RuntimeArtBinder.js";
 import { createMockPhaser } from "../../minigame_master/core/lib/testing/MockPhaserScene.js";
 import TestHooks from "../../minigame_master/core/lib/contracts/TestHooks.js";
+import VFX from "../../minigame_master/core/lib/juice/VFX.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LORE_ROOT = path.resolve(__dirname, "../..");
@@ -209,6 +210,89 @@ function testProductionBackgroundHardFail() {
   return true;
 }
 
+function testManifestDrivenClipSets() {
+  const mock = createMockPhaser();
+  const binder = new RuntimeArtBinder();
+  binder.scene = mock.scene;
+  binder.manifest = {
+    semanticPrefix: "bundle",
+    clipSets: {
+      player: {
+        walk: {
+          keys: Array.from({ length: 12 }, (_, i) => `player_walk_${i}`),
+          fps: 24,
+          loop: true
+        }
+      },
+      vfx_void_slash: {
+        loop: {
+          keys: Array.from({ length: 10 }, (_, i) => `vfx_void_slash_loop_${i}`),
+          fps: 15,
+          loop: true
+        },
+        impact: {
+          keys: ["vfx_void_slash_impact_0", "vfx_void_slash_impact_1"],
+          fps: 18,
+          loop: false
+        }
+      }
+    }
+  };
+
+  for (const key of binder.manifest.clipSets.player.walk.keys) mock.scene.textures.addCanvas(key);
+  for (const key of binder.manifest.clipSets.vfx_void_slash.loop.keys) mock.scene.textures.addCanvas(key);
+  for (const key of binder.manifest.clipSets.vfx_void_slash.impact.keys) mock.scene.textures.addCanvas(key);
+
+  const playerKeys = binder.resolveClipKeys("player", "walk");
+  if (playerKeys.length !== 12) {
+    return fail(`manifest clipSets must expose all 12 player frames, got ${playerKeys.length}`);
+  }
+  const fxKeys = binder.resolveClipKeys("vfx_void_slash", "loop");
+  if (fxKeys.length !== 10) {
+    return fail(`manifest clipSets must expose all 10 VFX frames, got ${fxKeys.length}`);
+  }
+
+  const walkSpec = binder.resolveClipSpec("player", "walk");
+  const impactSpec = binder.resolveClipSpec("vfx_void_slash", "impact");
+  if (walkSpec?.fps !== 24 || walkSpec?.loop !== true) {
+    return fail("player walk clip timing was not read from manifest");
+  }
+  if (impactSpec?.fps !== 18 || impactSpec?.loop !== false) {
+    return fail("VFX impact one-shot timing was not read from manifest");
+  }
+
+  let created = null;
+  mock.scene.anims.create = (cfg) => {
+    created = cfg;
+    return cfg;
+  };
+  mock.scene.anims.exists = () => false;
+  const sprite = mock.scene.add.sprite(0, 0);
+  sprite.play = () => sprite;
+  sprite.anims = { currentAnim: null, isPlaying: false };
+  binder.playClip(sprite, "vfx_void_slash", "impact");
+  if (!created || created.frameRate !== 18 || created.repeat !== 0) {
+    return fail(`manifest one-shot timing expected fps=18 repeat=0, got ${JSON.stringify(created)}`);
+  }
+
+  const runtimeArt = binder.createContext(mock.scene);
+  const effect = VFX.spriteClip(mock.scene, runtimeArt, "void_slash", 10, 20, { clip: "impact" });
+  if (!effect || effect.getData?.("artSource") !== "atlas") {
+    return fail("VFX.spriteClip should consume promoted atlas VFX before procedural fallback");
+  }
+  const expectedDuration = Math.ceil((2 / 18) * 1000);
+  if (effect.getData?.("artClipDurationMs") !== expectedDuration) {
+    return fail("one-shot VFX duration must derive from manifest keys/fps");
+  }
+  mock.tick(expectedDuration + 1);
+  if (effect.active !== false) {
+    return fail("one-shot atlas VFX must destroy itself after manifest-derived duration");
+  }
+
+  console.log("[PASS] manifest clipSets drive arbitrary frame counts, fps, loop, and generic VFX roles");
+  return true;
+}
+
 function main() {
   console.log("Running RuntimeArtBinder Asset Contract & Fallback Policy Checker...");
   const mock = createMockPhaser();
@@ -220,7 +304,8 @@ function main() {
     () => testGoldenFixture(),
     () => testPrototypeFallbackAndTelemetry(),
     () => testProductionHardFail(),
-    () => testProductionBackgroundHardFail()
+    () => testProductionBackgroundHardFail(),
+    () => testManifestDrivenClipSets()
   ];
 
   for (const step of steps) {

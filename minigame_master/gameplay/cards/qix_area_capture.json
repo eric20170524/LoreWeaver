@@ -30,32 +30,56 @@
       "default": 0.7,
       "min": 0.3,
       "max": 0.95,
-      "patchLevel": "L1",
-      "description": "Required claimed interior ratio."
-    },
-    "enemyCount": {
-      "type": "integer",
-      "default": 2,
-      "patchLevel": "L1",
-      "description": "Number of bouncing enemies."
-    },
-    "timeLimitSec": {
-      "type": "number",
-      "default": 90,
-      "patchLevel": "L1",
-      "description": "Time limit seconds."
+      "patchLevel": "L1"
     },
     "gridCols": {
       "type": "integer",
       "default": 24,
-      "patchLevel": "L1",
-      "description": "Grid columns."
+      "min": 10,
+      "max": 48,
+      "patchLevel": "L1"
     },
     "gridRows": {
       "type": "integer",
       "default": 16,
-      "patchLevel": "L1",
-      "description": "Grid rows."
+      "min": 8,
+      "max": 36,
+      "patchLevel": "L1"
+    },
+    "enemyCount": {
+      "type": "integer",
+      "default": 2,
+      "min": 0,
+      "max": 8,
+      "patchLevel": "L1"
+    },
+    "timeLimitSec": {
+      "type": "number",
+      "default": 90,
+      "min": 20,
+      "max": 300,
+      "patchLevel": "L1"
+    },
+    "playerSpeed": {
+      "type": "number",
+      "default": 140,
+      "min": 70,
+      "max": 420,
+      "patchLevel": "L1"
+    },
+    "enemySpeed": {
+      "type": "number",
+      "default": 90,
+      "min": 30,
+      "max": 300,
+      "patchLevel": "L1"
+    },
+    "pathMinCells": {
+      "type": "integer",
+      "default": 4,
+      "min": 2,
+      "max": 12,
+      "patchLevel": "L1"
     }
   },
   "patchPolicy": {
@@ -85,7 +109,7 @@
   },
   "testFixture": {
     "type": "e2e",
-    "path": null,
+    "path": "productize/jobs/run-qix-card-lab-e2e.mjs",
     "assertions": [
       "border movement",
       "path close claims area",

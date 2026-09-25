@@ -20,33 +20,65 @@
     "progress_met"
   ],
   "failure": [
-    "instability_max",
+    "condition_failed",
     "retreated"
   ],
   "knobs": {
     "targetProgress": {
       "type": "integer",
       "default": 100,
-      "patchLevel": "L1",
-      "description": "Progress to clear."
+      "min": 30,
+      "max": 200,
+      "patchLevel": "L1"
     },
     "instabilityMax": {
       "type": "integer",
       "default": 100,
-      "patchLevel": "L1",
-      "description": "Fail when instability reaches this."
+      "min": 20,
+      "max": 200,
+      "patchLevel": "L1"
     },
     "matchProgress": {
       "type": "number",
       "default": 14,
-      "patchLevel": "L1",
-      "description": "Progress on element match."
+      "min": 1,
+      "max": 50,
+      "patchLevel": "L1"
+    },
+    "nearMatchProgress": {
+      "type": "number",
+      "default": 7,
+      "min": 0,
+      "max": 50,
+      "patchLevel": "L1"
+    },
+    "instabilityOnMismatch": {
+      "type": "number",
+      "default": 18,
+      "min": 1,
+      "max": 100,
+      "patchLevel": "L1"
+    },
+    "instabilityOnMiss": {
+      "type": "number",
+      "default": 8,
+      "min": 1,
+      "max": 100,
+      "patchLevel": "L1"
+    },
+    "instabilityDecayPerSec": {
+      "type": "number",
+      "default": 4,
+      "min": 0,
+      "max": 20,
+      "patchLevel": "L1"
     },
     "poolSpawnIntervalSec": {
       "type": "number",
       "default": 1.1,
-      "patchLevel": "L1",
-      "description": "Orb spawn interval."
+      "min": 0.3,
+      "max": 5,
+      "patchLevel": "L1"
     }
   },
   "patchPolicy": {
@@ -78,7 +110,7 @@
   },
   "testFixture": {
     "type": "e2e",
-    "path": null,
+    "path": "productize/jobs/run-point-drag-card-lab-e2e.mjs",
     "assertions": [
       "drag orb to matching point",
       "mismatch raises instability",

@@ -1,0 +1,159 @@
+{
+  "createdAt": "2026-09-21T10:30:40.370Z",
+  "status": "passed",
+  "replayReady": true,
+  "releaseEligible": false,
+  "scenarioHash": "sha256:c250267e92e21260c96689b9b60e05aac7e65fb2420707144f8db293c2366976",
+  "identity": {
+    "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+    "runtimeVersion": "2.0.0",
+    "assetManifestHash": "ac5288b64b8805f80b7e95f70505fd9535c1b1a328dabdd12f97c27c056754c3"
+  },
+  "matrix": {
+    "requiredBrowsers": [
+      "chromium",
+      "firefox"
+    ],
+    "requiredBuildCount": 2,
+    "cells": [
+      {
+        "browser": "chromium",
+        "browserVersion": "131.0.6778.33",
+        "engineVersion": "Blink/131.0.6778.33",
+        "buildId": "build-a",
+        "sessionId": "runtime-mub3tiln-yc5psxyh",
+        "status": "passed",
+        "payloadHash": "230046c148b18314702a9128fc764b015b7937ce2181ba4ab0ef41f26e6c680d",
+        "artifactSha256": "70d268c259f4cb5033333307239c0c5b7631fe56216f00e071f4e1228dab6de9",
+        "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+        "runtimeVersion": "2.0.0",
+        "assetManifestHash": "ac5288b64b8805f80b7e95f70505fd9535c1b1a328dabdd12f97c27c056754c3",
+        "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2"
+      },
+      {
+        "browser": "chromium",
+        "browserVersion": "131.0.6778.33",
+        "engineVersion": "Blink/131.0.6778.33",
+        "buildId": "build-b",
+        "sessionId": "runtime-mub3tksi-d50510xl",
+        "status": "passed",
+        "payloadHash": "230046c148b18314702a9128fc764b015b7937ce2181ba4ab0ef41f26e6c680d",
+        "artifactSha256": "f092e5a22d0aacd9d9a06519dabb6ada8b11c4944c1a5cc39ec3743e6a636ea9",
+        "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+        "runtimeVersion": "2.0.0",
+        "assetManifestHash": "ac5288b64b8805f80b7e95f70505fd9535c1b1a328dabdd12f97c27c056754c3",
+        "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2"
+      },
+      {
+        "browser": "firefox",
+        "browserVersion": "132.0",
+        "engineVersion": "Gecko/132.0",
+        "buildId": "build-a",
+        "sessionId": "runtime-mub3toyx-7a6kyfjb",
+        "status": "passed",
+        "payloadHash": "230046c148b18314702a9128fc764b015b7937ce2181ba4ab0ef41f26e6c680d",
+        "artifactSha256": "70d268c259f4cb5033333307239c0c5b7631fe56216f00e071f4e1228dab6de9",
+        "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+        "runtimeVersion": "2.0.0",
+        "assetManifestHash": "ac5288b64b8805f80b7e95f70505fd9535c1b1a328dabdd12f97c27c056754c3",
+        "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2"
+      },
+      {
+        "browser": "firefox",
+        "browserVersion": "132.0",
+        "engineVersion": "Gecko/132.0",
+        "buildId": "build-b",
+        "sessionId": "runtime-mub3tt01-ru7vng3g",
+        "status": "passed",
+        "payloadHash": "230046c148b18314702a9128fc764b015b7937ce2181ba4ab0ef41f26e6c680d",
+        "artifactSha256": "f092e5a22d0aacd9d9a06519dabb6ada8b11c4944c1a5cc39ec3743e6a636ea9",
+        "specHash": "sha256:1eeb02049b4172d9c195cd3ade7723ec303865d5f940cac9326e26f1ed555d36",
+        "runtimeVersion": "2.0.0",
+        "assetManifestHash": "ac5288b64b8805f80b7e95f70505fd9535c1b1a328dabdd12f97c27c056754c3",
+        "stateFingerprint": "f0f51ac5a5fbc84e00649f2e4f4e7c83d4b3385ee90fdb074757fae51966d1e2"
+      }
+    ]
+  },
+  "comparisons": {
+    "perBrowser": [
+      {
+        "browser": "chromium",
+        "schemaVersion": "loreweaver.cross-build-determinism-evidence.v1",
+        "status": "passed",
+        "deterministic": true,
+        "blockers": [],
+        "stateMatches": true,
+        "visualMatches": null,
+        "initialStateMatches": true,
+        "initialDifferences": [],
+        "finalDifferences": []
+      },
+      {
+        "browser": "firefox",
+        "schemaVersion": "loreweaver.cross-build-determinism-evidence.v1",
+        "status": "passed",
+        "deterministic": true,
+        "blockers": [],
+        "stateMatches": true,
+        "visualMatches": null,
+        "initialStateMatches": true,
+        "initialDifferences": [],
+        "finalDifferences": []
+      }
+    ],
+    "crossBrowser": [
+      {
+        "buildId": "build-a",
+        "schemaVersion": "loreweaver.cross-build-determinism-evidence.v1",
+        "status": "passed",
+        "deterministic": true,
+        "blockers": [],
+        "stateMatches": true,
+        "visualMatches": null,
+        "initialStateMatches": true,
+        "initialDifferences": [],
+        "finalDifferences": []
+      },
+      {
+        "buildId": "build-b",
+        "schemaVersion": "loreweaver.cross-build-determinism-evidence.v1",
+        "status": "passed",
+        "deterministic": true,
+        "blockers": [],
+        "stateMatches": true,
+        "visualMatches": null,
+        "initialStateMatches": true,
+        "initialDifferences": [],
+        "finalDifferences": []
+      }
+    ]
+  },
+  "sourceReport": "data/workspaces/__golden_survivor_vertical_slice_ci/reports/cross_build_determinism_latest.json",
+  "initialProjection": {
+    "hp": 100,
+    "score": 0,
+    "timer": 90,
+    "kills": 0,
+    "determinism.random.state": 1115297809,
+    "determinism.random.calls": 0,
+    "determinism.adapterStateSample.enemyCount": 0,
+    "determinism.adapterStateSample.enemies": []
+  },
+  "finalProjection": {
+    "hp": 100,
+    "score": 0,
+    "timer": 89,
+    "kills": 0,
+    "determinism.random.state": 483462139,
+    "determinism.random.calls": 2,
+    "determinism.adapterStateSample.enemyCount": 1,
+    "determinism.adapterStateSample.enemies": [
+      {
+        "x": -8.288,
+        "y": 21.321,
+        "active": true,
+        "hp": 2
+      }
+    ]
+  }
+}

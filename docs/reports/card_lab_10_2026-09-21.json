@@ -1,0 +1,431 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "observe_capture",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "935878f234798f2fcd0601b747fdadfa4331a38c",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "ac2c11dee21afbf4da4c7033fe2ff0f78cd9edda6e67d0b758ba58d263544608"
+      },
+      {
+        "name": "game.js",
+        "sha256": "d54f1db2b69173dcb7d7f131bb9c32b808f7e90b773cac16262366a610d0e0ea"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T13:08:25.493Z",
+  "sourceNote": "Build revision is the checkout base, with uncommitted card changes and concurrent unrelated workspace changes. Bundle SHA-256 values identify the tested payload, not a clean exact-HEAD source tree.",
+  "unitTests": {
+    "passed": 8,
+    "command": "node --test productize/jobs/check-observe-capture-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "catalogPolicy": "passed after replacing stale production expectations with explicit no-auto-selection and experimental-opt-in assertions; card certification flags unchanged",
+  "cases": [
+    {
+      "id": "default-five-capture-victory",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 667.8251716432889,
+            "y": 871.6478770825097
+          },
+          "windowRemaining": 0.7,
+          "progress": 22
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 68.87163738742123,
+            "y": 1028.6108822132105
+          },
+          "windowRemaining": 0.7,
+          "progress": 44
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 528.0050851763964,
+            "y": 799.0441583187195
+          },
+          "windowRemaining": 0.7,
+          "progress": 66
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 317.2222347519964,
+            "y": 548.6170668194135
+          },
+          "windowRemaining": 0.7,
+          "progress": 88
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 373.5564711471606,
+            "y": 409.3042080045691
+          },
+          "windowRemaining": 0.7,
+          "progress": 100
+        }
+      ],
+      "assertions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captures": 5,
+          "misses": 0,
+          "progress": 100,
+          "elapsedSec": 10.866229999999938
+        }
+      }
+    },
+    {
+      "id": "miss-penalty-and-missed-window",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 555.1298499734355,
+            "y": 927.9980423135726
+          },
+          "windowRemaining": 0.7,
+          "progress": 22
+        }
+      ],
+      "assertions": [
+        "real elapsed windows do not award passive progress; one moving miss subtracts exactly 12"
+      ],
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captures": 1,
+          "misses": 1,
+          "progress": 10,
+          "elapsedSec": 6.449769999999993
+        }
+      }
+    },
+    {
+      "id": "pause-resume-and-three-restarts",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 592.6982963915664,
+            "y": 908.1644771240243
+          },
+          "windowRemaining": 0.66667,
+          "progress": 15
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 144.00101703527943,
+            "y": 991.0474445873487
+          },
+          "windowRemaining": 0.7,
+          "progress": 30
+        }
+      ],
+      "assertions": [],
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captures": 0,
+          "misses": 0,
+          "progress": 0,
+          "elapsedSec": 0.13332000000000008
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-victory",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "touch",
+          "target": {
+            "x": 513.3965927831321,
+            "y": 948.8634187106571
+          },
+          "windowRemaining": 0.7,
+          "progress": 22
+        },
+        {
+          "kind": "touch",
+          "target": {
+            "x": 256.6888255167296,
+            "y": 934.7010359504878
+          },
+          "windowRemaining": 0.7,
+          "progress": 44
+        },
+        {
+          "kind": "touch",
+          "target": {
+            "x": 626.0944188491208,
+            "y": 703.0531588679781
+          },
+          "windowRemaining": 0.7,
+          "progress": 66
+        },
+        {
+          "kind": "touch",
+          "target": {
+            "x": 52.17232396057641,
+            "y": 410.88279259383097
+          },
+          "windowRemaining": 0.7,
+          "progress": 88
+        },
+        {
+          "kind": "touch",
+          "target": {
+            "x": 565.5534964254499,
+            "y": 505.3027206437135
+          },
+          "windowRemaining": 0.7,
+          "progress": 100
+        }
+      ],
+      "assertions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captures": 5,
+          "misses": 0,
+          "progress": 100,
+          "elapsedSec": 11.66619999999992
+        }
+      }
+    },
+    {
+      "id": "offline-default-victory",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 442.4370326997161,
+            "y": 984.3406943562311
+          },
+          "windowRemaining": 0.7,
+          "progress": 22
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 156.52299770927826,
+            "y": 984.7852020522819
+          },
+          "windowRemaining": 0.7,
+          "progress": 44
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 619.8137430820216,
+            "y": 753.139829365907
+          },
+          "windowRemaining": 0.7,
+          "progress": 66
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 262.9619880954243,
+            "y": 521.4919522833973
+          },
+          "windowRemaining": 0.7,
+          "progress": 88
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 361.0369948692966,
+            "y": 403.0407132714348
+          },
+          "windowRemaining": 0.7,
+          "progress": 100
+        }
+      ],
+      "assertions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captures": 5,
+          "misses": 0,
+          "progress": 100,
+          "elapsedSec": 10.749559999999937
+        }
+      }
+    },
+    {
+      "id": "custom-target-no-premature-host-victory",
+      "passed": true,
+      "errors": [],
+      "actions": [
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 559.3146959146858,
+            "y": 925.9081237390822
+          },
+          "windowRemaining": 1.2,
+          "progress": 9
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 219.1278922870027,
+            "y": 953.4840069614864
+          },
+          "windowRemaining": 1.2,
+          "progress": 18
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 642.7812102952913,
+            "y": 711.3978067891312
+          },
+          "windowRemaining": 1.2,
+          "progress": 27
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 150.27417961397487,
+            "y": 465.14429144846986
+          },
+          "windowRemaining": 1.2,
+          "progress": 36
+        },
+        {
+          "kind": "pointer",
+          "target": {
+            "x": 331.8182051645878,
+            "y": 388.4325706171478
+          },
+          "windowRemaining": 1.2,
+          "progress": 45
+        }
+      ],
+      "assertions": [],
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "captures": 5,
+          "misses": 0,
+          "progress": 45,
+          "elapsedSec": 10.649599999999948
+        }
+      }
+    }
+  ]
+}

@@ -177,10 +177,12 @@ async function execute(playwright, stage, runId) {
       const move = api.input({ action: 'move', x: 20, y: 1220 });
       const advance = api.advanceFrames({ frames });
       const atCounter = api.snapshot();
+      // Exact stepping intentionally returns paused. Resume synchronously before
+      // an action that requires a running adapter; no RAF can interleave here.
+      const resume = api.resume({ reason: 'action_boss_alignment_complete' });
       const primary = api.input({ action: 'primary' });
       const afterPrimary = api.snapshot();
       const trace = api.trace();
-      const resume = api.resume({ reason: 'action_boss_alignment_complete' });
       return { before, move, advance, atCounter, primary, afterPrimary, trace, resume, capabilities: api.capabilities() };
     }, { frames: ADVANCE_FRAMES });
 

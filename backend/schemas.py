@@ -57,6 +57,7 @@ class FeedbackRequest(BaseModel):
     message: str
     agent_role: Optional[str] = "world_builder"
     department_id: Optional[str] = None
+    scope: Optional[Any] = None
 
 class ApproveRequest(BaseModel):
     modifications: Optional[Any] = None

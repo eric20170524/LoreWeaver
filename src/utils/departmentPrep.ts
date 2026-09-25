@@ -4,7 +4,13 @@ export type DepartmentStatus =
   | "ready_for_review"
   | "confirmed"
   | "blocked"
-  | "stale";
+  | "stale"
+  | "deferred";
+
+export interface PrepScope {
+  kind: "trunk" | "nodes" | "all";
+  nodeIds?: number[];
+}
 
 export type HandoffType = "request" | "ack" | "reject" | "escalate";
 
@@ -23,6 +29,8 @@ export interface DepartmentMeta {
   dependsOn?: string[];
   systemPromptRole?: string;
   uiTabs?: string[];
+  /** trunk | node | mixed | director */
+  scopeLayer?: "trunk" | "node" | "mixed" | "director" | string;
 }
 
 export interface DepartmentRuntimeState {
@@ -31,17 +39,26 @@ export interface DepartmentRuntimeState {
   version: number;
   qaScore: number | null;
   prepNotes: string;
+  brief?: string;
   artifacts: string[];
   openHandoffCount: number;
+  source?: "llm" | "procedural_fallback" | "orchestrator" | string;
+  provider?: string | null;
   updatedAt?: string | null;
   confirmedAt?: string | null;
 }
 
 export interface DepartmentDeskState {
   schemaVersion: string;
-  unitId: string;
+  unitId?: string;
   unitType?: string;
   stageId: string;
+  activeScope?: PrepScope;
+  scopes?: {
+    trunk?: { departments?: Record<string, DepartmentRuntimeState> };
+    nodes?: Record<string, { departments?: Record<string, DepartmentRuntimeState> }>;
+  };
+  legacyCampaignNotes?: Record<string, { prepNotes?: string; status?: string; version?: number }>;
   departments: Record<string, DepartmentRuntimeState>;
   requiredDepartmentIds: string[];
   confirmedCount: number;
@@ -58,12 +75,14 @@ export interface DepartmentHandoff {
   summary: string;
   payloadRef?: string;
   needs?: string[];
+  acceptanceCriteria?: string[];
   blockers?: string[];
   patchLevelMax?: string;
   createdAt: string;
   status: "open" | "resolved" | "wontfix";
   resolvedAt?: string;
   resolveNote?: string;
+  evidenceRefs?: Array<{ path: string; sha256: string }>;
 }
 
 export interface DepartmentRegistry {
@@ -82,6 +101,33 @@ export interface DepartmentDeskPayload {
   registry: DepartmentRegistry;
   state: DepartmentDeskState;
   handoffs: DepartmentHandoff[];
+  nodeIndex?: Array<{ id: number; title?: string }>;
+}
+
+export function departmentLayer(meta: DepartmentMeta): string {
+  return meta.scopeLayer || "mixed";
+}
+
+export function departmentCanRun(meta: DepartmentMeta, kind: "trunk" | "nodes"): boolean {
+  const layer = departmentLayer(meta);
+  if (layer === "director") return true;
+  if (kind === "trunk") return layer === "trunk" || layer === "mixed";
+  return layer === "node" || layer === "mixed";
+}
+
+export function departmentRuntime(
+  state: DepartmentDeskState | null | undefined,
+  deptId: string,
+  scope: PrepScope
+): DepartmentRuntimeState | undefined {
+  if (!state) return undefined;
+  if (state.scopes) {
+    if (scope.kind === "trunk") return state.scopes.trunk?.departments?.[deptId];
+    const nodeId = scope.nodeIds?.[0];
+    if (nodeId == null) return undefined;
+    return state.scopes.nodes?.[String(nodeId)]?.departments?.[deptId];
+  }
+  return state.departments?.[deptId];
 }
 
 export interface DepartmentTaskSyncResult {
@@ -147,7 +193,9 @@ export async function confirmDepartment(
   deptId: string,
   body: {
     prepNotes?: string;
-    qaScore?: number;
+    brief?: string;
+    scope?: PrepScope;
+    activeScope?: PrepScope;
     reprepDownstream?: boolean;
     applyPatches?: boolean;
   } = {}
@@ -164,7 +212,7 @@ export async function confirmDepartment(
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reprepDownstream: true, applyPatches: true, ...body })
+      body: JSON.stringify({ reprepDownstream: false, applyPatches: true, ...body })
     }
   );
   if (!res.ok) throw new Error(await res.text());
@@ -227,7 +275,7 @@ export async function advanceDepartmentStage(
 export async function setDepartmentStatus(
   workspaceId: string,
   deptId: string,
-  body: { status: DepartmentStatus; prepNotes?: string; qaScore?: number }
+  body: { status: DepartmentStatus; prepNotes?: string; scope?: PrepScope; activeScope?: PrepScope }
 ): Promise<DepartmentDeskState> {
   const res = await fetch(
     `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/departments/${encodeURIComponent(deptId)}/status`,
@@ -244,7 +292,7 @@ export async function setDepartmentStatus(
 
 export async function createHandoff(
   workspaceId: string,
-  handoff: Partial<DepartmentHandoff> & { from: string; to: string; summary: string }
+  handoff: Partial<DepartmentHandoff> & { from: string; to: string; summary: string; scope?: PrepScope }
 ): Promise<DepartmentHandoff> {
   const res = await fetch(
     `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/departments/handoffs`,
@@ -262,7 +310,7 @@ export async function createHandoff(
 export async function resolveHandoff(
   workspaceId: string,
   handoffId: string,
-  body: { status?: string; note?: string } = {}
+  body: { status: "resolved" | "wontfix"; note: string; evidenceRefs?: Array<{ path: string; sha256?: string }> }
 ): Promise<DepartmentHandoff> {
   const res = await fetch(
     `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/departments/handoffs/${encodeURIComponent(handoffId)}/resolve`,
@@ -306,6 +354,7 @@ export interface AdvanceGate {
   confirmedCount?: number;
   requiredCount?: number;
   qaScore?: number | null;
+  reportProvenance?: Array<{ file: string; createdAt?: string | null; artifactSha256?: string | null }>;
   nextStageId?: string | null;
   minQa?: number;
   openRejects?: number;
@@ -405,6 +454,8 @@ export interface AutoPrepResult {
     missingUpstream?: string[];
     risks?: string[];
     patchesApplied?: number;
+    scopeKind?: string;
+    nodeId?: number | null;
   }>;
   createdHandoffs?: DepartmentHandoff[];
   patchesApplied?: Array<Record<string, any>>;
@@ -415,7 +466,7 @@ export interface AutoPrepResult {
 
 export async function runAutoPrep(
   workspaceId: string,
-  body: { unitId?: string; force?: boolean; only?: string[] } = {}
+  body: { force?: boolean; only?: string[]; scope?: PrepScope; activeScope?: PrepScope; brief?: string } = {}
 ): Promise<AutoPrepResult> {
   const res = await fetch(
     `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/departments/auto-prep`,
@@ -433,7 +484,7 @@ export async function runAutoPrep(
 export async function runSingleDepartmentPrep(
   workspaceId: string,
   deptId: string,
-  body: { force?: boolean } = {}
+  body: { force?: boolean; scope: PrepScope; activeScope?: PrepScope; brief?: string; applyPatches?: boolean }
 ): Promise<AutoPrepResult> {
   const res = await fetch(
     `${API_BASE}/api/workspaces/${encodeURIComponent(workspaceId)}/departments/${encodeURIComponent(deptId)}/run-prep`,
@@ -463,7 +514,8 @@ export function statusLabel(status: DepartmentStatus, locale: "zh" | "en" = "zh"
     ready_for_review: { zh: "待确认", en: "Ready" },
     confirmed: { zh: "已确认", en: "Confirmed" },
     blocked: { zh: "阻塞", en: "Blocked" },
-    stale: { zh: "已过期", en: "Stale" }
+    stale: { zh: "已过期", en: "Stale" },
+    deferred: { zh: "延后", en: "Deferred" }
   };
   return map[status]?.[locale] || status;
 }
@@ -480,6 +532,8 @@ export function statusTone(status: DepartmentStatus): string {
       return "text-orange-600 dark:text-orange-400 border-orange-500/30 bg-orange-500/10";
     case "drafting":
       return "text-cyan-600 dark:text-cyan-400 border-cyan-500/30 bg-cyan-500/10";
+    case "deferred":
+      return "text-slate-500 border-slate-500/30 bg-slate-500/10";
     default:
       return "text-slate-500 border-slate-500/20 bg-slate-500/5";
   }

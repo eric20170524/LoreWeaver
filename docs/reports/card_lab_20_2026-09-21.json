@@ -1,0 +1,801 @@
+{
+  "schemaVersion": "loreweaver.card-lab-browser.v1",
+  "cardId": "rhythm_then_pickup",
+  "status": "passed",
+  "synthetic": true,
+  "releaseEligible": false,
+  "scope": "real input, shared RuntimeKernel, no state edits or accelerated time",
+  "build": {
+    "revision": "b470379c307cffa2a188b77d767b90059063b6ed",
+    "cards": [
+      "dodge_counter_boss",
+      "rhythm_timing",
+      "drag_collect_grid",
+      "sequence_synthesis",
+      "turn_based_skill_battle",
+      "side_scrolling_brawler",
+      "survivor_horde",
+      "reaction_pick",
+      "energy_balance",
+      "observe_capture",
+      "drag_to_core",
+      "pressure_survival",
+      "rune_connect_sequence",
+      "branching_dialogue_check",
+      "shooter_duel",
+      "maze_exploration_choice",
+      "platform_escape",
+      "hazard_collect_waves",
+      "sequence_puzzle_combo",
+      "rhythm_then_pickup"
+    ],
+    "releaseEligible": false,
+    "runtime": "compileRuntimeSpec -> LoreWeaverRuntimeKernel -> core adapter",
+    "files": [
+      {
+        "name": "index.html",
+        "sha256": "f890c38f01aedd056951b52c34469e00262e27fbe9ee7db727de4281528902c3"
+      },
+      {
+        "name": "game.js",
+        "sha256": "fd9d341c0329b7d712790f0ce10ffad9e6ceb8d30bca1aaa41e5c08a738683f7"
+      },
+      {
+        "name": "game.js.LEGAL.txt",
+        "sha256": "20e2cdf8d2f670e40ee45cad619d3d2951159f9276526874a1b4b64ccbf716bf"
+      },
+      {
+        "name": "LICENSE",
+        "sha256": "be9d092448936b752c991e3a701c29ea0b54d4eed17775811a1b8ee46c0bc7ca"
+      },
+      {
+        "name": "THIRD_PARTY_NOTICES.txt",
+        "sha256": "50a451c3a3e75d93481caaad72d00466eafe641449fc8146b1d135d71f82e0e8"
+      }
+    ]
+  },
+  "browser": "131.0.6778.33",
+  "finishedAt": "2026-09-21T15:05:40.280Z",
+  "sourceNote": "Checkout revision is the build base; actual bundle SHA-256 identifies uncommitted and concurrent source included in the tested payload.",
+  "unitTests": {
+    "passed": 8,
+    "command": "node productize/jobs/check-rhythm-pickup-runtime.mjs"
+  },
+  "typecheck": "npx tsc --noEmit: passed",
+  "smokeAdapter": {
+    "enter": true,
+    "spawnOrProgress": true,
+    "retreat": true,
+    "noCrash": true,
+    "warnings": [
+      "no_envKey",
+      "no_bgmKey"
+    ]
+  },
+  "cases": [
+    {
+      "id": "default-keyboard-both-phases",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "phase1Target": 12,
+        "bottlesNeeded": 5,
+        "phase2LimitSec": 20,
+        "beatIntervalMs": 1200,
+        "perfectWindowMs": 90,
+        "goodWindowMs": 180,
+        "bottleAppearMinSec": 1.2,
+        "bottleAppearMaxSec": 3,
+        "bottleLifeMinSec": 0.9,
+        "bottleLifeMaxSec": 1.5
+      },
+      "actions": [
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 1,
+          "distance": 33.409999999999854,
+          "hitsBefore": 0
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 2,
+          "distance": 33.48000000000093,
+          "hitsBefore": 1
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 3,
+          "distance": 33.51000000000204,
+          "hitsBefore": 2
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 4,
+          "distance": 16.87000000000262,
+          "hitsBefore": 3
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 5,
+          "distance": 33.59000000000378,
+          "hitsBefore": 4
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 6,
+          "distance": 16.970000000004802,
+          "hitsBefore": 5
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 7,
+          "distance": 17.030000000006112,
+          "hitsBefore": 6
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 8,
+          "distance": 0.40000000000691216,
+          "hitsBefore": 7
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 9,
+          "distance": 17.110000000007858,
+          "hitsBefore": 8
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 10,
+          "distance": 33.83000000000902,
+          "hitsBefore": 9
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 11,
+          "distance": 17.22000000001026,
+          "hitsBefore": 10
+        },
+        {
+          "kind": "beat",
+          "mode": "keyboard",
+          "index": 12,
+          "distance": 33.930000000011205,
+          "hitsBefore": 11
+        },
+        {
+          "kind": "pickup",
+          "mode": "keyboard",
+          "before": 0,
+          "timer": 18.200059999999986
+        },
+        {
+          "kind": "pickup",
+          "mode": "keyboard",
+          "before": 1,
+          "timer": 15.216869999999895
+        },
+        {
+          "kind": "pickup",
+          "mode": "keyboard",
+          "before": 2,
+          "timer": 12.433629999999951
+        },
+        {
+          "kind": "pickup",
+          "mode": "keyboard",
+          "before": 3,
+          "timer": 10.117039999999994
+        },
+        {
+          "kind": "pickup",
+          "mode": "keyboard",
+          "before": 4,
+          "timer": 7.967119999999991
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "hits": 12,
+        "bottles": 5,
+        "timer": 7.950459999999991,
+        "beatElapsedMs": 14382.729999999989,
+        "judgement": "perfect"
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "phase": 2,
+          "hits": 12,
+          "bottles": 5,
+          "combo": 12
+        }
+      }
+    },
+    {
+      "id": "single-click-per-beat-and-miss",
+      "passed": true,
+      "errors": [],
+      "assertions": [
+        "one real ring click gives one hit; repeated same-beat clicks do not add hits; off-beat input misses"
+      ],
+      "config": {
+        "phase1Target": 12,
+        "bottlesNeeded": 5,
+        "phase2LimitSec": 20,
+        "beatIntervalMs": 1200,
+        "perfectWindowMs": 90,
+        "goodWindowMs": 180,
+        "bottleAppearMinSec": 1.2,
+        "bottleAppearMaxSec": 3,
+        "bottleLifeMinSec": 0.9,
+        "bottleLifeMaxSec": 1.5
+      },
+      "actions": [],
+      "state": {
+        "phase": 1,
+        "hits": 1,
+        "bottles": 0,
+        "timer": null,
+        "beatElapsedMs": 1916.6000000000008,
+        "judgement": "miss"
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "phase": 1,
+          "hits": 1,
+          "bottles": 0,
+          "combo": 0
+        }
+      }
+    },
+    {
+      "id": "pickup-natural-timeout-and-expiry",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "phase1Target": 3,
+        "bottlesNeeded": 1,
+        "phase2LimitSec": 5,
+        "beatIntervalMs": 1200,
+        "perfectWindowMs": 90,
+        "goodWindowMs": 180,
+        "bottleAppearMinSec": 0.5,
+        "bottleAppearMaxSec": 0.5,
+        "bottleLifeMinSec": 2,
+        "bottleLifeMaxSec": 2
+      },
+      "actions": [
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 1,
+          "distance": 33.36999999999966,
+          "hitsBefore": 0
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 2,
+          "distance": 33.39999999999645,
+          "hitsBefore": 1
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 3,
+          "distance": 16.799999999998363,
+          "hitsBefore": 2
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "hits": 3,
+        "bottles": 0,
+        "timer": 0,
+        "beatElapsedMs": 3583.2000000000016,
+        "judgement": "perfect"
+      },
+      "result": {
+        "success": false,
+        "reason": "timer_expired",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "phase": 2,
+          "hits": 3,
+          "bottles": 0,
+          "combo": 3
+        }
+      }
+    },
+    {
+      "id": "pause-both-phases-and-three-restarts",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "phase1Target": 3,
+        "bottlesNeeded": 1,
+        "phase2LimitSec": 5,
+        "beatIntervalMs": 1200,
+        "perfectWindowMs": 90,
+        "goodWindowMs": 180,
+        "bottleAppearMinSec": 0.5,
+        "bottleAppearMaxSec": 0.5,
+        "bottleLifeMinSec": 2,
+        "bottleLifeMaxSec": 2
+      },
+      "actions": [
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 1,
+          "distance": 16.739999999999327,
+          "hitsBefore": 0
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 2,
+          "distance": 16.769999999997253,
+          "hitsBefore": 1
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 3,
+          "distance": 33.51999999999998,
+          "hitsBefore": 2
+        },
+        {
+          "kind": "pickup",
+          "mode": "mouse",
+          "before": 0,
+          "timer": 4.433340000000001
+        }
+      ],
+      "state": {
+        "phase": 1,
+        "hits": 0,
+        "bottles": 0,
+        "timer": null,
+        "beatElapsedMs": 116.65999999999948,
+        "judgement": null
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "phase": 1,
+          "hits": 0,
+          "bottles": 0,
+          "combo": 0
+        }
+      }
+    },
+    {
+      "id": "invalid-windows-and-maximum-config",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "phase1Target": 40,
+        "bottlesNeeded": 20,
+        "phase2LimitSec": 61,
+        "beatIntervalMs": 1200,
+        "perfectWindowMs": 90,
+        "goodWindowMs": 180,
+        "bottleAppearMinSec": 1.2,
+        "bottleAppearMaxSec": 3,
+        "bottleLifeMinSec": 0.9,
+        "bottleLifeMaxSec": 1.5
+      },
+      "actions": [],
+      "state": {
+        "phase": 1,
+        "hits": 0,
+        "bottles": 0,
+        "timer": null,
+        "beatElapsedMs": 116.68000000000004,
+        "judgement": null
+      },
+      "result": {
+        "success": false,
+        "reason": "retreated",
+        "rewards": {},
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "phase": 1,
+          "hits": 0,
+          "bottles": 0,
+          "combo": 0
+        }
+      }
+    },
+    {
+      "id": "mobile-touch-default-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "phase1Target": 12,
+        "bottlesNeeded": 5,
+        "phase2LimitSec": 20,
+        "beatIntervalMs": 1200,
+        "perfectWindowMs": 90,
+        "goodWindowMs": 180,
+        "bottleAppearMinSec": 1.2,
+        "bottleAppearMaxSec": 3,
+        "bottleLifeMinSec": 0.9,
+        "bottleLifeMaxSec": 1.5
+      },
+      "actions": [
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 1,
+          "distance": 33.37999999999943,
+          "hitsBefore": 0
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 2,
+          "distance": 33.4399999999996,
+          "hitsBefore": 1
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 3,
+          "distance": 33.470000000001164,
+          "hitsBefore": 2
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 4,
+          "distance": 33.55000000000291,
+          "hitsBefore": 3
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 5,
+          "distance": 33.57000000000335,
+          "hitsBefore": 4
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 6,
+          "distance": 33.640000000004875,
+          "hitsBefore": 5
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 7,
+          "distance": 17.010000000005675,
+          "hitsBefore": 6
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 8,
+          "distance": 17.05000000000655,
+          "hitsBefore": 7
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 9,
+          "distance": 33.77000000000771,
+          "hitsBefore": 8
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 10,
+          "distance": 0.49000000000887667,
+          "hitsBefore": 9
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 11,
+          "distance": 17.21000000001004,
+          "hitsBefore": 10
+        },
+        {
+          "kind": "beat",
+          "mode": "touch",
+          "index": 12,
+          "distance": 33.92000000001099,
+          "hitsBefore": 11
+        },
+        {
+          "kind": "pickup",
+          "mode": "touch",
+          "before": 0,
+          "timer": 18.633409999999937
+        },
+        {
+          "kind": "pickup",
+          "mode": "touch",
+          "before": 1,
+          "timer": 16.700109999999903
+        },
+        {
+          "kind": "pickup",
+          "mode": "touch",
+          "before": 2,
+          "timer": 14.300249999999902
+        },
+        {
+          "kind": "pickup",
+          "mode": "touch",
+          "before": 3,
+          "timer": 12.733639999999934
+        },
+        {
+          "kind": "pickup",
+          "mode": "touch",
+          "before": 4,
+          "timer": 10.050399999999987
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "hits": 12,
+        "bottles": 5,
+        "timer": 10.033729999999988,
+        "beatElapsedMs": 14382.749999999989,
+        "judgement": "perfect"
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "phase": 2,
+          "hits": 12,
+          "bottles": 5,
+          "combo": 12
+        }
+      }
+    },
+    {
+      "id": "offline-default-mouse-victory",
+      "passed": true,
+      "errors": [],
+      "assertions": [],
+      "config": {
+        "phase1Target": 12,
+        "bottlesNeeded": 5,
+        "phase2LimitSec": 20,
+        "beatIntervalMs": 1200,
+        "perfectWindowMs": 90,
+        "goodWindowMs": 180,
+        "bottleAppearMinSec": 1.2,
+        "bottleAppearMaxSec": 3,
+        "bottleLifeMinSec": 0.9,
+        "bottleLifeMaxSec": 1.5
+      },
+      "actions": [
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 1,
+          "distance": 16.720000000000027,
+          "hitsBefore": 0
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 2,
+          "distance": 16.800000000000637,
+          "hitsBefore": 1
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 3,
+          "distance": 33.50000000000273,
+          "hitsBefore": 2
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 4,
+          "distance": 16.86000000000422,
+          "hitsBefore": 3
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 5,
+          "distance": 33.580000000005384,
+          "hitsBefore": 4
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 6,
+          "distance": 33.61000000000604,
+          "hitsBefore": 5
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 7,
+          "distance": 17.010000000007494,
+          "hitsBefore": 6
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 8,
+          "distance": 33.74000000000888,
+          "hitsBefore": 7
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 9,
+          "distance": 33.78000000000975,
+          "hitsBefore": 8
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 10,
+          "distance": 17.170000000010987,
+          "hitsBefore": 9
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 11,
+          "distance": 17.20000000001164,
+          "hitsBefore": 10
+        },
+        {
+          "kind": "beat",
+          "mode": "mouse",
+          "index": 12,
+          "distance": 17.240000000012515,
+          "hitsBefore": 11
+        },
+        {
+          "kind": "pickup",
+          "mode": "mouse",
+          "before": 0,
+          "timer": 18.633379999999967
+        },
+        {
+          "kind": "pickup",
+          "mode": "mouse",
+          "before": 0,
+          "timer": 18.56672999999997
+        },
+        {
+          "kind": "pickup",
+          "mode": "mouse",
+          "before": 1,
+          "timer": 15.850169999999904
+        },
+        {
+          "kind": "pickup",
+          "mode": "mouse",
+          "before": 2,
+          "timer": 12.983649999999958
+        },
+        {
+          "kind": "pickup",
+          "mode": "mouse",
+          "before": 3,
+          "timer": 9.983750000000017
+        },
+        {
+          "kind": "pickup",
+          "mode": "mouse",
+          "before": 4,
+          "timer": 7.267200000000053
+        }
+      ],
+      "state": {
+        "phase": 2,
+        "hits": 12,
+        "bottles": 5,
+        "timer": 7.267200000000053,
+        "beatElapsedMs": 14382.759999999987,
+        "judgement": "perfect"
+      },
+      "result": {
+        "success": true,
+        "reason": "objective_met",
+        "rewards": {
+          "score": 1
+        },
+        "penalties": {},
+        "unlocks": {
+          "nodes": [],
+          "ages": [],
+          "flags": [],
+          "gallery": []
+        },
+        "telemetry": {
+          "phase": 2,
+          "hits": 12,
+          "bottles": 5,
+          "combo": 12
+        }
+      }
+    }
+  ]
+}

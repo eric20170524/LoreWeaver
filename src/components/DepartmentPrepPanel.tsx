@@ -25,6 +25,9 @@ import {
   runAutoPrep,
   runSingleDepartmentPrep,
   setDepartmentStatus,
+  departmentCanRun,
+  departmentRuntime,
+  PrepScope,
   statusLabel,
   statusTone,
   AutoPrepResult,
@@ -66,7 +69,6 @@ export function DepartmentPrepPanel({
   const [selectedId, setSelectedId] = useState<string>("director");
   const [detailTab, setDetailTab] = useState<DetailTab>("prepNotes");
   const [notesDraft, setNotesDraft] = useState("");
-  const [qaDraft, setQaDraft] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,10 +77,21 @@ export function DepartmentPrepPanel({
   const [lastPatches, setLastPatches] = useState<AutoPrepResult["patchesApplied"]>([]);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<"idle" | "refresh" | "auto" | "dept" | "other">("idle");
+  const [scopeKind, setScopeKind] = useState<"trunk" | "nodes">("trunk");
+  const [viewNodeId, setViewNodeId] = useState<number | null>(null);
+  const [allNodes, setAllNodes] = useState(false);
+  const [briefDraft, setBriefDraft] = useState("");
+  const [reprepDownstream, setReprepDownstream] = useState(false);
+  const [forceRun, setForceRun] = useState(false);
 
   // New handoff form
   const [hoTo, setHoTo] = useState("art");
   const [hoSummary, setHoSummary] = useState("");
+  const [hoCriteria, setHoCriteria] = useState("");
+  const [resolutionDrafts, setResolutionDrafts] = useState<Record<string, { note: string; path: string }>>({});
+  const [releaseDecision, setReleaseDecision] = useState<{
+    status?: string; releaseCertified?: boolean; blockers?: string[]; artifactSha256?: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     if (!workspaceId) return;
@@ -94,6 +107,20 @@ export function DepartmentPrepPanel({
         setGate(await fetchAdvanceGate(workspaceId));
       } catch {
         setGate(null);
+      }
+      try {
+        const releaseResponse = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/release-status`);
+        if (!releaseResponse.ok) throw new Error(`release status HTTP ${releaseResponse.status}`);
+        const releasePayload = await releaseResponse.json();
+        const decision = releasePayload?.decision;
+        setReleaseDecision(decision ? {
+          status: decision.status || releasePayload.status,
+          releaseCertified: decision.releaseCertified === true,
+          blockers: decision.blockers || [],
+          artifactSha256: decision.identity?.artifactSha256
+        } : null);
+      } catch {
+        setReleaseDecision(null);
       }
       setStatusMsg(zh ? "已刷新部门状态" : "Desk refreshed");
       onDeskChanged?.();
@@ -112,29 +139,48 @@ export function DepartmentPrepPanel({
 
   const metaList: DepartmentMeta[] = desk?.registry.departments || [];
   const state = desk?.state;
+  const nodeIndex = desk?.nodeIndex || [];
+  const primaryNodeId =
+    viewNodeId ??
+    (nodeIndex.length && nodeIndex[0].id != null ? Number(nodeIndex[0].id) : null);
+  const viewScope: PrepScope =
+    scopeKind === "nodes" && primaryNodeId != null
+      ? { kind: "nodes", nodeIds: [primaryNodeId] }
+      : { kind: "trunk" };
+  const runNodeIds =
+    scopeKind === "nodes" && allNodes
+      ? nodeIndex.map((node) => Number(node.id)).filter((id) => !Number.isNaN(id))
+      : viewScope.nodeIds || [];
+  const runScope: PrepScope =
+    scopeKind === "trunk" ? { kind: "trunk" } : { kind: "nodes", nodeIds: runNodeIds };
+  const scopeMode: "trunk" | "nodes" = viewScope.kind === "nodes" ? "nodes" : "trunk";
   const selectedMeta = metaList.find((d) => d.id === selectedId) || metaList[0];
   const selectedRuntime: DepartmentRuntimeState | undefined =
-    selectedMeta && state?.departments?.[selectedMeta.id];
+    selectedMeta && departmentRuntime(state, selectedMeta.id, viewScope);
+  const viewKey = viewScope.kind === "trunk" ? "trunk" : String(viewScope.nodeIds?.[0] ?? "");
 
   useEffect(() => {
     if (selectedRuntime) {
       setNotesDraft(selectedRuntime.prepNotes || "");
-      setQaDraft(
-        selectedRuntime.qaScore == null ? "" : String(selectedRuntime.qaScore)
-      );
+      setBriefDraft(selectedRuntime.brief || "");
+    } else {
+      setNotesDraft("");
+      setBriefDraft("");
     }
-  }, [selectedId, selectedRuntime?.version, selectedRuntime?.prepNotes, selectedRuntime?.qaScore]);
+  }, [selectedId, viewKey, selectedRuntime?.version, selectedRuntime?.prepNotes, selectedRuntime?.brief]);
+
+  const viewUnitId = viewScope.kind === "trunk" ? "trunk" : `node:${viewScope.nodeIds?.[0]}`;
 
   const handoffsForSelected: DepartmentHandoff[] = useMemo(() => {
     if (!desk || !selectedMeta) return [];
     return (desk.handoffs || []).filter(
-      (h) => h.to === selectedMeta.id || h.from === selectedMeta.id
+      (h) => h.unitId === viewUnitId && (h.to === selectedMeta.id || h.from === selectedMeta.id)
     );
-  }, [desk, selectedMeta]);
+  }, [desk, selectedMeta, viewUnitId]);
 
   const openHandoffs = useMemo(
-    () => (desk?.handoffs || []).filter((h) => h.status === "open"),
-    [desk]
+    () => (desk?.handoffs || []).filter((h) => h.status === "open" && h.unitId === viewUnitId),
+    [desk, viewUnitId]
   );
 
   const stages = desk?.registry.stages || [];
@@ -153,16 +199,17 @@ export function DepartmentPrepPanel({
     if (!selectedMeta || busy) return;
     setBusy(true);
     try {
-      const score = qaDraft === "" ? undefined : Number(qaDraft);
       const result = await confirmDepartment(workspaceId, selectedMeta.id, {
         prepNotes: notesDraft,
-        qaScore: Number.isFinite(score as number) ? (score as number) : undefined,
-        reprepDownstream: true
+        brief: briefDraft,
+        scope: viewScope,
+        activeScope: viewScope,
+        reprepDownstream
       });
       setDesk((prev) => (prev ? { ...prev, state: result.state } : prev));
       if (result.reprepLog?.length) setLastRunLog(result.reprepLog);
       if (result.reprepPatches?.length) setLastPatches(result.reprepPatches);
-      const ver = result.state.departments[selectedMeta.id]?.version;
+      const ver = departmentRuntime(result.state, selectedMeta.id, viewScope)?.version;
       const stale = result.staleDownstream || [];
       const reprepped = (result.reprepLog || []).filter((x) => !x.skipped).map((x) => x.id);
       addLog(
@@ -184,11 +231,11 @@ export function DepartmentPrepPanel({
     if (!selectedMeta || busy) return;
     setBusy(true);
     try {
-      const score = qaDraft === "" ? 80 : Number(qaDraft);
       const next = await setDepartmentStatus(workspaceId, selectedMeta.id, {
         status: "ready_for_review",
         prepNotes: notesDraft,
-        qaScore: Number.isFinite(score) ? score : 80
+        scope: viewScope,
+        activeScope: viewScope
       });
       setDesk((prev) => (prev ? { ...prev, state: next } : prev));
       addLog(zh ? `📋 ${selectedMeta.title} → 待确认` : `${selectedMeta.id} ready for review`);
@@ -207,13 +254,17 @@ export function DepartmentPrepPanel({
     setError(null);
     setStatusMsg(
       zh
-        ? "自动筹备进行中：按拓扑逐个调用 LLM（约 10 个部门，可能需要 1–3 分钟），请勿关闭页面…"
-        : "Auto-prep running: calling LLM per department (may take 1–3 min)…"
+        ? "自动筹备进行中：先主干，再按关卡逐个调用（可能需要几分钟），请勿关闭页面…"
+        : "Auto-prep running: trunk first, then each node…"
     );
     try {
       addLog(zh ? "🎬 导演组开始拓扑调度各部门 Agent…" : "Director scheduling departments…");
       // force:true so re-running is not a silent no-op / stale procedural pass
-      const data = await runAutoPrep(workspaceId, { force: true });
+      const data = await runAutoPrep(workspaceId, {
+        force: forceRun,
+        scope: { kind: "all" },
+        activeScope: viewScope
+      });
       setDesk((prev) => (prev ? { ...prev, state: data.state } : prev));
       setLastRunLog(data.runLog || []);
       setLastPatches(data.patchesApplied || []);
@@ -256,7 +307,22 @@ export function DepartmentPrepPanel({
     setStatusMsg(zh ? `正在调度【${selectedMeta.title}】…` : `Running ${selectedMeta.id}…`);
     try {
       addLog(zh ? `▶ 调度部门 ${selectedMeta.title}…` : `Running ${selectedMeta.id}…`);
-      const data = await runSingleDepartmentPrep(workspaceId, selectedMeta.id, { force: true });
+      if (scopeKind === "nodes" && runNodeIds.length === 0) {
+        throw new Error(zh ? "请先选择关卡" : "Select a node first");
+      }
+      if (!departmentCanRun(selectedMeta, scopeMode)) {
+        throw new Error(
+          zh
+            ? `【${selectedMeta.title}】不能在${scopeMode === "trunk" ? "主干" : "关卡"}上调度`
+            : `${selectedMeta.id} cannot run on this scope`
+        );
+      }
+      const data = await runSingleDepartmentPrep(workspaceId, selectedMeta.id, {
+        force: forceRun,
+        scope: runScope,
+        activeScope: viewScope,
+        brief: briefDraft
+      });
       setDesk((prev) => (prev ? { ...prev, state: data.state } : prev));
       setLastRunLog(data.runLog || []);
       setLastPatches(data.patchesApplied || []);
@@ -278,16 +344,19 @@ export function DepartmentPrepPanel({
   };
 
   const onCreateHandoff = async () => {
-    if (!selectedMeta || !hoSummary.trim() || busy) return;
+    if (!selectedMeta || !hoSummary.trim() || !hoCriteria.trim() || busy) return;
     setBusy(true);
     try {
       await createHandoff(workspaceId, {
         from: selectedMeta.id,
         to: hoTo,
         summary: hoSummary.trim(),
-        type: "request"
+        acceptanceCriteria: hoCriteria.split("\n").map((item) => item.trim()).filter(Boolean),
+        type: "request",
+        scope: viewScope
       });
       setHoSummary("");
+      setHoCriteria("");
       addLog(zh ? `📨 交接已创建：${selectedMeta.id} → ${hoTo}` : `Handoff ${selectedMeta.id} → ${hoTo}`);
       await load();
     } catch (e: any) {
@@ -297,10 +366,20 @@ export function DepartmentPrepPanel({
     }
   };
 
-  const onResolve = async (id: string) => {
+  const onResolve = async (handoff: DepartmentHandoff, status: "resolved" | "wontfix") => {
+    const draft = resolutionDrafts[handoff.id] || { note: "", path: "" };
     setBusy(true);
     try {
-      await resolveHandoff(workspaceId, id, { status: "resolved" });
+      await resolveHandoff(workspaceId, handoff.id, {
+        status,
+        note: draft.note.trim(),
+        evidenceRefs: status === "resolved" ? [{ path: draft.path.trim() }] : []
+      });
+      setResolutionDrafts((current) => {
+        const next = { ...current };
+        delete next[handoff.id];
+        return next;
+      });
       await load();
     } catch (e: any) {
       setError(e?.message || String(e));
@@ -309,8 +388,22 @@ export function DepartmentPrepPanel({
     }
   };
 
-  const confirmed = state?.confirmedCount ?? 0;
-  const required = state?.requiredCount ?? 0;
+  const scopeDepartments = metaList.filter(
+    (meta) => meta.id !== "director" && departmentCanRun(meta, scopeMode)
+  );
+  const confirmed = scopeDepartments.filter(
+    (meta) => departmentRuntime(state, meta.id, viewScope)?.status === "confirmed"
+  ).length;
+  const required = scopeDepartments.length;
+  const scopeLabel =
+    scopeMode === "trunk"
+      ? zh
+        ? "主干"
+        : "Trunk"
+      : `Node ${primaryNodeId ?? "—"}${allNodes ? (zh ? ` · 调度全关 × ${runNodeIds.length}` : ` · dispatch all × ${runNodeIds.length}`) : ""}`;
+  const canRunSelected = !!selectedMeta && departmentCanRun(selectedMeta, scopeMode) && (
+    scopeMode === "trunk" || runNodeIds.length > 0
+  );
   const stageId = normalizeStageId(state?.stageId || gate?.stageId || "production_prep");
   const nextStageId = gate?.nextStageId ?? null;
   const nextTransition =
@@ -321,33 +414,6 @@ export function DepartmentPrepPanel({
   );
 
   const openRejectHandoffs = openHandoffs.filter((h) => h.type === "reject");
-
-  const onResolveAllRejects = async () => {
-    if (!workspaceId || !openRejectHandoffs.length) return;
-    setBusy(true);
-    setBusyAction("other");
-    try {
-      for (const h of openRejectHandoffs) {
-        await resolveHandoff(workspaceId, h.id, {
-          status: "resolved",
-          note: zh
-            ? "人工确认：reject 已登记为后续优化，不阻断后续阶段"
-            : "Acknowledged: reject deferred; does not block later stages"
-        });
-      }
-      addLog(
-        zh
-          ? `✅ 已关闭 ${openRejectHandoffs.length} 条 REJECT 交接`
-          : `✅ Resolved ${openRejectHandoffs.length} reject handoff(s)`
-      );
-      await load();
-    } catch (e: any) {
-      setError(e?.message || String(e));
-    } finally {
-      setBusy(false);
-      setBusyAction("idle");
-    }
-  };
 
   const onAdvanceStage = async (target: "asset_confirm" | "runtime_stage") => {
     if (busy || !workspaceId) return;
@@ -418,7 +484,7 @@ export function DepartmentPrepPanel({
             {zh ? "制作筹备 · 部门 Agent 台" : "Production Prep Desk"}
           </h2>
           <p className="text-[11px] text-slate-500 mt-0.5 font-mono">
-            unit: {state?.unitId || "—"} · {zh ? "已确认" : "confirmed"}{" "}
+            {scopeLabel} · {zh ? "已确认" : "confirmed"}{" "}
             <span className="text-emerald-500 font-bold">
               {confirmed}/{required}
             </span>
@@ -458,6 +524,58 @@ export function DepartmentPrepPanel({
                 : "Auto Prep"}
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            setScopeKind("trunk");
+            setAllNodes(false);
+          }}
+          className={`px-2.5 py-1 rounded-full border text-[11px] font-mono ${
+            scopeKind === "trunk"
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              : "border-slate-200 dark:border-slate-800 text-slate-500"
+          }`}
+        >
+          {zh ? "主干" : "Trunk"}
+        </button>
+        {nodeIndex.map((node) => {
+          const id = Number(node.id);
+          const active = scopeKind === "nodes" && primaryNodeId === id;
+          return (
+            <button
+              key={String(node.id)}
+              type="button"
+              onClick={() => {
+                setScopeKind("nodes");
+                setViewNodeId(id);
+              }}
+              className={`px-2.5 py-1 rounded-full border text-[11px] font-mono max-w-[16rem] truncate ${
+                active
+                  ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
+                  : "border-slate-200 dark:border-slate-800 text-slate-500"
+              }`}
+              title={node.title || ""}
+            >
+              {node.id}
+              {node.title ? ` · ${node.title}` : ""}
+            </button>
+          );
+        })}
+        {scopeKind === "nodes" && nodeIndex.length > 1 && (
+          <label className="ml-1 flex items-center gap-1.5 text-[11px] text-slate-500">
+            <input
+              type="checkbox"
+              checked={allNodes}
+              onChange={(event) => setAllNodes(event.target.checked)}
+            />
+            {zh
+              ? `全关（本次调度 × ${nodeIndex.length}，确认仍是当前关）`
+              : `All nodes (run × ${nodeIndex.length}; confirm stays on the selected node)`}
+          </label>
+        )}
       </div>
 
       {/* Multi-stage advance buttons (同级: 资产确认 / 节拍板 / 运行导出) */}
@@ -521,14 +639,51 @@ export function DepartmentPrepPanel({
         <div className="text-xs text-emerald-850 dark:text-emerald-250 bg-emerald-500/15 border border-emerald-500/30 rounded-xl px-4 py-3 flex flex-col gap-1.5 shadow-sm">
           <div className="font-bold flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
             <span>🎉</span>
-            {zh ? "恭喜！『运行与导出』阶段门禁已通过" : "Congratulations! 'Runtime & Export' Gate Passed"}
+            {zh ? "制作筹备已进入运行阶段" : "Production prep reached runtime stage"}
           </div>
           <div className="opacity-90 leading-relaxed font-sans">
             {zh
-              ? "当前版本已成功通过全部测试。请点击页面右上角顶栏的【 📥 导出 】(Export) 按钮，即可打包下载独立的本地单页 H5 游戏 ZIP 包！"
-              : "The current version has successfully passed all tests. Please click the [ 📥 Export ] button in the top-right header to package and download your standalone H5 game ZIP!"}
+              ? "此阶段表示筹备门禁通过；候选包与正式发布验收请看下方独立发布决策。"
+              : "This is a prep gate. Candidate and certified release evidence are evaluated separately below."}
           </div>
         </div>
+      )}
+
+      <div className="text-xs rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-900 dark:text-amber-200">
+        {releaseDecision ? (
+          <>
+            <strong>{zh ? "当前包发布决策" : "Current candidate decision"}: {releaseDecision.status || "unknown"}</strong>
+            <span className="block mt-1 font-mono text-[10px] break-all">SHA-256 {releaseDecision.artifactSha256 || "—"}</span>
+            <span className="block mt-1">
+              {releaseDecision.releaseCertified
+                ? (zh ? "已取得正式发布证据。" : "Certified release evidence is complete.")
+                : (zh ? `未认证；仍有 ${releaseDecision.blockers?.length || 0} 项发布阻断。` : `Not certified; ${releaseDecision.blockers?.length || 0} release blockers remain.`)}
+            </span>
+            {!!releaseDecision.blockers?.length && (
+              <details className="mt-1">
+                <summary className="cursor-pointer">{zh ? "查看发布阻断项" : "Show release blockers"}</summary>
+                <ul className="mt-1 max-h-40 overflow-y-auto space-y-0.5 font-mono text-[10px] break-all">
+                  {releaseDecision.blockers.map((blocker, index) => <li key={`${blocker}-${index}`}>{blocker}</li>)}
+                </ul>
+              </details>
+            )}
+          </>
+        ) : (zh ? "当前包发布决策未取得；筹备分数不能代替发布验收。" : "Candidate decision unavailable; prep scores are not release evidence.")}
+      </div>
+      {!!gate?.reportProvenance?.length && (
+        <details className="text-[11px] text-slate-500 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2">
+          <summary className="cursor-pointer">{zh ? "筹备分所用报告与候选包匹配情况" : "Prep report sources and candidate match"}</summary>
+          <ul className="mt-2 space-y-1 font-mono">
+            {gate.reportProvenance.map((report) => {
+              const match = !!releaseDecision?.artifactSha256 && report.artifactSha256 === releaseDecision.artifactSha256;
+              return <li key={report.file} className="break-all">
+                {report.file} · {report.createdAt || (zh ? "时间未知" : "undated")} · {match
+                  ? (zh ? "匹配当前包" : "matches candidate")
+                  : (zh ? "未绑定当前包，仅供筹备参考" : "not bound to candidate; prep only")}
+              </li>;
+            })}
+          </ul>
+        </details>
       )}
 
       {statusMsg && !error && (
@@ -572,7 +727,7 @@ export function DepartmentPrepPanel({
                   : `next → ${nextStageId} ${gate.allowed ? "OPEN" : "BLOCKED"}`
                 : stageId}
           </strong>
-          {gate.qaScore != null && ` · QA ${gate.qaScore}`}
+          {gate.qaScore != null && ` · ${zh ? "筹备分" : "Prep score"} ${gate.qaScore}`}
           {nextBlocked && gate.blockers?.length ? (
             <span className="block mt-1 opacity-90">
               blockers: {gate.blockers.slice(0, 6).join(" · ")}
@@ -628,17 +783,9 @@ export function DepartmentPrepPanel({
             <div className="mt-2 flex flex-wrap items-center gap-2 not-italic font-sans">
               <span className="text-amber-700 dark:text-amber-300">
                 {zh
-                  ? `${openRejectHandoffs.length} 条开放 REJECT（仅阻断「进入资产确认」）`
-                  : `${openRejectHandoffs.length} open REJECT (blocks asset_confirm only)`}
+                  ? `${openRejectHandoffs.length} 条本范围开放 REJECT；需逐项提供修复证据。`
+                  : `${openRejectHandoffs.length} open REJECT in this scope; resolve each with evidence.`}
               </span>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onResolveAllRejects}
-                className="px-2 py-0.5 rounded border border-amber-500/40 text-amber-800 dark:text-amber-200 text-[10px] font-bold hover:bg-amber-500/10 disabled:opacity-50"
-              >
-                {zh ? "确认并关闭 REJECT" : "Resolve REJECT(s)"}
-              </button>
             </div>
           )}
         </div>
@@ -664,8 +811,9 @@ export function DepartmentPrepPanel({
                 title={entry.reason || entry.risks?.join(", ") || entry.source}
               >
                 {entry.id}
+                {entry.nodeId != null ? `@${entry.nodeId}` : entry.scopeKind === "trunk" ? "@trunk" : ""}
                 {entry.skipped ? " skip" : ` ${entry.source || "ok"}`}
-                {entry.qaScore != null ? ` ${entry.qaScore}` : ""}
+                {entry.qaScore != null ? ` ${zh ? "筹备分" : "Prep"} ${entry.qaScore}` : ""}
                 {entry.patchesApplied ? ` p${entry.patchesApplied}` : ""}
               </span>
             ))}
@@ -693,7 +841,7 @@ export function DepartmentPrepPanel({
             </span>
           </div>
           {metaList.map((m) => {
-            const rt = state?.departments?.[m.id];
+            const rt = departmentRuntime(state, m.id, viewScope);
             const st = (rt?.status || "idle") as any;
             const active = selectedId === m.id;
             return (
@@ -721,7 +869,9 @@ export function DepartmentPrepPanel({
                     </span>
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5 flex gap-2 font-mono">
-                    {rt?.qaScore != null && <span>QA {rt.qaScore}</span>}
+                    {rt?.qaScore != null && <span>{zh ? "筹备分" : "Prep"} {rt.qaScore}</span>}
+                    {rt?.source === "procedural_fallback" && <span className="text-amber-600">{zh ? "程序草案" : "fallback draft"}</span>}
+                    {rt?.source === "llm" && <span>{zh ? "模型草案" : "LLM draft"}</span>}
                     {(rt?.openHandoffCount || 0) > 0 && (
                       <span className="text-amber-500">
                         {zh ? "交接" : "HO"} {rt?.openHandoffCount}
@@ -790,12 +940,19 @@ export function DepartmentPrepPanel({
                   <div className="flex flex-wrap gap-2 justify-end">
                     <button
                       type="button"
-                      disabled={busy}
+                      disabled={busy || !canRunSelected}
                       onClick={onRunThisDept}
+                      title={
+                        canRunSelected
+                          ? scopeLabel
+                          : zh
+                            ? "这个部门不在当前范围"
+                            : "This department does not run on the current scope"
+                      }
                       className="px-3 py-1.5 text-xs rounded-lg border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-40 flex items-center gap-1"
                     >
                       <Sparkles className="w-3.5 h-3.5" />
-                      {zh ? "调度本部门 Agent" : "Run this agent"}
+                      {zh ? `调度本部门 · ${scopeLabel}` : `Run · ${scopeLabel}`}
                     </button>
                     <button
                       type="button"
@@ -814,7 +971,54 @@ export function DepartmentPrepPanel({
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       {zh ? "确认部门" : "Confirm"}
                     </button>
+                    {scopeMode === "nodes" && canRunSelected && selectedMeta?.id !== "director" && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={async () => {
+                          if (!selectedMeta || busy) return;
+                          setBusy(true);
+                          try {
+                            const next = await setDepartmentStatus(workspaceId, selectedMeta.id, {
+                              status: "deferred",
+                              prepNotes: notesDraft,
+                              scope: viewScope,
+                              activeScope: viewScope
+                            });
+                            setDesk((prev) => (prev ? { ...prev, state: next } : prev));
+                            addLog(
+                              zh
+                                ? `${selectedMeta.title} · Node ${primaryNodeId} 标为延后`
+                                : `${selectedMeta.id} deferred on node ${primaryNodeId}`
+                            );
+                          } catch (e: any) {
+                            setError(e?.message || String(e));
+                          } finally {
+                            setBusy(false);
+                          }
+                        }}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-300 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40"
+                      >
+                        {zh ? "标记延后" : "Defer"}
+                      </button>
+                    )}
                   </div>
+                  <label className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={forceRun}
+                      onChange={(event) => setForceRun(event.target.checked)}
+                    />
+                    {zh ? "包含已确认" : "Include confirmed"}
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={reprepDownstream}
+                      onChange={(event) => setReprepDownstream(event.target.checked)}
+                    />
+                    {zh ? "确认后重跑本范围直接下游" : "Re-prep direct downstream in this scope"}
+                  </label>
                 </div>
               </div>
 
@@ -856,6 +1060,21 @@ export function DepartmentPrepPanel({
 
               {detailTab === "prepNotes" && (
                 <div className="flex flex-col gap-2 flex-1">
+                  <label className="flex flex-col gap-1 text-[11px] text-slate-500">
+                    {zh ? "本次约束（随调度发送，不覆盖筹备意见）" : "Constraint for this run"}
+                    <input
+                      value={briefDraft}
+                      onChange={(event) => setBriefDraft(event.target.value)}
+                      className="w-full text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950/50 px-3 py-1.5 text-slate-800 dark:text-slate-100"
+                      placeholder={zh ? "例如：只补 Node 3 的胜利台词" : "Optional constraint"}
+                    />
+                  </label>
+                  {scopeMode === "nodes" && state?.legacyCampaignNotes?.[selectedMeta?.id || ""]?.prepNotes && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400 leading-relaxed">
+                      {zh ? "旧战役级意见已归档，不作为本关确认：" : "Archived campaign note:"}{" "}
+                      {String(state.legacyCampaignNotes[selectedMeta?.id || ""].prepNotes).slice(0, 280)}
+                    </p>
+                  )}
                   <textarea
                     value={notesDraft}
                     onChange={(e) => setNotesDraft(e.target.value)}
@@ -888,6 +1107,8 @@ export function DepartmentPrepPanel({
                         selectedMeta.legacyAgentIds![0]
                       }
                       departmentTitle={titleOf(selectedMeta)}
+                      scope={viewScope}
+                      scopeLocked={!departmentCanRun(selectedMeta, scopeMode)}
                       jobId={jobId}
                       status={jobStatus}
                       onRefreshJob={onRefreshJob || (() => undefined)}
@@ -912,17 +1133,7 @@ export function DepartmentPrepPanel({
 
               {detailTab === "qaReport" && (
                 <div className="flex flex-col gap-3">
-                  <label className="text-xs text-slate-500 flex items-center gap-2">
-                    {zh ? "质检分数 (0–100)" : "QA score (0–100)"}
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={qaDraft}
-                      onChange={(e) => setQaDraft(e.target.value)}
-                      className="w-20 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-transparent text-sm font-mono"
-                    />
-                  </label>
+                  <p className="text-xs text-slate-500">{zh ? "筹备分（只读，非当前候选包发布分）：" : "Prep score (read-only, not candidate release evidence): "}{selectedRuntime.qaScore ?? "—"}</p>
                   <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1 font-mono bg-slate-50 dark:bg-slate-950/40 rounded-lg p-3 border border-slate-200 dark:border-slate-800">
                     <div>
                       {zh ? "依赖" : "dependsOn"}:{" "}
@@ -938,10 +1149,11 @@ export function DepartmentPrepPanel({
                     <div>
                       {zh ? "确认时间" : "confirmed"}: {selectedRuntime.confirmedAt || "—"}
                     </div>
+                    <div>{zh ? "草案来源" : "draft source"}: {selectedRuntime.source || "—"}{selectedRuntime.provider ? ` · ${selectedRuntime.provider}` : ""}</div>
                     <div className="pt-2 text-slate-500">
                       {zh
-                        ? "完整 gate 报告仍来自 workflow/reports；此处为部门台分数占位，后续可绑定 e2e/art coverage。"
-                        : "Full gates stay in workflow/reports; score here is a desk placeholder."}
+                        ? "发布证据以当前候选包 SHA 和独立发布决策为准；旧的全局 latest 报告不自动转为当前包通过。"
+                        : "Release evidence follows the exact candidate SHA and independent decision; global latest reports do not carry over."}
                     </div>
                   </div>
                 </div>
@@ -975,9 +1187,16 @@ export function DepartmentPrepPanel({
                       placeholder={zh ? "交接摘要，例如：Node4 需要 laser 预警圈美术" : "Summary…"}
                       className="w-full text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1.5"
                     />
+                    <textarea
+                      value={hoCriteria}
+                      onChange={(e) => setHoCriteria(e.target.value)}
+                      rows={2}
+                      placeholder={zh ? "验收条件（每行一项；例如：当前包节点 4 横屏截图经独立视觉审计）" : "Acceptance criteria, one per line"}
+                      className="w-full text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1.5"
+                    />
                     <button
                       type="button"
-                      disabled={busy || !hoSummary.trim()}
+                      disabled={busy || !hoSummary.trim() || !hoCriteria.trim()}
                       onClick={onCreateHandoff}
                       className="self-start px-3 py-1.5 text-xs rounded-lg bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold disabled:opacity-40"
                     >
@@ -1011,18 +1230,37 @@ export function DepartmentPrepPanel({
                           </span>
                         </div>
                         <p className="text-slate-700 dark:text-slate-300">{h.summary}</p>
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                          <span>{h.createdAt}</span>
-                          {h.status === "open" && (
-                            <button
-                              type="button"
-                              className="text-emerald-600 dark:text-emerald-400 hover:underline"
-                              onClick={() => onResolve(h.id)}
-                            >
-                              {zh ? "标记已解决" : "Resolve"}
-                            </button>
-                          )}
-                        </div>
+                        <p className="text-[10px] text-slate-500">{zh ? "验收条件" : "Acceptance"}: {(h.acceptanceCriteria || h.needs || [h.summary]).join("；")}</p>
+                        <span className="text-[10px] text-slate-500 font-mono">{h.unitId || "trunk"} · {h.createdAt}</span>
+                        {h.status === "open" ? (
+                          <div className="flex flex-col gap-1.5 mt-1">
+                            <input
+                              value={resolutionDrafts[h.id]?.path || ""}
+                              onChange={(e) => setResolutionDrafts((current) => ({ ...current, [h.id]: { note: current[h.id]?.note || "", path: e.target.value } }))}
+                              placeholder={zh ? "仓库内证据文件路径（解决时必填，服务端核验 SHA）" : "Repository evidence file path (required to resolve)"}
+                              className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-[11px]"
+                            />
+                            <textarea
+                              value={resolutionDrafts[h.id]?.note || ""}
+                              onChange={(e) => setResolutionDrafts((current) => ({ ...current, [h.id]: { note: e.target.value, path: current[h.id]?.path || "" } }))}
+                              rows={2}
+                              placeholder={zh ? "核对结果与当前包身份；无法完成时写明原因" : "Verification result or reason for not doing it"}
+                              className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-1 text-[11px]"
+                            />
+                            <div className="flex gap-2">
+                              <button type="button" disabled={busy || !resolutionDrafts[h.id]?.note?.trim() || !resolutionDrafts[h.id]?.path?.trim()}
+                                className="text-emerald-600 dark:text-emerald-400 hover:underline disabled:opacity-40"
+                                onClick={() => onResolve(h, "resolved")}>{zh ? "核验证据并解决" : "Verify evidence and resolve"}</button>
+                              {h.type !== "reject" && (
+                                <button type="button" disabled={busy || !resolutionDrafts[h.id]?.note?.trim()}
+                                  className="text-amber-700 dark:text-amber-400 hover:underline disabled:opacity-40"
+                                  onClick={() => onResolve(h, "wontfix")}>{zh ? "说明原因并放弃" : "Explain and decline"}</button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-slate-500">{h.resolveNote || "—"}{h.evidenceRefs?.length ? ` · ${h.evidenceRefs.map((ref) => `${ref.path}#${ref.sha256.slice(0, 12)}`).join(", ")}` : ""}</p>
+                        )}
                       </div>
                     ))}
                   </div>

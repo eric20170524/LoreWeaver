@@ -3,7 +3,7 @@
   "id": "energy_balance",
   "title": "Energy Balance",
   "category": "gauge_balance",
-  "status": "production_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -51,19 +51,25 @@
       "type": "number",
       "default": 0.8,
       "patchLevel": "L1",
-      "description": "Min orb spawn interval."
+      "description": "Min orb spawn interval.",
+      "min": 0.4,
+      "max": 5
     },
     "orbSpawnMaxSec": {
       "type": "number",
       "default": 1.6,
       "patchLevel": "L1",
-      "description": "Max orb spawn interval."
+      "description": "Max orb spawn interval.",
+      "min": 0.4,
+      "max": 5
     },
     "failOverWarn": {
       "type": "integer",
       "default": 8,
       "patchLevel": "L1",
-      "description": "Lightweight cert knob failOverWarn"
+      "description": "Lightweight cert knob failOverWarn",
+      "min": 1,
+      "max": 30
     },
     "allowQuit": {
       "type": "boolean",
@@ -192,8 +198,8 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
+    "productionReady": false,
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package.",
     "conditionalWaivers": [
       "device_class_fps: headless soak proxy",
       "vlm_visual_overflow: deferred",

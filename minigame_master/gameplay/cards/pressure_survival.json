@@ -3,7 +3,7 @@
   "id": "pressure_survival",
   "title": "Pressure Survival",
   "category": "microgame",
-  "status": "production_ready",
+  "status": "verified_prototype",
   "runtime": {
     "engineTargets": [
       "phaser"
@@ -26,25 +26,33 @@
       "type": "integer",
       "default": 30,
       "patchLevel": "L1",
-      "description": "durationSec"
+      "description": "durationSec",
+      "min": 5,
+      "max": 120
     },
     "pressureGrowthPerSec": {
       "type": "integer",
       "default": 8,
       "patchLevel": "L1",
-      "description": "pressureGrowthPerSec"
+      "description": "pressureGrowthPerSec",
+      "min": 1,
+      "max": 100
     },
     "clickRelief": {
       "type": "integer",
       "default": 6,
       "patchLevel": "L1",
-      "description": "clickRelief"
+      "description": "clickRelief",
+      "min": 1,
+      "max": 100
     },
     "skillCooldownSec": {
       "type": "integer",
       "default": 5,
       "patchLevel": "L1",
-      "description": "skillCooldownSec"
+      "description": "skillCooldownSec",
+      "min": 1,
+      "max": 30
     },
     "allowQuit": {
       "type": "boolean",
@@ -81,7 +89,7 @@
     "PressureBar"
   ],
   "resultContract": {
-    "successReason": "objective_met"
+    "successReason": "timer_expired"
   },
   "testFixture": {
     "type": "e2e",
@@ -160,8 +168,8 @@
     }
   ],
   "exportPolicy": {
-    "productionReady": true,
-    "blockReason": null,
+    "productionReady": false,
+    "blockReason": "Relabeled verified_prototype: residual headless FPS proxy / VLM not run / demo-gate evidence is not a full release package.",
     "conditionalWaivers": [
       "device_class_fps: headless soak proxy",
       "vlm_visual_overflow: deferred",

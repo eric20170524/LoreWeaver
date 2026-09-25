@@ -274,6 +274,22 @@ assert(afterExact.sessionId === beforeExact.sessionId && afterExact.sequence > b
 assert(afterExact.state.exactFrameAdvance.frames === 3, "same-session snapshot records exact frame evidence");
 assert(afterExact.capabilities.exactFrameAdvance === true, "exact-frame capability remains truthful after execution");
 
+// Equal frame counts must not straddle a timer boundary differently because
+// absolute RAF timestamps have different floating-point precision.
+const callbackBeforeReplay = exactLoop.callback;
+const replayTotals = [];
+for (const epoch of [4096, 65536, 1048576]) {
+  exactLoop.lastTime = epoch;
+  exactAdapter.updateDeltas = [];
+  const replay = exactApi.advanceFrames({ frames: 120 });
+  assert(replay.status === "passed", JSON.stringify(replay));
+  assert(exactAdapter.updateDeltas.length === 120, "replay executes 120 gameplay updates");
+  assert(exactAdapter.updateDeltas.every(delta => delta === 1000 / 60), "fixed gameplay delta is exact, not merely within tolerance");
+  replayTotals.push(exactAdapter.updateDeltas.reduce((total, delta) => total + delta, 0));
+  assert(exactLoop.callback === callbackBeforeReplay, "normal callback restored after replay");
+}
+assert(new Set(replayTotals).size === 1, "timer accumulation is independent of the RAF epoch");
+
 const exactInvalid = exactApi.advanceFrames({ frames: 0 });
 assert(exactInvalid.status === "failed" && exactInvalid.error.includes("exact_frame_count_invalid"), "invalid exact frame count fails closed");
 exactLoop._coolDown = 1;

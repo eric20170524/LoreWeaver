@@ -19,10 +19,54 @@
     "objective_met"
   ],
   "failure": [
-    "failed",
+    "hp_zero",
+    "condition_failed",
     "retreated"
   ],
-  "knobs": {},
+  "knobs": {
+    "maxWave": {
+      "type": "integer",
+      "default": 3,
+      "min": 1,
+      "max": 10,
+      "patchLevel": "L1"
+    },
+    "waveTimeSec": {
+      "type": "number",
+      "default": 15,
+      "min": 3,
+      "max": 120,
+      "patchLevel": "L1"
+    },
+    "collectTargetPerWave": {
+      "type": "integer",
+      "default": 4,
+      "min": 1,
+      "max": 20,
+      "patchLevel": "L1"
+    },
+    "warningSec": {
+      "type": "number",
+      "default": 0.9,
+      "min": 0.3,
+      "max": 2,
+      "patchLevel": "L1"
+    },
+    "strikeDamage": {
+      "type": "integer",
+      "default": 20,
+      "min": 1,
+      "max": 100,
+      "patchLevel": "L1"
+    },
+    "hazardIntervalSec": {
+      "type": "number",
+      "default": 2.2,
+      "min": 0.5,
+      "max": 4,
+      "patchLevel": "L1"
+    }
+  },
   "patchPolicy": {
     "defaultAllowedLevels": [
       "L0",
@@ -42,7 +86,7 @@
   },
   "testFixture": {
     "type": "e2e",
-    "path": null,
+    "path": "productize/jobs/run-hazard-waves-card-lab-e2e.mjs",
     "assertions": [
       "playable",
       "NodeResult"

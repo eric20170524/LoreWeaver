@@ -285,7 +285,8 @@ def _run_codex_cli(screenshot_bytes: bytes, payload_summary: dict) -> Dict[str, 
             image_file.write(screenshot_bytes)
             image_path = image_file.name
 
-        # ChatGPT.app codex: `codex exec -i file.png "prompt"`
+        # --image accepts multiple paths and can swallow a following prompt.
+        # Feed the prompt through stdin so CLI versions parse it consistently.
         cmd = [
             cli,
             "exec",
@@ -294,13 +295,13 @@ def _run_codex_cli(screenshot_bytes: bytes, payload_summary: dict) -> Dict[str, 
             "--skip-git-repo-check",
             "-i",
             image_path,
-            prompt,
         ]
         proc = subprocess.run(
             cmd,
+            input=prompt,
             capture_output=True,
             text=True,
-            timeout=90,
+            timeout=180,
         )
         output = (proc.stdout or "").strip()
         parsed = None

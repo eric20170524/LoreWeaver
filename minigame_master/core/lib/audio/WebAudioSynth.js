@@ -8,21 +8,24 @@ class WebAudioSynth {
      * 必须在用户首次交互 (PointerDown) 时调用此方法，以解锁移动端的 AudioContext
      */
     static unlock() {
+        if (typeof window === 'undefined') return Promise.resolve(false);
         if (!this.context) {
             this.context = new (window.AudioContext || window.webkitAudioContext)();
         }
         
         if (this.context.state === 'suspended') {
-            this.context.resume().then(() => {
+            return this.context.resume().then(() => {
                 this.isUnlocked = true;
                 // 播放一段极短的静音来彻底激活
                 const osc = this.context.createOscillator();
                 osc.connect(this.context.destination);
                 osc.start();
                 osc.stop(this.context.currentTime + 0.001);
+                return true;
             });
         } else {
             this.isUnlocked = true;
+            return Promise.resolve(true);
         }
     }
     
@@ -88,14 +91,23 @@ class WebAudioSynth {
      * 利用 LFO 调制滤波器的频率
      */
     static startASMR() {
-        if (!this.context || !this.isUnlocked || this.asmrOsc) return;
+        this.startBed(60);
+    }
+
+    static startBed(frequency = 60) {
+        const hz = Number(frequency);
+        const next = Number.isFinite(hz) && hz >= 40 && hz <= 2000 ? hz : 60;
+        this.requestedHz = next;
+        if (this.asmrOsc && this.bedHz === next) return;
+        this.stopASMR();
+        this.requestedHz = next;
+        if (!this.context || !this.isUnlocked) return;
 
         const ctx = this.context;
-        
-        // 主振荡器 (低频三角波)
+        this.bedHz = next;
         this.asmrOsc = ctx.createOscillator();
         this.asmrOsc.type = 'triangle';
-        this.asmrOsc.frequency.value = 60; // 60Hz 极低频
+        this.asmrOsc.frequency.value = next;
 
         // 低通滤波器
         const filter = ctx.createBiquadFilter();
@@ -112,10 +124,11 @@ class WebAudioSynth {
 
         lfo.connect(lfoGain);
         lfoGain.connect(filter.frequency);
+        this.bedLfo = lfo;
 
         // 主音量控制
         this.asmrGain = ctx.createGain();
-        this.asmrGain.gain.value = 0.1; // 极低音量，避免吵闹
+        this.asmrGain.gain.value = this.bedGain ?? 0.1; // 极低音量，避免吵闹
 
         // 连接链条
         this.asmrOsc.connect(filter);
@@ -126,9 +139,29 @@ class WebAudioSynth {
         lfo.start();
     }
 
+    static setBedGain(gain) {
+        const value = Math.max(0, Math.min(0.3, Number(gain) || 0));
+        this.bedGain = value;
+        if (this.asmrGain) this.asmrGain.gain.value = value;
+    }
+
     static stopASMR() {
+        this.bedHz = null;
+        if (this.bedLfo) {
+            try {
+                this.bedLfo.stop();
+                this.bedLfo.disconnect();
+            } catch {
+                /* already stopped */
+            }
+            this.bedLfo = null;
+        }
         if (this.asmrOsc) {
-            this.asmrOsc.stop();
+            try {
+                this.asmrOsc.stop();
+            } catch {
+                /* already stopped */
+            }
             this.asmrOsc.disconnect();
             this.asmrOsc = null;
         }

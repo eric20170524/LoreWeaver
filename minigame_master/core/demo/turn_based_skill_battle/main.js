@@ -10,7 +10,7 @@ import themeNeon from "../../../gameplay/cards/fixtures/turn_based_skill_battle/
 
 const LAST_RESULT_KEY = "__LW_TBSB_DEMO_LAST_RESULT__";
 const DEMO_CARD_ID = "turn_based_skill_battle";
-const DEMO_SPEC_HASH = "turn_based_skill_battle:core_demo:v1_theme_skin";
+const DEMO_SPEC_HASH = "turn_based_skill_battle:core_demo:v2_timer_controls";
 const DEMO_RUNTIME_VERSION = "minigame_master.core.demo.turn_based_skill_battle";
 window.Phaser = Phaser;
 
@@ -80,13 +80,21 @@ const theme = resolveThemePack();
 const controls = {
   start: document.getElementById("lw-start"),
   retreat: document.getElementById("lw-retreat"),
+  pause: document.getElementById("lw-pause"),
+  restart: document.getElementById("lw-restart"),
   back: document.getElementById("lw-back")
 };
 const testStateNode = document.getElementById("lw-test-state");
 
+function setPauseLabel(status = "running") {
+  controls.pause.textContent = status === "paused" ? "Resume" : "Pause";
+}
+
 function setControlMode(mode) {
   controls.start.hidden = mode !== "menu";
   controls.retreat.hidden = mode !== "run";
+  controls.pause.hidden = mode !== "run";
+  controls.restart.hidden = mode === "menu";
   controls.back.hidden = mode !== "result";
 }
 
@@ -116,6 +124,9 @@ function createDemoPayload() {
   const enemyHp = Number(q.get("enemyHp") || 90);
   const playerHp = Number(q.get("playerHp") || 100);
   const enemyAtk = Number(q.get("enemyAtk") || 14);
+  const timeLimitSec = Number(q.get("timeLimitSec") || q.get("durationSec") || 45);
+  const failOnTimeoutRaw = String(q.get("failOnTimeout") || "true").toLowerCase();
+  const failOnTimeout = failOnTimeoutRaw !== "false" && failOnTimeoutRaw !== "0";
   return createNodePayload({
     nodeId: "turn_based_skill_battle_demo",
     nodeConfig: {
@@ -130,6 +141,8 @@ function createDemoPayload() {
           enemyHp,
           enemyAtk,
           playerAtk: 22,
+          timeLimitSec,
+          failOnTimeout,
           allowQuit: true,
           allowPause: true,
           artRuntimeMode: "prototype",
@@ -146,6 +159,7 @@ class MenuScene extends Phaser.Scene {
   constructor() {
     super("MenuScene");
   }
+
   create(data = {}) {
     const { width, height } = this.scale;
     const lastResult = data.lastResult || window[LAST_RESULT_KEY] || null;
@@ -196,6 +210,7 @@ class MenuScene extends Phaser.Scene {
         })
         .setOrigin(0.5);
     }
+    setPauseLabel("running");
     setControlMode("menu");
     writeTestState({
       mode: "menu",
@@ -203,7 +218,8 @@ class MenuScene extends Phaser.Scene {
       hasLastResult: Boolean(lastResult),
       title,
       intro,
-      controlHint: hint
+      controlHint: hint,
+      settlementCount: 0
     });
     controls.start.onclick = () => this.scene.start("RunScene");
   }
@@ -213,8 +229,11 @@ class RunScene extends Phaser.Scene {
   constructor() {
     super("RunScene");
   }
+
   create() {
     const { width, height } = this.scale;
+    this.resultShown = false;
+    this.settlementCount = 0;
     this.add.rectangle(width / 2, height / 2, width, height, 0x111827, 1);
     this.hudLabels = theme.hudParts();
     this.hud = this.add
@@ -236,40 +255,97 @@ class RunScene extends Phaser.Scene {
     });
     this.adapter.init(createDemoPayload()).create(this);
     window.__LW_TBSB_DEMO__ = this.adapter;
+
+    const initialState = this.adapter.getTestState();
     writeTestState({
       mode: "run",
-      status: this.adapter.status,
+      status: initialState.status,
       nodeId: this.adapter.payload.nodeId,
       objective: theme.getText("level.objective"),
-      enemyHp: this.adapter.state.enemyHp,
-      hp: this.adapter.state.playerHp
+      enemyHp: initialState.enemyHp,
+      hp: initialState.hp,
+      timer: initialState.timer,
+      turn: initialState.turn,
+      score: initialState.score,
+      skillsUsed: initialState.skillsUsed,
+      cooldowns: initialState.cooldowns,
+      settlementCount: 0,
+      resultReason: null,
+      resultSuccess: null,
+      resultHeadline: null,
+      rewards: null
     });
+    setPauseLabel("running");
     setControlMode("run");
+
     controls.retreat.onclick = () => this.adapter.retreat();
-    this.events.once("shutdown", () => this.adapter?.destroy());
+    controls.pause.onclick = () => {
+      if (this.adapter.status === "running") {
+        this.adapter.pause();
+      } else if (this.adapter.status === "paused") {
+        this.adapter.resume();
+      }
+      const state = this.adapter.getTestState();
+      setPauseLabel(state.status);
+      writeTestState({
+        mode: "run",
+        status: state.status,
+        hp: state.hp,
+        enemyHp: state.enemyHp,
+        timer: state.timer,
+        turn: state.turn,
+        skillsUsed: state.skillsUsed,
+        cooldowns: state.cooldowns
+      });
+    };
+    controls.restart.onclick = () => this.restartBattle();
+
+    this.events.once("shutdown", () => {
+      const oldAdapter = this.adapter;
+      oldAdapter?.destroy();
+      if (window.__LW_TBSB_DEMO__ === oldAdapter) {
+        window.__LW_TBSB_DEMO__ = null;
+      }
+    });
   }
+
+  restartBattle() {
+    if (this.adapter?.status === "paused") {
+      this.adapter.resume();
+    }
+    this.scene.restart();
+  }
+
   update(time, delta) {
     this.adapter?.update(time, delta);
     const state = this.adapter?.getTestState();
     if (!state) return;
     const h = this.hudLabels;
     this.hud.setText([
-      `${h.hp} ${state.hp}`,
+      `${h.hp} ${Math.ceil(state.hp)}`,
       `${h.turn} ${state.turn}`,
       `${h.damage} ${state.score}`,
-      `${h.skills} ${state.skillsUsed}`
+      `${h.skills} ${state.skillsUsed}`,
+      `Time ${Math.ceil(state.timer)}s`
     ]);
     writeTestState({
       mode: state.status === "ended" ? "result" : "run",
       status: state.status,
       hp: state.hp,
       enemyHp: state.enemyHp,
+      timer: state.timer,
       turn: state.turn,
       score: state.score,
-      skillsUsed: state.skillsUsed
+      skillsUsed: state.skillsUsed,
+      cooldowns: state.cooldowns,
+      settlementCount: this.settlementCount
     });
   }
+
   showResult(result) {
+    if (this.resultShown) return;
+    this.resultShown = true;
+    this.settlementCount += 1;
     window[LAST_RESULT_KEY] = result;
     const headline = result.success
       ? theme.getText("level.victory")
@@ -282,7 +358,8 @@ class RunScene extends Phaser.Scene {
       resultReason: result.reason,
       resultSuccess: result.success,
       resultHeadline: headline,
-      rewards: result.rewards
+      rewards: result.rewards,
+      settlementCount: this.settlementCount
     });
     const { width, height } = this.scale;
     this.add
@@ -307,6 +384,7 @@ class RunScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(101);
     setControlMode("result");
+    controls.restart.onclick = () => this.restartBattle();
     controls.back.onclick = () => this.scene.start("MenuScene", { lastResult: result });
   }
 }

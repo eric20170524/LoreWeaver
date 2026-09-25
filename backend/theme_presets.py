@@ -24,7 +24,12 @@ def get_procedural_preset(theme: str) -> dict:
         "凡人": "xianxia_preset.json",
         "guimi": "guimi_preset.json",
         "诡秘": "guimi_preset.json",
-        "克苏鲁": "guimi_preset.json"
+        "克苏鲁": "guimi_preset.json",
+        "玄界之门": "xuanjiezhimen_fangame_preset.json",
+        "玄界": "xuanjiezhimen_fangame_preset.json",
+        "石牧": "xuanjiezhimen_fangame_preset.json",
+        "xuanjie": "xuanjiezhimen_fangame_preset.json",
+        "xuanjiezhimen": "xuanjiezhimen_fangame_preset.json"
     }
     
     lower_normalized = normalized.lower()

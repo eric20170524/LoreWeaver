@@ -18,15 +18,17 @@ from backend.gameplay_catalog import (  # noqa: E402
 
 EXPECTED = {
     "survivor_horde",
-    "rhythm_timing",
-    "drag_collect_grid",
+}
+RESIDUAL_PROTOTYPES = {
     "turn_based_skill_battle",
-    "sequence_synthesis",
     "reaction_pick",
     "energy_balance",
     "observe_capture",
     "drag_to_core",
     "pressure_survival",
+    "rhythm_timing",
+    "drag_collect_grid",
+    "sequence_synthesis",
 }
 
 
@@ -37,11 +39,26 @@ def main() -> int:
     assert not missing, f"missing production cards: {missing}"
     assert default_production_card_id() == "survivor_horde"
 
-    r1 = resolve_card_id(mechanics="tap_reaction", allow_experimental=False)
-    assert r1["cardId"] == "rhythm_timing", r1
+    # Residual / lightweight cards keep historical notes but cannot auto-select.
+    for cid in sorted(RESIDUAL_PROTOTYPES):
+        assert cid not in prod_ids, cid
+        blocked = resolve_card_id(preferred=cid, allow_experimental=False)
+        assert blocked["cardId"] == "survivor_horde" and blocked["productionReady"], blocked
+        allowed = resolve_card_id(preferred=cid, allow_experimental=True)
+        assert allowed["cardId"] == cid and allowed["experimental"] and not allowed["productionReady"], allowed
 
-    r_seq = resolve_card_id(mechanics="memory_sequence", allow_experimental=False)
-    assert r_seq["cardId"] == "sequence_synthesis", r_seq
+    # Card Lab runtime acceptance deliberately does not grant release certification.
+    for mechanics, cid in {
+        "tap_reaction": "rhythm_timing",
+        "collect_dodge": "drag_collect_grid",
+        "memory_sequence": "sequence_synthesis",
+    }.items():
+        assert cid not in prod_ids
+        for selector in ({"mechanics": mechanics}, {"preferred": cid}):
+            blocked = resolve_card_id(**selector, allow_experimental=False)
+            assert blocked["cardId"] == "survivor_horde" and blocked["productionReady"], blocked
+            allowed = resolve_card_id(**selector, allow_experimental=True)
+            assert allowed["cardId"] == cid and allowed["experimental"] and not allowed["productionReady"], allowed
 
     for cid in sorted(EXPECTED):
         r = resolve_card_id(preferred=cid)
@@ -52,7 +69,7 @@ def main() -> int:
     assert r5["experimental"] is True, r5
 
     summary = catalog_summary()
-    assert summary["totals"]["productionReady"] >= 10
+    assert summary["totals"]["productionReady"] >= len(EXPECTED)
     auto_ids = {c["id"] for c in summary["autoSelectable"]}
     assert EXPECTED <= auto_ids
 
